@@ -20,10 +20,9 @@ respectively. There is also a variant of each of these suffixed with
 "_small" which contains a subsampled version of the original
 dataset. Each data directory contains three files:
 
-* entities.txt -- defines the list of entities and entity tuples in the
-* category and relation matrices
-* words.txt -- defines the list of category and relation predicates
-* lf.txt -- training examples
+* `entities.txt` -- defines the list of entities and entity tuples in the category and relation matrices
+* `words.txt` -- defines the list of category and relation predicates
+* `lf.txt` -- training examples
 
 ## Training
 
