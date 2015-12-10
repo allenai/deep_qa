@@ -10,6 +10,7 @@ mkdir data
 cd data
 wget http://rtw.ml.cmu.edu/tacl2015_csf/tacl2015-training.txt.gz
 gunzip tacl2015-training.txt.gz
+cd ..
 ./src/scripts/process_training_data.sh
 ```
 
