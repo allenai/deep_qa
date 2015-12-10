@@ -41,5 +41,24 @@ directed into the output/<dataset_name>/ directory. This output
 includes a log file that shows the progression of training and a model
 file containing the trained models serialized as a Java object.
 
-## Running trained models
+## Running Models Interactively
+
+You can interactively run queries against a trained model. To start,
+run the following command:
+
+./src/scripts/run_model.sh
+
+This command starts an interactive lisp interpreter. (The command line
+is not very usable at the moment.) You can run queries using the
+following command:
+
+(expression-eval (quote (print-predicate-marginals <query> entity-array)))
+
+For example, to get "17th-century painter from France", we can run:
+
+(expression-eval (quote (print-predicate-marginals (lambda x (and ((word-cat "17th-century") x) ((word-cat "painter") x) ((word-rel "from") x "/m/0f8l9c"))) entity-array)))
+
+Above, "/m/0f8l9c" is the Freebase mid for France. This command prints
+out the marginal probability that each entity in entity-array is in
+the denotation of the query.
 
