@@ -10,7 +10,7 @@ P_LF=$P_OUT_DIR/lf.txt
 
 echo "Generating predicate ranking data..."
 mkdir -p $P_OUT_DIR
-#./src/scripts/generate_entity_tuples.py $TRAINING_DATA $P_ENTITIES $P_WORDS $P_LF $WORD_COUNT_THRESHOLD 0 0 0
+./src/scripts/generate_entity_tuples.py $TRAINING_DATA $P_ENTITIES $P_WORDS $P_LF $WORD_COUNT_THRESHOLD 0 0 0
 
 Q_OUT_DIR=data/query
 Q_ENTITIES=$Q_OUT_DIR/entities.txt
@@ -19,11 +19,11 @@ Q_LF=$Q_OUT_DIR/lf.txt
 
 echo "Generating query ranking data..."
 mkdir -p $Q_OUT_DIR
-#./src/scripts/generate_entity_tuples.py $TRAINING_DATA $Q_ENTITIES $Q_WORDS $Q_LF $WORD_COUNT_THRESHOLD 0 0 1
+./src/scripts/generate_entity_tuples.py $TRAINING_DATA $Q_ENTITIES $Q_WORDS $Q_LF $WORD_COUNT_THRESHOLD 0 0 1
 
 ## Generate additional, smaller training files for messing around by subsampling the training data
 TRAINING_DATA_SAMPLE=data/tacl2015-training-sample.txt
-head -n1000000 $TRAINING_DATA > $TRAINING_DATA_SAMPLE
+head -n100000 $TRAINING_DATA > $TRAINING_DATA_SAMPLE
 WORD_COUNT_THRESHOLD=2
 
 P_OUT_DIR=data/predicate_small
