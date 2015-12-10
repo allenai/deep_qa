@@ -23,5 +23,23 @@ category and relation matrices
 words.txt -- defines the list of category and relation predicates
 lf.txt -- training examples
 
+## Training
 
+To train the matrix factorization models with the predicate ranking
+objective, run:
+
+./src/scripts/train_predicate_ranking.sh
+
+For the query ranking objective, run:
+
+./src/scripts/train_query_ranking.sh
+
+By default, these scripts train on the subsampled predicate/query data
+generated above. To use a different data set, change the value of the
+DATA_DIR variable within them. The output of these scripts will be
+directed into the output/<dataset_name>/ directory. This output
+includes a log file that shows the progression of training and a model
+file containing the trained models serialized as a Java object.
+
+## Running trained models
 
