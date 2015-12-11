@@ -9,6 +9,7 @@ format it for training, run the following commands:
 mkdir data
 cd data
 wget http://rtw.ml.cmu.edu/tacl2015_csf/tacl2015-training.txt.gz
+wget http://rtw.ml.cmu.edu/tacl2015_csf/tacl2015-test.txt
 gunzip tacl2015-training.txt.gz
 cd ..
 ./src/scripts/process_training_data.sh
@@ -40,7 +41,7 @@ For the query ranking objective, run:
 ./src/scripts/train_query_ranking.sh
 ```
 
-By default, these scripts train on the subsampled predicate/query data
+By default, these scripts train on the "_small" predicate/query data
 generated above. To use a different data set, change the value of the
 `DATA_DIR` variable within them. The output of these scripts will be
 directed into the `output/<dataset_name>/` directory. This output
@@ -49,16 +50,15 @@ file containing the trained models serialized as a Java object.
 
 ## Running Models Interactively
 
-You can interactively run queries against a trained model. To start,
-run the following command:
+You can interactively run queries against a trained model. For the
+query ranking model, run the following command:
 
 ```
 ./src/scripts/run_model.sh
 ```
 
-This command starts an interactive lisp interpreter. (The command line
-is not very usable at the moment.) You can run queries using the
-following command:
+This command starts an interactive lisp interpreter where you can run
+queries using the following command:
 
 ```
 (expression-eval (quote (print-predicate-marginals **QUERY** entity-array)))
@@ -72,5 +72,23 @@ For example, to get "17th-century painter from France", we can run:
 
 Above, "/m/0f8l9c" is the Freebase mid for France. This command prints
 out the marginal probability that each entity in entity-array is in
-the denotation of the query.
+the denotation of the query. Note that the command line is not very
+usable. Other models can be run by changing the parameters in
+`run_model.sh`.
 
+## Evaluation
+
+After training the models as above, you can run the evaluation using:
+
+```
+./src/scripts/train_baseline.sh
+./src/scripts/evaluation.sh
+```
+
+The first script "trains" the corpus lookup baseline, and the second
+script evaluates the baseline, the trained models, and the ensemble
+models. The output of each evaluation is placed in the `results`
+directory, and the final few lines of each generated file display MAP
+and Precision/Recall curves. By default, this script runs everything
+on the "_small" data set; to run on the whole data set, edit the
+script and change the directory pointers appropriately.
