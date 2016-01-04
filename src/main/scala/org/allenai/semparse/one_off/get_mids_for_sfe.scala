@@ -21,12 +21,16 @@ object get_mids_for_sfe {
   }
 
   def get_training_mids() {
+    // TODO(matt): separate mids and mid pairs into separate files, and make sure that mid pairs
+    // are in sorted order.
     println(s"Getting training mids from $training_file")
     val mids = fileUtil.getLineIterator(training_file).map(_.split("\t")(0)).toSet.toSeq
     fileUtil.writeLinesToFile(training_mids_file, mids)
   }
 
   def get_test_mids() {
+    // TODO(matt): separate mids and mid pairs into separate files, and make sure that mid pairs
+    // are in sorted order.
     println(s"Getting test mids from $test_file")
     val mids = fileUtil.getLineIterator(test_file).toSeq.flatMap(line => {
       val json = parse(line)

@@ -11,16 +11,18 @@ object do_feature_selection {
     println("Selecting MID features")
     featureSelectionFromFile(
       "/Users/mattg/pra/results/semparse/mids/unknown/training_matrix.tsv",
-      "/Users/mattg/clone/tacl2015-factorization/data/mid_features.tsv"
+      "word-graph-features",
+      "/Users/mattg/clone/tacl2015-factorization/data/mid_features"
     )
     println("Selecting MID pair features")
     featureSelectionFromFile(
       "/Users/mattg/pra/results/semparse/mid_pairs/unknown/training_matrix.tsv",
-      "/Users/mattg/clone/tacl2015-factorization/data/mid_pair_features.tsv"
+      "word-rel-graph-features",
+      "/Users/mattg/clone/tacl2015-factorization/data/mid_pair_features"
     )
   }
 
-  def featureSelectionFromFile(infile: String, outfile: String) {
+  def featureSelectionFromFile(infile: String, dictionaryName: String, outfile: String) {
     println("Reading features from file")
     val (featuresForKey, featureCounts) = readFeaturesFromFile(infile)
     printTopKeys(featuresForKey, 10)
@@ -31,7 +33,9 @@ object do_feature_selection {
     val filteredFeatures = filterFeatures(featuresForKey, keptFeatures)
     printTopKeys(filteredFeatures, 10)
     println("Outputting feature matrix")
-    outputFeatureMatrix(filteredFeatures, outfile)
+    outputFeatureMatrix(filteredFeatures, outfile + ".tsv")
+    println("Outputting feature dictionary")
+    outputFeatureDictionary(filteredFeatures, dictionaryName, outfile + "_list.txt")
   }
 
   def readFeaturesFromFile(infile: String) = {
@@ -92,5 +96,19 @@ object do_feature_selection {
       }
       writer.write("\n")
     }
+    writer.close()
+  }
+
+  def outputFeatureDictionary(featuresForKey: Map[String, Seq[String]], dictionaryName: String, outfile: String) {
+    val writer = fileUtil.getFileWriter(outfile)
+    val features = featuresForKey.flatMap(_._2).toSet
+    writer.write(s"(define ${dictionaryName} (list\n")
+    for (feature <- features) {
+      writer.write("\"")
+      writer.write(feature)
+      writer.write("\"\n")
+    }
+    writer.write("))\n")
+    writer.close()
   }
 }
