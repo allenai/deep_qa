@@ -16,7 +16,7 @@ cd ..
 ```
 
 This will create four directories under data. Two of them are are
-data/predicate and data/query, which are contain training data for the
+data/predicate and data/query, which contain training data for the
 predicate and query ranking objectives from the paper,
 respectively. There is also a variant of each of these suffixed with
 "_small" which contains a subsampled version of the original
