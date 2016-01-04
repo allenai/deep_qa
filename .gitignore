@@ -1,2 +1,8 @@
 # Ignore emacs temp files
 *~
+/bin/
+target/
+*.pyc
+data/
+output/
+results/
