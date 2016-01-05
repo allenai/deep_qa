@@ -46,9 +46,9 @@ object do_feature_selection {
         val features = featuresStr.trim.split(" -#- ").map(_.replace(",1.0", ""))
         (key, features.toSeq)
       })
-    })
+    }).toSeq
     val featuresForKey = features.toMap.seq
-    val featureCounts = features.map(_._2).groupBy(identity).mapValues(_.size).seq
+    val featureCounts = features.flatMap(_._2).groupBy(identity).mapValues(_.size).seq
     (featuresForKey, featureCounts)
   }
 
@@ -75,7 +75,7 @@ object do_feature_selection {
 
   def selectFeatures(featureCounts: Map[String, Int]): Set[String] = {
     val features = featureCounts.keySet
-    features.sort(x => -featureCounts(features)).take(20000)
+    features.toSeq.sortBy(x => -featureCounts(x)).take(20000).toSet
     //features.par.filter(feature => featureCounts(feature) > 5).toSet.seq
   }
 
