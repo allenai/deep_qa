@@ -85,6 +85,7 @@ object do_feature_selection {
 
   def outputFeatureMatrix(featuresForKey: Map[String, Seq[String]], outfile: String) {
     val writer = fileUtil.getFileWriter(outfile)
+    val seen_features = new mutable.HashSet[String]
     for (keyFeatures <- featuresForKey) {
       val key = keyFeatures._1
       val features = keyFeatures._2
@@ -92,11 +93,13 @@ object do_feature_selection {
       writer.write("\t")
       for ((feature, i) <- features.zipWithIndex) {
         writer.write(feature)
+        seen_features.add(feature)
         if (i < features.size - 1) writer.write(" -#- ")
       }
       writer.write("\n")
     }
     writer.close()
+    println(s"Saw ${seen_features.size} features")
   }
 
   def outputFeatureDictionary(featuresForKey: Map[String, Seq[String]], dictionaryName: String, outfile: String) {
