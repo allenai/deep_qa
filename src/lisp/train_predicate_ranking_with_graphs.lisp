@@ -70,6 +70,7 @@
 
 
 (display "Made training data.")
+(display "Creating parameter objects")
 (define expression-parameters (make-parameter-list (list
                                                      (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array cat-words)))
                                                      ;; I'm not sure at all about the (list (list #t #f)) part here...
