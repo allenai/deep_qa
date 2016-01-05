@@ -19,7 +19,7 @@
 ;   (not (apply rel-word-pred (sample-histogram entity-tuple-histogram))))
 
 
-(define word-ranking-family (word-parameters entity-parameters word-graph-parameters)
+(define word-ranking-family (word-parameters entity-parameters)
   (lambda (word)
     (lambda (entity neg-entity)
       (if (dictionary-contains entity entities)
@@ -33,7 +33,7 @@
         #f)
       )))
 
-(define word-rel-ranking-family (word-rel-params entity-tuple-params word-rel-graph-parameters)
+(define word-rel-ranking-family (word-rel-params entity-tuple-params)
   (define word-rel (word)
     (lambda (entity1 neg-entity1 entity2 neg-entity2)
       (if (dictionary-contains (list entity1 entity2) entity-tuples)
@@ -59,18 +59,32 @@
         (entity-tuple-parameters (get-ith-parameter parameters 5))
         (word-cat (word-ranking-family word-parameters entity-parameters word-graph-parameters))
         (word-rel (word-rel-ranking-family word-rel-parameters entity-tuple-parameters word-rel-graph-parameters)))
-    (define expression-evaluator (expression entities word)
-      (if (= 1 (length entities))
-        ((eval expression) (car entities) (rejection-sample-histogram entity-histogram (array-get-ith-element cat-word-entities (get-index-with-unknown word cat-words))))
-        (let ((rel-neg-example (rejection-sample-histogram entity-tuple-histogram (array-get-ith-element rel-word-entities (get-index-with-unknown word rel-words)))))
-          ((eval expression) (car entities) (car rel-neg-example) (cadr entities) (cadr rel-neg-example)))
-        )
-      )
+    (define expression-evaluator (expression arg-entities arg1s arg2s positive-set-ind)
+      (let ((arg1-candidates (apply dset-intersect (map (lambda (x) (array-get-ith-element arg1-arg2-map (dictionary-lookup x entities))) arg1s)))
+            (arg2-candidates (apply dset-intersect (map (lambda (x) (array-get-ith-element arg2-arg1-map (dictionary-lookup x entities))) arg2s)))
+            (all-candidates (dset-intersect arg1-candidates arg2-candidates))
+            (positive-examples (array-get-ith-element joint-entities positive-set-ind)))
+
+        (if (nil? all-candidates)
+          ;; No constraints on the argument value.
+          (begin
+            ((eval expression) (car arg-entities) (rejection-sample-histogram entity-histogram positive-examples))
+            )
+
+          (let ((new-candidates (dset-subtract all-candidates positive-examples)))
+            (if (not (dset-empty? new-candidates))
+              ((eval expression) (car arg-entities) (sample-histogram-conditional entity-histogram new-candidates))
+              ; This #f results in a search error. The search error happens because
+              ; every possible value for the sampled entity has occurred as an answer to this query.
+              #f
+              )
+            )
+          )
+        ))
     expression-evaluator))
 
 
 (display "Made training data.")
-(display "Creating parameter objects")
 (define expression-parameters (make-parameter-list (list
                                                      (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array cat-words)))
                                                      ;; I'm not sure at all about the (list (list #t #f)) part here...
@@ -81,11 +95,7 @@
                                                      (make-parameter-list (array-map (lambda (x) (make-featurized-classifier-parameters (list (list #t #f)) word-rel-graph-features)) (dictionary-to-array rel-words)))
                                                      (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array entity-tuples)))
                                                      )))
-(display "Perturbing parameters")
-(perturb-parameters (get-ith-parameter expression-parameters 0))
-(perturb-parameters (get-ith-parameter expression-parameters 2))
-(perturb-parameters (get-ith-parameter expression-parameters 3))
-(perturb-parameters (get-ith-parameter expression-parameters 5))
+(perturb-parameters expression-parameters 0.1)
 
 (display "Training...")
 (define best-params (opt expression-ranking-family expression-parameters training-data))
