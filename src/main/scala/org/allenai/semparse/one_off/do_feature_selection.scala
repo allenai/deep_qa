@@ -10,15 +10,15 @@ object do_feature_selection {
   def main(args: Array[String]) {
     println("Selecting MID features")
     featureSelectionFromFile(
-      "/Users/mattg/pra/results/semparse/mids/unknown/training_matrix.tsv",
+      "/home/mattg/pra/results/semparse/mids/unknown/training_matrix.tsv",
       "word-graph-features",
-      "/Users/mattg/clone/tacl2015-factorization/data/mid_features"
+      "/home/mattg/clone/tacl2015-factorization/data/mid_features"
     )
     println("Selecting MID pair features")
     featureSelectionFromFile(
-      "/Users/mattg/pra/results/semparse/mid_pairs/unknown/training_matrix.tsv",
+      "/home/mattg/pra/results/semparse/mid_pairs/unknown/training_matrix.tsv",
       "word-rel-graph-features",
-      "/Users/mattg/clone/tacl2015-factorization/data/mid_pair_features"
+      "/home/mattg/clone/tacl2015-factorization/data/mid_pair_features"
     )
   }
 
@@ -39,18 +39,17 @@ object do_feature_selection {
   }
 
   def readFeaturesFromFile(infile: String) = {
-    val featuresForKey = new mutable.HashMap[String, Seq[String]]
-    val featureCounts = new mutable.HashMap[String, Int].withDefaultValue(0)
-    for (line <- fileUtil.getLineIterator(infile)) {
-      val (keyStr, featuresStr) = line.splitAt(line.indexOf('\t'))
-      val key = keyStr.trim
-      val features = featuresStr.trim.split(" -#- ").map(_.replace(",1.0", ""))
-      featuresForKey(key) = features.toSeq
-      for (feature <- features) {
-        featureCounts.update(feature, featureCounts(feature) + 1)
-      }
-    }
-    (featuresForKey.toMap, featureCounts.toMap)
+    val features = fileUtil.getLineIterator(infile).grouped(1024).flatMap(lines => {
+      lines.par.map(line => {
+        val (keyStr, featuresStr) = line.splitAt(line.indexOf('\t'))
+        val key = keyStr.trim
+        val features = featuresStr.trim.split(" -#- ").map(_.replace(",1.0", ""))
+        (key, features.toSeq)
+      })
+    })
+    val featuresForKey = features.toMap.seq
+    val featureCounts = features.map(_._2).groupBy(identity).mapValues(_.size).seq
+    (featuresForKey, featureCounts)
   }
 
   def printTopKeys(featuresForKey: Map[String, Seq[String]], topK: Int) {
@@ -76,7 +75,8 @@ object do_feature_selection {
 
   def selectFeatures(featureCounts: Map[String, Int]): Set[String] = {
     val features = featureCounts.keySet
-    features.par.filter(feature => featureCounts(feature) > 5).toSet.seq
+    features.sort(x => -featureCounts(features)).take(20000)
+    //features.par.filter(feature => featureCounts(feature) > 5).toSet.seq
   }
 
   def filterFeatures(featuresForKey: Map[String, Seq[String]], keptFeatures: Set[String]) = {
