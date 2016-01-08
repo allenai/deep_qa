@@ -15,6 +15,8 @@ object get_mids_for_sfe {
 
   val training_mids_file = "data/training-mids.txt"
   val training_mid_pairs_file = "data/training-mid-pairs.txt"
+  val mid_words_file = "data/training-mid-words.txt"
+  val mid_pair_words_file = "data/training-mid-pair-words.txt"
   val test_mids_file = "data/test-mids.txt"
   val fileUtil = new FileUtil()
 
@@ -27,24 +29,44 @@ object get_mids_for_sfe {
     println(s"Getting training mids from $training_file")
     val mids = new mutable.HashSet[String]
     val mid_pairs = new mutable.HashSet[(String, String)]
+    val mid_words = new mutable.HashMap[String, Seq[String]].withDefaultValue(Nil)
+    val mid_pair_words = new mutable.HashMap[(String, String), Seq[String]].withDefaultValue(Nil)
     for (line <- fileUtil.getLineIterator(training_file)) {
       val fields = line.split("\t")
       if (fields(0).contains(" ")) {
         // We're dealing with a mid pair, or a relation word, here.
-        val mid_pair = fields(0).split(" ")
-        mid_pairs += Tuple2(mid_pair(0), mid_pair(1))
-        mids += mid_pair(0)
-        mids += mid_pair(1)
+        val mid_pair_array = fields(0).split(" ")
+        val word = fields(3)
+        val mid_pair = Tuple2(mid_pair_array(0), mid_pair_array(1))
+        mid_pairs += mid_pair
+        mids += mid_pair._1
+        mids += mid_pair._2
         process_json_obj(parse(fields(5)), mids, mid_pairs)
+        mid_pair_words.update(mid_pair, mid_pair_words(mid_pair) :+ word)
       } else {
         // And here this is a mid, or a category word.
         val mid = fields(0)
+        val word = fields(2)
         mids += mid
         process_json_obj(parse(fields(5)), mids, mid_pairs)
+        mid_words.update(mid, mid_words(mid) :+ word)
       }
     }
     fileUtil.writeLinesToFile(training_mids_file, mids.toSeq.sorted)
     fileUtil.writeLinesToFile(training_mid_pairs_file, mid_pairs.toSeq.sorted.map(x => x._1 + " " + x._2))
+    fileUtil.writeLinesToFile(mid_words_file, mid_words.map(mid_words_to_string).toSeq)
+    fileUtil.writeLinesToFile(mid_pair_words_file, mid_pair_words.map(mid_pair_words_to_string).toSeq)
+  }
+
+  // TODO(matt): should I make these sets instead of seqs?  I guess the issue is, we're going to
+  // use this to compute PMI.  Does the count for each word matter?  Maybe it does...  So I'm
+  // keeping the seq for now.
+  def mid_words_to_string(entry: (String, Seq[String])): String = {
+    entry._1 + "\t" + entry._2.mkString("\t")
+  }
+
+  def mid_pair_words_to_string(entry: ((String, String), Seq[String])): String = {
+    entry._1._1 + "," + entry._1._2 + "\t" + entry._2.mkString("\t")
   }
 
   def process_json_obj(json_obj: JValue, mids: mutable.Set[String], mid_pairs: mutable.Set[(String, String)]) {

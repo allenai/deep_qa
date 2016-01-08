@@ -8,9 +8,9 @@ scalacOptions ++= Seq("-unchecked", "-deprecation")
 
 javacOptions += "-Xlint:unchecked"
 
-fork in run := true
+fork := true
 
-javaOptions ++= Seq("-Xmx10g")
+javaOptions ++= Seq("-Xmx160g")
 
 libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
