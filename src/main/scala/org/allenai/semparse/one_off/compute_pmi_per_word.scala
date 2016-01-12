@@ -4,70 +4,199 @@ import edu.cmu.ml.rtw.users.matt.util.FileUtil
 
 import sys.process._
 
+import scala.collection.mutable
+
 // Looks like this is too large to do in memory, so we're going to do a pipeline approach.
 object compute_pmi_per_word {
   val fileUtil = new FileUtil
 
-  val mid_results_file = "/home/mattg/pra/results/semparse/mids/unknown/training_matrix.tsv"
-  val mid_word_file = "/home/mattg/clone/tacl2015-factorization/data/training-mid-words.txt"
-  val tmp_dir = "tmp/"
+  val results_file = Map(
+    ("mid" -> "/home/mattg/pra/results/semparse/mids/unknown/training_matrix.tsv"),
+    ("mid pair" -> "/home/mattg/pra/results/semparse/mid_pairs/unknown/training_matrix.tsv")
+  )
+  val mid_word_file = Map(
+    ("mid" -> "/home/mattg/clone/tacl2015-factorization/data/training-mid-words.txt"),
+    ("mid pair" -> "/home/mattg/clone/tacl2015-factorization/data/training-mid-pair-words.txt")
+  )
+  val word_feature_file = Map(
+    ("mid" -> "/home/mattg/clone/tacl2015-factorization/data/word-cat-features.txt"),
+    ("mid pair" -> "/home/mattg/clone/tacl2015-factorization/data/word-rel-features.txt")
+  )
+  val tmp_dir = Map(
+    ("mid" -> "tmp_mid/"),
+    ("mid pair" -> "tmp_mid_pair/")
+  )
 
-  fileUtil.mkdirs(tmp_dir)
+  val MIN_FEATURE_COUNT = Map(
+    ("mid" -> 1000),
+    ("mid pair" -> 50)
+  )
+  val FEATURES_PER_WORD = 100
+
+  fileUtil.mkdirs(tmp_dir("mid"))
+  fileUtil.mkdirs(tmp_dir("mid pair"))
 
   val emptyLogger = ProcessLogger(line => ())
 
   def main(args: Array[String]) {
-    //createCountFiles()
+    //createCountFiles("mid pair")
+    loadFilesAndComputePmi("mid pair")
+    //createCountFiles("mid")
+    //loadFilesAndComputePmi("mid")
   }
 
-  def createCountFiles() {
+  def loadFilesAndComputePmi(mid_or_pair: String) {
+    val base = tmp_dir(mid_or_pair)
+    val featureCounts = loadFeatureCounts(base + "feature_counts.txt", MIN_FEATURE_COUNT(mid_or_pair))
+    val (wordFeatureCounts, totalCount) = loadWordFeatureCounts(base + "word_feature_counts.txt", featureCounts.keySet)
+    val wordCounts = loadWordCounts(base + "word_counts.txt")
+    println("Loaded all files, computing PMI")
+    val wordFeatures = wordCounts.par.map(entry => {
+      val word = entry._1
+      val wordCount = entry._2
+      val features = selectWordFeatures(word, wordCount, totalCount, wordFeatureCounts, featureCounts)
+      (word, features)
+    })
+    println("Writing results to disk")
+    writeWordFeaturesToDisk(word_feature_file(mid_or_pair), wordFeatures.seq)
+  }
+
+  def writeWordFeaturesToDisk(filename: String, wordFeatures: Iterable[(String, Seq[(String, Double)])]) {
+    val writer = fileUtil.getFileWriter(filename)
+    for (wordAndFeatures <- wordFeatures) {
+      val word = wordAndFeatures._1
+      val features = wordAndFeatures._2
+      writer.write(word)
+      writer.write("\n")
+      for (featureScore <- features) {
+        writer.write(s"   ${featureScore._1}\t${featureScore._2}\n")
+      }
+    }
+  }
+
+  def selectWordFeatures(
+    word: String,
+    wordCount: Int,
+    totalCount: Double,
+    wordFeatureCounts: Map[(String, String), Int],
+    featureCounts: Map[String, Int]
+  ): Seq[(String, Double)] = {
+    val scoredFeatures = featureCounts.map(entry => {
+      val feature = entry._1
+      val featureCount = entry._2
+      val wordFeatureCount = wordFeatureCounts.getOrElse((word, feature), 0)
+      (feature, (totalCount * wordFeatureCount) / (wordCount * featureCount))
+    })
+    val grouped = scoredFeatures.toSeq.groupBy(_._2).toSeq.sortBy(-_._1)
+    val kept = grouped.flatMap(entry => {
+      val score = entry._1
+      if (score > 0.0) {
+        val features = entry._2.map(_._1)
+        val shortest_feature = features.sortBy(_.length).head
+        Seq((shortest_feature, score))
+      } else {
+        Seq()
+      }
+    }).take(FEATURES_PER_WORD)
+    kept
+  }
+
+  def loadFeatureCounts(filename: String, min_feature_count: Int): Map[String, Int] = {
+    println("Loading feature counts")
+    fileUtil.getLineIterator(filename).flatMap(line => {
+      val fields = line.split("\t")
+      val count = fields(1).toInt
+      if (count > min_feature_count) {
+        val feature = fields(0).substring(8, fields(0).length - 1)
+        Seq((feature -> count))
+      } else {
+        Seq()
+      }
+    }).toMap
+  }
+
+  def loadWordCounts(filename: String): Map[String, Int] = {
+    println("Loading word counts")
+    fileUtil.getLineIterator(filename).map(line => {
+      val fields = line.split("\t")
+      val word = fields(0).substring(5, fields(0).length - 1)
+      val count = fields(1).toInt
+      (word -> count)
+    }).toMap
+  }
+
+  def loadWordFeatureCounts(filename: String, features: Set[String]): (Map[(String, String), Int], Double) = {
+    println("Loading word feature counts")
+    println(s"There are ${features.size} possible features")
+    var totalCount = 0.0
+    var i = 0
+    val wordFeatures = fileUtil.getLineIterator(filename).flatMap(line => {
+      fileUtil.logEvery(1000000, i)
+      val fields = line.split("\t")
+      val feature = fields(1).substring(8, fields(1).length - 1)
+      val count = fields(2).toInt
+      totalCount += count
+      i += 1
+      if (features.contains(feature)) {
+        val word = fields(0).substring(5, fields(0).length - 1)
+        Seq(((word, feature) -> count))
+      } else {
+        Seq()
+      }
+    }).toMap
+    (wordFeatures, totalCount)
+  }
+
+  def createCountFiles(mid_or_pair: String) {
     println("Loading results file")
-    val featuresForMid = do_feature_selection.readFeaturesFromFile(mid_results_file)
+    val featuresForMid = do_feature_selection.readFeaturesFromFile(results_file(mid_or_pair))
+    println(s"Found features for ${featuresForMid.size} MIDs")
 
     println("Reading MID word file")
-    val midWords = do_feature_selection.readMidWords(mid_word_file)
+    val midWords = do_feature_selection.readMidWords(mid_word_file(mid_or_pair))
+    println(s"Found words for ${midWords.size} MIDs")
 
     println("Doing initial map from mids to words")
     val wordFeatures = getWordFeatureList(featuresForMid, midWords)
 
     val totalCount = wordFeatures.size
 
-    writeAndSortWordFeatureOccurrences(wordFeatures)
-    writeAndSortWordOccurrences(wordFeatures)
-    writeAndSortFeatureOccurrences(wordFeatures)
+    writeAndSortWordFeatureOccurrences(tmp_dir(mid_or_pair), wordFeatures)
+    writeAndSortWordOccurrences(tmp_dir(mid_or_pair), wordFeatures)
+    writeAndSortFeatureOccurrences(tmp_dir(mid_or_pair), wordFeatures)
   }
 
-  def writeAndSortWordFeatureOccurrences(wordFeatures: Seq[(Word, Feature)]) {
+  def writeAndSortWordFeatureOccurrences(base: String, wordFeatures: Seq[(Word, Feature)]) {
     println("Outputting a file with word feature occurrences")
-    fileUtil.writeLinesToFile("tmp/word_feature_occurrences.txt", wordFeatures.view.map(x => s"${x._1}\t${x._2}"))
+    fileUtil.writeLinesToFile(base + "word_feature_occurrences.txt", wordFeatures.view.map(x => s"${x._1}\t${x._2}"))
     println("Sorting and counting them")
-    "sort -S 100g --parallel=40 tmp/word_feature_occurrences.txt" #| "uniq -c" #> new java.io.File("tmp/word_feature_counts_bad_format.txt") ! emptyLogger
-    "rm -f tmp/word_feature_occurrences.txt" ! emptyLogger
+    s"sort -S 100g --parallel=40 ${base}word_feature_occurrences.txt" #| "uniq -c" #> new java.io.File(base + "word_feature_counts_bad_format.txt") ! emptyLogger
+    s"rm -f ${base}word_feature_occurrences.txt" ! emptyLogger
     println("Fixing the file format")
-    Seq("awk", "{print $2\"\t\"$3\"\t\"$1}", "tmp/word_feature_counts_bad_format.txt") #> new java.io.File("tmp/word_feature_counts.txt") ! emptyLogger
-    "rm -f tmp/word_feature_counts_bad_format.txt" ! emptyLogger
+    Seq("awk", "{print $2\"\t\"$3\"\t\"$1}", s"${base}word_feature_counts_bad_format.txt") #> new java.io.File(base + "word_feature_counts.txt") ! emptyLogger
+    s"rm -f ${base}word_feature_counts_bad_format.txt" ! emptyLogger
   }
 
-  def writeAndSortWordOccurrences(wordFeatures: Seq[(Word, Feature)]) {
+  def writeAndSortWordOccurrences(base: String, wordFeatures: Seq[(Word, Feature)]) {
     println("Outputting a file with word occurrences")
-    fileUtil.writeLinesToFile("tmp/word_occurrences.txt", wordFeatures.view.map(x => s"${x._1}"))
+    fileUtil.writeLinesToFile(base + "word_occurrences.txt", wordFeatures.view.map(x => s"${x._1}"))
     println("Sorting and counting them")
-    "sort -S 100g --parallel=40 tmp/word_occurrences.txt" #| "uniq -c" #> new java.io.File("tmp/word_counts_bad_format.txt") ! emptyLogger
-    "rm -f tmp/word_occurrences.txt" ! emptyLogger
+    s"sort -S 100g --parallel=40 ${base}word_occurrences.txt" #| "uniq -c" #> new java.io.File(base + "word_counts_bad_format.txt") ! emptyLogger
+    s"rm -f ${base}word_occurrences.txt" ! emptyLogger
     println("Fixing the file format")
-    Seq("awk", "{print $2\"\t\"$1}", "tmp/word_counts_bad_format.txt") #> new java.io.File("tmp/word_counts.txt") ! emptyLogger
-    "rm -f tmp/word_counts_bad_format.txt" ! emptyLogger
+    Seq("awk", "{print $2\"\t\"$1}", s"${base}word_counts_bad_format.txt") #> new java.io.File(base + "word_counts.txt") ! emptyLogger
+    s"rm -f ${base}word_counts_bad_format.txt" ! emptyLogger
   }
 
-  def writeAndSortFeatureOccurrences(wordFeatures: Seq[(Word, Feature)]) {
+  def writeAndSortFeatureOccurrences(base: String, wordFeatures: Seq[(Word, Feature)]) {
     println("Outputting a file with feature occurrences")
-    fileUtil.writeLinesToFile("tmp/feature_occurrences.txt", wordFeatures.view.map(x => s"${x._2}"))
+    fileUtil.writeLinesToFile(base + "feature_occurrences.txt", wordFeatures.view.map(x => s"${x._2}"))
     println("Sorting and counting them")
-    "sort -S 100g --parallel=40 tmp/feature_occurrences.txt" #| "uniq -c" #> new java.io.File("tmp/feature_counts_bad_format.txt") ! emptyLogger
-    "rm -f tmp/feature_occurrences.txt" ! emptyLogger
+    s"sort -S 100g --parallel=40 ${base}feature_occurrences.txt" #| "uniq -c" #> new java.io.File(base + "feature_counts_bad_format.txt") ! emptyLogger
+    s"rm -f ${base}feature_occurrences.txt" ! emptyLogger
     println("Fixing the file format")
-    Seq("awk", "{print $2\"\t\"$1}", "tmp/feature_counts_bad_format.txt") #> new java.io.File("tmp/feature_counts.txt") ! emptyLogger
-    "rm -f tmp/feature_counts_bad_format.txt" ! emptyLogger
+    Seq("awk", "{print $2\"\t\"$1}", s"${base}feature_counts_bad_format.txt") #> new java.io.File(base + "feature_counts.txt") ! emptyLogger
+    s"rm -f ${base}feature_counts_bad_format.txt" ! emptyLogger
   }
 
   def getWordFeatureList(featuresForMid: Map[Mid, Seq[Feature]], midWords: Map[Mid, Seq[Word]]) = {

@@ -88,10 +88,11 @@ object do_feature_selection {
   }
 
   def readFeaturesFromFile(infile: String): Map[Mid, Seq[Feature]] = {
+    println(s"Reading features from file $infile")
     fileUtil.getLineIterator(infile).grouped(1024).flatMap(lines => {
       lines.par.map(line => {
         val fields = line.split("\t")
-        val key = fields(0).trim
+        val key = fields(0).trim.replace(",", " ")
         val features = fields(2).trim.split(" -#- ").map(f => Feature(f.replace(",1.0", "")))
         (Mid(key), features.toSeq)
       })
