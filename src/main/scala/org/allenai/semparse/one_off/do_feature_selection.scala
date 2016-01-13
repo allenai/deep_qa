@@ -81,8 +81,6 @@ object do_feature_selection {
     printTopKeys(filteredFeatures, 10)
     println("Outputting feature matrix")
     outputFeatureMatrix(filteredFeatures, outfile + ".tsv")
-    println("Outputting feature dictionary")
-    outputFeatureDictionary(filteredFeatures, dictionaryName, outfile + "_list.txt")
     println("Outputting word features")
     outputWordFeatures(keptFeaturesForWords, outfile + "_per_word.tsv")
   }
@@ -221,19 +219,6 @@ object do_feature_selection {
     }
     writer.close()
     println(s"Saw ${seen_features.size} features")
-  }
-
-  def outputFeatureDictionary(featuresForMid: Map[Mid, Seq[Feature]], dictionaryName: String, outfile: String) {
-    val writer = fileUtil.getFileWriter(outfile)
-    val features = featuresForMid.flatMap(_._2).toSet
-    writer.write(s"(define ${dictionaryName} (list\n")
-    for (feature <- features) {
-      writer.write("\"")
-      writer.write(feature.feature)
-      writer.write("\"\n")
-    }
-    writer.write("))\n")
-    writer.close()
   }
 
   def outputWordFeatures(featuresForWord: Map[Word, Set[Feature]], outfile: String) {
