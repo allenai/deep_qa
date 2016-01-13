@@ -28,7 +28,7 @@
             var #t (get-cat-word-params word word-parameters) (get-entity-params entity entity-parameters)
             (get-entity-params neg-entity entity-parameters))
           (make-featurized-classifier
-            var (get-entity-feature-difference entity neg-entity) (get-cat-word-params word word-graph-parameters))
+            var (get-entity-feature-difference entity neg-entity word) (get-cat-word-params word word-graph-parameters))
           var)
         #f)
       )))
@@ -43,7 +43,7 @@
             (get-entity-tuple-params entity1 entity2 entity-tuple-params)
             (get-entity-tuple-params neg-entity1 neg-entity2 entity-tuple-params))
           (make-featurized-classifier
-            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2) (get-rel-word-params word word-rel-graph-parameters))
+            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2 word) (get-rel-word-params word word-rel-graph-parameters))
           var)
         #f
         )
@@ -70,17 +70,23 @@
 
 
 (display "Made training data.")
+
 (display "Creating parameter objects")
-(define expression-parameters (make-parameter-list (list
-                                                     (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array cat-words)))
-                                                     ;; I'm not sure at all about the (list (list #t #f)) part here...
-                                                     (make-parameter-list (array-map (lambda (x) (make-featurized-classifier-parameters (list (list #t #f)) word-graph-features)) (dictionary-to-array cat-words)))
-                                                     (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array entities)))
-                                                     (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array rel-words)))
-                                                     ;; I'm not sure at all about the (list (list #t #f)) part here...
-                                                     (make-parameter-list (array-map (lambda (x) (make-featurized-classifier-parameters (list (list #t #f)) word-rel-graph-features)) (dictionary-to-array rel-words)))
-                                                     (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array entity-tuples)))
-                                                     )))
+(define expression-parameters
+  (make-parameter-list (list (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))
+                                                             (dictionary-to-array cat-words)))
+                             (make-parameter-list (array-map (lambda (x) (make-featurized-classifier-parameters (list true-false) (get-cat-word-feature-list x)))
+                                                             (dictionary-to-array cat-words)))
+                             (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))
+                                                             (dictionary-to-array entities)))
+                             (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))
+                                                             (dictionary-to-array rel-words)))
+                             (make-parameter-list (array-map (lambda (x) (make-featurized-classifier-parameters (list true-false) (get-rel-word-feature-list x)))
+                                                             (dictionary-to-array rel-words)))
+                             (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))
+                                                             (dictionary-to-array entity-tuples)))
+                             ))
+
 (display "Perturbing parameters")
 (perturb-parameters (get-ith-parameter expression-parameters 0) 0.1)
 (perturb-parameters (get-ith-parameter expression-parameters 2) 0.1)
