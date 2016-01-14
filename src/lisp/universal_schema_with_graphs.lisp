@@ -139,29 +139,31 @@
 (define get-entity-tuple-params (entity-arg1 entity-arg2 entity-tuple-parameter-list)
   (get-params (list entity-arg1 entity-arg2) entity-tuples entity-tuple-parameter-list #f))
 
-(define word-family (word-parameters entity-parameters)
+(define word-family (word-parameters entity-parameters word-graph-parameters)
   (lambda (word)
     (lambda (entity)
       (if (dictionary-contains entity entities)
-        (let ((var (make-entity-var entity)))
+        (let ((var (make-entity-var entity))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
           (make-inner-product-classifier
             var #t (get-cat-word-params word word-parameters) (get-entity-params entity entity-parameters))
           (make-featurized-classifier
-            var (get-entity-features entity) (get-cat-word-params word word-graph-parameters))
+            var (get-entity-features entity word_or_unknown) (get-cat-word-params word word-graph-parameters))
           var)
         #f)
       )))
 
-(define word-rel-family (word-rel-params entity-tuple-params)
+(define word-rel-family (word-rel-params entity-tuple-params word-rel-graph-parameters)
   (define word-rel (word)
     (lambda (entity1 entity2)
       (if (dictionary-contains (list entity1 entity2) entity-tuples)
-        (let ((var (make-entity-var (cons entity1 entity2))))
+        (let ((var (make-entity-var (cons entity1 entity2)))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
           (make-inner-product-classifier
             var #t (get-rel-word-params word word-rel-params)
             (get-entity-tuple-params entity1 entity2 entity-tuple-params))
           (make-featurized-classifier
-            var (get-entity-tuple-features entity1 entity2) (get-rel-word-params word word-rel-graph-parameters))
+            var (get-entity-tuple-features entity1 entity2 word_or_unknown) (get-rel-word-params word word-rel-graph-parameters))
           var)
         #f
         )
@@ -193,7 +195,7 @@
 
     (array-map (lambda (word) (display word (parameters-to-string (get-rel-word-params word word-rel-parameters))))
                (dictionary-to-array rel-words))
-    ))
+    )))
 
 ;; (display "exists x st. (plano x) and (city x)?")
 ;; (display (get-marginals (expression-eval (quote (exists-func (lambda (x) (and ((mention "/en/plano") x) ((word-cat "city") x))) entities)))))
