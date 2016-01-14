@@ -4,6 +4,8 @@ import edu.cmu.ml.rtw.users.matt.util.FileUtil
 
 import sys.process._
 
+import java.io.FileWriter
+
 import scala.collection.mutable
 
 // Looks like this is too large to do in memory, so we're going to do a pipeline approach.
@@ -19,8 +21,12 @@ object compute_pmi_per_word {
     ("mid pair" -> "/home/mattg/clone/tacl2015-factorization/data/training-mid-pair-words.txt")
   )
   val word_feature_file = Map(
-    ("mid" -> "/home/mattg/clone/tacl2015-factorization/data/word-cat-features.txt"),
-    ("mid pair" -> "/home/mattg/clone/tacl2015-factorization/data/word-rel-features.txt")
+    ("mid" -> "/home/mattg/clone/tacl2015-factorization/data/cat_word_features.tsv"),
+    ("mid pair" -> "/home/mattg/clone/tacl2015-factorization/data/rel_word_features.tsv")
+  )
+  val filtered_feature_file = Map(
+    ("mid" -> "/home/mattg/clone/tacl2015-factorization/data/mid_features.tsv"),
+    ("mid pair" -> "/home/mattg/clone/tacl2015-factorization/data/mid_pair_features.tsv")
   )
   val tmp_dir = Map(
     ("mid" -> "tmp_mid/"),
@@ -41,8 +47,10 @@ object compute_pmi_per_word {
   def main(args: Array[String]) {
     //createCountFiles("mid pair")
     loadFilesAndComputePmi("mid pair")
+    filterFeatureFile("mid pair")
     //createCountFiles("mid")
-    //loadFilesAndComputePmi("mid")
+    loadFilesAndComputePmi("mid")
+    filterFeatureFile("mid")
   }
 
   def loadFilesAndComputePmi(mid_or_pair: String) {
@@ -66,11 +74,29 @@ object compute_pmi_per_word {
     for (wordAndFeatures <- wordFeatures) {
       val word = wordAndFeatures._1
       val features = wordAndFeatures._2
+      writeWordFeaturesToFile(word, features, writer)
+    }
+    writer.close()
+  }
+
+  def writeWordFeaturesToFile(
+    word: String,
+    features: Seq[(String, Double)],
+    writer: FileWriter,
+    humanReadable: Boolean = false
+  ) {
+    if (humanReadable) {
       writer.write(word)
       writer.write("\n")
       for (featureScore <- features) {
         writer.write(s"   ${featureScore._1}\t${featureScore._2}\n")
       }
+    } else {
+      writer.write(word)
+      for (featureScore <- features) {
+        writer.write(s"\t${featureScore._1}")
+      }
+      writer.write("\tbias\n")
     }
   }
 
@@ -99,6 +125,19 @@ object compute_pmi_per_word {
       }
     }).take(FEATURES_PER_WORD)
     kept
+  }
+
+  def filterFeatureFile(mid_or_pair: String) {
+    println(s"Filtering features for ${mid_or_pair}s")
+    val featuresForMid = do_feature_selection.readFeaturesFromFile(results_file(mid_or_pair))
+    println("Reading kept word features")
+    val keptFeatures = fileUtil.getLineIterator(word_feature_file(mid_or_pair)).flatMap(line => {
+      line.split("\t").drop(1).toSeq.map(Feature(_))
+    }).toSet
+    println("Doing the filtering")
+    val filteredFeatures = do_feature_selection.filterFeatures(featuresForMid, keptFeatures)
+    println("Outputting a final feature matrix")
+    do_feature_selection.outputFeatureMatrix(filteredFeatures, filtered_feature_file(mid_or_pair))
   }
 
   def loadFeatureCounts(filename: String, min_feature_count: Int): Map[String, Int] = {

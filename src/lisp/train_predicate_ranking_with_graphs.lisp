@@ -85,12 +85,14 @@
                                                              (dictionary-to-array rel-words)))
                              (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))
                                                              (dictionary-to-array entity-tuples)))
-                             ))
+                             )))
 
 (display "Perturbing parameters")
 (perturb-parameters (get-ith-parameter expression-parameters 0) 0.1)
+(perturb-parameters (get-ith-parameter expression-parameters 1) 0.1)
 (perturb-parameters (get-ith-parameter expression-parameters 2) 0.1)
 (perturb-parameters (get-ith-parameter expression-parameters 3) 0.1)
+(perturb-parameters (get-ith-parameter expression-parameters 4) 0.1)
 (perturb-parameters (get-ith-parameter expression-parameters 5) 0.1)
 
 (display "Training...")
