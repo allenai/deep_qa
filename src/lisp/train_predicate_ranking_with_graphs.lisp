@@ -23,12 +23,13 @@
   (lambda (word)
     (lambda (entity neg-entity)
       (if (dictionary-contains entity entities)
-        (let ((var (make-entity-var entity)))
+        (let ((var (make-entity-var entity))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
           (make-ranking-inner-product-classifier
             var #t (get-cat-word-params word word-parameters) (get-entity-params entity entity-parameters)
             (get-entity-params neg-entity entity-parameters))
           (make-featurized-classifier
-            var (get-entity-feature-difference entity neg-entity word) (get-cat-word-params word word-graph-parameters))
+            var (get-entity-feature-difference entity neg-entity word_or_unknown) (get-cat-word-params word word-graph-parameters))
           var)
         #f)
       )))
@@ -37,13 +38,14 @@
   (define word-rel (word)
     (lambda (entity1 neg-entity1 entity2 neg-entity2)
       (if (dictionary-contains (list entity1 entity2) entity-tuples)
-        (let ((var (make-entity-var (cons entity1 entity2))))
+        (let ((var (make-entity-var (cons entity1 entity2)))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
           (make-ranking-inner-product-classifier
             var #t (get-rel-word-params word word-rel-params)
             (get-entity-tuple-params entity1 entity2 entity-tuple-params)
             (get-entity-tuple-params neg-entity1 neg-entity2 entity-tuple-params))
           (make-featurized-classifier
-            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2 word) (get-rel-word-params word word-rel-graph-parameters))
+            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2 word_or_unknown) (get-rel-word-params word word-rel-graph-parameters))
           var)
         #f
         )
