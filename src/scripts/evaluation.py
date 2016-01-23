@@ -28,7 +28,7 @@ entity_file= data_dir + '/entities.txt'
 # freq_entity_file= data_dir + '/10k_freq_entities.txt'
 word_file= data_dir + '/words.txt'
 
-DEBUG=False
+DEBUG=True
 
 def read_entity_names(midfilename):
     entity_names = {}
@@ -107,9 +107,6 @@ def read_until_prompt():
 # Start of the actual script:
 
 # Open subprocess to evaluate queries
-if DEBUG:
-    print >> sys.stderr, "Opening process..."
-
 uschema_file = "src/lisp/universal_schema.lisp"
 if model_type.endswith("_graphs"):
     if model_type != "ensemble_graphs":
@@ -118,13 +115,19 @@ if model_type.endswith("_graphs"):
 
 process = None
 if model_type == "us":
-    process = subprocess.Popen('''java -Xmx80000M -cp 'lib/*' com.jayantkrish.jklol.lisp.cli.AmbLisp --args "%s" src/lisp/environment.lisp %s %s %s src/lisp/run_universal_schema.lisp --interactive --noPrintOptions''' % (model_filename, entity_file, word_file, uschema_file), shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp --args '%s' src/lisp/environment.lisp %s %s %s src/lisp/run_universal_schema.lisp --interactive --noPrintOptions"''' % (model_filename, entity_file, word_file, uschema_file)
 elif model_type == "ccg":
-    process = subprocess.Popen('''java -Xmx80000M -cp 'lib/*' com.jayantkrish.jklol.lisp.cli.AmbLisp src/lisp/environment.lisp %s %s %s %s src/lisp/run_universal_schema_baseline.lisp --interactive --noPrintOptions''' % (baseline_model_filename, entity_file, word_file, uschema_file), shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp src/lisp/environment.lisp %s %s %s %s src/lisp/run_universal_schema_baseline.lisp --interactive --noPrintOptions"''' % (baseline_model_filename, entity_file, word_file, uschema_file)
 elif model_type == "ensemble":
-    process = subprocess.Popen('''java -Xmx80000M -cp 'lib/*' com.jayantkrish.jklol.lisp.cli.AmbLisp --args "%s" src/lisp/environment.lisp %s %s %s %s src/lisp/run_ensemble.lisp --interactive --noPrintOptions''' % (model_filename, baseline_model_filename, entity_file, word_file, uschema_file), shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp --args '%s' src/lisp/environment.lisp %s %s %s %s src/lisp/run_ensemble.lisp --interactive --noPrintOptions"''' % (model_filename, baseline_model_filename, entity_file, word_file, uschema_file)
 elif model_type == "ensemble_graphs":
-    process = subprocess.Popen('''java -Xmx80000M -cp 'lib/*' com.jayantkrish.jklol.lisp.cli.AmbLisp --args "%s" src/lisp/environment.lisp %s %s %s %s src/lisp/run_ensemble_with_graphs.lisp --interactive --noPrintOptions''' % (model_filename, baseline_model_filename, entity_file, word_file, uschema_file), shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp --args '%s' src/lisp/environment.lisp %s %s %s %s src/lisp/run_ensemble_with_graphs.lisp --interactive --noPrintOptions"''' % (model_filename, baseline_model_filename, entity_file, word_file, uschema_file)
+
+if DEBUG:
+    print >> sys.stderr, "Opening process..."
+    print >> sys.stderr, "Command:", command
+
+process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
 fcntl.fcntl(process.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 

@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
-DATA_DIR=data/query_small/
+DATA_DIR=data/query/
 OUTPUT_DIR=output/
-MODEL_DIR=$OUTPUT_DIR/query_small/
+MODEL_DIR=$OUTPUT_DIR/query/
 
 ENTITY_FILE=$DATA_DIR/entities.txt
 WORD_FILE=$DATA_DIR/words.txt
@@ -18,4 +18,4 @@ LOG_OUTPUT=$MODEL_DIR/log_$MODEL_NAME.txt
 mkdir -p $OUTPUT_DIR
 mkdir -p $MODEL_DIR
 
-java -cp 'lib/*' -Xmx10000M com.jayantkrish.jklol.lisp.cli.AmbLisp --optEpochs $EPOCHS --optL2Regularization $L2_REGULARIZATION --optL2RegularizationFrequency $L2_REGULARIZATION_FREQ --args $MODEL_OUTPUT src/lisp/environment.lisp $ENTITY_FILE $WORD_FILE $LF_FILE src/lisp/universal_schema.lisp src/lisp/train_query_ranking.lisp > $LOG_OUTPUT
+java -cp 'lib/*' -Xmx80g com.jayantkrish.jklol.lisp.cli.AmbLisp --optEpochs $EPOCHS --optL2Regularization $L2_REGULARIZATION --optL2RegularizationFrequency $L2_REGULARIZATION_FREQ --args $MODEL_OUTPUT src/lisp/environment.lisp $ENTITY_FILE $WORD_FILE $LF_FILE src/lisp/universal_schema.lisp src/lisp/train_query_ranking.lisp > $LOG_OUTPUT

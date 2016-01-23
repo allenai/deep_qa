@@ -1,10 +1,10 @@
 #!/bin/bash -e
 
-DATA_DIR=data/query_small/
+DATA_DIR=data/query/
 ENTITY_FILE=$JOINT_DATA_DIR/entities.txt
 WORD_FILE=$JOINT_DATA_DIR/words.txt
 
-MODEL_DIR=output/query_small
+MODEL_DIR=output/query
 BASELINE_MODEL_FILENAME=$MODEL_DIR/baseline.txt
 US_JOINT_MODEL_NAME="query_d=300_iter=100_l2=1e-4"
 MODEL_FILENAME=$MODEL_DIR/out_$US_JOINT_MODEL_NAME.ser
