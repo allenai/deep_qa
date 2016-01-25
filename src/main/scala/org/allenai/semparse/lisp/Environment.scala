@@ -42,3 +42,66 @@ class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boole
     environment.bindName(name, value, symbolTable)
   }
 }
+
+object Environment {
+  val BASE_ENVIRONMENT_FILE = "src/lisp/environment.lisp"
+  val USCHEMA_ENVIRONMENT_FILE = "src/lisp/uschema_environment.lisp"
+
+  val DISTRIBUTIONAL_MODEL_FILE = "src/lisp/model.lisp"
+  val GRAPH_MODEL_FILE = "src/lisp/model_with_graph.lisp"
+  val BASELINE_MODEL_FILE = "src/lisp/baseline_model.lisp"
+
+  val PREDICATE_RANKING_FILE = "src/lisp/predicate_ranking.lisp"
+  val QUERY_RANKING_FILE = "src/lisp/query_ranking.lisp"
+  val TRAIN_FILE = "src/lisp/train_model.lisp"
+
+  val EVAL_BASELINE_FILE = "src/lisp/eval_baseline.lisp"
+  val EVAL_USCHEMA_FILE = "src/lisp/eval_uschema.lisp"
+  val EVAL_ENSEMBLE_FILE = "src/lisp/eval_ensemble.lisp"
+
+  val SMALL_WORD_FILE = "data/small/words.lisp"
+  val SMALL_ENTITY_FILE = "data/small/entities.lisp"
+  val SMALL_JOINT_ENTITY_FILE = "data/small/joint_entities.lisp"
+  val SMALL_PREDICATE_RANKING_LF_FILE = "data/small/predicate_ranking_lf.lisp"
+  val SMALL_QUERY_RANKING_LF_FILE = "data/small/query_ranking_lf.lisp"
+  val SMALL_GRAPH_SPEC_FILE = "data/small/graph_spec.json"
+
+  val LARGE_WORD_FILE = "data/large/words.lisp"
+  val LARGE_ENTITY_FILE = "data/large/entities.lisp"
+  val LARGE_JOINT_ENTITY_FILE = "data/large/joint_entities.lisp"
+  val LARGE_PREDICATE_RANKING_LF_FILE = "data/large/predicate_ranking_lf.lisp"
+  val LARGE_QUERY_RANKING_LF_FILE = "data/large/query_ranking_lf.lisp"
+  val LARGE_GRAPH_SPEC_FILE = "data/large/graph_spec.json"
+
+  val COMMON_SMALL_DATA = Seq(SMALL_WORD_FILE, SMALL_ENTITY_FILE)
+  val PREDICATE_RANKING_SMALL_DATA = COMMON_SMALL_DATA ++ Seq(SMALL_PREDICATE_RANKING_LF_FILE)
+  val QUERY_RANKING_SMALL_DATA = COMMON_SMALL_DATA ++ Seq(
+    SMALL_JOINT_ENTITY_FILE, SMALL_QUERY_RANKING_LF_FILE)
+
+  val COMMON_LARGE_DATA = Seq(LARGE_WORD_FILE, LARGE_ENTITY_FILE)
+  val PREDICATE_RANKING_LARGE_DATA = COMMON_LARGE_DATA ++ Seq(LARGE_PREDICATE_RANKING_LF_FILE)
+  val QUERY_RANKING_LARGE_DATA = COMMON_LARGE_DATA ++ Seq(
+    LARGE_JOINT_ENTITY_FILE, LARGE_QUERY_RANKING_LF_FILE)
+
+  val ENV_FILES = Seq(BASE_ENVIRONMENT_FILE, USCHEMA_ENVIRONMENT_FILE)
+
+  val TRAIN_QUERY_RANKING_DISTRIBUTIONAL_MODEL = ENV_FILES ++ Seq(
+    QUERY_RANKING_FILE, DISTRIBUTIONAL_MODEL_FILE, TRAIN_FILE)
+  val TRAIN_PREDICATE_RANKING_DISTRIBUTIONAL_MODEL = ENV_FILES ++ Seq(
+    PREDICATE_RANKING_FILE, DISTRIBUTIONAL_MODEL_FILE, TRAIN_FILE)
+
+  val TRAIN_QUERY_RANKING_GRAPH_MODEL = ENV_FILES ++ Seq(
+    QUERY_RANKING_FILE, GRAPH_MODEL_FILE, TRAIN_FILE)
+  val TRAIN_PREDICATE_RANKING_GRAPH_MODEL = ENV_FILES ++ Seq(
+    PREDICATE_RANKING_FILE, GRAPH_MODEL_FILE, TRAIN_FILE)
+
+  val EVAL_BASELINE = ENV_FILES ++ Seq(BASELINE_MODEL_FILE, EVAL_BASELINE_FILE)
+  val EVAL_USCHEMA_DISTRIBUTIONAL_MODEL = ENV_FILES ++ Seq(
+    DISTRIBUTIONAL_MODEL_FILE, EVAL_USCHEMA_FILE)
+  val EVAL_USCHEMA_GRAPH_MODEL = ENV_FILES ++ Seq(
+    DISTRIBUTIONAL_GRAPH_FILE, EVAL_USCHEMA_FILE)
+  val EVAL_ENSEMBLE_DISTRIBUTIONAL_MODEL = ENV_FILES ++ Seq(
+    DISTRIBUTIONAL_MODEL_FILE, EVAL_ENSEMBLE_FILE)
+  val EVAL_ENSEMBLE_GRAPH_MODEL = ENV_FILES ++ Seq(
+    DISTRIBUTIONAL_GRAPH_FILE, EVAL_ENSEMBLE_FILE)
+}
