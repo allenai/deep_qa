@@ -1,26 +1,12 @@
-(define best-params (deserialize (car ARGV)))
+(define best-params (deserialize (cadr ARGV)))
 
-(define UNKNOWN-WORD "<UNK>")
 (define BASELINE-PROB 0.5)
 ; original value
 ; (define BASELINE-PROB 0.9)
 
-(define get-cluster (word word-cluster-dict word-cluster-names cluster-dict clusters)
-  (if (dictionary-contains word word-cluster-dict)
-    (array-get-ith-element clusters
-                           (dictionary-lookup (array-get-ith-element word-cluster-names
-                                                                     (dictionary-lookup word word-cluster-dict)) cluster-dict))
-    (array-get-ith-element clusters
-                           (dictionary-lookup (array-get-ith-element word-cluster-names
-                                                                     (dictionary-lookup UNKNOWN-WORD word-cluster-dict)) cluster-dict))))
-
 (define expression-eval (expr)
-  (let ((word-parameters (get-ith-parameter best-params 0))
-        (entity-parameters (get-ith-parameter best-params 1))
-        (word-rel-parameters (get-ith-parameter best-params 2))
-        (entity-tuple-parameters (get-ith-parameter best-params 3))
-        (us-word-cat (word-family word-parameters entity-parameters))
-        (us-word-rel (word-rel-family word-rel-parameters entity-tuple-parameters)))
+  (let ((us-word-cat (get-word-cat best-params))
+        (us-word-rel (get-word-rel best-params)))
 
     (define word-cat (word)
       (lambda (entity)

@@ -23,13 +23,21 @@
       ))
   word-rel)
 
-(define expression-family (parameters)
+(define get-word-cat (parameters)
   (let ((word-parameters (get-ith-parameter parameters 0))
         (entity-parameters (get-ith-parameter parameters 1))
-        (word-rel-parameters (get-ith-parameter parameters 2))
+        (word-cat (word-family word-parameters entity-parameters)))
+    word-cat))
+
+(define get-word-rel (parameters)
+  (let ((word-rel-parameters (get-ith-parameter parameters 2))
         (entity-tuple-parameters (get-ith-parameter parameters 3))
-        (word-cat (word-family word-parameters entity-parameters))
         (word-rel (word-rel-family word-rel-parameters entity-tuple-parameters)))
+    word-rel))
+
+(define expression-family (parameters)
+  (let ((word-cat (get-word-cat parameters))
+        (word-rel (get-word-rel parameters)))
     (define expression-evaluator (expression entities)
       (eval expression))
     expression-evaluator))
@@ -61,15 +69,24 @@
       ))
   word-rel)
 
-(define expression-ranking-family (parameters)
+(define get-ranking-word-cat (parameters)
   (let ((word-parameters (get-ith-parameter parameters 0))
         (entity-parameters (get-ith-parameter parameters 1))
-        (word-rel-parameters (get-ith-parameter parameters 2))
+        (word-cat (word-ranking-family word-parameters entity-parameters)))
+    word-cat))
+
+(define get-ranking-word-rel (parameters)
+  (let ((word-rel-parameters (get-ith-parameter parameters 2))
         (entity-tuple-parameters (get-ith-parameter parameters 3))
-        (word-cat (word-ranking-family word-parameters entity-parameters))
         (word-rel (word-rel-ranking-family word-rel-parameters entity-tuple-parameters)))
-    (eval define-expression-evaluator)
+    word-rel))
+
+(define expression-ranking-family (parameters)
+  (let ((word-cat (get-ranking-word-cat parameters))
+        (word-rel (get-ranking-word-rel parameters))
+        (expression-evaluator (get-expression-evaluator word-cat word-rel)))
     expression-evaluator))
+
 
 (define expression-parameters
   (make-parameter-list (list (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))

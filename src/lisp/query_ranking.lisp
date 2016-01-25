@@ -1,6 +1,4 @@
-; UGLY, but it seems like the only way to have just one place where I specify the model, which is
-; really orthogonal to how I train it.
-(define define-expression-evaluator (quote
+(define get-expression-evaluator (word-cat word-rel)
   (define expression-evaluator (expression arg-entities arg1s arg2s positive-set-ind)
     (let ((arg1-candidates (apply dset-intersect (map (lambda (x) (array-get-ith-element arg1-arg2-map (dictionary-lookup x entities))) arg1s)))
           (arg2-candidates (apply dset-intersect (map (lambda (x) (array-get-ith-element arg2-arg1-map (dictionary-lookup x entities))) arg2s)))
@@ -23,4 +21,4 @@
           )
         )
       ))
-))
+  expression-evaluator)
