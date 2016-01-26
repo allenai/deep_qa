@@ -5,4 +5,5 @@ target/
 *.pyc
 data/
 output/
-results*/
+*results*/
+tmp*/
