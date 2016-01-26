@@ -9,46 +9,10 @@ import re
 
 from query_test_utils import *
 
-model_filename = sys.argv[1]
-baseline_model_filename = sys.argv[2]
-query_filename = sys.argv[3]
-all_data_file = sys.argv[4]
-data_dir = sys.argv[5]
-model_type = sys.argv[6]
-
 cat_query_format = '(expression-eval (quote (print-predicate-marginals %s (get-all-related-entities (list %s)))))'
 # cat_query_format = '(expression-eval (quote (print-predicate-marginals %s freq-entities)))'
 rel_query_format = '(expression-eval (quote (print-relation-marginals %s entity-tuple-array)))'
 # rel_query_format = '(expression-eval (quote (print-relation-marginals %s freq-entity-tuples)))'
-
-pool_depth=100
-run_depth=200
-
-entity_file= data_dir + '/entities.txt'
-# freq_entity_file= data_dir + '/10k_freq_entities.txt'
-word_file= data_dir + '/words.txt'
-
-DEBUG=True
-
-def read_entity_names(midfilename):
-    entity_names = {}
-    with open(midfilename, 'r') as midfile:
-        for line in midfile:
-            parts = line.split('\t')
-            
-            midpart = parts[0]
-            namepart = parts[1]
-            
-            mids = midpart.split(" ")
-            names = namepart.strip().split('" "')
-            
-            for i in xrange(len(mids)):
-                if not entity_names.has_key(mids[i]):
-                    entity_names[mids[i]] = set()
-                entity_names[mids[i]].add(names[i].strip('"'))
-
-    # print >> sys.stderr, entity_names
-    return entity_names
 
 def parse_result(lines):
     parsed = []
@@ -105,36 +69,6 @@ def read_until_prompt():
 
 
 # Start of the actual script:
-
-# Open subprocess to evaluate queries
-uschema_file = "src/lisp/universal_schema.lisp"
-if model_type.endswith("_graphs"):
-    if model_type != "ensemble_graphs":
-        model_type = model_type.replace("_graphs", "")
-    uschema_file = "src/lisp/universal_schema_with_graphs.lisp"
-
-process = None
-if model_type == "us":
-    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp --args '%s' src/lisp/environment.lisp %s %s %s src/lisp/run_universal_schema.lisp --interactive --noPrintOptions"''' % (model_filename, entity_file, word_file, uschema_file)
-elif model_type == "ccg":
-    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp src/lisp/environment.lisp %s %s %s %s src/lisp/run_universal_schema_baseline.lisp --interactive --noPrintOptions"''' % (baseline_model_filename, entity_file, word_file, uschema_file)
-elif model_type == "ensemble":
-    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp --args '%s' src/lisp/environment.lisp %s %s %s %s src/lisp/run_ensemble.lisp --interactive --noPrintOptions"''' % (model_filename, baseline_model_filename, entity_file, word_file, uschema_file)
-elif model_type == "ensemble_graphs":
-    command = '''sbt "runMain com.jayantkrish.jklol.lisp.cli.AmbLisp --args '%s' src/lisp/environment.lisp %s %s %s %s src/lisp/run_ensemble_with_graphs.lisp --interactive --noPrintOptions"''' % (model_filename, baseline_model_filename, entity_file, word_file, uschema_file)
-
-if DEBUG:
-    print >> sys.stderr, "Opening process..."
-    print >> sys.stderr, "Command:", command
-
-process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-
-fcntl.fcntl(process.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
-
-output = read_until_prompt()
-print output
-
-entity_names = read_entity_names(all_data_file)
 
 with open(query_filename, 'r') as query_file:
     average_precision_sum = 0.0
