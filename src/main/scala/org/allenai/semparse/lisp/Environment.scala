@@ -44,6 +44,9 @@ class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boole
   }
 }
 
+// We need somewhere to keep pointers to all of the lisp files that are possible inputs to the
+// Environment class.  This seems like a reasonable place.  There are also a few attempts at
+// grouping together files that go together.
 object Environment {
   val BASE_ENVIRONMENT_FILE = "src/lisp/environment.lisp"
   val USCHEMA_ENVIRONMENT_FILE = "src/lisp/uschema_environment.lisp"
