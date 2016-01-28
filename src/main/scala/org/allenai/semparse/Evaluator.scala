@@ -1,12 +1,9 @@
-package org.allenai.semparse.evaluation
+package org.allenai.semparse
 
 import java.io.FileWriter
 import java.io.File
 
 import scala.collection.mutable
-
-import org.allenai.semparse.lisp.Environment
-import org.allenai.semparse.training.Trainer
 
 import com.jayantkrish.jklol.lisp.ConsValue
 
@@ -47,13 +44,13 @@ class Evaluator(
 
     // Go through the test query file and get metrics for each query.
     for (line <- fileUtil.getLineIterator(queryFile)) {
-      numQueries += 1
 
       // Parsing the query here, which is in JSON format.
       val json = parse(line)
       val sentence = (json \ "sentence").extract[String]
       val queries = (json \ "queries").extract[Seq[JValue]]
       for (query <- queries) {
+        numQueries += 1
         val queryExpression = (query \ "queryExpression").extract[String]
         val midsInQuery = (query \ "midsInQuery").extract[Seq[String]]
         val correctIds = (query \ "correctAnswerIds").extract[Seq[String]].toSet
@@ -82,21 +79,21 @@ class Evaluator(
 
         // Now run the expression through the evaluation code and parse the result.
         val result = env.evalulateSExpression(expressionToEvaluate).getValue()
-        val entityScoreObjects = result.asInstanceOf[Array[Object]].take(poolDepth)
+        val entityScoreObjects = result.asInstanceOf[Array[Object]]
         val entityScores = entityScoreObjects.map(entityScoreObject => {
           val cons = entityScoreObject.asInstanceOf[ConsValue]
           val list = ConsValue.consListToList(cons, classOf[Object])
           val score = list.get(0).asInstanceOf[Double].toDouble
           val entity = list.get(1).asInstanceOf[String]
           (score, entity)
-        }).toSeq
+        }).toSeq.sortBy(-_._1).take(poolDepth)
 
         // Finally, compute statistics (like average precision) and output to a result file.
         writer.write(sentence)
         writer.write("\n")
         writer.write(queryExpression)
         writer.write("\n")
-        for ((score, entity) <- entityScores.sortBy(-_._1)) {
+        for ((score, entity) <- entityScores) {
           val names = entityNames.getOrElse(entity, "NO ENTITY NAME!")
           if (score > 0.0) {
             if (correctIds.contains(entity)) {
@@ -110,9 +107,10 @@ class Evaluator(
           }
         }
         val positiveScore = entityScores.filter(_._1 > 0.0)
+        if (positiveScore.size == 0) writer.write("\n")
         val averagePrecision = Evaluator.computeAveragePrecision(positiveScore.take(runDepth), correctIds)
         averagePrecisionSum += averagePrecision
-        writer.write(s"\nAP: $averagePrecision\n")
+        writer.write(s"AP: $averagePrecision\n")
         val weightedAveragePrecision = averagePrecision * correctIds.size
         weightedAPSum += weightedAveragePrecision
         writer.write(s"WAP: $weightedAveragePrecision\n")
@@ -158,17 +156,29 @@ class Evaluator(
 object Evaluator {
 
   // A helper method that really could belong in a different class.  Just computing average
-  // precision from a list of scored objects.  The list is assumed to be already sorted.
+  // precision from a list of scored objects.  We group and sort this list, just in case it wasn't
+  // done previously.  I don't expect that the inputs will ever be long enough that that's a
+  // problem.
   def computeAveragePrecision[T](scores: Seq[(Double, T)], correctInstances: Set[T]): Double = {
     if (correctInstances.size == 0) return 0
     var numPredictionsSoFar = 0
     var totalPrecision = 0.0
     var correctSoFar = 0.0  // this is a double to avoid casting later
-    for ((score, instance) <- scores) {
-      numPredictionsSoFar += 1
-      if (correctInstances.contains(instance)) {
-        correctSoFar += 1.0
-        totalPrecision += (correctSoFar / numPredictionsSoFar)
+
+    // These are double scores, so ties should be uncommon, but they do happen.
+    val grouped = scores.groupBy(_._1).toSeq.sortBy(-_._1)
+    for (resultsWithScore <- grouped) {
+      val score = resultsWithScore._1
+      for ((score, instance) <- resultsWithScore._2) {
+        numPredictionsSoFar += 1
+        if (correctInstances.contains(instance)) {
+          correctSoFar += 1.0
+        }
+      }
+      for ((score, instance) <- resultsWithScore._2) {
+        if (correctInstances.contains(instance)) {
+          totalPrecision += (correctSoFar / numPredictionsSoFar)
+        }
       }
     }
     totalPrecision / correctInstances.size
@@ -220,7 +230,7 @@ object Evaluator {
       }
     }
     println("Done reading entity name file")
-    midNames.par.mapValues(_.map(n => "\"" + n + "\"").mkString(" ")).seq.toMap
+    midNames.par.mapValues(_.toSeq.sorted.map(n => "\"" + n + "\"").mkString(" ")).seq.toMap
   }
 
   // This is kind of messy.  The issue is that we have lots of different lisp files that need to be
@@ -235,40 +245,40 @@ object Evaluator {
     usingGraphs: Boolean
   ): Environment = {
     val dataFiles = data match {
-      case "large" => Environment.COMMON_LARGE_DATA
-      case "small" => Environment.COMMON_SMALL_DATA
+      case "large" => Experiments.COMMON_LARGE_DATA
+      case "small" => Experiments.COMMON_SMALL_DATA
       case other => throw new RuntimeException("unrecognized data option")
     }
 
     val modelFiles = modelType match {
-      case "baseline" => Seq(Environment.BASELINE_MODEL_FILE)
+      case "baseline" => Seq(Experiments.BASELINE_MODEL_FILE)
       case "ensemble" => usingGraphs match {
-        case true => Seq(Environment.BASELINE_MODEL_FILE, Environment.GRAPH_MODEL_FILE)
-        case false => Seq(Environment.BASELINE_MODEL_FILE, Environment.DISTRIBUTIONAL_MODEL_FILE)
+        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.GRAPH_MODEL_FILE)
+        case false => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.DISTRIBUTIONAL_MODEL_FILE)
       }
       case "uschema" => usingGraphs match {
-        case true => Seq(Environment.GRAPH_MODEL_FILE)
-        case false => Seq(Environment.DISTRIBUTIONAL_MODEL_FILE)
+        case true => Seq(Experiments.GRAPH_MODEL_FILE)
+        case false => Seq(Experiments.DISTRIBUTIONAL_MODEL_FILE)
       }
       case other => throw new RuntimeException("unrecognized model type")
     }
 
     val evalFile = modelType match {
-      case "baseline" => Seq(Environment.EVAL_BASELINE_FILE)
-      case "uschema" => Seq(Environment.EVAL_USCHEMA_FILE)
-      case "ensemble" => Seq(Environment.EVAL_ENSEMBLE_FILE)
+      case "baseline" => Seq(Experiments.EVAL_BASELINE_FILE)
+      case "uschema" => Seq(Experiments.EVAL_USCHEMA_FILE)
+      case "ensemble" => Seq(Experiments.EVAL_ENSEMBLE_FILE)
       case other => throw new RuntimeException("unrecognized model type")
     }
 
     val sfeSpecFile = data match {
-      case "large" => Environment.LARGE_SFE_SPEC_FILE
-      case "small" => Environment.SMALL_SFE_SPEC_FILE
+      case "large" => Experiments.LARGE_SFE_SPEC_FILE
+      case "small" => Experiments.SMALL_SFE_SPEC_FILE
       case other => throw new RuntimeException("unrecognized data option")
     }
 
     val serializedModelFile = Trainer.getModelFile(data, ranking, usingGraphs, modelType == "baseline")
 
-    val baseInputFiles = dataFiles ++ Environment.ENV_FILES ++ modelFiles ++ evalFile
+    val baseInputFiles = dataFiles ++ Experiments.ENV_FILES ++ modelFiles ++ evalFile
     val baseExtraArgs = Seq(sfeSpecFile)
 
     // Most of the model lisp files assume there is a serialized parameters object passed in as the
@@ -304,32 +314,12 @@ object Evaluator {
     val fileUtil = new FileUtil
 
     // Input files that aren't specified elsewhere.
-    val largeDataFile = "data/tacl2015-training.txt"
-    val smallDataFile = "data/tacl2015-training-sample.txt"
-    lazy val smallEntityNames = loadEntityNames(smallDataFile)
-    lazy val largeEntityNames = loadEntityNames(largeDataFile)
-    val queryFile = "data/tacl2015-test.txt"
+    lazy val smallEntityNames = loadEntityNames(Experiments.SMALL_BASE_DATA_FILE)
+    lazy val largeEntityNames = loadEntityNames(Experiments.LARGE_BASE_DATA_FILE)
 
-    // What things should we evaluate?
-    val datasets = Seq("small") //, "large")
-    val modelTypes = Seq("uschema") //, "ensemble")
-    val rankings = Seq("predicate") //, "query")
-    val withGraphOrNot = Seq(true) //, false)
-    val baselineConfigs = Seq(
-      ("small", "baseline", "ignored", false)
-      //("large", "baseline", "ignored", false)
-    )
-
-    // Generate all possible combinations
-    val configs = for (data <- datasets;
-         modelType <- modelTypes;
-         ranking <- rankings;
-         usingGraphs <- withGraphOrNot) yield (data, modelType, ranking, usingGraphs)
-
-    // Now run the evaluation for them, if the model has been trained, and the evaluation hasn't
-    // already been done.
-    //(configs ++ baselineConfigs).par.foreach(config => {
-    baselineConfigs.par.foreach(config => {
+    // We run an evaluation for experiment listed in Experiments.experimentConfigs, if the model
+    // file is available and the evaluation hasn't already been done.
+    Experiments.experimentConfigs.par.foreach(config => {
       val (data, modelType, ranking, usingGraphs) = config
       val modelFile = Trainer.getModelFile(data, ranking, usingGraphs, modelType == "baseline")
       val outputFile = getOutputFile(data, modelType, ranking, usingGraphs)
@@ -347,7 +337,7 @@ object Evaluator {
           case "small" => smallEntityNames
         }
         println("Creating evaluator")
-        val evaluator = new Evaluator(env, queryFile, entityNames)
+        val evaluator = new Evaluator(env, Experiments.TEST_DATA_FILE, entityNames)
         fileUtil.mkdirs(new File(outputFile).getParent())
         val writer = fileUtil.getFileWriter(outputFile)
         evaluator.evaluate(writer)
