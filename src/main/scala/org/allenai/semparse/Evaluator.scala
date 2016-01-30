@@ -276,7 +276,6 @@ object Evaluator {
       case other => throw new RuntimeException("unrecognized data option")
     }
 
-    val serializedModelFile = Trainer.getModelFile(data, ranking, usingGraphs, modelType == "baseline")
 
     val baseInputFiles = dataFiles ++ Experiments.ENV_FILES ++ modelFiles ++ evalFile
     val baseExtraArgs = Seq(sfeSpecFile)
@@ -285,8 +284,19 @@ object Evaluator {
     // first extra argument.  The baseline, instead, has a lisp file as its "serialized model", so
     // we have to handle these two cases differently.
     val (inputFiles, extraArgs) = modelType match {
-      case "baseline" => (serializedModelFile +: baseInputFiles, baseExtraArgs)
-      case _ => (baseInputFiles, baseExtraArgs :+ serializedModelFile)
+      case "baseline" => {
+        val baselineModelFile = Trainer.getModelFile(data, ranking, usingGraphs, true)
+        (baselineModelFile +: baseInputFiles, baseExtraArgs)
+      }
+      case "ensemble" => {
+        val serializedModelFile = Trainer.getModelFile(data, ranking, usingGraphs, false)
+        val baselineModelFile = Trainer.getModelFile(data, ranking, usingGraphs, true)
+        (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
+      }
+      case "uschema" => {
+        val serializedModelFile = Trainer.getModelFile(data, ranking, usingGraphs, false)
+        (baseInputFiles, baseExtraArgs :+ serializedModelFile)
+      }
     }
 
     new Environment(inputFiles, extraArgs, true)
@@ -313,7 +323,8 @@ object Evaluator {
   def main(args: Array[String]) {
     val fileUtil = new FileUtil
 
-    // Input files that aren't specified elsewhere.
+    // We only want to load these once, because (especially on the large data set) it could take a
+    // while.  But do it lazily, in case we're not running an experiment config that needs them.
     lazy val smallEntityNames = loadEntityNames(Experiments.SMALL_BASE_DATA_FILE)
     lazy val largeEntityNames = loadEntityNames(Experiments.LARGE_BASE_DATA_FILE)
 
