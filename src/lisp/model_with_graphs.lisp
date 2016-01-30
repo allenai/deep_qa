@@ -41,9 +41,9 @@
 
 (define get-word-rel (parameters)
   (let ((word-rel-parameters (get-ith-parameter parameters 3))
-        (entity-tuple-parameters (get-ith-parameter parameters 4))
-        (word-rel-graph-parameters (get-ith-parameter parameters 5))
-        (word-rel (word-rel-family word-rel-parameters entity-tuple-parameters)))
+        (word-rel-graph-parameters (get-ith-parameter parameters 4))
+        (entity-tuple-parameters (get-ith-parameter parameters 5))
+        (word-rel (word-rel-family word-rel-parameters entity-tuple-parameters word-rel-graph-parameters)))
     word-rel))
 
 (define expression-family (parameters)
@@ -95,9 +95,9 @@
 
 (define get-ranking-word-rel (parameters)
   (let ((word-rel-parameters (get-ith-parameter parameters 3))
-        (entity-tuple-parameters (get-ith-parameter parameters 4))
-        (word-rel-graph-parameters (get-ith-parameter parameters 5))
-        (word-rel (word-rel-ranking-family word-rel-parameters entity-tuple-parameters)))
+        (word-rel-graph-parameters (get-ith-parameter parameters 4))
+        (entity-tuple-parameters (get-ith-parameter parameters 5))
+        (word-rel (word-rel-ranking-family word-rel-parameters entity-tuple-parameters word-rel-graph-parameters)))
     word-rel))
 
 (define expression-ranking-family (parameters)

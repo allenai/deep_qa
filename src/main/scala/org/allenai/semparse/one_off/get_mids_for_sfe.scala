@@ -10,19 +10,19 @@ import org.json4s.native.JsonMethods.parse
 object get_mids_for_sfe {
   implicit val formats = DefaultFormats
 
-  val training_file = "data/tacl2015-training-sample.txt"
+  val training_file = "data/tacl2015-training.txt"
   val test_file = "data/tacl2015-test.txt"
 
-  val training_mids_file = "data/training-mids.txt"
-  val training_mid_pairs_file = "data/training-mid-pairs.txt"
-  val mid_words_file = "data/training-mid-words.txt"
-  val mid_pair_words_file = "data/training-mid-pair-words.txt"
-  val test_mids_file = "data/test-mids.txt"
+  val training_mids_file = "data/large/training-mids.txt"
+  val training_mid_pairs_file = "data/large/training-mid-pairs.txt"
+  val mid_words_file = "data/large/training-mid-words.txt"
+  val mid_pair_words_file = "data/large/training-mid-pair-words.txt"
+  val test_mids_file = "data/large/test-mids.txt"
   val fileUtil = new FileUtil()
 
   def main(args: Array[String]) {
-    val training_mids = get_training_mids()
-    val test_mids = get_test_mids()
+    get_training_mids()
+    get_test_mids()
   }
 
   def get_training_mids() {
@@ -31,7 +31,9 @@ object get_mids_for_sfe {
     val mid_pairs = new mutable.HashSet[(String, String)]
     val mid_words = new mutable.HashMap[String, Seq[String]].withDefaultValue(Nil)
     val mid_pair_words = new mutable.HashMap[(String, String), Seq[String]].withDefaultValue(Nil)
+    var i = 0
     for (line <- fileUtil.getLineIterator(training_file)) {
+      i += 1
       val fields = line.split("\t")
       if (fields(0).contains(" ")) {
         // We're dealing with a mid pair, or a relation word, here.
@@ -48,7 +50,15 @@ object get_mids_for_sfe {
         val mid = fields(0)
         val word = fields(2)
         mids += mid
-        process_json_obj(parse(fields(5)), mids, mid_pairs)
+        try {
+          process_json_obj(parse(fields(5)), mids, mid_pairs)
+        } catch {
+          case e: Exception => {
+            println(s"Bad line $i: $line")
+            println(s"Supposed json: ${fields(5)}")
+            throw e
+          }
+        }
         mid_words.update(mid, mid_words(mid) :+ word)
       }
     }

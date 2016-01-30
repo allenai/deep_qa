@@ -10,9 +10,9 @@ object Experiments {
   // possibilities, this will need some re-thinking to be more sane.
   val experimentConfigs: Seq[(String, String, String, Boolean)] = {
     val datasets = Seq("small") //, "large")
-    val modelTypes = Seq("uschema") //, "ensemble")
-    val rankings = Seq("predicate") //, "query")
-    val withGraphOrNot = Seq(false) //, true)
+    val modelTypes = Seq("uschema", "ensemble")
+    val rankings = Seq("predicate", "query")
+    val withGraphOrNot = Seq(true, false)
     val baselineConfigs = Seq(
       ("small", "baseline", "ignored", false)
       //("large", "baseline", "ignored", false)
@@ -24,8 +24,7 @@ object Experiments {
          ranking <- rankings;
          usingGraphs <- withGraphOrNot) yield (data, modelType, ranking, usingGraphs)
 
-    //(configs ++ baselineConfigs)
-    configs
+    (configs ++ baselineConfigs)
   }
 
   val BASE_ENVIRONMENT_FILE = "src/lisp/environment.lisp"

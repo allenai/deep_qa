@@ -66,7 +66,7 @@ object do_feature_selection {
     outfile: String
   ) {
     println("Reading features from file")
-    val featuresForMid = readFeaturesFromFile(infile)
+    val featuresForMid = readFeaturesFromFile(infile, Set())
     printTopKeys(featuresForMid, 10)
     println("Reading MID-word file")
     val midWords = readMidWords(mid_word_file)
@@ -85,13 +85,20 @@ object do_feature_selection {
     outputWordFeatures(keptFeaturesForWords, outfile + "_per_word.tsv")
   }
 
-  def readFeaturesFromFile(infile: String): Map[Mid, Seq[Feature]] = {
+  def readFeaturesFromFile(infile: String, allowedFeatures: Set[String]): Map[Mid, Seq[Feature]] = {
     println(s"Reading features from file $infile")
     fileUtil.getLineIterator(infile).grouped(1024).flatMap(lines => {
       lines.par.map(line => {
         val fields = line.split("\t")
         val key = fields(0).trim.replace(",", " ")
-        val features = fields(2).trim.split(" -#- ").map(f => Feature(f.replace(",1.0", "")))
+        val features = fields(2).trim.split(" -#- ").flatMap(f => {
+          val feature = f.replace(",1.0", "")
+          if (allowedFeatures.contains(feature)) {
+            Seq(Feature(feature))
+          } else {
+            Seq()
+          }
+        })
         (Mid(key), features.toSeq)
       })
     }).toMap.seq
