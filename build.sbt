@@ -12,7 +12,7 @@ fork := true
 
 connectInput := true
 
-javaOptions ++= Seq("-Xmx160g")
+javaOptions ++= Seq("-Xmx100g")
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "1.6.0",

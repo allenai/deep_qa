@@ -55,7 +55,6 @@ object SparkPmiComputer {
       val fields = line.split("\t")
       val mid = fields(0)
       val words = midWordCounts.value.getOrElse(mid, Seq.empty)
-      // TODO(matt): make these counts first, it should cut down a _lot_ on the intermediate output
       val features = fields(2).trim.split(" -#- ").map(f => f.replace(",1.0", ""))
       for ((word, wordCount) <- words;
            feature <- features) yield ((word, feature) -> wordCount)
