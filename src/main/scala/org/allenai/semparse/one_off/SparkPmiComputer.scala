@@ -47,23 +47,25 @@ object SparkPmiComputer {
 
     // PB here and below is "pre-broadcast" - it's a sign that you shouldn't be using this variable
     // anywhere except in a call to sc.broadcast()
-    val midWordsPB = sc.textFile(midWordFile(mid_or_pair)).map(line => {
+    val midWordCountsPB = sc.textFile(midWordFile(mid_or_pair)).map(line => {
       val fields = line.split("\t")
       val mid = fields(0)
       val words = fields.drop(1).toSeq
-      (mid -> words)
+      // The last .map(identity) is because of a scala bug - Map#mapValues is not serializable.
+      val wordCounts = words.groupBy(identity).mapValues(_.size).map(identity)
+      (mid -> wordCounts.toMap)
     })
-    println(s"Read words for ${midWordsPB.count} mids")
-    val midWords = sc.broadcast(midWordsPB.collectAsMap)
+    println(s"Read words for ${midWordCountsPB.count} mids")
+    val midWordCounts = sc.broadcast(midWordCountsPB.collectAsMap)
 
     val wordFeatureCounts = sc.textFile(matrixFile(mid_or_pair), 1500).flatMap(line => {
       val fields = line.split("\t")
       val mid = fields(0)
-      val words = midWords.value.getOrElse(mid, Seq.empty)
+      val words = midWordCounts.value.getOrElse(mid, Seq.empty)
       // TODO(matt): make these counts first, it should cut down a _lot_ on the intermediate output
       val features = fields(2).trim.split(" -#- ").map(f => f.replace(",1.0", ""))
-      for (word <- words;
-           feature <- features) yield ((word, feature) -> 1)
+      for ((word, wordCount) <- words;
+           feature <- features) yield ((word, feature) -> wordCount)
     }).reduceByKey(_+_)
     wordFeatureCounts.persist()
 
