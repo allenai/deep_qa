@@ -4,11 +4,12 @@
 # https://github.com/amplab/spark-ec2/tree/branch-1.4/scala/init.sh
 # https://github.com/amplab/spark-ec2/tree/branch-1.4/scala/init.sh
 
-AWS_PEM_FILE="/home/mattg/.aws/mattg-spark.pem"
+AWS_PEM_FILE="$HOME/.aws/mattg-spark.pem"
+KEYPAIR_NAME="mattg-spark"
 NUM_SLAVES=30
 
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ROOT_DIR=$DIR/..
+ROOT_DIR=$DIR/../..
 SCRIPT_NAME=$0
 
 if [ -z "$AWS_PEM_FILE" ]
@@ -18,7 +19,7 @@ then
 fi
 
 SPARK_VERSION=${SPARK_VERSION:-1.4.1}
-CLUSTER_NAME=${CLUSTER_NAME:-s2-spark-job-$USER}
+CLUSTER_NAME=${CLUSTER_NAME:-$USER-spark-job}
 REGION=${REGION:-us-west-2}
 ZONE=${ZONE:-us-west-2b}
 INSTANCE_TYPE=${INSTANCE_TYPE:-m3.xlarge}
@@ -56,7 +57,7 @@ function install {
 function launch {
     install
     $SPARK_EC2 \
-        --key-pair=dev-keypair \
+        --key-pair=$KEYPAIR_NAME \
         --identity-file=$AWS_PEM_FILE \
         --slaves=$NUM_SLAVES \
         --region=$REGION \

@@ -7,31 +7,24 @@ object SparkPmiComputer {
 
   val dataSize = "small"
   val MIN_FEATURE_COUNT = dataSize match {
-    case "large" => Map(("mid" -> 5000), ("mid pair" -> 500))
+    case "large" => Map(("mid" -> 2000), ("mid pair" -> 100))
     case "small" => Map(("mid" -> 1000), ("mid pair" -> 50))
   }
   val FEATURES_PER_WORD = 100
 
   val matrixFile = Map(
-    ("mid" -> s"/home/mattg/pra/results/semparse/$dataSize/mids/unknown/training_matrix.tsv"),
-    ("mid pair" -> s"/home/mattg/pra/results/semparse/$dataSize/mid_pairs/unknown/training_matrix.tsv")
+    ("mid" -> s"s3://mattg-pipeline-tmp/${dataSize}_mid_training_matrix.tsv"),
+    ("mid pair" -> s"s3://mattg-pipeline-tmp/${dataSize}_mid_pair_training_matrix.tsv")
   )
 
   val midWordFile = Map(
-    ("mid" -> s"/home/mattg/clone/tacl2015-factorization/data/$dataSize/training-mid-words.txt"),
-    ("mid pair" -> s"/home/mattg/clone/tacl2015-factorization/data/$dataSize/training-mid-pair-words.txt")
+    ("mid" -> s"s3://mattg-pipeline-tmp/${dataSize}_mid_words.tsv"),
+    ("mid pair" -> s"s3://mattg-pipeline-tmp/${dataSize}_mid_pair_words.tsv")
   )
 
-  /*
   val wordFeatureFile = Map(
-    ("mid" -> s"/home/mattg/clone/tacl2015-factorization/data/$dataSize/cat_word_features.tsv"),
-    ("mid pair" -> s"/home/mattg/clone/tacl2015-factorization/data/$dataSize/rel_word_features.tsv")
-  )
-  */
-
-  val wordFeatureFile = Map(
-    ("mid" -> s"/home/mattg/clone/tacl2015-factorization/test_cat_word_features.tsv"),
-    ("mid pair" -> s"/home/mattg/clone/tacl2015-factorization/test_rel_word_features.tsv")
+    ("mid" -> s"s3://mattg-pipeline-tmp/${dataSize}_cat_word_features.tsv"),
+    ("mid pair" -> s"s3://mattg-pipeline-tmp/${dataSize}_rel_word_features.tsv")
   )
 
   def main(args: Array[String]) {
@@ -40,7 +33,7 @@ object SparkPmiComputer {
   }
 
   def runSpark(mid_or_pair: String) {
-    val conf = new SparkConf().setAppName(s"Compute PMI ($mid_or_pair)").setMaster("local[*]")
+    val conf = new SparkConf().setAppName(s"Compute PMI ($mid_or_pair)")
     val sc = new SparkContext(conf)
 
     val minFeatureCount = MIN_FEATURE_COUNT(mid_or_pair)
