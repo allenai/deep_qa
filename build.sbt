@@ -2,7 +2,7 @@ organization := "org.allenai"
 
 name := "semparse"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.10.5"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
@@ -12,7 +12,7 @@ fork := true
 
 connectInput := true
 
-javaOptions ++= Seq("-Xmx100g")
+javaOptions ++= Seq("-Xmx140g")
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "1.6.0",

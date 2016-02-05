@@ -22,7 +22,7 @@ SPARK_VERSION=${SPARK_VERSION:-1.4.1}
 CLUSTER_NAME=${CLUSTER_NAME:-$USER-spark-job}
 REGION=${REGION:-us-west-2}
 ZONE=${ZONE:-us-west-2b}
-INSTANCE_TYPE=${INSTANCE_TYPE:-m3.xlarge}
+INSTANCE_TYPE=${INSTANCE_TYPE:-r3.8xlarge}
 VPC=${VPC:-vpc-681db30d}
 SUBNET=${SUBNET:-subnet-c49616a1}
 NUM_SLAVES=${NUM_SLAVES:-5}
@@ -118,7 +118,7 @@ function start {
     rsync_with_opts target/scala-2.10/$JAR root@$(master):~/
     run "nohup sh -c \"( (source spark/conf/spark-env.sh && \
         source spark-ec2/ec2-variables.sh && \
-        spark/bin/spark-submit --class $CLASS_NAME --master $(master_url) $JAR &> log.txt;
+        spark/bin/spark-submit --conf spark.driver.memory=20g --class $CLASS_NAME --master $(master_url) $JAR &> log.txt;
         echo DONE >> log.txt) & )\""
     log
 }

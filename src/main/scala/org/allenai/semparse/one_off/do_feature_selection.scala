@@ -99,7 +99,7 @@ object do_feature_selection {
             Seq()
           }
         })
-        (Mid(key), features.toSeq)
+        (Mid(key), features.toSeq ++ Seq(Feature("bias")))
       })
     }).toMap.seq
   }

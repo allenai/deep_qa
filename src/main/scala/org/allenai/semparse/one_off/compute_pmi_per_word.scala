@@ -54,15 +54,15 @@ object compute_pmi_per_word {
   def runPipeline(mid_or_pair: String) {
     println(s"Running pipeline for $mid_or_pair")
     // First we take the original matrix and find a set of potential features.
-    val features = getFeaturesThatMeetCutoff(matrix_file(mid_or_pair), MIN_FEATURE_COUNT(mid_or_pair))
-    println(s"Kept ${features.size} features")
+    //val features = getFeaturesThatMeetCutoff(matrix_file(mid_or_pair), MIN_FEATURE_COUNT(mid_or_pair))
+    //println(s"Kept ${features.size} features")
 
     // Then we go through the matrix file again, and output new files that we can use to get the
     // counts we need for computing PMI.
-    createCountFiles(mid_or_pair, features)
+    //createCountFiles(mid_or_pair, features)
 
     // Then we actually read those count files and do the PMI computation.
-    loadFilesAndComputePmi(mid_or_pair)
+    //loadFilesAndComputePmi(mid_or_pair)
 
     // Finally, we go through the feature matrix we output in createCountFiles and remove all
     // features that weren't selected by the PMI computation.

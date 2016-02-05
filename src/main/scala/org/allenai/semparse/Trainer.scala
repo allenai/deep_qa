@@ -79,7 +79,9 @@ object Trainer {
     // We train a model for each experiment listed in Experiments.experimentConfigs, if the
     // configuration is one that we can actually train, and if the model file isn't already
     // present.
-    // And, for now, we'll do this sequentially, as parallel output would be a big mess.
+    //
+    // And, for now, we'll do this sequentially, as parallel output in the terminal would be a big
+    // mess (not to mention it'd probably take too much memory).
     Experiments.experimentConfigs.foreach(config => {
       val (data, modelType, ranking, usingGraphs) = config
       val modelFile = getModelFile(data, ranking, usingGraphs, modelType == "baseline")

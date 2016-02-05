@@ -9,12 +9,12 @@ object Experiments {
   // type, what ranking method, and whether to use graph-based features.  If we add very many more
   // possibilities, this will need some re-thinking to be more sane.
   val experimentConfigs: Seq[(String, String, String, Boolean)] = {
-    val datasets = Seq("small") //, "large")
-    val modelTypes = Seq("uschema", "ensemble")
-    val rankings = Seq("predicate", "query")
-    val withGraphOrNot = Seq(true, false)
+    val datasets = Seq("small", "large")
+    val modelTypes = Seq("uschema")//, "ensemble")
+    val rankings = Seq("query")//, "predicate")
+    val withGraphOrNot = Seq(true)//, false)
     val baselineConfigs = Seq(
-      ("small", "baseline", "ignored", false)
+      //("small", "baseline", "ignored", false)
       //("large", "baseline", "ignored", false)
     )
 
