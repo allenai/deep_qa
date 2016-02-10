@@ -27,20 +27,20 @@ object Experiments {
     (configs ++ baselineConfigs)
   }
 
-  val BASE_ENVIRONMENT_FILE = "src/lisp/environment.lisp"
-  val USCHEMA_ENVIRONMENT_FILE = "src/lisp/uschema_environment.lisp"
+  val BASE_ENVIRONMENT_FILE = "src/main/lisp/environment.lisp"
+  val USCHEMA_ENVIRONMENT_FILE = "src/main/lisp/uschema_environment.lisp"
 
-  val DISTRIBUTIONAL_MODEL_FILE = "src/lisp/model.lisp"
-  val GRAPH_MODEL_FILE = "src/lisp/model_with_graphs.lisp"
-  val BASELINE_MODEL_FILE = "src/lisp/baseline_model.lisp"
+  val DISTRIBUTIONAL_MODEL_FILE = "src/main/lisp/model.lisp"
+  val GRAPH_MODEL_FILE = "src/main/lisp/model_with_graphs.lisp"
+  val BASELINE_MODEL_FILE = "src/main/lisp/baseline_model.lisp"
 
-  val PREDICATE_RANKING_FILE = "src/lisp/predicate_ranking.lisp"
-  val QUERY_RANKING_FILE = "src/lisp/query_ranking.lisp"
-  val TRAIN_FILE = "src/lisp/train_model.lisp"
+  val PREDICATE_RANKING_FILE = "src/main/lisp/predicate_ranking.lisp"
+  val QUERY_RANKING_FILE = "src/main/lisp/query_ranking.lisp"
+  val TRAIN_FILE = "src/main/lisp/train_model.lisp"
 
-  val EVAL_BASELINE_FILE = "src/lisp/eval_baseline.lisp"
-  val EVAL_USCHEMA_FILE = "src/lisp/eval_uschema.lisp"
-  val EVAL_ENSEMBLE_FILE = "src/lisp/eval_ensemble.lisp"
+  val EVAL_BASELINE_FILE = "src/main/lisp/eval_baseline.lisp"
+  val EVAL_USCHEMA_FILE = "src/main/lisp/eval_uschema.lisp"
+  val EVAL_ENSEMBLE_FILE = "src/main/lisp/eval_ensemble.lisp"
 
   val SMALL_BASE_DATA_FILE = "data/tacl2015-training-sample.txt"
   val SMALL_WORD_FILE = "data/small/words.lisp"
