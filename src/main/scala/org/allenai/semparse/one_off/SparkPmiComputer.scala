@@ -10,8 +10,8 @@ object SparkPmiComputer {
   // I guess I could make these command-line arguments, but for now, just change these and
   // recompile to run in different configurations.
   val dataSize = "large"  // "small" or "large"
-  val runningLocally = true
-  val midOrPairToRun = "mid pair"  // "mid" or "mid pair"
+  val runningLocally = false
+  val midOrPairToRun = "mid"  // "mid" or "mid pair"
 
   val numPartitions = dataSize match {
     case "large" => 10000
@@ -60,12 +60,17 @@ object SparkPmiComputer {
   }
 
   def main(args: Array[String]) {
-    runSpark(midOrPairToRun)
+    // TODO(matt): make a better CLI, including getting the hard-coded parameters up top.
+    val accessKeyId = args(0)
+    val secretAccessKey = args(1)
+    runSpark(midOrPairToRun, accessKeyId, secretAccessKey)
   }
 
-  def runSpark(mid_or_pair: String) {
+  def runSpark(mid_or_pair: String, accessKeyId: String, secretAccessKey: String) {
     val conf = new SparkConf().setAppName(s"Compute PMI ($mid_or_pair)")
       .set("spark.driver.maxResultSize", "0")
+      .set("fs.s3n.awsAccessKeyId", accessKeyId)
+      .set("fs.s3n.awsSecretAccessKey", secretAccessKey)
       .set("spark.network.timeout", "1000000")
       .set("spark.akka.frameSize", "1028")
 
