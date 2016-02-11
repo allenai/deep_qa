@@ -114,4 +114,9 @@ class SfeFeatureComputer(specFile: String, fileUtil: FileUtil = new FileUtil) {
       Seq(bias)
     }
   }
+
+  def findRelatedEntities(word: String, mid: String, isSource: Boolean): Set[String] = {
+    val features = getFeaturesForRelWord(word)
+    nodePairFeatureGenerator.getRelatedNodes(mid, isSource, features, graph)
+  }
 }
