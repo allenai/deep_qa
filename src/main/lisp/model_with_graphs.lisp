@@ -121,3 +121,6 @@
                              (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality))
                                                              (dictionary-to-array entity-tuples)))
                              )))
+
+(define find-related-entities (midsInQuery midRelationsInQuery)
+  (array-merge-sets (get-all-related-entities midsInQuery) (find-related-entities-in-graph midRelationsInQuery)))

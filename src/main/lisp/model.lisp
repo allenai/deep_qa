@@ -111,3 +111,4 @@
                (dictionary-to-array rel-words))
     ))
 
+(define find-related-entities (midsInQuery midRelationsInQuery) (get-all-related-entities midsInQuery))
