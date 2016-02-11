@@ -26,7 +26,7 @@ class Evaluator(
 ) {
   implicit val formats = DefaultFormats
 
-  val catQueryFormat = "(expression-eval (quote (get-predicate-marginals %s (get-all-related-entities (list %s)))))"
+  val catQueryFormat = "(expression-eval (quote (get-predicate-marginals %s (find-related-entities (list %s) (list %s)))))"
 
   // NOTE: the test data currently does not have any relation queries, so this does not get used.
   val relQueryFormat = "(expression-eval (quote (get-relation-marginals %s entity-tuple-array)))"
@@ -53,6 +53,7 @@ class Evaluator(
         numQueries += 1
         val queryExpression = (query \ "queryExpression").extract[String]
         val midsInQuery = (query \ "midsInQuery").extract[Seq[String]]
+        val midRelationsInQuery = (query \ "midRelationsInQuery").extract[Seq[JValue]]
         val correctIds = (query \ "correctAnswerIds").extract[Seq[String]].toSet
         if (correctIds.size == 0) {
           numNoAnswerQueries += 1
@@ -74,7 +75,15 @@ class Evaluator(
           relQueryFormat.format(queryExpression)
         } else {
           val midStr = midsInQuery.map(m => "\"" + m + "\"").mkString(" ")
-          catQueryFormat.format(queryExpression, midStr)
+          val midRelationStr = midRelationsInQuery.map(jval => {
+            val list = jval.extract[Seq[JValue]]
+            val word = list(0).extract[String]
+            val arg = list(1).extract[String]
+            val isSource = list(2).extract[Boolean]
+            val isSourceStr = if (isSource) "#t" else "#f"
+            s"(list $word $arg $isSourceStr)"
+          }).mkString(" ")
+          catQueryFormat.format(queryExpression, midStr, midRelationStr)
         }
 
         // Now run the expression through the evaluation code and parse the result.
