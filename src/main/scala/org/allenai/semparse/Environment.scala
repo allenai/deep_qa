@@ -48,13 +48,14 @@ class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boole
 
   // This defines some functions that we can use in lisp code without defining them there.
   def bindBuiltinFunctions(env: JEnv, symbolTable: IndexedList[String]) {
-    env.bindName("get-entity-features", new GetEntityFeatures(), symbolTable);
-    env.bindName("get-entity-tuple-features", new GetEntityPairFeatures(), symbolTable);
-    env.bindName("get-entity-feature-difference", new GetEntityFeatureDifference(), symbolTable);
-    env.bindName("get-entity-tuple-feature-difference", new GetEntityPairFeatureDifference(), symbolTable);
-    env.bindName("get-cat-word-feature-list", new GetCatWordFeatureList(), symbolTable);
-    env.bindName("get-rel-word-feature-list", new GetRelWordFeatureList(), symbolTable);
     env.bindName("create-sfe-feature-computer", new CreateSfeFeatureComputer(), symbolTable);
     env.bindName("display-parameters", new DisplayParameters(), symbolTable);
+    env.bindName("find-related-entities-in-graph", new FindRelatedEntities(), symbolTable);
+    env.bindName("get-cat-word-feature-list", new GetCatWordFeatureList(), symbolTable);
+    env.bindName("get-entity-feature-difference", new GetEntityFeatureDifference(), symbolTable);
+    env.bindName("get-entity-features", new GetEntityFeatures(), symbolTable);
+    env.bindName("get-entity-tuple-feature-difference", new GetEntityPairFeatureDifference(), symbolTable);
+    env.bindName("get-entity-tuple-features", new GetEntityPairFeatures(), symbolTable);
+    env.bindName("get-rel-word-feature-list", new GetRelWordFeatureList(), symbolTable);
   }
 }

@@ -21,6 +21,37 @@ class CreateSfeFeatureComputer extends AmbFunctionValue {
   }
 }
 
+class DisplayParameters extends AmbFunctionValue {
+  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+    Preconditions.checkArgument(argumentValues.size() == 1)
+    val params = argumentValues.get(0).asInstanceOf[SpecAndParameters]
+    val stats = params.getParameters()
+    println(stats.getDescription())
+    ConstantValue.TRUE
+  }
+}
+
+class FindRelatedEntities extends AmbFunctionValue {
+  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+    Preconditions.checkArgument(argumentValues.size() == 2)
+    val midRelations = ConsValue.consListToList(argumentValues.get(0))
+    val featureComputer = argumentValues.get(1).asInstanceOf[SfeFeatureComputer]
+
+    val parsedMidRelations = midRelations.asScala.map(midRelation => {
+      val list = ConsValue.consListToList(midRelation).asScala.toSeq
+      val word = list(0).asInstanceOf[String]
+      val mid = list(1).asInstanceOf[String]
+      val isSource = list(2).asInstanceOf[Boolean]
+      (word, mid, isSource)
+    })
+
+    val relatedEntities = parsedMidRelations.flatMap {
+      case (word, mid, isSource) => featureComputer.findRelatedEntities(word, mid, isSource)
+    }
+    relatedEntities.toArray
+  }
+}
+
 class GetCatWordFeatureList extends AmbFunctionValue {
   override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 2)
@@ -94,15 +125,5 @@ class GetEntityPairFeatureDifference extends AmbFunctionValue {
     val positiveVector = featureComputer.getEntityPairFeatures(entity1, entity2, word)
     val negativeVector = featureComputer.getEntityPairFeatures(neg_entity1, neg_entity2, word)
     positiveVector.elementwiseAddition(negativeVector.elementwiseProduct(-1))
-  }
-}
-
-class DisplayParameters extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
-    Preconditions.checkArgument(argumentValues.size() == 1)
-    val params = argumentValues.get(0).asInstanceOf[SpecAndParameters]
-    val stats = params.getParameters()
-    println(stats.getDescription())
-    ConstantValue.TRUE
   }
 }

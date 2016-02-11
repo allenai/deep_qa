@@ -123,4 +123,4 @@
                              )))
 
 (define find-related-entities (midsInQuery midRelationsInQuery)
-  (array-merge-sets (get-all-related-entities midsInQuery) (find-related-entities-in-graph midRelationsInQuery)))
+  (array-merge-sets (get-all-related-entities midsInQuery) (find-related-entities-in-graph midRelationsInQuery graph-features)))
