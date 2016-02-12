@@ -33,7 +33,7 @@ abstract class CachedFeatureDictionary(
         if (!cacheMisses.isEmpty) {
           println(s"Saving cache misses to $featureFile")
           val lines = cacheMisses.map(entry => {
-            entry._1 + "\t" + entry._2.mkString("\t")
+            entry._1 + "\t" + entry._2.mkString(" -#- ")
           })
           fileUtil.writeLinesToFile(featureFile, lines, true)
         }

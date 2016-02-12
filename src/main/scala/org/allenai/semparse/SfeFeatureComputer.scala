@@ -15,6 +15,8 @@ import edu.cmu.ml.rtw.users.matt.util.SpecFileReader
 
 import org.json4s._
 
+import scala.collection.mutable
+
 class SfeFeatureComputer(specFile: String, fileUtil: FileUtil = new FileUtil) {
   implicit val formats = DefaultFormats
   val params = new SpecFileReader("/dev/null").readSpecFile(specFile)
@@ -115,8 +117,24 @@ class SfeFeatureComputer(specFile: String, fileUtil: FileUtil = new FileUtil) {
     }
   }
 
+  // This is only used at test time, on a relatively small set of entities.  Some of them repeat a
+  // few times, though, and for hub entities, this can be an expensive computation.  So we're going
+  // to cache the results of the findRelatedEntities computation.
+  //
+  // And, we currently ignore the word when finding related entities (we just look for direct (or
+  // mediated) connections), so we just have the mid as the key here, instead of (word, mid).
+  val cachedRelatedEntities = new mutable.HashMap[String, Set[String]]
+
   def findRelatedEntities(word: String, mid: String, isSource: Boolean): Set[String] = {
-    val features = getFeaturesForRelWord(word)
-    nodePairFeatureGenerator.getRelatedNodes(mid, isSource, features, graph)
+    cachedRelatedEntities.get(mid) match {
+      case Some(related) => related
+      case None => {
+        println(s"Getting entities related to $mid by word $word")
+        val related = nodePairFeatureGenerator.getRelatedNodes(mid, isSource, Seq("CONNECTED"), graph)
+        println(s"Found ${related.size} of them")
+        cachedRelatedEntities(mid) = related
+        related
+      }
+    }
   }
 }

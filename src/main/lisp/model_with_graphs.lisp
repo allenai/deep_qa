@@ -12,7 +12,14 @@
           (make-featurized-classifier
             var (get-entity-features entity word_or_unknown graph-features) (get-cat-word-params word word-graph-parameters))
           var)
-        #f)
+        ; The bilinear model needs to have a vector learned for each entity, but the graph features
+        ; model doesn't.  So we just score the graph features model when the entity is not in our
+        ; dictionary.
+        (let ((var (make-entity-var entity))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
+          (make-featurized-classifier
+            var (get-entity-features entity word_or_unknown graph-features) (get-cat-word-params word word-graph-parameters))
+          var))
       )))
 
 (define word-rel-family (word-rel-params entity-tuple-params word-rel-graph-parameters)
@@ -27,7 +34,14 @@
           (make-featurized-classifier
             var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word word-rel-graph-parameters))
           var)
-        #f
+        ; The bilinear model needs to have a vector learned for each entity pair, but the graph
+        ; features model doesn't.  So we just score the graph features model when the entity pair
+        ; is not in our dictionary.
+        (let ((var (make-entity-var (cons entity1 entity2)))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
+          (make-featurized-classifier
+            var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word word-rel-graph-parameters))
+          var)
         )
       ))
   word-rel)

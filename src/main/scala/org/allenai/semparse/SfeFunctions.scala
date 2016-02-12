@@ -41,7 +41,7 @@ class FindRelatedEntities extends AmbFunctionValue {
       val list = ConsValue.consListToList(midRelation).asScala.toSeq
       val word = list(0).asInstanceOf[String]
       val mid = list(1).asInstanceOf[String]
-      val isSource = list(2).asInstanceOf[Boolean]
+      val isSource = list(2).asInstanceOf[ConstantValue].toBoolean
       (word, mid, isSource)
     })
 

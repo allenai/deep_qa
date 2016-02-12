@@ -12,7 +12,7 @@ import scala.collection.mutable
 object compute_pmi_per_word {
   val fileUtil = new FileUtil
 
-  val dataSize = "large"
+  val dataSize = "small"
 
   val matrix_file = Map(
     ("mid" -> s"/home/mattg/pra/results/semparse/$dataSize/mids/unknown/training_matrix.tsv"),
