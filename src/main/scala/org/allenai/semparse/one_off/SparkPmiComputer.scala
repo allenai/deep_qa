@@ -10,11 +10,11 @@ object SparkPmiComputer {
   // I guess I could make these command-line arguments, but for now, just change these and
   // recompile to run in different configurations.
   val dataSize = "large"  // "small" or "large"
-  val runningLocally = false
-  val midOrPairToRun = "mid"  // "mid" or "mid pair"
+  val runningLocally = true
+  val midOrPairToRun = "mid pair"  // "mid" or "mid pair"
 
   val numPartitions = dataSize match {
-    case "large" => 10000
+    case "large" => 1000
     case "small" => 1500
   }
 
@@ -37,10 +37,17 @@ object SparkPmiComputer {
   }
   val FEATURES_PER_WORD = 100
 
-  val matrixFile = Map(
-    ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_training_matrix.tsv"),
-    ("mid pair" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_pair_training_matrix.tsv")
-  )
+  val matrixFile = if (runningLocally) {
+    Map(
+      ("mid" -> s"/home/mattg/pra/results/semparse/${dataSize}/mids/unknown/training_matrix.tsv"),
+      ("mid pair" -> s"/home/mattg/pra/results/semparse/${dataSize}/mid_pairs/unknown/training_matrix.tsv")
+    )
+  } else {
+    Map(
+      ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_training_matrix.tsv"),
+      ("mid pair" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_pair_training_matrix.tsv")
+    )
+  }
 
   val midWordFile = Map(
     ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_words.tsv"),
@@ -102,7 +109,11 @@ object SparkPmiComputer {
       val features = fields(2).trim.split(" -#- ")
       if (features.length < MAX_FEATURE_COUNT) {
         val totalCount = words.map(_._2).foldLeft(0)(_+_).toDouble
-        for (feature <- features.map(f => f.replace(",1.0", ""))) yield (feature -> totalCount)
+        if (totalCount > 0) {
+          for (feature <- features.map(f => f.replace(",1.0", ""))) yield (feature -> totalCount)
+        } else {
+          Seq()
+        }
       } else {
         Seq()
       }
@@ -181,7 +192,12 @@ object SparkPmiComputer {
 
     val records = keptFeatures.map(entry => {
       val (word, features) = entry
-      val featureStr = (features.map(_._1) ++ Seq("bias")).mkString("\t")
+      // Always include CONNECTED and bias as potential features.  bias will get automatically
+      // added to every entity / entity pair, and CONNECTED means that two entities have a direct
+      // connection in the graph.
+      val defaultFeatures = if (mid_or_pair == "mid pair") Set("bias", "CONNECTED") else Set("bias")
+      val f = features.map(_._1).toSet ++ defaultFeatures
+      val featureStr = f.mkString("\t")
       s"$word\t$featureStr"
     })
     val results = records.collect()
