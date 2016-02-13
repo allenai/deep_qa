@@ -57,5 +57,6 @@ class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boole
     env.bindName("get-entity-tuple-feature-difference", new GetEntityPairFeatureDifference(), symbolTable);
     env.bindName("get-entity-tuple-features", new GetEntityPairFeatures(), symbolTable);
     env.bindName("get-rel-word-feature-list", new GetRelWordFeatureList(), symbolTable);
+    env.bindName("par-array-map", new ParArrayMap(), symbolTable);
   }
 }

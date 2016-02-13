@@ -65,12 +65,12 @@
   (lifted-map (lambda (x) (get-marginals x)) predicate-amb-list))
 
 (define get-predicate-marginals (predicate candidate-array)
-  (array-map (lambda (x) (new-fg-scope (let ((marginals (get-marginals (predicate x)))
-                               (ind (find-index #t (car marginals))))
-                           (if (= ind -1)
-                             (list 0.0 x)
-                             (list (get-ith-element (cadr marginals) ind) x )))))
-             candidate-array))
+  (par-array-map (lambda (x) (new-fg-scope (let ((marginals (get-marginals (predicate x)))
+                                                 (ind (find-index #t (car marginals))))
+                                             (if (= ind -1)
+                                               (list 0.0 x)
+                                               (list (get-ith-element (cadr marginals) ind) x )))))
+                 candidate-array))
 
 (define print-predicate-marginals (predicate candidate-array)
   (begin

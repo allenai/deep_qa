@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue
 import com.jayantkrish.jklol.lisp.ConstantValue
 import com.jayantkrish.jklol.lisp.ConsValue
 import com.jayantkrish.jklol.lisp.{Environment => JEnv}
+import com.jayantkrish.jklol.lisp.LispUtil
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder
 import com.jayantkrish.jklol.lisp.SpecAndParameters
 
@@ -48,7 +49,15 @@ class FindRelatedEntities extends AmbFunctionValue {
     val relatedEntities = parsedMidRelations.flatMap {
       case (word, mid, isSource) => featureComputer.findRelatedEntities(word, mid, isSource)
     }
-    relatedEntities.toArray
+    if (relatedEntities.size > 100) {
+      // If there are too many related entities, let's just give up on finding new connections.
+      // This is probably a popular entity that we saw with lots of other entities at training
+      // time, anyway.
+      println("Found too many related entities, skipping")
+      Array.empty
+    } else {
+      relatedEntities.toArray
+    }
   }
 }
 
@@ -125,5 +134,14 @@ class GetEntityPairFeatureDifference extends AmbFunctionValue {
     val positiveVector = featureComputer.getEntityPairFeatures(entity1, entity2, word)
     val negativeVector = featureComputer.getEntityPairFeatures(neg_entity1, neg_entity2, word)
     positiveVector.elementwiseAddition(negativeVector.elementwiseProduct(-1))
+  }
+}
+
+class ParArrayMap extends AmbFunctionValue {
+  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+    LispUtil.checkArgument(argumentValues.size() == 2)
+    val function = argumentValues.get(0).asInstanceOf[AmbFunctionValue]
+    val values = argumentValues.get(1).asInstanceOf[Array[Object]]
+    values.par.map(value => function(java.util.Arrays.asList(value), env, b)).seq.toArray
   }
 }

@@ -9,6 +9,7 @@ import edu.cmu.ml.rtw.users.matt.util.FileUtil
 
 import collection.mutable
 import collection.JavaConverters._
+import collection.concurrent
 
 abstract class CachedFeatureDictionary(
   featureFile: String,
@@ -17,9 +18,13 @@ abstract class CachedFeatureDictionary(
   fileUtil: FileUtil = new FileUtil
 ) {
 
-  lazy val features: mutable.HashMap[String, Seq[String]] = loadFeatures()
-  val cacheMisses: mutable.Map[String, Seq[String]] = new mutable.HashMap
-  val featureVectors: mutable.Map[String, mutable.Map[String, Tensor]] = new mutable.HashMap
+  // Because the computation that populates these maps is idempotent, not _that_ expensive, and
+  // very unlikely to have simultaneous requests for the same not-yet-computed key, we don't need
+  // really sophisticated locking below; I'm just using a TrieMap to make sure some memory state
+  // doesn't get corrupted by concurrent writes.
+  lazy val features: concurrent.TrieMap[String, Seq[String]] = loadFeatures()
+  val cacheMisses: concurrent.TrieMap[String, Seq[String]] = new concurrent.TrieMap
+  val featureVectors: concurrent.TrieMap[String, mutable.Map[String, Tensor]] = new concurrent.TrieMap
   lazy val dictionaries: Map[String, DiscreteVariable] = loadDictionaries()
 
   val biasFeature = "bias"
@@ -41,7 +46,6 @@ abstract class CachedFeatureDictionary(
     })
   }
 
-  // TODO(matt): will this get called in parallel?  Do I need a lock here?
   def getFeatureVector(key: String, word: String): Tensor = {
     val keyFeatureVectors = featureVectors.getOrElseUpdate(key, new mutable.HashMap)
     keyFeatureVectors.getOrElseUpdate(word, createVectorForWord(key, word))
@@ -59,7 +63,7 @@ abstract class CachedFeatureDictionary(
 
   def loadFeatures() = {
     println(s"Loading CachedFeatureDictionary from file $featureFile")
-    val f = new mutable.HashMap[String, Seq[String]]
+    val f = new concurrent.TrieMap[String, Seq[String]]
     for (line <- fileUtil.getLineIterator(featureFile)) {
       val fields = line.split("\t")
       val key = fields(0)

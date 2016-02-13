@@ -27,7 +27,7 @@
     (lambda (entity1 entity2)
       (if (dictionary-contains (list entity1 entity2) entity-tuples)
         (let ((var (make-entity-var (cons entity1 entity2)))
-              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
+              (word_or_unknown (if (dictionary-contains word rel-words) word UNKNOWN-WORD)))
           (make-inner-product-classifier
             var #t (get-rel-word-params word word-rel-params)
             (get-entity-tuple-params entity1 entity2 entity-tuple-params))
@@ -38,7 +38,7 @@
         ; features model doesn't.  So we just score the graph features model when the entity pair
         ; is not in our dictionary.
         (let ((var (make-entity-var (cons entity1 entity2)))
-              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
+              (word_or_unknown (if (dictionary-contains word rel-words) word UNKNOWN-WORD)))
           (make-featurized-classifier
             var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word word-rel-graph-parameters))
           var)
