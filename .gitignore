@@ -5,5 +5,6 @@ target/
 *.pyc
 data/
 output/
+models/
 *results*/
 tmp*/
