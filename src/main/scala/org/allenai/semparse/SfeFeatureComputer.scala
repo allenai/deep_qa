@@ -46,9 +46,7 @@ class SfeFeatureComputer(specFile: String, fileUtil: FileUtil = new FileUtil) {
   // And here we set up the cached entity feature files and pre-computed word feature dictionaries.
   val midFeatureFile = (params \ "mid feature file").extract[String]
   val midPairFeatureFile = (params \ "mid pair feature file").extract[String]
-  //"data/cat_word_features.tsv"
   val catWordFeatureFile = (params \ "cat word feature file").extract[String]
-  //"data/rel_word_features.tsv"
   val relWordFeatureFile = (params \ "rel word feature file").extract[String]
 
   val midFeatures = new CachedFeatureDictionary(midFeatureFile, catWordFeatureFile) {
