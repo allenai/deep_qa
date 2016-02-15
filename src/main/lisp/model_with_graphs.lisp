@@ -10,7 +10,7 @@
           (make-inner-product-classifier
             var #t (get-cat-word-params word word-parameters) (get-entity-params entity entity-parameters))
           (make-featurized-classifier
-            var (get-entity-features entity word_or_unknown graph-features) (get-cat-word-params word word-graph-parameters))
+            var (get-entity-features entity word_or_unknown graph-features) (get-cat-word-params word_or_unknown word-graph-parameters))
           var)
         ; The bilinear model needs to have a vector learned for each entity, but the graph features
         ; model doesn't.  So we just score the graph features model when the entity is not in our
@@ -18,7 +18,7 @@
         (let ((var (make-entity-var entity))
               (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
           (make-featurized-classifier
-            var (get-entity-features entity word_or_unknown graph-features) (get-cat-word-params word word-graph-parameters))
+            var (get-entity-features entity word_or_unknown graph-features) (get-cat-word-params word_or_unknown word-graph-parameters))
           var))
       )))
 
@@ -32,7 +32,7 @@
             var #t (get-rel-word-params word word-rel-params)
             (get-entity-tuple-params entity1 entity2 entity-tuple-params))
           (make-featurized-classifier
-            var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word word-rel-graph-parameters))
+            var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word_or_unknown word-rel-graph-parameters))
           var)
         ; The bilinear model needs to have a vector learned for each entity pair, but the graph
         ; features model doesn't.  So we just score the graph features model when the entity pair
@@ -40,7 +40,7 @@
         (let ((var (make-entity-var (cons entity1 entity2)))
               (word_or_unknown (if (dictionary-contains word rel-words) word UNKNOWN-WORD)))
           (make-featurized-classifier
-            var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word word-rel-graph-parameters))
+            var (get-entity-tuple-features entity1 entity2 word_or_unknown graph-features) (get-rel-word-params word_or_unknown word-rel-graph-parameters))
           var)
         )
       ))
@@ -77,9 +77,13 @@
             var #t (get-cat-word-params word word-parameters) (get-entity-params entity entity-parameters)
             (get-entity-params neg-entity entity-parameters))
           (make-featurized-classifier
-            var (get-entity-feature-difference entity neg-entity word_or_unknown graph-features) (get-cat-word-params word word-graph-parameters))
+            var (get-entity-feature-difference entity neg-entity word_or_unknown graph-features) (get-cat-word-params word_or_unknown word-graph-parameters))
           var)
-        #f)
+        (let ((var (make-entity-var entity))
+              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
+          (make-featurized-classifier
+            var (get-entity-feature-difference entity neg-entity word_or_unknown graph-features) (get-cat-word-params word_or_unknown word-graph-parameters))
+          var))
       )))
 
 (define word-rel-ranking-family (word-rel-params entity-tuple-params word-rel-graph-parameters)
@@ -87,16 +91,19 @@
     (lambda (entity1 neg-entity1 entity2 neg-entity2)
       (if (dictionary-contains (list entity1 entity2) entity-tuples)
         (let ((var (make-entity-var (cons entity1 entity2)))
-              (word_or_unknown (if (dictionary-contains word cat-words) word UNKNOWN-WORD)))
+              (word_or_unknown (if (dictionary-contains word rel-words) word UNKNOWN-WORD)))
           (make-ranking-inner-product-classifier
             var #t (get-rel-word-params word word-rel-params)
             (get-entity-tuple-params entity1 entity2 entity-tuple-params)
             (get-entity-tuple-params neg-entity1 neg-entity2 entity-tuple-params))
           (make-featurized-classifier
-            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2 word_or_unknown graph-features) (get-rel-word-params word word-rel-graph-parameters))
+            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2 word_or_unknown graph-features) (get-rel-word-params word_or_unknown word-rel-graph-parameters))
           var)
-        #f
-        )
+        (let ((var (make-entity-var (cons entity1 entity2)))
+              (word_or_unknown (if (dictionary-contains word rel-words) word UNKNOWN-WORD)))
+          (make-featurized-classifier
+            var (get-entity-tuple-feature-difference entity1 entity2 neg-entity1 neg-entity2 word_or_unknown graph-features) (get-rel-word-params word_or_unknown word-rel-graph-parameters))
+          var))
       ))
   word-rel)
 
