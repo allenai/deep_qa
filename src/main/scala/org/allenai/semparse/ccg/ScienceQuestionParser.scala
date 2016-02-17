@@ -22,6 +22,7 @@ import edu.uw.easysrl.main.ParsePrinter
 import edu.uw.easysrl.semantics.lexicon.CompositeLexicon
 import edu.uw.easysrl.syntax.evaluation.CCGBankEvaluation
 import edu.uw.easysrl.syntax.grammar.Category
+import edu.uw.easysrl.syntax.model.CutoffsDictionary
 import edu.uw.easysrl.syntax.model.SRLFactoredModel.SRLFactoredModelFactory
 import edu.uw.easysrl.syntax.model.SupertagFactoredModel.SupertagFactoredModelFactory
 import edu.uw.easysrl.syntax.model.feature.Feature.FeatureKey
@@ -53,16 +54,16 @@ class ScienceQuestionParser(useQuestionModel: Boolean) {
 
   val questionModelDir = "models/easysrl_questions/"
   val sentenceModelDir = "models/easysrl_sentences/"
-  val modelDir = if (useQuestionModel) questionModelDir else sentenceModelDir
+  val modelDir = if (useQuestionModel) new File(questionModelDir) else new File(sentenceModelDir)
   val pipelineDir = new File(modelDir, "/pipeline")
 
-  def main(args: Array[String]) {
-    System.err.println("====Starting loading model====")
+  def main() {
+    println("====Starting loading model====")
 
     val parser2 = if (pipelineDir.exists()) {
       val posTagger = POSTagger.getStanfordTagger(new File(pipelineDir, "posTagger"))
       val pipeline = makePipelineParser(0.000001, true)
-      new BackoffSRLParser(new JointSRLParser(makeParser(defaultSuperTaggerBeam, 20000, true, Some(defaultSuperTaggerWeight), defaultNBest, defaultMaxLength), posTagger), pipeline)
+      new BackoffSRLParser(new JointSRLParser(makeParser(modelDir, defaultSuperTaggerBeam, 20000, true, Some(defaultSuperTaggerWeight), defaultNBest, defaultMaxLength), posTagger), pipeline)
     } else {
       makePipelineParser(0.000001, true)
     }
@@ -124,10 +125,11 @@ class ScienceQuestionParser(useQuestionModel: Boolean) {
     val posTagger = POSTagger.getStanfordTagger(new File(pipelineDir, "posTagger"))
     val labelClassifier = new File(pipelineDir, "labelClassifier")
     val classifier = if (labelClassifier.exists() && outputDependencies) Util.deserialize(labelClassifier) else CCGBankEvaluation.dummyLabelClassifier
-    new PipelineSRLParser(makeParser(supertaggerBeam, 100000, false, None, defaultNBest, defaultMaxLength), classifier, posTagger)
+    new PipelineSRLParser(makeParser(pipelineDir, supertaggerBeam, 100000, false, None, defaultNBest, defaultMaxLength), classifier, posTagger)
   }
 
   def makeParser(
+    dir: File,
     supertaggerBeam: Double,
     maxChartSize: Int,
     joint: Boolean,
@@ -135,23 +137,30 @@ class ScienceQuestionParser(useQuestionModel: Boolean) {
     nbest: Int,
     maxLength: Int
   ): Parser = {
-    Coindexation.parseMarkedUpFile(new File(modelDir, "markedup"))
-    val cutoffsFile = new File(modelDir, "cutoffs")
-    val cutoffs = if(cutoffsFile.exists()) Util.deserialize(cutoffsFile) else null
+    Coindexation.parseMarkedUpFile(new File(dir, "markedup"))
+    val cutoffsFile = new File(dir, "cutoffs")
+    val cutoffs = if(cutoffsFile.exists()) Util.deserialize[CutoffsDictionary](cutoffsFile) else null
 
     val modelFactory = if (joint) {
-      val keyToIndex = Util.deserialize[java.util.Map[FeatureKey, Integer]](new File(modelDir, "featureToIndex"))
-      val weights = Util.deserialize[Array[Double]](new File(modelDir, "weights"))
+      val keyToIndex = Util.deserialize[java.util.Map[FeatureKey, Integer]](new File(dir, "featureToIndex"))
+      val weights = Util.deserialize[Array[Double]](new File(dir, "weights"))
       supertaggerWeight match {
         case Some(weight) => weights(0) = weight
         case None => { }
       }
-      new SRLFactoredModelFactory(weights, Util.deserialize[FeatureSet](new File(modelDir, "features")).setSupertaggingFeature(new File(modelDir, "/pipeline"), supertaggerBeam), TaggerEmbeddings.loadCategories(new File(modelDir, "categories")), cutoffs, keyToIndex)
+      new SRLFactoredModelFactory(weights, Util.deserialize[FeatureSet](new File(dir, "features")).setSupertaggingFeature(new File(dir, "/pipeline"), supertaggerBeam), TaggerEmbeddings.loadCategories(new File(dir, "categories")), cutoffs, keyToIndex)
     } else {
-      new SupertagFactoredModelFactory(Tagger.make(new File(modelDir), supertaggerBeam, 50, cutoffs), nbest > 1)
+      new SupertagFactoredModelFactory(Tagger.make(dir, supertaggerBeam, 50, cutoffs), nbest > 1)
     }
 
-    val parser = new ParserAStar(modelFactory, maxLength, nbest, rootCategories.map(Category.valueOf).asJava, new File(modelDir), maxChartSize)
+    val parser = new ParserAStar(modelFactory, maxLength, nbest, rootCategories.map(Category.valueOf).asJava, dir, maxChartSize)
     parser
+  }
+}
+
+object test_easysrl {
+  def main(args: Array[String]) {
+    val parser = new ScienceQuestionParser(false)
+    parser.main()
   }
 }
