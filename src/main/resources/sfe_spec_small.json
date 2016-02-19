@@ -1,0 +1,32 @@
+{
+  "graph": "/home/mattg/pra/graphs/freebase/",
+  "node features": {
+    "type": "subgraphs",
+    "path finder": {
+      "type": "BfsPathFinder",
+      "number of steps": 2
+    },
+    "feature extractors": [
+      "PathAndEndNodeFeatureExtractor",
+      "PathOnlyFeatureExtractor"
+    ],
+    "feature size": -1
+  },
+  "node pair features": {
+    "type": "subgraphs",
+    "path finder": {
+      "type": "BfsPathFinder",
+      "number of steps": 2
+    },
+    "feature extractors": [
+      "ConnectedAtOneFeatureExtractor",
+      "ConnectedByMediatorFeatureExtractor",
+      "PraFeatureExtractor"
+    ],
+    "feature size": -1
+  },
+  "mid feature file": "/home/mattg/clone/tacl2015-factorization/data/small/mid_features.tsv",
+  "mid pair feature file": "/home/mattg/clone/tacl2015-factorization/data/small/mid_pair_features.tsv",
+  "cat word feature file": "/home/mattg/clone/tacl2015-factorization/data/small/cat_word_features.tsv",
+  "rel word feature file": "/home/mattg/clone/tacl2015-factorization/data/small/rel_word_features.tsv"
+}
