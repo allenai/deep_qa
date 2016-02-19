@@ -55,7 +55,9 @@ class TrainingDataBuilder {
   private val entityPairCounts: mutable.Map[(String, String), Int] = new mutable.HashMap()
   private val logicalForms: mutable.ArrayBuffer[(String, JValue)] = new mutable.ArrayBuffer()
   private val relWordMidPairs: mutable.Map[String, mutable.Set[(String, String)]] = new mutable.HashMap()
+  private val midPairWords: mutable.Map[(String, String), mutable.ArrayBuffer[String]] = new mutable.HashMap()
   private val catWordMids: mutable.Map[String, mutable.Set[String]] = new mutable.HashMap()
+  private val midWords: mutable.Map[String, mutable.ArrayBuffer[String]] = new mutable.HashMap()
   private val queryMids: mutable.Map[Seq[Query], mutable.Set[String]] = new mutable.HashMap()
 
   def observeEntity(mid: String) { entityCounts.update(mid, 1 + entityCounts.getOrElse(mid, 0)) }
@@ -70,9 +72,11 @@ class TrainingDataBuilder {
   }
   def observeEntityWithWord(word: String, mid: String) {
     catWordMids.getOrElseUpdate(word, new mutable.HashSet).add(mid)
+    midWords.getOrElseUpdate(mid, new mutable.ArrayBuffer) += word
   }
   def observeEntityPairWithWord(word: String, mid1: String, mid2: String) {
     relWordMidPairs.getOrElseUpdate(word, new mutable.HashSet).add((mid1, mid2))
+    midPairWords.getOrElseUpdate((mid1, mid2), new mutable.ArrayBuffer) += word
   }
   def addLogicalForm(predicate: String, json: JValue) { logicalForms += Tuple2(predicate, json) }
 
@@ -84,7 +88,9 @@ class TrainingDataBuilder {
       entityPairCounts.toMap,
       logicalForms.toSeq,
       relWordMidPairs.par.mapValues(_.toSet).seq.toMap,
+      midPairWords.par.mapValues(_.toSeq).seq.toMap,
       catWordMids.par.mapValues(_.toSet).seq.toMap,
+      midWords.par.mapValues(_.toSeq).seq.toMap,
       queryMids.par.mapValues(_.toSet).seq.toMap
     )
   }
@@ -97,10 +103,15 @@ class TrainingData(
   entityPairCounts: Map[(String, String), Int],
   logicalForms: Seq[(String, JValue)],
   relWordMidPairs: Map[String, Set[(String, String)]],
+  midPairWords: Map[(String, String), Seq[String]],
   catWordMids: Map[String, Set[String]],
+  midWords: Map[String, Seq[String]],
   queryMids: Map[Seq[Query], Set[String]]
 ) {
   def getEntities() = entityCounts.keySet
+  def getMidWords(mid: String): Seq[String] = midWords.getOrElse(mid, Seq())
+  def getEntityPairs() = entityPairCounts.keySet
+  def getMidPairWords(midPair: (String, String)): Seq[String] = midPairWords.getOrElse(midPair, Seq())
   def getRelatedEntities(mid: String): Set[String] = {
     arg1Arg2Map.getOrElse(mid, Set()) ++ arg2Arg1Map.getOrElse(mid, Set())
   }
@@ -133,11 +144,20 @@ class TrainingDataProcessor(
   def processTrainingFile() {
     val wordCounts = getWordCountsFromTrainingFile()
     val trainingData = readTrainingData(wordCounts)
+
+    // These five lisp files are all used as input to various parts of the semantic parsing code.
     outputWordFile(trainingData, wordCounts)
     outputEntityFile(trainingData)
     val queryIndex = outputJointEntityFile(trainingData)
     outputPredicateRankingLogicalForms(trainingData)
     outputQueryRankingLogicalForms(trainingData, queryIndex)
+
+    // And these tsv files are used by the PMI pipeline, and to precompute features for MIDs and
+    // MID pairs in the training data.
+    outputMidWordsFile(trainingData)
+    outputMidPairWordsFile(trainingData)
+    outputMidList(trainingData)
+    outputMidPairList(trainingData)
   }
 
   def jsonToQuerySeq(json: JValue, mid: String): Seq[Query] = {
@@ -424,6 +444,32 @@ class TrainingDataProcessor(
     queryFile.write("))\n")
     queryFile.close()
   }
+
+  def outputMidList(trainingData: TrainingData) {
+    val mids = trainingData.getEntities().toSeq.sorted
+    fileUtil.writeLinesToFile(outDir + "training-mids.tsv", mids)
+  }
+
+  def outputMidPairList(trainingData: TrainingData) {
+    val midPairs = trainingData.getEntityPairs().toSeq.sorted.map(x => x._1 + " " + x._2)
+    fileUtil.writeLinesToFile(outDir + "training-mid-pairs.tsv", midPairs)
+  }
+
+  def outputMidWordsFile(trainingData: TrainingData) {
+    val mids = trainingData.getEntities().toSeq.sorted
+    val midWords = mids.map(m => (m, trainingData.getMidWords(m))).map(entry => {
+      entry._1 + "\t" + entry._2.mkString("\t")
+    })
+    fileUtil.writeLinesToFile(outDir + "training-mid-words.tsv", midWords)
+  }
+
+  def outputMidPairWordsFile(trainingData: TrainingData) {
+    val midPairs = trainingData.getEntityPairs().toSeq.sorted
+    val midPairWords = midPairs.map(m => (m, trainingData.getMidPairWords(m))).map(entry => {
+      entry._1._1 + "," + entry._1._2 + "\t" + entry._2.mkString("\t")
+    })
+    fileUtil.writeLinesToFile(outDir + "training-mid-words.tsv", midPairWords)
+  }
 }
 
 object process_training_data {
@@ -436,6 +482,7 @@ object process_training_data {
       Some(100000)
     )
     smallProcessor.processTrainingFile()
+    return
     val largeProcessor = new TrainingDataProcessor(
       "data/tacl2015-training.txt",
       "data/large/",
