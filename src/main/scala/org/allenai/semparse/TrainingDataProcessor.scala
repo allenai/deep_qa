@@ -230,8 +230,8 @@ class TrainingDataProcessor(
       val counts = catWords.map(w => wordCounts.getCatWordCount(w)) ++ relWords.map(w => wordCounts.getRelWordCount(w))
       val missedThreshold = counts.filter(_ <= wordCountThreshold)
       if (missedThreshold.size == 0) {
-        val json = parse(fields(5))
         val logicalForm = fields(4)
+        val json = parse(fields(5).replace("\\", "\\\\"))
         trainingData.addLogicalForm(logicalForm, json)
         for (mid <- mids) {
           trainingData.observeEntity(mid)
@@ -468,23 +468,25 @@ class TrainingDataProcessor(
     val midPairWords = midPairs.map(m => (m, trainingData.getMidPairWords(m))).map(entry => {
       entry._1._1 + "," + entry._1._2 + "\t" + entry._2.mkString("\t")
     })
-    fileUtil.writeLinesToFile(outDir + "training-mid-words.tsv", midPairWords)
+    fileUtil.writeLinesToFile(outDir + "training-mid-pair-words.tsv", midPairWords)
   }
 }
 
 object process_training_data {
   def main(args: Array[String]) {
     // This is so you can have a small dataset while developing things.
+    println("Processing a sample of the data")
     val smallProcessor = new TrainingDataProcessor(
-      "data/tacl2015-training.txt",
+      "data/acl2016-training.txt",
       "data/small/",
       2,
       Some(100000)
     )
     smallProcessor.processTrainingFile()
-    return
+
+    println("Processing the whole data")
     val largeProcessor = new TrainingDataProcessor(
-      "data/tacl2015-training.txt",
+      "data/acl2016-training.txt",
       "data/large/",
       5,
       None
