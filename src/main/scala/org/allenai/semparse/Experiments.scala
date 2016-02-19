@@ -48,7 +48,7 @@ object Experiments {
   val SMALL_JOINT_ENTITY_FILE = "data/small/joint_entities.lisp"
   val SMALL_PREDICATE_RANKING_LF_FILE = "data/small/predicate_ranking_lf.lisp"
   val SMALL_QUERY_RANKING_LF_FILE = "data/small/query_ranking_lf.lisp"
-  val SMALL_SFE_SPEC_FILE = "data/small/sfe_spec.json"
+  val SMALL_SFE_SPEC_FILE = "src/main/resources/sfe_spec_small.json"
 
   val LARGE_BASE_DATA_FILE = "data/tacl2015-training.txt"
   val LARGE_WORD_FILE = "data/large/words.lisp"
@@ -56,7 +56,7 @@ object Experiments {
   val LARGE_JOINT_ENTITY_FILE = "data/large/joint_entities.lisp"
   val LARGE_PREDICATE_RANKING_LF_FILE = "data/large/predicate_ranking_lf.lisp"
   val LARGE_QUERY_RANKING_LF_FILE = "data/large/query_ranking_lf.lisp"
-  val LARGE_SFE_SPEC_FILE = "data/large/sfe_spec.json"
+  val LARGE_SFE_SPEC_FILE = "src/main/resources/sfe_spec_large.json"
 
   val TEST_DATA_FILE = "data/tacl2015-test-augmented.txt"
 
