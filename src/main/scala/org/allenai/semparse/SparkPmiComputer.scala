@@ -7,15 +7,15 @@ import edu.cmu.ml.rtw.users.matt.util.FileUtil
 
 object SparkPmiComputer {
 
-  // I guess I could make these command-line arguments, but for now, just change these and
-  // recompile to run in different configurations.
+  // TODO(matt): these parameters control what files are used as input - just take the files as
+  // as class constructor parameters, and put this control logic in a main method somewhere.
   val dataSize = "large"  // "small" or "large"
   val runningLocally = true
-  val midOrPairToRun = "mid pair"  // "mid" or "mid pair"
+  val midOrPairToRun = "mid"  // "mid" or "mid pair"
 
   val numPartitions = dataSize match {
-    case "large" => 1000
-    case "small" => 1500
+    case "large" => 2000
+    case "small" => 1000
   }
 
   // If we've seen a MID too many times, it blows up the word-feature computation.  The US, God,
@@ -39,8 +39,8 @@ object SparkPmiComputer {
 
   val matrixFile = if (runningLocally) {
     Map(
-      ("mid" -> s"/home/mattg/pra/results/semparse/${dataSize}/mids/unknown/training_matrix.tsv"),
-      ("mid pair" -> s"/home/mattg/pra/results/semparse/${dataSize}/mid_pairs/unknown/training_matrix.tsv")
+      ("mid" -> s"data/${dataSize}/pre-filtered-mid-features.tsv"),
+      ("mid pair" -> s"data/${dataSize}/pre-filtered-mid-pair-features.tsv")
     )
   } else {
     Map(
@@ -49,20 +49,39 @@ object SparkPmiComputer {
     )
   }
 
-  val midWordFile = Map(
-    ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_words.tsv"),
-    ("mid pair" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_pair_words.tsv")
-  )
+  val midWordFile = if (runningLocally) {
+    Map(
+      ("mid" -> s"data/${dataSize}/training-mid-words.tsv"),
+      ("mid pair" -> s"data/${dataSize}/training-mid-pair-words.tsv")
+    )
+  } else {
+    Map(
+      ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_words.tsv"),
+      ("mid pair" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_pair_words.tsv")
+    )
+  }
 
   val wordFeatureFile = if (runningLocally) {
     Map(
-      ("mid" -> s"/home/mattg/clone/tacl2015-factorization/data/${dataSize}/cat_word_features.tsv"),
-      ("mid pair" -> s"/home/mattg/clone/tacl2015-factorization/data/${dataSize}/rel_word_features.tsv")
+      ("mid" -> s"data/${dataSize}/cat_word_features.tsv"),
+      ("mid pair" -> s"data/${dataSize}/rel_word_features.tsv")
     )
   } else {
     Map(
       ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_cat_word_features.tsv"),
       ("mid pair" -> s"s3n://mattg-pipeline-tmp/${dataSize}_rel_word_features.tsv")
+    )
+  }
+
+  val filteredFeatureFile = if (runningLocally) {
+    Map(
+      ("mid" -> s"data/${dataSize}/mid_features.tsv"),
+      ("mid pair" -> s"data/${dataSize}/mid_pair_features.tsv")
+    )
+  } else {
+    Map(
+      ("mid" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_features.tsv"),
+      ("mid pair" -> s"s3n://mattg-pipeline-tmp/${dataSize}_mid_pair_features.tsv")
     )
   }
 
@@ -73,6 +92,7 @@ object SparkPmiComputer {
     runSpark(midOrPairToRun, accessKeyId, secretAccessKey)
   }
 
+  // TODO(matt): put some comments outlining what's going on here.
   def runSpark(mid_or_pair: String, accessKeyId: String, secretAccessKey: String) {
     val conf = new SparkConf().setAppName(s"Compute PMI ($mid_or_pair)")
       .set("spark.driver.maxResultSize", "0")
@@ -89,11 +109,11 @@ object SparkPmiComputer {
 
     val minFeatureCount = MIN_FEATURE_COUNT(mid_or_pair)
 
-    // PB here and below is "pre-broadcast" - it's a sign that you shouldn't be using this variable
-    // anywhere except in a call to sc.broadcast()
+    // PB here and below is "pre-broadcast" - it's a sign that you probably shouldn't be using this
+    // variable anywhere except in a call to sc.broadcast()
     val midWordCountsPB = sc.textFile(midWordFile(mid_or_pair)).map(line => {
       val fields = line.split("\t")
-      val mid = fields(0).replace(" ", ",")
+      val mid = fields(0).replace(",", " ")
       val words = fields.drop(1).toSeq
       // The last .map(identity) is because of a scala bug - Map#mapValues is not serializable.
       val wordCounts = words.groupBy(identity).mapValues(_.size).map(identity)
@@ -106,11 +126,11 @@ object SparkPmiComputer {
       val fields = line.split("\t")
       val mid = fields(0)
       val words = midWordCounts.value.getOrElse(mid, Seq.empty)
-      val features = fields(2).trim.split(" -#- ")
+      val features = if (fields.length > 1) fields(1).trim.split(" -#- ") else Array[String]()
       if (features.length < MAX_FEATURE_COUNT) {
         val totalCount = words.map(_._2).foldLeft(0)(_+_).toDouble
         if (totalCount > 0) {
-          for (feature <- features.map(f => f.replace(",1.0", ""))) yield (feature -> totalCount)
+          for (feature <- features) yield (feature -> totalCount)
         } else {
           Seq()
         }
@@ -124,11 +144,11 @@ object SparkPmiComputer {
       val fields = line.split("\t")
       val mid = fields(0)
       val words = midWordCounts.value.getOrElse(mid, Seq.empty)
-      val features = fields(2).trim.split(" -#- ")
+      val features = if (fields.length > 1) fields(1).trim.split(" -#- ") else Array[String]()
       if (features.length < MAX_FEATURE_COUNT) {
         val counts = featureCounts.value
         for ((word, wordCount) <- words;
-             feature <- features.map(f => f.replace(",1.0", ""));
+             feature <- features;
              if counts.getOrElse(feature, 0.0) > minFeatureCount) yield ((word, feature) -> wordCount.toDouble)
       } else {
         Seq()
@@ -140,7 +160,7 @@ object SparkPmiComputer {
       val fields = line.split("\t")
       val mid = fields(0)
       val words = midWordCounts.value.getOrElse(mid, Seq.empty)
-      val features = fields(2).trim.split(" -#- ")
+      val features = if (fields.length > 1) fields(1).trim.split(" -#- ") else Array[String]()
       val numFeatures = features.length.toDouble
       if (numFeatures < MAX_FEATURE_COUNT) {
         for ((word, wordCount) <- words) yield (word -> wordCount * numFeatures)
@@ -170,15 +190,19 @@ object SparkPmiComputer {
       .map(entry => {
         try {
           val (word, featureScores) = entry
+          // Always include CONNECTED and bias as potential features.  bias will get automatically
+          // added to every entity / entity pair, and CONNECTED means that two entities have a direct
+          // connection in the graph.
+          val defaultFeatures = if (mid_or_pair == "mid pair") Seq(("bias", 1.0), ("CONNECTED", 1.0)) else Seq(("bias", 1.0))
           val grouped = featureScores.groupBy(_._2).toSeq.sortBy(-_._1).take(FEATURES_PER_WORD)
           val kept = grouped.flatMap(entry => {
             val score = entry._1
             if (score > 0.0) {
               val features = entry._2.map(_._1)
               val shortest_feature = features.sortBy(_.length).head
-              Seq((shortest_feature, score))
+              Seq((shortest_feature, score)) ++ defaultFeatures
             } else {
-              Seq()
+              Seq() ++ defaultFeatures
             }
           })
           (word, kept)
@@ -189,14 +213,11 @@ object SparkPmiComputer {
           }
         }
       })
+    keptFeatures.persist()
 
     val records = keptFeatures.map(entry => {
       val (word, features) = entry
-      // Always include CONNECTED and bias as potential features.  bias will get automatically
-      // added to every entity / entity pair, and CONNECTED means that two entities have a direct
-      // connection in the graph.
-      val defaultFeatures = if (mid_or_pair == "mid pair") Set("bias", "CONNECTED") else Set("bias")
-      val f = features.map(_._1).toSet ++ defaultFeatures
+      val f = features.map(_._1).toSet
       val featureStr = f.mkString("\t")
       s"$word\t$featureStr"
     })
@@ -205,6 +226,31 @@ object SparkPmiComputer {
       new FileUtil().writeLinesToFile(wordFeatureFile(mid_or_pair), results)
     } else {
       sc.parallelize(results, 1).saveAsTextFile(wordFeatureFile(mid_or_pair))
+    }
+
+    val allAllowedFeatures = sc.broadcast(keptFeatures.flatMap(_._2.map(_._1)).collect.toSet)
+
+    val filteredMatrix = sc.textFile(matrixFile(mid_or_pair), numPartitions).map(line => {
+      val allowedFeatures = allAllowedFeatures.value
+      val defaultFeatures = Seq("bias")
+      val fields = line.split("\t")
+      val mid = fields(0)
+      val features = if (fields.length > 1) fields(1).trim.split(" -#- ") else Array[String]()
+      val filteredFeatures = features.flatMap(feature => {
+        if (allowedFeatures.contains(feature)) {
+          Seq(feature)
+        } else {
+          Seq()
+        }
+      })
+      val featureStr = (filteredFeatures ++ defaultFeatures).mkString(" -#- ")
+      s"${mid}\t${featureStr}"
+    })
+    val finalMatrix = filteredMatrix.collect()
+    if (runningLocally) {
+      new FileUtil().writeLinesToFile(filteredFeatureFile(mid_or_pair), finalMatrix)
+    } else {
+      sc.parallelize(finalMatrix, 1).saveAsTextFile(filteredFeatureFile(mid_or_pair))
     }
   }
 }

@@ -466,7 +466,7 @@ class TrainingDataProcessor(
   def outputMidPairWordsFile(trainingData: TrainingData) {
     val midPairs = trainingData.getEntityPairs().toSeq.sorted
     val midPairWords = midPairs.map(m => (m, trainingData.getMidPairWords(m))).map(entry => {
-      entry._1._1 + "," + entry._1._2 + "\t" + entry._2.mkString("\t")
+      entry._1._1 + " " + entry._1._2 + "\t" + entry._2.mkString("\t")
     })
     fileUtil.writeLinesToFile(outDir + "training-mid-pair-words.tsv", midPairWords)
   }
