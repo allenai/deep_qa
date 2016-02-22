@@ -72,16 +72,51 @@ class PreFilteredFeatureComputer(
 
 object compute_full_feature_vectors {
   val dataSize = "small"
-  val midFile = "data/${dataSize}/training-mids.tsv"
-  val midPairFile = "data/${dataSize}/training-mid-pairs.tsv"
-  val midFeatureFile = "data/${dataSize}/pre-filtered-mid-features.tsv"
-  val midPairFeatureFile = "data/${dataSize}/pre-filtered-mid-pair-features.tsv"
-  val specFile = "src/main/resources/sfe_spec_${dataSize}.json"
+  val midFile = s"data/${dataSize}/training-mids.tsv"
+  val midPairFile = s"data/${dataSize}/training-mid-pairs.tsv"
+  val midFeatureFile = s"data/${dataSize}/pre-filtered-mid-features.tsv"
+  val midPairFeatureFile = s"data/${dataSize}/pre-filtered-mid-pair-features.tsv"
+  val specFile = s"src/main/resources/sfe_spec_${dataSize}.json"
 
   def main(args: Array[String]) {
+    processInMemory()
+  }
+
+  def processInMemory() {
     val fileUtil = new FileUtil
     val computer = new PreFilteredFeatureComputer(specFile, fileUtil)
 
+    {
+      // This block is so that midFeatures goes out of scope and can be garbage collected once it's
+      // written to disk.
+      println("Computing MID features")
+      val midFeatures = fileUtil.parMapLinesFromFile(midFile, (line: String) => {
+        val mid = line
+        val features = computer.computeMidFeatures(mid)
+        val featureStr = features.mkString(" -#- ")
+        s"${mid}\t${featureStr}"
+      }, 1000)
+      fileUtil.writeLinesToFile(midFeatureFile, midFeatures)
+    }
+
+    {
+      println("Computing MID pair features")
+      val midPairFeatures = fileUtil.parMapLinesFromFile(midPairFile, (line: String) => {
+        val midPair = line
+        val midPairFields = midPair.split(" ")
+        val mid1 = midPairFields(0)
+        val mid2 = midPairFields(1)
+        val features = computer.computeMidPairFeatures(mid1, mid2)
+        val featureStr = features.mkString(" -#- ")
+        s"${midPair}\t${featureStr}"
+      }, 1000)
+      fileUtil.writeLinesToFile(midPairFeatureFile, midPairFeatures)
+    }
+  }
+
+  def processMemoryConstrained() {
+    val fileUtil = new FileUtil
+    val computer = new PreFilteredFeatureComputer(specFile, fileUtil)
     val midWriter = fileUtil.getFileWriter(midFeatureFile)
     fileUtil.parProcessFileInChunks(midFile, (lines: Seq[String]) => {
       val midFeatures = lines.map(line => {
