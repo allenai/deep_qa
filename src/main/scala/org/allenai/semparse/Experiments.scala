@@ -12,7 +12,7 @@ object Experiments {
     val datasets = Seq("large")//, "small")
     val modelTypes = Seq("uschema")//, "ensemble")
     val rankings = Seq("query")//, "predicate")
-    val withGraphOrNot = Seq(true)//, false)
+    val withGraphOrNot = Seq(false)//, true)
     val baselineConfigs = Seq(
       //("small", "baseline", "ignored", false)
       //("large", "baseline", "ignored", false)
@@ -50,7 +50,7 @@ object Experiments {
   val SMALL_QUERY_RANKING_LF_FILE = "data/small/query_ranking_lf.lisp"
   val SMALL_SFE_SPEC_FILE = "src/main/resources/sfe_spec_small.json"
 
-  val LARGE_BASE_DATA_FILE = "data/tacl2015-training.txt"
+  val LARGE_BASE_DATA_FILE = "data/acl2016-training.txt"
   val LARGE_WORD_FILE = "data/large/words.lisp"
   val LARGE_ENTITY_FILE = "data/large/entities.lisp"
   val LARGE_JOINT_ENTITY_FILE = "data/large/joint_entities.lisp"
@@ -58,7 +58,7 @@ object Experiments {
   val LARGE_QUERY_RANKING_LF_FILE = "data/large/query_ranking_lf.lisp"
   val LARGE_SFE_SPEC_FILE = "src/main/resources/sfe_spec_large.json"
 
-  val TEST_DATA_FILE = "data/tacl2015-test-augmented.txt"
+  val TEST_DATA_FILE = "data/tacl2015/tacl2015-test-new-lfs-augmented.txt"
 
   val COMMON_SMALL_DATA = Seq(SMALL_ENTITY_FILE, SMALL_WORD_FILE)
   val PREDICATE_RANKING_SMALL_DATA = COMMON_SMALL_DATA ++ Seq(SMALL_PREDICATE_RANKING_LF_FILE)

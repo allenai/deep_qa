@@ -30,7 +30,7 @@ class TestJsonAugmenter {
       List(JString(entry._1), JString(entry._2), JBool(entry._3))
     }).toList
     val extraJson: JValue = ("midRelationsInQuery" -> wordRelJson)
-    queryJson merge extraJson
+    queryJson removeField { _._1 == "midRelationsInQuery" } merge extraJson
   }
 
   def getWordRelsFromExpression(expression: String): Seq[(String, String, Boolean)] = {
@@ -67,13 +67,22 @@ class TestJsonAugmenter {
 }
 
 object add_rel_variables_to_test_file {
-  val testFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015-test.txt"
-  val augmentedTestFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015-test-augmented.txt"
+  implicit val formats = DefaultFormats
+  val testFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-pretty-new-lfs.json"
+  val augmentedTestFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-new-lfs-augmented.txt"
+  val prettyTestFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-new-lfs-augmented-pretty.json"
   val fileUtil = new FileUtil
 
   def main(args: Array[String]) {
     val augmenter = new TestJsonAugmenter
-    val newLines = fileUtil.getLineIterator(testFile).map(augmenter.augmentLine).toSeq
+    //val newLines = fileUtil.getLineIterator(testFile).map(augmenter.augmentLine).toSeq
+    val json = parse(fileUtil.readLinesFromFile(testFile).mkString("\n"))
+    val jsonList = json.extract[Seq[JValue]]
+    val augmented = jsonList.map(augmenter.augmentJson)
+    val newLines = augmented.map(j => compact(render(j)))
     fileUtil.writeLinesToFile(augmentedTestFile, newLines)
+    val writer = fileUtil.getFileWriter(prettyTestFile)
+    writer.write(pretty(render(augmented)))
+    writer.close()
   }
 }
