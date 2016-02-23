@@ -129,8 +129,9 @@ class SfeFeatureComputer(specFile: String, fileUtil: FileUtil = new FileUtil) {
       case None => {
         println(s"Getting entities related to $mid by word $word")
         val related = nodePairFeatureGenerator.getRelatedNodes(mid, isSource, Seq("CONNECTED"), graph)
-        println(s"Found ${related.size} of them")
-        cachedRelatedEntities(mid) = related
+        val kept = related.filter(_.startsWith("/m/"))  // Only keep actual entities, not type nodes.
+        println(s"Found ${kept.size} of them")
+        cachedRelatedEntities(mid) = kept
         related
       }
     }
