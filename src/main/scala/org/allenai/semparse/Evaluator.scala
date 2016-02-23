@@ -320,8 +320,10 @@ object Evaluator {
   ) = {
     val graphs = if (usingGraphs) "with_graph_features" else "no_graph_features"
     modelType match {
-      case "baseline" => s"results/${data}/baseline/results.txt"
-      case other => s"results/${data}/${modelType}/${graphs}/${ranking}/results.txt"
+      // ACK!  I need to make this more general...  The dataset should not be just "large" and
+      // "small"
+      case "baseline" => s"results/${data}_acl2016/baseline/results.txt"
+      case other => s"results/${data}_acl2016/${modelType}/${graphs}/${ranking}/results.txt"
     }
   }
 

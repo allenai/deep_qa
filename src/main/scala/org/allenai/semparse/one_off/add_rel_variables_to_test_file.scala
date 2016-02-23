@@ -68,9 +68,9 @@ class TestJsonAugmenter {
 
 object add_rel_variables_to_test_file {
   implicit val formats = DefaultFormats
-  val testFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-pretty-new-lfs.json"
-  val augmentedTestFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-new-lfs-augmented.txt"
-  val prettyTestFile = "/home/mattg/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-new-lfs-augmented-pretty.json"
+  val testFile = "/home/mattg/clone/tacl2015-factorization/data/acl2016-test-pretty.json"
+  val augmentedTestFile = "/home/mattg/clone/tacl2015-factorization/data/acl2016-test-augmented.txt"
+  val prettyTestFile = "/home/mattg/clone/tacl2015-factorization/data/acl2016-test-augmented-pretty.json"
   val fileUtil = new FileUtil
 
   def main(args: Array[String]) {
