@@ -1,8 +1,8 @@
 
-QUERY_FILE=~/data/universal_schema/clueweb/lf/test/all_validation_queries.txt
+QUERY_FILE=~/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-new-lfs-augmented.txt
 
-ANNOTATION_FILE=~/data/universal_schema/clueweb/results/100114/annotations2.txt
+ANNOTATION_FILE=~/clone/annotation-framework/finished_annotations.tsv
 
-ANNOTATED_QUERY_FILE=~/data/universal_schema/clueweb/lf/test/all_validation_queries_attested_annotations2.txt
+ANNOTATED_QUERY_FILE=~/clone/tacl2015-factorization/data/tacl2015/tacl2015-test-new-lfs-augmented-annotated.txt
 
-./src/scripts/us/merge_query_annotations2.py $ANNOTATION_FILE $QUERY_FILE > $ANNOTATED_QUERY_FILE
+./src/scripts/annotation/merge_query_annotations2.py $ANNOTATION_FILE $QUERY_FILE > $ANNOTATED_QUERY_FILE
