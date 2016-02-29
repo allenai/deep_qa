@@ -132,7 +132,7 @@ class SfeFeatureComputer(specFile: String, fileUtil: FileUtil = new FileUtil) {
         val kept = related.filter(_.startsWith("/m/"))  // Only keep actual entities, not type nodes.
         println(s"Found ${kept.size} of them")
         cachedRelatedEntities(mid) = kept
-        related
+        kept
       }
     }
   }
