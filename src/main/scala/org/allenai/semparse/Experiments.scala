@@ -58,7 +58,7 @@ object Experiments {
   val LARGE_QUERY_RANKING_LF_FILE = "data/large/query_ranking_lf.lisp"
   val LARGE_SFE_SPEC_FILE = "src/main/resources/sfe_spec_large.json"
 
-  val TEST_DATA_FILE = "data/acl2016-test-augmented.txt"
+  val TEST_DATA_FILE = "src/main/resources/acl2016_final_test_set_annotated.json"
 
   val COMMON_SMALL_DATA = Seq(SMALL_ENTITY_FILE, SMALL_WORD_FILE)
   val PREDICATE_RANKING_SMALL_DATA = COMMON_SMALL_DATA ++ Seq(SMALL_PREDICATE_RANKING_LF_FILE)

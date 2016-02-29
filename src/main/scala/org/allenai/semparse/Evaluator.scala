@@ -42,11 +42,10 @@ class Evaluator(
     var numAnnotatedFalseEntities = 0
     val pointPrecisionSum = new Array[Double](11)
 
-    // Go through the test query file and get metrics for each query.
-    for (line <- fileUtil.getLineIterator(queryFile)) {
-
-      // Parsing the query here, which is in JSON format.
-      val json = parse(line)
+    // The test file is a JSON object, which is itself a list of objects containing the query
+    // information.
+    val wholeJson = parse(fileUtil.readLinesFromFile(queryFile).mkString("\n"))
+    for (json <- wholeJson.extract[Seq[JValue]]) {
       val sentence = (json \ "sentence").extract[String]
       val queries = (json \ "queries").extract[Seq[JValue]]
       for (query <- queries) {
