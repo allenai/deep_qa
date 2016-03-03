@@ -1,0 +1,8 @@
+(define get-expression-evaluator (word-cat word-rel)
+  (define expression-evaluator (expression entities word)
+    (if (= 1 (length entities))
+      ((eval expression) (car entities) (rejection-sample-histogram entity-histogram (array-get-ith-element cat-word-entities (get-index-with-unknown word cat-words))))
+      (let ((rel-neg-example (rejection-sample-histogram entity-tuple-histogram (array-get-ith-element rel-word-entities (get-index-with-unknown word rel-words)))))
+        ((eval expression) (car entities) (car rel-neg-example) (cadr entities) (cadr rel-neg-example)))
+      ))
+  expression-evaluator)
