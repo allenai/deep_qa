@@ -157,7 +157,35 @@ closely related work.
 
 \subsection{Subgraph feature extraction}
 
-\mattnote{TODO}
+Subgraph feature extraction (SFE) is a technique introduced by Gardner and
+Mitchell~\shortcite{gardner-2015-sfe} for generating feature matrices over node
+pairs in a graph with labeled edges.  Given a pair of nodes in a graph, SFE
+performs a search to characterize a subgraph around those two nodes, then
+extracts various kinds of features from that subgraph, such as the set of edge
+sequences that connect the two nodes.  \mattnote{Give an example graph with
+features.}  Gardner and Mitchell used these features to perform link
+prediction in the graph, using characteristics of the subgraph around two nodes
+to determine if an edge of a particular type should exist between those nodes
+(when the graph corresponds to a knowledge base like Freebase, this task is
+also known as knowledge base completion). Gardner and Mitchell only used these
+features to model formal KB relations, however.
+
+We differ from the work done by Gardner and Mitchell in two ways.  First, we
+apply these features to models of natural language, instead of formal KB
+relations.  There are some non-trivial problems that need to be solved in order
+to make this work, which will be discussed in \secref{method}.  Second, Gardner
+and Mitchell only considered generating feature matrices over node \emph{pairs}
+in a graph, with which one can model binary relations.  The natural language
+queries we wish to answer also involve unary predicates, or categories.  We
+thus extend SFE to also generate feature matrices over \emph{nodes} in a graph,
+an extension that is straightforward and is also discussed in more detail in
+\secref{method}.
+
+\subsection{Other related work}
+
+Manaal's retrofitting semantic lexicons, Sebastian Riedel's ``Injecting Logical
+Background Knowledge into Embeddings for Relation Extraction'', work on PRA and
+KBC more generally\ldots
 
 \section{Method}
 \label{sec:method}
