@@ -134,7 +134,7 @@ The rest of this paper is organized as follows.  In \secref{background}, we
 describe the relevant background necessary to understand the models we propose,
 and we situate our model in the context of related work.  In \secref{method},
 we give a formal description of our models of predicate semantics.  In
-\secref{experiments}, we present experimental results on fill-in-the-blank
+\secref{evaluation}, we present experimental results on fill-in-the-blank
 natural language query task.  Using web text linked to Freebase as our training
 and test data, we show a 63\% relative improvement over prior work, giving a
 new state-of-the-art result on this dataset.  In \secref{discussion}, we give a
@@ -152,6 +152,7 @@ describe both of these techniques, as well as give a short overview of other
 closely related work.
 
 \subsection{Open-vocabulary semantic parsing}
+\label{sec:jayant-semparse}
 
 \mattnote{TODO - Jayant will write this}
 
@@ -183,19 +184,65 @@ an extension that is straightforward and is also discussed in more detail in
 
 \subsection{Other related work}
 
-Manaal's retrofitting semantic lexicons, Sebastian Riedel's ``Injecting Logical
-Background Knowledge into Embeddings for Relation Extraction'', work on PRA and
-KBC more generally\ldots
+Some related work on including structured information in distributional
+representations: Manaal's retrofitting semantic lexicons, Sebastian Riedel's
+``Injecting Logical Background Knowledge into Embeddings for Relation
+Extraction'', work on PRA and KBC more generally\ldots Also, the whole line of
+work on knowledge base embeddings (RESCAL, TransE, etc.) is at least slightly
+relevant here, as is PRA.  \mattnote{Actually write
+this section}.
 
 \section{Method}
 \label{sec:method}
 
-\mattnote{TODO}
-
-\section{Experiments}
-\label{sec:experiments}
+\subsection{Adding SFE features to Jayant's models}
+\label{sec:formal-and-distributional}
 
 \mattnote{TODO}
+
+\subsection{Finding relevant features for each predicate}
+\label{sec:computing-pmi}
+
+\mattnote{TODO}
+
+\subsection{Improved logical forms}
+\label{sec:better-lfs}
+
+\mattnote{TODO}
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+We evaluate our models of predicate semantics on a fill-in-the-blank natural
+language query task.  Each test example is a natural language phrase containing
+at least two Freebase entities, one of which is held out.  The system must
+propose Freebase entities to fill in the blank left by the held out entity, and
+the predicted entities are then judged manually for correctness.  We compare
+our proposed models, which combine distributional and formal elements, with
+distributional-only and formal-only baselines.
+
+\subsection{Data}
+
+We use the dataset introduced by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}, which
+consists of the ClueWeb09 web
+corpus\footnote{http://www.lemuproject.org/clueweb09.php} along with Google's
+FACC entity linking of that corpus to
+Freebase~\cite{gabrilovich-2013-clueweb-entity-linking}.  3 million webpages
+from this corpus were processed with a CCG parser to produce logical forms, as
+described in \secref{jayant-semparse}.  This produced 2.1m predicate instances
+involving 142k entity pairs and 184k entities.  After removing
+infrequently-seen predicates (seen fewer than 6 times), there were 25k
+categories and 4.2k relations.\footnote{The differences in numbers reported
+here versus those reported by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} are due to the
+improved logical form generation, discussed in \secref{better-lfs}.}
+
+\subsection{Methodology}
+
+\subsection{Models}
+
+\subsection{Results}
 
 \section{Discussion}
 \label{sec:discussion}
