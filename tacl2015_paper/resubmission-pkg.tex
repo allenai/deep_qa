@@ -1,0 +1,55 @@
+\documentclass{article}[11pt,oneside]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% INPUTS FOR THE NEW PAPER
+\newcommand{\subtitle}{Learning a Compositional Semantics for Freebase \\ with an Open
+  Predicate Vocabulary}
+\title{Resubmission of TACL \#548, \\ \subtitle.   \\}
+
+\newcommand{\resubmission}{paper.pdf}  %% revised version
+\newcommand{\origdecision}{decision.pdf}  %% name of anonymized original-decision-letter file
+\newcommand{\coverfile}{our-cover-letter.pdf}  %% name of anonymized cover-letter file
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{hyperref}
+% \hypersetup{
+%     colorlinks=true, %set true if you want colored links
+%     linktoc=all,     %set to all if you want both sections and subsections linked
+%     linkcolor=blue,  %choose some color if you want links to stand out
+% }
+\usepackage{ifthen}
+\usepackage{xspace}
+
+\usepackage{times}
+\usepackage{fullpage}
+\usepackage{pdfpages}
+
+\special{papersize=8.5in,11in}
+\pdfpageheight\paperheight
+\pdfpagewidth\paperwidth
+\setlength\topmargin{-7mm} \setlength\oddsidemargin{-0cm}
+\setlength\textheight{22cm} \setlength\textwidth{15.8cm}
+\setlength\columnsep{0.25in}  \newlength\titlebox \setlength\titlebox{2.00in}
+\setlength\headheight{5pt}   \setlength\headsep{0pt}
+\setlength\footskip{1.9cm}
+\setlength\leftmargin{0.0in}
+\pagestyle{plain}
+
+
+\setlength{\footskip}{55pt}
+
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\section{Author(s) cover letter responding to the original reviews} Starts on next page.
+\includepdf[pages=-,offset=0mm 6mm]{\coverfile}
+\section{Revised submission} Starts on next page.
+\includepdf[pages=-,offset=0mm 6mm]{\resubmission}
+\section{Original decision letter and reviews} Starts on next page.
+\includepdf[pages=-,offset=0mm 6mm]{\origdecision}
+
+\end{document}

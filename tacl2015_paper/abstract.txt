@@ -1,0 +1,144 @@
+
+Compositional Semantics with Universal Schema
+
+Producing model-theoretic semantics for natural language has long been
+a goal of NLP. However, current semantic parsing approaches are
+inherently limited by the schema of the knowledge base. We
+
+We demonstrate that our approach outperforms reasonable baselines on
+an open-domain QA task. We then perform several more direct
+comparisons
+
+
+Problem:
+- semantic parsing approaches restricted by available schema
+  - EVIDENCE?
+
+Claims:
+- use matrix factorization 
+
+
+Questions:
+- How well can available schema capture our "more natural" queries?
+- How well can our learned predicates perform on existing FB data sets?
+
+
+Evaluation
+- MAP results
+- Data set statistics
+  - # of queries
+  - # of annotated correct / incorrect entity answers
+  - # of queries with zero retrieved answers
+
+- Drill down. Pick 10 queries.
+  - annotate FB MQL queries for them
+  - compare results
+
+- 
+
+
+
+
+
+========================================
+
+
+
+Evaluation:
+
+Split webpages into training / test sets.
+
+Generate "queries" against the models
+1. Single relation / single category queries: the set of (x, y) such that r(x, y)
+2. Compositional queries: "major cities in Texas"? 
+
+Metrics:
+- Rank all answers to queries for each model, do the pooled evaluation
+of Riedel.
+OR
+- Generate a random set of entities for each generated lf. Rank the
+"true" set above the "false" set.
+
+Baselines:
+- Direct lookup in training corpus (according to extracted logical forms from CCG parses)
+- Lewis & Steedman -- cluster the logical forms and rank according to probability.
+  - Not sure how to implement this effectively.
+- Category / relation universal schema (only for 2-argument test patterns)
+  - This will only be runnable on a subset of the data.
+
+
+Abstract: 
+
+Current approaches to compositional semantics tied to a knowledge base
+are limited in their understanding by the schema of the knowledge
+base. \emph{Universal schema} provides a method for eliminating this
+restriction by treating every word in the language as its own
+predicate and learning its denotation. This paper explores an approach
+to compositional semantics based on universal schema. Our approach
+heuristically maps CCG-parsed sentences to logical forms containing
+per-word predicates. The denotations of these per-word predicates are
+learned using a matrix factorization model that is trained on a corpus
+of entity-linked sentences. This approach can learn denotations for
+tricky words (e.g., "front-runner"), and further can compose them to
+produce denotations for phrases (e.g., "Republican front-runner from
+Texas"). We evaluate our approach on a compositional natural language
+query task, where it outperforms several natural baselines. We also
+experimentally analyze the strengths and weaknesses of our universal
+schema approach relative to relying on the fixed Freebase schema.
+
+
+
+
+Abstract:
+
+We present \emph{compositional universal schema}, a new approach to
+semantics that combines both distributional and formal logic
+approaches. Our key observation is that universal schema (CITATION)
+provides a natural interface between distributional and logical
+semantics, as it learns vector space embeddings of predicates that can
+be mapped to logical denotations. Building on this insight, our
+approach first maps sentences to formal logic semantic
+representations, then learns the denotations of any used predicate
+symbols via universal schema. This approach combines the relative
+advantages of both representations: it uses distributional
+representations for lexical semantics, and formal logic for
+composition. It also improves on non-compositional universal schema by
+enabling additional sharing of statistical information across
+predicates. We present experiments on a question-answering task
+demonstrating that our approach outperforms non-compositional
+universal schema and similar combined models based on clustering
+(citation).
+
+
+Need way to:
+1) generate paired training / test examples for compositional / non-compositional data
+  - Use all logical forms that apply to exactly 2 entities as "relation" patterns.
+    These need to be canonicalized somehow.
+
+2) simply implement lookup / clustering models
+  - Generating a list of entailed category / relation instances would make this
+    part dramatically simpler
+
+
+Strategy:
+- Generate two sets of logical form templates, for training and testing.
+- Training templates: use the logic with built-in simplification, so that
+  1) entailed category / relation instances can be easily identified
+  2) subsets of the logical form containing 2 entity arguments can be extracted
+     (non-compositional patterns)
+- Test templates: use the query logic (that already exists)
+  - Write some syntactic patterns to extract good "queries" to evaluate on
+
+Results table:
+
+                                Non-compositional test set      Compositional Test Set
+Non-compositional models
+us                              ###                             --
+lookup                          ###                             --
+clustering                      ###                             --
+Compositional models
+Compositional us                ###                             ###
+lookup                          ###                             ###
+clustering                      ###                             ###
+
+

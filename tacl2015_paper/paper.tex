@@ -1,0 +1,1793 @@
+\documentclass[11pt]{article}
+
+\usepackage{acl2012}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage[pdf]{pstricks}
+\usepackage{pst-pdf}
+\usepackage{pst-plot}
+\usepackage{times}
+\usepackage{multirow}
+\usepackage{latexsym}
+\usepackage{soul}
+\usepackage{subfig}
+\usepackage{stmaryrd}
+\usepackage{url}
+\setlength\titlebox{6.5cm}    % Expanding the titlebox
+
+\title{Learning a Compositional Semantics for Freebase \\ with an Open
+  Predicate Vocabulary}
+
+\author{Jayant Krishnamurthy\\
+        Carnegie Mellon University\\
+        5000 Forbes Avenue\\
+        Pittsburgh, PA 15213\\
+	{\tt jayantk@cs.cmu.edu}
+	  \And
+	Tom M. Mitchell\\
+        Carnegie Mellon University\\
+        5000 Forbes Avenue\\
+        Pittsburgh, PA 15213\\
+        {\tt tom.mitchell@cmu.edu}}
+
+\date{}
+
+% Contributions:
+% - compositional model of semantics based on universal schema (cite old work)
+% - new training objective
+% - experimental evaluation
+% 
+% Introduction:
+% 
+% - Fixed schema is inherently limiting
+% - open / universal is good
+%   - need techniques for composition / compositional semantics
+% - 
+
+\newcommand{\pred}[1]{\textsc{#1}}
+% TODO: make this look cleaner!
+\newcommand{\ccgsyn}[1]{\mbox{$\it{#1}$}}
+\newcommand{\true}{\pred{True}}
+
+\newcommand{\clb}{\textsc{CorpusLookup}}
+\newcommand{\cb}{\textsc{Clustering}}
+\newcommand{\uspr}{\textsc{Factorization} (\ensuremath{O_P})}
+\newcommand{\usqr}{\textsc{Factorization} (\ensuremath{O_Q})}
+\newcommand{\epr}{\textsc{Ensemble} (\ensuremath{O_P})}
+\newcommand{\eqr}{\textsc{Ensemble} (\ensuremath{O_Q})}
+\newcommand{\pden}[1]{\ensuremath{\llbracket #1 \rrbracket_{P}}}
+
+\DeclareMathOperator{\precision}{Prec}
+\DeclareMathOperator{\correct}{Correct}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+We present an approach to learning a model-theoretic semantics for
+natural language tied to Freebase. Crucially, our approach uses an
+open predicate vocabulary, enabling it to produce denotations for
+phrases such as ``Republican front-runner from Texas'' whose semantics
+cannot be represented using the Freebase schema. Our approach directly
+converts a sentence's syntactic CCG parse into a logical form
+containing predicates derived from the words in the sentence,
+assigning each word a consistent semantics across sentences. This
+logical form is evaluated against a learned probabilistic database
+that defines a distribution over denotations for each textual
+predicate. A training phase produces this probabilistic database using
+a corpus of entity-linked text and probabilistic matrix factorization
+with a novel ranking objective function. We evaluate our approach on a
+compositional question answering task where it outperforms several
+competitive baselines. We also compare our approach against manually
+annotated Freebase queries, finding that our open predicate vocabulary
+enables us to answer many questions that Freebase cannot.
+
+% This approach allows us to learn denotations for tricky words (e.g.,
+% ``front-runner'') and compose them to produce denotations for phrases
+% (e.g., ``Republican front-runner from Texas''). The use of CCG also
+% enables us to model linguistic phenomena such as negation. 
+\end{abstract}
+
+\section{Introduction}
+
+Traditional knowledge representation assumes that world knowledge can
+be encoded using a closed vocabulary of formal predicates. In recent
+years, semantic parsing has enabled us to build compositional models
+of natural language semantics using such a closed predicate vocabulary
+\cite{zelle1996,zettlemoyer05}. These semantic parsers map natural
+language statements to database queries, enabling applications such as
+answering questions using a large knowledge base
+\cite{yahya12,krishnamurthy2012,cai2013acl,kwiatkowski2013,berant2013,berant2014,reddy2014}. Furthermore,
+the model-theoretic semantics provided by such parsers have the
+potential to improve performance on other tasks, such as information
+extraction and coreference resolution.
+
+However, a closed predicate vocabulary has inherent
+limitations. First, its coverage will be limited, as such vocabularies
+are typically manually constructed. Second, it may abstract away
+potentially relevant semantic differences. For example, the semantics
+of ``Republican front-runner'' cannot be adequately encoded in the
+Freebase schema because it lacks the concept of a ``front-runner.''
+We could choose to encode this concept as ``politician'' at the cost
+of abstracting away the distinction between the two. As this example
+illustrates, these two problems are prevalent in even the largest
+knowledge bases.
+
+
+\begin{figure*}
+\small
+\begin{minipage}{0.23\linewidth}\textbf{Input Text}\\Republican front-runner \\ from Texas\end{minipage} ~~ $\rightarrow$ ~~
+\begin{minipage}{0.3\linewidth}
+\textbf{Logical Form}\\
+$\lambda x.\exists y,z. \pred{front-runner}(x) \wedge y=\pred{/en/republican} \wedge \pred{nn}(y,x) \wedge z=\pred{/en/texas} \wedge \pred{from}(x,z)$
+\end{minipage} ~~ $\rightarrow$ ~~
+\begin{minipage}{0.3\linewidth}
+\begin{tabular}{ll}
+\textbf{Entity} & \textbf{Prob.} \\
+$\pred{/en/george\_bush}$ & 0.57 \\
+$\pred{/en/rick\_perry}$ & 0.45 \\
+... & \\
+\end{tabular}
+\end{minipage}
+
+\vspace{-.35in}
+\begin{minipage}{0.15\linewidth}
+\begin{pspicture}(-0.25,-0.4)(4.2,3.6)
+\scalebox{0.8}{
+
+\psframe(1,0)(2,2)
+\psframe(2.2,1)(4.2,2)
+\rput(1.5, 1){$\phi$}
+\rput(3.2, 1.5){$\theta$}
+
+\rput[rt](0.95,1.85){{\small \pred{ texas}}}
+\rput[rt](0.95,1.35){{\small \pred{ repub.}}}
+\rput[rt](0.95,0.85){{\small \pred{ g.\_bush}}}
+\rput[rt](0.95,0.35){{\small \pred{ ...}}}
+
+\rput[lb]{60}(2.4,2){{\small \pred{f.-run.}}}
+\rput[lb]{60}(2.9,2){{\small \pred{pol.}}}
+\rput[lb]{60}(3.4,2){{\small \pred{state}}}
+\rput[lb]{60}(3.9,2){{\small \pred{...}}}
+
+\rput[l](0,-0.3){\large \textbf{Entity/Predicate Embeddings}}
+}
+\end{pspicture}
+\end{minipage}
+\begin{minipage}{0.35\linewidth}
+\begin{pspicture}(-2.7,-0.4)(4.7,3.6)
+\scalebox{0.8}{
+
+\psframe(1,0)(2,2)
+\psframe(2.2,1)(4.2,2)
+\rput(1.5, 1){$\phi$}
+\rput(3.2, 1.5){$\theta$}
+
+\rput[rt](0.95,1.85){{\small (\pred{g.\_bush}, \pred{ texas})}}
+\rput[rt](0.95,1.35){{\small (\pred{g.\_bush}, \pred{ repub.})}}
+\rput[rt](0.95,0.85){{\small (\pred{repub.}, \pred{ g.\_bush})}}
+\rput[rt](0.95,0.35){{\small \pred{...}}}
+
+\rput[lb]{60}(2.4,2){{\small \pred{from}}}
+\rput[lb]{60}(2.9,2){{\small \pred{lives\_in}}}
+\rput[lb]{60}(3.4,2){{\small \pred{nn}}}
+\rput[lb]{60}(3.9,2){{\small \pred{...}}}
+
+\rput(4.6,1.5){$\rightarrow$}
+}
+\end{pspicture}
+\end{minipage}
+\begin{minipage}{0.15\linewidth}
+\begin{pspicture}(-1,-0.4)(8,3.6)
+\scalebox{0.8}{
+
+\psframe(1,0)(3,2)
+\psline(1,0.5)(3,0.5)
+\psline(1,1)(3,1)
+\psline(1,1.5)(3,1.5)
+\psline(1.5,0)(1.5,2)
+\psline(2,0)(2,2)
+\psline(2.5,0)(2.5,2)
+
+\rput[rt](0.95,1.85){{\small \pred{ texas}}}
+\rput[rt](0.95,1.35){{\small \pred{ repub.}}}
+\rput[rt](0.95,0.85){{\small \pred{ g.\_bush}}}
+\rput[rt](0.95,0.35){{\small \pred{ ...}}}
+
+\rput[lb]{60}(1.3,2){{\small \pred{f.-run.}}}
+\rput[lb]{60}(1.8,2){{\small \pred{pol.}}}
+\rput[lb]{60}(2.3,2){{\small \pred{state}}}
+\rput[lb]{60}(2.8,2){{\small \pred{...}}}
+
+\rput[c](1.25,1.75){{\small .1}}
+\rput[c](1.25,1.25){{\small .1}}
+\rput[c](1.25,0.75){{\small .9}}
+
+\rput[c](1.75,1.75){{\small .1}}
+\rput[c](1.75,1.25){{\small .1}}
+\rput[c](1.75,0.75){{\small .9}}
+
+\rput[c](2.25,1.75){{\small .8}}
+\rput[c](2.25,1.25){{\small .1}}
+\rput[c](2.25,0.75){{\small .1}}
+
+\rput[l](0,-0.3){\large \textbf{Probabilistic Database}}
+
+% \psline[linewidth=0.5pt](3.4,1.5)(6.5,1.5)
+% \psline[linewidth=0.5pt]{->}(6.5,1.5)(6.5,3.7)
+}
+\end{pspicture}
+\end{minipage}
+\begin{minipage}{0.2\linewidth}
+\begin{pspicture}(-2.5,-0.4)(8,3.6)
+\scalebox{0.8}{
+
+\psframe(1,0)(3,2)
+\psline(1,0.5)(3,0.5)
+\psline(1,1)(3,1)
+\psline(1,1.5)(3,1.5)
+\psline(1.5,0)(1.5,2)
+\psline(2,0)(2,2)
+\psline(2.5,0)(2.5,2)
+
+\rput[rt](0.95,1.85){{\small (\pred{g.\_bush}, \pred{ texas})}}
+\rput[rt](0.95,1.35){{\small (\pred{g.\_bush}, \pred{ repub.})}}
+\rput[rt](0.95,0.85){{\small (\pred{repub.}, \pred{ g.\_bush})}}
+\rput[rt](0.95,0.35){{\small \pred{ ...}}}
+
+\rput[lb]{60}(1.3,2){{\small \pred{from}}}
+\rput[lb]{60}(1.8,2){{\small \pred{lives\_in}}}
+\rput[lb]{60}(2.3,2){{\small \pred{nn}}}
+\rput[lb]{60}(2.8,2){{\small \pred{...}}}
+
+\rput[c](1.25,1.75){{\small .9}}
+\rput[c](1.25,1.25){{\small .1}}
+\rput[c](1.25,0.75){{\small .1}}
+
+\rput[c](1.75,1.75){{\small .9}}
+\rput[c](1.75,1.25){{\small .1}}
+\rput[c](1.75,0.75){{\small .1}}
+
+\rput[c](2.25,1.75){{\small .1}}
+\rput[c](2.25,1.25){{\small .1}}
+\rput[c](2.25,0.75){{\small .7}}
+
+% \psline[linewidth=0.5pt](3.4,1.5)(6.5,1.5)
+% \psline[linewidth=0.5pt]{->}(6.5,1.5)(6.5,3.7)
+\psline[linewidth=0.5pt]{->}(-0.5,2.8)(-0.5,3.2)
+
+}
+\end{pspicture}
+\end{minipage}
+\vspace{-.1in}
+\caption{Overview of our approach. Top left: the text is converted to
+  logical form by CCG syntactic parsing and a collection of
+  manually-defined rules. Bottom: low-dimensional embeddings of each
+  entity (entity pair) and category (relation) are learned from an
+  entity-linked web corpus. These embeddings are used to construct a
+  probabilistic database. The labels of these matrices are shortened
+  for space reasons. Top right: evaluating the logical form on the
+  probabilistic database computes the marginal probability that each
+  entity is an element of the text's denotation.}
+\label{fig:overview}
+\vspace{-.1in}
+\end{figure*}
+
+An alternative paradigm is an \emph{open} predicate vocabulary, where
+each natural language word or phrase is given its own formal
+predicate. This paradigm is embodied in both open information
+extraction \cite{banko2007} and universal schema
+\cite{riedel2013}. Open predicate vocabularies have the potential to
+capture subtle semantic distinctions and achieve high
+coverage. However, we have yet to develop compelling approaches to
+compositional semantics within this paradigm.
+
+% An alternative approach is \emph{open information extraction}, which
+% treats every natural language word or phrase as its own formal
+% predicate \cite{banko2007}. Another closely related approach is
+% \emph{universal schema}, which joins these natural language predicates
+% with formal predicates \cite{riedel2013}. 
+% In these approaches, the knowledge representation has an open
+% predicate vocabulary that is determined by the textual expressions in
+% a corpus. 
+
+This paper takes a step toward compositional semantics with an open
+predicate vocabulary. Our approach defines a distribution over
+denotations (sets of Freebase entities) given an input text.  The
+model has two components, shown in Figure \ref{fig:overview}. The
+first component is a rule-based semantic parser that uses a syntactic
+CCG parser and manually-defined rules to map entity-linked texts to
+logical forms containing predicates derived from the words in the
+text. The second component is a probabilistic database with a possible
+worlds semantics that defines a distribution over denotations for each
+textually-derived predicate. This database assigns independent
+probabilities to individual predicate instances, such as
+$P(\pred{front-runner}(\pred{/en/george\_bush})) = 0.9$. Together,
+these components define an exponentially-large distribution over
+denotations for an input text; to simplify this output, we compute the
+marginal probability, over all possible worlds, that each entity is an
+element of the text's denotation.
+
+% A training phase estimates parameters for the probabilistic database
+% using probabilistic matrix factorization with a novel query/answer
+% ranking objective. The training data is derived by analyzing a corpus
+% of entity-linked sentences with the rule-based semantic analysis
+% system, producing a collection logical form queries with observed
+% entity answers. The query/answer ranking objective, when optimized,
+% trains the database to rank the observed answers for each query above
+% unobserved answers. The matrix factorization learns a low-dimensional
+% embedding of each entity (entity pair) and category (relation) such
+% that the denotation of a predicate is likely to contain entities or
+% entity pairs with nearby vectors.
+
+The learning problem in our approach is to train the probabilistic
+database to predict a denotation for each predicate. We pose this
+problem as probabilistic matrix factorization with a novel
+query/answer ranking objective. This factorization learns a
+low-dimensional embedding of each entity (entity pair) and category
+(relation) such that the denotation of a predicate is likely to
+contain entities or entity pairs with nearby vectors. To train the
+database, we first collect training data by analyzing entity-linked
+sentences in a large web corpus with the rule-based semantic
+parser. This process generates a collection of logical form queries
+with observed entity answers. The query/answer ranking objective, when
+optimized, trains the database to rank the observed answers for each
+query above unobserved answers.
+
+% Given a learned probabilistic database, Figure \ref{fig:overview}
+% illustrates the process of predicting a denotation for a text. First,
+% the semantic analysis system produces a logical form for the given
+% text (top left). Next, this logical form is evaluated against the
+% learned probabilistic database to produce a list of entities ranked by
+% probability, similar to existing semantic parsing techniques (top
+% right). Each predicate instance's probability in the database is
+% determined by the low-dimensional embeddings learned by matrix
+% factorization (bottom left). 
+
+% pose this problem as
+% probabilistic matrix factorization with a novel ranking
+% objective. First, we collect training data, in the form of true
+% assertions about Freebase entities found in a large web corpus. We
+% then automatically generate query-answer pairs from these assertions
+% and train the database to rank  Training produces a vector embedding of each
+% predicate and entity such that the denotation of a predicate is likely
+% to contain entities with nearby vectors.
+% 
+% 
+% An initial training phase uses the semantic analysis component and a
+% large entity-linked corpus to learn parameters for the probabilistic
+% database,  The set of categories and
+% relations is automatically derived from the words in the training
+% data. 
+
+
+% The denotation of a text is computed in three
+% steps.  (Embeddings of entity pairs and relation
+% predicates are also learned, but not shown in the Figure for space
+% reasons.) Second, given a text, a rule based-semantic analysis system
+% produces a logical form. 
+% 
+% Our approach represents world knowledge in a
+% probabilistic database over textually-derived predicates and Freebase
+% entities. To semantically analyze a natural language statement, we use a
+% rule-based approach to transform its syntactic CCG parse into a query
+% against this database. Evaluating the query produces a ranked list of
+% Freebase entity answers,  
+
+
+% We train the database using a data set of true assertions about
+% Freebase entities collected from a large web corpus. , or learning
+% embeddings for each predicated and entity that assign high probability
+% to the observed assertions.
+
+%  Our approach first uses a CCG-based semantic analysis system
+% to identify assertions about Freebase entities, resulting in a sparse
+% collection of observed predicate instances. Our approach then
+% generalizes from the observed predicate instances using probabilistic
+% matrix factorization (TODO: cite). We introduce a novel training
+% objective that encourages the learned parameters to correctly answer
+% compositional natural language queries.
+
+We evaluate our approach on a question answering task, finding that
+our approach outperforms several baselines and that our new training
+objective improves performance over a previously-proposed
+objective. We also evaluate the trade-offs between open and closed
+predicate vocabularies by comparing our approach to a
+manually-annotated Freebase query for each question. This comparison
+reveals that, when Freebase contains predicates that cover the
+question, it achieves higher precision and recall than our
+approach. However, our approach can correctly answer many questions
+not covered by Freebase.
+
+% The contributions of this work are threefold:
+% \begin{enumerate} 
+% \item An approach to compositional semantics with an open predicate
+%   vocabulary that uses probabilistic matrix factorization to produce
+%   the underlying knowledge representation.
+% 
+% \item A novel query/answer ranking objective for the matrix
+%   factorization that improves performance over a previously-proposed
+%   objective.
+% 
+% \item An experimental evaluation on a question answering task that
+%   highlights the advantages and disadvantages of open and closed
+%   predicate vocabularies.
+% \end{enumerate}
+
+
+
+% (TODO: key challenges to semantic analysis: (1) ability to represent
+% phenomena like negation, etc. (2) synonymy)
+
+% \section{Overview}
+% 
+% This paper is structured as follows. Section \ref{sec:rule} describes
+% the rule-based semantic analysis system, which is used to generate
+% training data for the probabilistic database. Section \ref{sec:probdb}
+% describes the probabilistic database, our matrix factorization model
+% and our training algorithm. Section \ref{sec:evaluation} describes our
+% experimental evaluation, Section \ref{sec:priorwork} describes prior
+% work, and Section \ref{sec:discussion} concludes.
+
+
+\section{System Overview}
+
+The purpose of our system is to predict a denotation $\gamma$ for a
+given natural language text $s$. The denotation $\gamma$ is the set of
+Freebase entities that $s$ refers to; for example, if
+$s=\mbox{``president of the US,''}$ then $\gamma = \{\pred{/en/Obama},
+\pred{/en/Bush}, ... \}$.\footnote{This paper uses a simple
+  model-theoretic semantics where the denotation of a noun phrase is a
+  set of entities and the denotation of a sentence is either true or
+  false. However, for notational convenience, denotations $\gamma$
+  will be treated as sets of entities throughout.} Our system
+represents this prediction problem using the following probabilistic
+model:
+\begin{eqnarray*}
+P(\gamma | s) = \sum_w \sum_\ell P(\gamma | \ell, w) P(w) P(\ell | s) 
+\end{eqnarray*}
+
+The first term in this factorization, $P(\ell | s)$, is a distribution
+over logical forms $\ell$ given the text $s$. This term
+corresponds to the rule-based semantic parser (Section
+\ref{sec:rule}). This semantic parser is deterministic, so this term
+assigns probability 1 to a single logical form for each text. The
+second term, $P(w)$, represents a distribution over possible worlds,
+where each world is an assignment of truth values to all possible
+predicate instances. The distribution over worlds is represented by a
+probabilistic database (Section \ref{sec:probdb}). The final term,
+$P(\gamma | \ell, w)$, deterministically evaluates the logical form
+$\ell$ on the world $w$ to produce a denotation $\gamma$. This term
+represents query evaluation against a fixed database, as in other work
+on semantic parsing.
+
+Section \ref{sec:inference} describes inference in our model. To
+produce a ranked list of entities (Figure \ref{fig:overview}, top
+right) from $P(\gamma | s)$, our system computes the marginal
+probability that each entity is an element of the denotation
+$\gamma$. This problem corresponds to query evaluation in a
+probabilistic database, which is known to be tractable in many cases
+\cite{suciu2011probabilistic}.
+
+Section \ref{sec:training} describes training, which estimates
+parameters for the probabilistic database $P(w)$. This step first
+automatically generates training data using the rule-based semantic
+parser. This data is used to formulate a matrix factorization problem
+that is optimized to estimate the database parameters.
+
+% In our approach, only
+% the probabilistic database $P(w)$ must be learned. Training data, in
+% the form of logical forms with fully-observed entity arguments, is
+% automatically generated by applying the open-vocabulary semantic
+% parser to entity-linked text. The probabilistic database is
+% parameterized as a matrix factorization model, and is trained by
+% optimizing a ranking objective using stochastic gradient descent.
+
+
+% Note that this probabilistic model is the exact opposite of the
+% traditional semantic parsing model. Traditionally, $P(\ell | s)$ is
+% learned, and $P(W)$ is a point distribution. Our system is exactly the
+% opposite, using a \emph{deterministic} semantic parser and a
+% \emph{learned} database.
+
+
+\section{Rule-Based Semantic Parser}
+\label{sec:rule}
+
+The first part of our compositional semantics system is a rule-based
+system that deterministically computes a logical form $\ell$ for a
+text $s$. This component is used during inference to analyze the
+logical structure of text, and during training to generate training
+data (see Section \ref{sec:trainingdata}).  Several input/output pairs
+for this system are shown in Figure \ref{fig:examplesem}.
+
+The conversion to logical form has 3 phases:
+
+\begin{enumerate}
+\item \textbf{CCG syntactic parsing} parses the text and applies
+  several deterministic syntactic transformations to facilitate
+  semantic analysis.
+\item \textbf{Entity linking} marks known Freebase entities in the
+  text.
+\item \textbf{Semantic analysis} assigns a logical form to each word,
+  then composes them to produce a logical form for the complete text.
+\end{enumerate}
+
+\subsection{Syntactic Parsing}
+
+The first step in our analysis is to syntactically parse the text. We
+use the \textsc{ASP-SYN} parser \cite{krishnamurthy2014} trained on
+CCGBank \cite{hockenmaier02ccgbank}. We then automatically transform
+the resulting syntactic parse to make the syntactic structure more
+amenable to semantic analysis. This step marks \ccgsyn{NP}s in
+conjunctions by replacing their syntactic category with
+\ccgsyn{NP[\mbox{conj}]}. This transformation allows semantic analysis to
+distinguish between appositives and comma-separated lists. It also
+transforms all verb arguments to core arguments, i.e., using the
+category \ccgsyn{PP/NP} as opposed to \ccgsyn{((S\backslash
+  NP)\backslash (S\backslash NP))/NP}. This step simplifies the
+semantic analysis of verbs with prepositional phrase arguments. The
+final transformation adds a word feature to each \ccgsyn{PP} category,
+e.g., mapping \ccgsyn{PP} to \ccgsyn{PP[\mbox{by}]}. These features are used
+to generate verb-preposition relation predicates, such as
+$\pred{directed\_by}$.
+
+\subsection{Entity Linking}
+
+The second step is to identify mentions of Freebase entities in the
+text. This step could be performed by an off-the-shelf entity linking
+system \cite{ratinov2011,milne2008} or string matching. However, our
+training and test data is derived from Clueweb 2009, so we rely on the
+entity linking for this corpus provided by Gabrilovich et. al
+\shortcite{gabrilovich2013}.
+
+Our system incorporates the provided entity links into the syntactic
+parse provided that they are consistent with the parse
+structure. Specifically, we require that each mention is either (1) a
+constituent in the parse tree with syntactic category $N$ or $NP$ or
+(2) a collection of $N/N$ or $NP/NP$ modifiers with a single head
+word. The first case covers noun and noun phrase mentions, while the
+second case covers noun compounds. In both cases, we substitute a
+single multi-word terminal into the parse tree spanning the mention
+and invoke special semantic rules for mentions described in the next
+section.
+
+\subsection{Semantic analysis}
+
+The final step uses the syntactic parse and entity links to produce a
+logical form for the text. The system induces a logical form for every
+word in the text based on its syntactic CCG category. Composing these
+logical forms according to the syntactic parse produces a logical form
+for the entire text.
+
+\begin{figure}
+{\small
+\ul{Dan Hesse}, CEO of \ul{Sprint} \\
+$\lambda x.\exists y.x = \pred{/en/dan\_hesse} \wedge \pred{ceo}(x) \wedge \pred{of}(x, y) \wedge y = \pred{/en/sprint}$ \\
+ 
+\ul{Yankees} pitcher \\
+$\lambda x.\exists y.\pred{pitcher}(x) \wedge \pred{nn}(y, x) \wedge y = \pred{/en/yankees}$ \\
+
+\ul{Tom Cruise} plays \ul{Maverick} in the movie \ul{Top Gun}. \\
+$\exists x,y,z. x = \pred{/en/tom\_cruise} \wedge \pred{plays}(x,
+y) \wedge y = \pred{/en/maverick\_(character)} \wedge \pred{plays\_in}(x, z) \wedge z
+= \pred{/en/top\_gun} $
+}
+\vspace{-.1in}
+\caption{Example input/output pairs for our semantic analysis
+  system. Mentions of Freebase entities in the text are indicated by
+  underlines.}
+\vspace{-.1in}
+\label{fig:examplesem}
+\end{figure}
+
+Our semantic analyses are based on a relatively na\"ive
+model-theoretic semantics. We focus on language whose semantics can be
+represented with existentially-quantified conjunctions of unary and
+binary predicates, ignoring, for example, temporal scope and
+superlatives. Generally, our system models nouns and adjectives as
+unary predicates, and verbs and prepositions as binary
+predicates. Special multi-word predicates are generated for
+verb-preposition combinations. Entity mentions are mapped to the
+mentioned entity in the logical form. We also created special rules
+for analyzing conjunctions, appositives, and relativizing
+conjunctions. The complete list of rules used to produce these logical
+forms is available
+online.\footnote{\url{http://rtw.ml.cmu.edu/tacl2015_csf}}
+
+We made several notable choices in designing this component. First,
+multi-argument verbs are analyzed using pairwise relations, as in the
+third example in Figure \ref{fig:examplesem}. This analysis allows us
+to avoid reasoning about entity triples (quadruples, etc.), which are
+challenging for the matrix factorization due to sparsity. Second,
+noun-preposition combinations are analyzed as a category and relation,
+as in the first example in Figure \ref{fig:examplesem}. We empirically
+found that combining the noun and preposition in such instances
+resulted in worse performance, as it dramatically increased the
+sparsity of training instances for the combined relations.
+% Furthermore, in many
+% cases our analysis is more reasonable than the combined analysis; for
+% example, ``Dan Hesse of Sprint'' is an acceptable statement given the
+% first example in Figure \ref{fig:examplesem}.
+Third, entity mentions with the $\ccgsyn{N/N}$ category are analyzed
+using a special noun-noun relation, as in the second example in Figure
+\ref{fig:examplesem}. Our intuition is that this relation shares
+instances with other relations (e.g., ``city in Texas'' implies
+``Texan city''). Finally, we lowercased each word to create its
+predicate name, but performed no lemmatization or other normalization.
+
+\subsection{Discussion}
+
+The scope of our semantic analysis system is somewhat limited relative
+to other similar systems \cite{bos2008,lewis2013} as it only outputs
+existentially-quantified conjunctions of predicates. Our goal in
+building this system was to analyze noun phrases and simple sentences,
+for which this representation generally suffices. The reason for this
+focus is twofold. First, this subset of language is sufficient to
+capture much of the language surrounding Freebase entities. Second,
+for various technical reasons, this restricted semantic representation
+is easier to use (and more informative) for training the probabilistic
+database (see Section \ref{sec:qro}).
+
+% This semantic analysis system may appear somewhat na\"ive in
+% comparison to other similar systems \cite{bos2008,lewis2013}, as it
+% does not even attempt to model many linguistic phenomena (TODO:
+% example). Our goal in building this system was to analyze noun phrases
+% and simple sentences, for which it produces reasonable analyses.
+% There are many reasons for this emphasis. First, these are the kinds
+% of constructions in which Freebase entities appear. Second, it makes
+% sense to evaluate a new approach to compositional semantics on
+% (relatively) simple language. Third, complex logical forms are less
+% useful for training. Fourth, the current version of our probabilistic
+% database learning is restricted to categories and relations. TODO:
+% existentially quantified conjunctions of predicates.
+
+Note that this system can be straightforwardly extended to model
+additional linguistic phenomena, such as additional logical operators
+and generalized quantifiers, by writing additional rules. The
+semantics of logical forms including these operations are well-defined
+in our model, and the system does not even need to be re-trained to
+incorporate these additions.
+
+% We demonstrate this capability by adding additional rules for
+% negation (TODO).
+
+% TODO: Describe the scope / intended coverage of this system. Cite
+% BOxer / lewis and steedman. Explicitly discuss quantifiers (e.g., 5
+% movies). Formal logical restrictions and size of l.f.s (can reference
+% later table).
+
+
+% The
+% semantics of more complex logical forms,  are well-defined by the probabilistic database
+% 
+% The
+% focus of this paper, however, is on evaluating the combination of a
+% compositional semantics
+% 
+% Prior work has clearly demonstrated that more sophisticated systems
+% are possible.
+% 
+% Thus,  If 
+% 
+% Our goal in building this system is not to produce a complete,
+% logically accurate semantic analysis of language, but rather a good
+% enough analysis for the purpose of evaluating our compositional
+% semantics approach.
+% 
+% This semantic analysis system is somewhat na\"ive
+% 
+% The focus of this semantic analysis system is on analyzing noun
+% phrases and simple sentences. 
+% 
+% The output of this semantic analysis system is, typically, an
+% existentially-quantified conjunction of predicates. Although this
+% representation may seem fairly limited, it is sufficient for the types
+% of language we expect to be able to analyze. 
+% 
+% Despite the open predicate vocabulary, the
+% denotations of many words cannot be accurately represented as sets of
+% Freebase entities.
+% 
+% Note that this system can be extended quite easily with additional
+% rules for generalized quantifiers (e.g, ``5 movies''). To verify this,
+% we annotated a rule for a simple kind of negation (TODO: demo?).
+% 
+% The design of this semantic analysis system is influenced by the kinds
+% of language we expect to encounter 
+% 
+% Our goals in designing this semantic analysis system were 
+% 
+% 
+%  A simple form of negation was included for the sole purpose
+% of demonstrating that
+% 
+% The intended scope of this semantic analysis system is quite limited:
+% it focuses on analyzing noun phrases and simple sentences with
+% verbs. 
+% 
+% Generalized quantifiers
+% 
+% Although this semantic analysis system is not very sophisticated, it
+% is sufficient for the purposes of this paper. Specifically, not all
+% language can be semantically represented using
+% 
+% During training, it is much more efficient to 
+% 
+% Other systems for converting syntactic CCG parses to logical form are
+% considerably more sophisticated than ours \cite{bos2008,lewis2013}.
+% 
+
+
+% Note that we make no attempt to analyze negation or quantifiers
+% (outside of conjunctions). These phenomena could be included in our
+% analysis by annotating special logical forms for a small subset of
+% words, such as ``not.'' We found that such quantifiers were
+% empirically not very common in our evaluation, and thus we chose not
+% to annotate them. Complexly quantified statements would also be
+% omitted from the probabilistic database training, so there is little
+% consequence in omitting these entries.
+
+\section{Probabilistic Database}
+\label{sec:probdb}
+
+The second part of our compositional semantics system is a
+probabilistic database. This database represents a distribution over
+\emph{possible worlds}, where each world is an assignment of truth
+values to every predicate instance. Equivalently, the probabilistic
+database can be viewed as a distribution over databases or knowledge
+bases.
+
+    % In traditional semantic parsing, a
+   % logical form can be evaluated against a world to produce a
+  % denotation. Evaluating a logical form against a probabilistic database
+ % produces a \emph{distribution} over denotations.
+
+Formally, a probabilistic database is a collection of random
+variables, each of which represents the truth value of a single
+predicate instance. Given entities $e \in E$, categories $c \in C$,
+and relations $r \in R$ the probabilistic database contains boolean
+random variables $c(e)$ and $r(e_1, e_2)$ for each category and
+relation instance, respectively. All of these random variables are
+assumed to be independent. Let a world $w$ represent an assignment of
+truth values to all of these random variables, where $c(e) = w_{c,e}$
+and $r(e_1, e_2) = w_{r, e_1, e_2}$. By independence, the probability
+of a world can be written as:
+\begin{eqnarray*}
+P(w) & = & \prod_{e \in E} \prod_{c \in C} P( c(e) = w_{c,e}) \times \\
+ & & \prod_{e_1\in E} \prod_{e_2 \in E} \prod_{r \in R} P(r(e_1, e_2) = w_{r, e_1, e_2})
+\end{eqnarray*}
+
+The next section discusses how probabilistic matrix factorization is
+used to model the probabilities of these predicate instances.
+
+\subsection{Matrix Factorization Model}
+
+The probabilistic matrix factorization model treats the truth of each
+predicate instance as an independent boolean random variable that is
+true with probability:
+\begin{eqnarray*}
+P( c(e) = \true{}) & = & \sigma ( \theta_c^T \phi_e ) \\
+P( r(e_1,e_2) = \true{}) & = & \sigma ( \theta_r^T \phi_{(e_1,e_2)} )
+\end{eqnarray*}
+
+Above, $\sigma (x) = \frac{e^x}{1 + e^x}$ is the logistic function. In
+these equations, $\theta_c$ and $\theta_r$ represent $k$-dimensional
+vectors of per-predicate parameters, while $\phi_e$ and $\phi_{(e_1,
+  e_2)}$ represent $k$-dimensional vector embeddings of each entity
+and entity pair. This model contains a low-dimensional embedding of
+each predicate and entity such that each predicate's denotation has a
+high probability of containing entities with nearby vectors. The
+probability that each variable is false is simply 1 minus the
+probability that it is true.
+
+
+This model can be viewed as matrix factorization, as depicted in
+Figure \ref{fig:overview}. The category and relation instance
+probabilities can be arranged in a pair of matrices of dimension $|E|
+\times |C|$ and $|E|^2 \times |R|$. Each row of these matrices
+represents an entity or entity pair, each column represents a category
+or relation, and each value is between 0 and 1 and represents a truth
+probability (Figure \ref{fig:overview}, bottom right). These two
+matrices are factored into matrices of size $|E| \times k$ and $k
+\times |C|$, and $|E|^2 \times k$ and $k \times |R|$, respectively,
+containing $k$-dimensional embeddings of each entity, category, entity
+pair and relation (Figure \ref{fig:overview}, bottom left). These
+low-dimensional embeddings are represented by the parameters $\phi$
+and $\theta$.
+
+
+% In the first equation above, $\theta$ is a $|C| \times k$ matrix
+% containing a $k$-dimensional vector embedding $\theta_c$ for each
+% category $c$, and $\phi$ an $|E| \times k$ matrix containing a
+% $k$-dimensional vector embedding $\phi_e$ for each entity $e$. The
+% $\theta$ and $\phi$ matrices are defined analogously for relations and
+% entity pairs in the second equation.
+
+
+\section{Inference: Computing Marginal Probabilities}
+\label{sec:inference}
+
+Inference computes the marginal probability, over all possible worlds,
+that each entity is an element of a text's denotation. In many cases
+-- depending on the text -- these marginal probabilities can be
+computed exactly in polynomial time.
+
+The inference problem is to calculate $P(e \in \gamma | s)$ for each
+entity $e$. Because both the semantic parser $P(\ell | s)$ and query
+evaluation $P(\gamma | \ell, w)$ are deterministic, this problem can
+be rewritten as:
+\begin{eqnarray*}
+P(e \in \gamma | s) & = & \sum_\gamma \textbf{1}(e \in \gamma) P(\gamma | s) \\
+% & = & \sum_\gamma \sum_w \textbf{1}(e \in \gamma) P(\gamma | \ell, w) P(w)  \\
+& = & \sum_w \textbf{1}(e \in \llbracket \ell \rrbracket_w) P(w) 
+\end{eqnarray*}
+
+Above, $\ell$ represents the logical form for the text $s$ produced by
+the rule-based semantic parser, and \textbf{1} represents the
+indicator function. The notation $\llbracket \ell \rrbracket_w$
+represents denotation produced by (deterministically) evaluating the
+logical form $\ell$ on world $w$. This inference problem corresponds
+to query evaluation in a probabilistic database, which is \#P-hard in
+general. Intuitively, this problem can be difficult because $P(\gamma
+| s)$ is a joint distribution over sets of entities that can be
+exponentially large in the number of entities.
+
+However, a large subset of probabilistic database queries, known as
+\emph{safe} queries, permit polynomial time evaluation
+\cite{dalvi2007}. Safe queries can be evaluated extensionally using a
+probabilistic notion of a denotation that treats each entity as
+independent. Let $\pden{ \ell }$ denote a probabilistic denotation,
+which is a function from entities (or entity pairs) to probabilities,
+i.e., $\pden{ \ell }(e) \in [0, 1]$. The denotation of a
+logical form is then computed recursively, in the same manner as a
+non-probabilistic denotation, using probabilistic extensions of the
+typical rules, such as:
+\begin{eqnarray*}
+\pden{c}(e) & = & \sum_w P(w) \textbf{1}(w_{c,e}) \\
+\pden{r}(e_1, e_2) & = & \sum_w P(w) \textbf{1}(w_{r,e_1,e_2}) \\
+\pden{c_1(x) \wedge c_2(x)}(e) & = & \pden{ c_1 }(e) \times \pden{ c_2 }(e) \\
+\pden{\exists y.r(x, y)}(e) & = & 1 - \prod_{y \in E} (1 - \pden{r}(e, y)) \\
+% P_{ext}(c_1(e_1) \wedge r(e_1, e_2)) & = & P(c(e_1)) \times P(r(e_1, e_2)) \\
+% P_{ext}(\exists y.r(e, y)) & = & ( 1 - \prod_{y \in E} [1 -  P(\pred{of}(e, y)) \times P(\pred{company}(y))]) \\
+\end{eqnarray*}
+
+The first two rules are base cases that simply retrieve predicate
+probabilities from the probabilistic database. The remaining rules
+compute the probabilistic denotation of a logical form from the
+denotations of its parts.\footnote{This listing of rules is partial as
+  it does not include, e.g., negation or joins between one-argument
+  and two-argument logical forms. However, the corresponding rules are
+  easy to derive.} The formula for the probabilistic computation on
+the right of each of these rules is a straightforward consequence of
+the (assumed) independence of entities. For example, the last rule
+computes the probability of an \pred{or} of a set of independent
+random variables (indexed by $y$) using the identity $A \vee B = \neg
+(\neg A \wedge \neg B)$. For safe queries, $\pden{ \ell }(e) = P(e \in
+\gamma | s)$, that is, the probabilistic denotation computed according
+to the above rules \emph{is equal to} the marginal probability
+distribution. In practice, all of the queries in the experiments are
+safe, because they contain only one query variable and do not contain
+repeated predicates. For more information on query evaluation in
+probabilistic databases, we refer the reader to Suciu et
+al. \shortcite{suciu2011probabilistic}.
+
+
+% To evaluate a safe query, one first creates a query
+% plan that determines the intermediate sets of entities to create. For
+% example, to evaluate, $\lambda x. \exists y. \pred{ceo}(x) \wedge
+% \pred{of}(x, y) \wedge \pred{company}(y)$, we can first evaluate
+% $\lambda x,y.\pred{of}(x, y) \wedge \pred{company}(y)$ to get a set of
+% entity pairs. Next, we quantify out $y$ to get the set of entities for
+% $\lambda x.\exists y.\pred{of}(x, y) \wedge
+% \pred{company}(y)$. Finally, we join this with $\lambda
+% x.\pred{ceo}(x)$ to get the final result.
+% 
+% The fundamental idea of safe query evaluation is to approximate the
+% joint distributions over sets of entities with
+% 
+% 
+% 
+% Evaluating a probabilistic database query can be
+% intractable because $P(\gamma | s)$ is a distribution over \emph{sets}
+% of entities, which can be exponentially large in the number of
+% entities. However, this distribution often factors such that the set
+% membership of each entity is independent. Safe queries are those for
+% which treating this distribution as if it factors results in the
+% correct marginal probabilities.
+% 
+% \begin{figure}
+% \begin{pspicture}(0,0)(7,5)
+% \psframe(0.5,3.5)(1,4.5)
+% \psframe(0.5,3.5)(1,4.5)
+% \end{pspicture}
+% \end{figure}
+% 
+% Safe queries can be evaluated similarly to standard database queries
+% by maintaining additional probability tables for each intermediate
+% result. Consider the logical form $\lambda x. \exists y. \pred{ceo}(x)
+% \wedge \pred{of}(x, y) \wedge \pred{company}(y)$. The probabilistic
+% database gives us a table of probabilities for each predicate,
+% $P_{ext}(\pred{company}(e))$, etc.
+% 
+% for each predicate
+% and intermediate result in the computation. , for each predicate or
+% intermediate recursively by maintaining a list of probabilities
+% 
+
+% TODO: marginal probabilities can also be approximated quite accurately for unsafe queries.
+
+% These queries can be
+% evaluated using simple recursive probability computations. For
+% example, an entity $e$ is in the denotation of $\lambda
+% x.\pred{ceo}(x) \wedge \pred{of}(x, \pred{/en/sprint})$ with
+% probability $P(\pred{ceo}(e)) \times P(\pred{of}(e,
+% \pred{/en/sprint}))$. Queries with existential (universal) quantifiers
+% can also be handled by computing an \pred{or} (\pred{and}) over all
+% possible entity values of the quantified variable. For example, an
+% entity $e$ is in the denotation of $\lambda x. \exists
+% y. \pred{ceo}(x) \wedge \pred{of}(x, y) \wedge \pred{company}(y)$ with
+% probability $P(\pred{ceo}(e)) \times ( 1 - \prod_{y \in E} [1 -
+%   P(\pred{of}(e, y)) \times P(\pred{company}(y))])$; this expression
+% computes the \pred{or} over entities $y$ using the identity $A \vee B
+% = \neg (\neg A \wedge \neg B)$.
+
+
+Note that inference does not compute the most probable denotation,
+$\max_\gamma P(\gamma | s)$. In some sense, the most probable
+denotation is the correct output for a model-theoretic
+semantics. However, it is highly sensitive to the probabilities in the
+database, and in many cases it is empty (because a conjunction of
+independent boolean random variables is unlikely to be
+true). Producing a ranked list of entities is also useful for
+evaluation purposes.
+
+% 
+% 
+% \begin{eqnarray*}
+% P(\gamma | s) = \sum_w \sum_\ell P(\gamma | \ell, w) P(w) P(\ell | s) 
+% \end{eqnarray*}
+% 
+% 
+% Consider query evaluation against a fixed world (database) $W$ as in
+% traditional semantic parsing. A logical form $\ell$ can be
+% deterministically evaluated against this world to return a denotation
+% $\gamma$. This process is traditionally written as 
+% 
+% In the probabilistic case, there is no longer a single world, but
+% rather a distribution $P(W)$ over possible worlds. However, logical
+% forms can be evaluated against each possible world in the same fashion
+% as above, producing a distribution over denotations:
+% 
+% \begin{eqnarray*}
+% P(\gamma | \ell ; \theta, \phi) & = & \sum_W P( \gamma | \ell, W) P(W ; \theta, \phi) \\
+%  & = & \sum_W \textbf{1}(\gamma = \llbracket \ell \rrbracket_W) P(W ; \theta, \phi) \\
+% \end{eqnarray*}
+% 
+% Above, \textbf{1} represents the indicator function. The conditional
+% probability distribution can be replaced with this indicator because
+% evaluation is deterministic.
+% 
+% At first glance, the highest probability denotation appears to be the
+% correct output for the model. However, this denotation is highly
+% sensitive to the probabilities in the database, and in many cases is
+% completely empty. Instead, for the evaluation, we compute the marginal
+% probability that each entity is an element of the denotation:
+% 
+% \begin{eqnarray*}
+% P(e \in \gamma | \ell; \theta, \phi) = \sum_\gamma \textbf{1}(e \in \gamma) P(\gamma | \ell ; \theta, \phi)
+% \end{eqnarray*}
+
+% This probability is a score for each entity that allows us to produce
+% a ranked list of answers for each query. As it turns out, there is a
+% considerable amount of work on computing these marginal probabilities
+% in probabilistic databases; for more information, we refer the reader
+% to Suciu et al. \shortcite{suciu2011probabilistic}.  Computing
+% marginal probabilities for probabilistic database queries is \#P-hard
+% in general, but many queries permit tractable evaluation
+% \cite{dalvi2007}.
+% 
+% For example, an entity $e$ is in the denotation of $\lambda
+% x.\pred{ceo}(x) \wedge \pred{of}(x, \pred{/en/sprint})$ with
+% probability $P(\pred{ceo}(e)) \times P(\pred{of}(e,
+% \pred{/en/sprint}))$. Queries with existential (universal) quantifiers
+% can also be handled by computing an \pred{or} (\pred{and}) over all
+% possible entity values of the quantified variable. For example, an
+% entity $e$ is in the denotation of $\lambda x. \exists
+% y. \pred{ceo}(x) \wedge \pred{of}(x, y) \wedge \pred{company}(y)$ with
+% probability $P(\pred{ceo}(e)) \times ( 1 - \prod_{y \in E} [1 -
+%   P(\pred{of}(e, y)) \times P(\pred{company}(y))])$; this expression
+% computes the \pred{or} over entities $y$ using the identity $A \vee B
+% = \neg (\neg A \wedge \neg B)$. For more information about query
+% evaluation in probabilistic databases, we refer the reader to .
+
+
+\section{Training}
+\label{sec:training}
+
+The training problem in our approach is to learn parameters $\theta$
+and $\phi$ for the probabilistic database. We consider two different
+objective functions for learning these parameters that use slightly
+different forms of training data. In both cases, training has two
+phases. First, we generate training data, in the form of observed
+assertions or query-answer pairs, by applying the rule-based semantic
+parser to a corpus of entity-linked web text. Second, we optimize the
+parameters of the probabilistic database to rank observed assertions
+or answers above unobserved assertions or answers.
+
+% We work around the
+% requirement for negative training data by using a novel ranking
+% objective that trains the system to rank observed answers to queries
+% above unobserved answers.
+
+\subsection{Training Data}
+\label{sec:trainingdata}
+
+\begin{figure*}
+\small
+
+\textbf{Original sentence and logical form} \\
+General \ul{Powell}, appearing Sunday on \ul{CNN} 's \ul{Late Edition}, said ... \\
+{\small $\exists w,x,y,z. ~~~ w = \pred{/en/powell} \wedge \pred{general}(w) \wedge \pred{appearing}(w, x) \wedge \pred{sunday}(x) \wedge \pred{appearing\_on}(w, y) \wedge y = \pred{/en/late} \wedge \pred{'s}(z, y) \wedge z = \pred{/en/cnn} \wedge \pred{said}(w, ...)$ } \\
+
+\textbf{Simplified logical form} \\
+{\small $\exists w,y,z. ~~ w = \pred{/en/powell}  \wedge \pred{general}(w) \wedge \pred{appearing\_on}(w, y) \wedge y = \pred{/en/late} \wedge \pred{'s}(z, y) \wedge z = \pred{/en/cnn}$ } \\ 
+
+{
+\renewcommand{\tabcolsep}{0.1cm}
+\begin{tabular}{l|ll}
+\textbf{Instances} & \textbf{Queries} & \textbf{Answers} \\
+{\small $\pred{general}(\pred{/en/powell})$ }& {\small $\lambda w.\pred{general}(w) \wedge \pred{appearing\_on}(w, \pred{/en/late})$ } & {\small $\pred{/en/powell}$ }\\
+{\small $\pred{appearing\_on}(\pred{/en/powell}, \pred{/en/late})$ } & {\small $\lambda y.\pred{appearing\_on}(\pred{/en/powell}, y) \wedge \pred{'s}(\pred{/en/cnn}, y) $ } & {\small  $\pred{/en/late}$ }\\
+{\small $\pred{'s}(\pred{/en/cnn}, \pred{/en/late})$ } & {\small $\lambda z.\pred{'s}(z, \pred{/en/late})$}& {\small $\pred{/en/cnn}$ }\\
+\end{tabular}
+}
+\vspace{-.15in}
+\caption{Illustration of training data generation applied to a single
+  sentence. We generate two types of training data, predicate
+  instances and queries with observed answers, by semantically parsing
+  the sentence and extracting portions of the generated logical form
+  with observed entity arguments. The predicate instances are
+  extracted from the conjuncts in the simplified logical form, and the
+  queries are created by removing a single entity from the simplified
+  logical form.}
+\label{fig:trainingdata}
+\vspace{-.1in}
+\end{figure*}
+
+Training data is generated by applying the process illustrated in
+Figure \ref{fig:trainingdata} to each sentence in an entity-linked web
+corpus. First, we apply our rule-based semantic parser to the sentence
+to produce a logical form. Next, we extract portions of this logical
+form where every variable is bound to a particular Freebase entity,
+resulting in a simplified logical form. Because the logical forms are
+existentially-quantified conjunctions of predicates, this step simply
+discards any conjuncts in the logical form containing a variable that
+is not bound to a Freebase entity. From this simplified logical form,
+we generate two types of training data: (1) predicate instances, and
+(2) queries with known answers (see Figure \ref{fig:trainingdata}). In
+both cases, the corpus consists entirely of assumed-to-be-true
+statements, making obtaining negative examples a major challenge for
+training.\footnote{A seemingly simple solution to this problem is to
+  randomly generate negative examples; however, we empirically found
+  that this approach performs considerably worse than both of the
+  proposed ranking objectives.}
+
+\subsection{Predicate Ranking Objective}
+\label{sec:pro}
+
+Riedel et al. \shortcite{riedel2013} introduced a ranking objective to
+work around the lack of negative examples in a similar matrix
+factorization problem. Their objective is a modified version of
+Bayesian Personalized Ranking \cite{rendle2009} that aims to rank
+observed predicate instances above unobserved instances.
+
+This objective function uses observed predicate instances (Figure
+\ref{fig:trainingdata}, bottom left) as training data. This data
+consists of two collections, $\{(c_i, e_i)\}_{i=1}^n$ and $\{(r_j,
+t_j)\}_{j=1}^m$, of observed category and relation instances. We use
+$t_j$ to denote a tuple of entities, $t_j = (e_{j,1}, e_{j,2})$, to
+simplify notation. The predicate ranking objective is:
+\begin{eqnarray*}
+O_P(\theta, \phi) & = & \sum_{i=1}^n \log \sigma( \theta_{c_i}^T (\phi_{e_i} - \phi_{e_i^\prime})) + \\
+& & \sum_{j=1}^m \log \sigma( \theta_{r_j}^T (\phi_{t_j} - \phi_{t_j^\prime}))
+\end{eqnarray*}
+
+where $e_i^\prime$ is a randomly sampled entity such that $(c_i,
+e_i^\prime)$ does not occur in the training data. Similarly,
+$t_j^\prime$ is a random entity tuple such that $(r_j, t_j^\prime)$
+does not occur. Maximizing this function attempts to find
+$\theta_{c_i}$, $\phi_{e_i}$ and $\phi_{e_i^\prime}$ such that
+$P(c_i(e_i))$ is larger than $P(c_i(e_i^\prime))$ (and similarly for
+relations). During training, $e_i^\prime$ and $t_j^\prime$ are
+resampled on each pass over the data set according to each entity or
+tuple's empirical frequency.
+
+\subsection{Query Ranking Objective}
+\label{sec:qro}
+
+The previous objective aims to rank the entities within each predicate
+well. However, such within-predicate rankings are insufficient to
+produce correct answers for queries containing multiple predicates --
+the scores for each predicate must further be calibrated to work well
+with each other given the independence assumptions of the
+probabilistic database.
+
+We introduce a new training objective that encourages good rankings
+for entire queries instead of single predicates. The data for this
+objective consists of tuples, $\{(\ell_i, e_i)\}_{i=1}^n$, of a query
+$\ell_i$ with an observed answer $e_i$ (Figure \ref{fig:trainingdata},
+bottom right). Each $\ell_i$ is a function with exactly one entity
+argument, and $\ell_i(e)$ is a conjunction of predicate instances. For
+example, the last query in Figure \ref{fig:trainingdata} is a function
+of one argument $z$, and $\ell(e)$ is a single predicate instance,
+$\pred{'s}(e, \pred{/en/late})$. The new objective aims to rank the
+observed entity answer above unobserved entities for each query: {
+% \setlength{\abovedisplayskip}{-5pt}
+\setlength{\belowdisplayskip}{-10pt}
+% \setlength{\abovedisplayshortskip}{0pt}
+% \setlength{\belowdisplayshortskip}{0pt}
+\begin{eqnarray*}
+O_{Q}(\theta, \phi) & = & \sum_{i=1}^n \log P_{rank}(\ell_i, e_i, e_i^\prime)  \\
+\end{eqnarray*}
+}
+% The expression $\theta_{c}^T (\phi_{e} - \phi_{e^\prime})$ in the
+% predicate ranking objective can be viewed as an approximation of the
+% probability that $e$ is ranked above $e^\prime$ in category $c$. Our
+% goal is to extend this approximation to work for complete logical
+% expressions. Our approach is to can define a new probabilistic
+% database, $\pred{DB}_{e^\prime}$, where the random variable for each
+% predicate instance $c(e)$ defines the (approximate) probability. Then the
+% predicate ranking objective is simply:
+% 
+% $P_{\pred{DB}_{e^\prime}}(c(e))$
+%% For example,
+%% given the phrase ``Dan Hesse, CEO of Sprint'', we would produce the
+%% logical form $\pred{ceo}(\pred{/en/dan\_hesse}) \wedge
+%% \pred{of}(\pred{/en/dan\_hesse}, \pred{/en/sprint})$, and the training
+%% example $(\ell = \lambda x.\pred{ceo}(x) \wedge \pred{of}(x,
+%% \pred{/en/sprint}), e = \pred{/en/dan\_hesse})$.
+
+$P_{rank}$ generalizes the approximate ranking probability defined by
+the predicate ranking objective to more general queries. The
+expression $\sigma (\theta_{c}^T (\phi_{e} - \phi_{e^\prime}))$ in the
+predicate ranking objective can be viewed as an approximation of the
+probability that $e$ is ranked above $e^\prime$ in category
+$c$. $P_{rank}$ uses this approximation for each individual predicate
+in the query. For example, given the query $\ell = \lambda x.c(x)
+\wedge r(x, y)$ and entities $(e, e^\prime)$, $P_{rank}(\ell, e,
+e^\prime) = \sigma( \theta_c (\phi_e - \phi_{e^\prime})) \times
+\sigma( \theta_r (\phi_{(e,y)} - \phi_{(e^\prime, y)}))$. For this
+objective, we sample $e^\prime_i$ such that $(\ell_i, e^\prime_i)$
+does not occur in the training data.
+
+When $\ell$'s body consists of a conjunction of predicates, the query
+ranking objective simplifies considerably. In this case, $\ell$ can be
+described as three sets of one-argument functions: categories
+$C(\ell)= \{\lambda x.c(x)\}$, left arguments of relations $R_L(\ell)
+= \{\lambda x.r(x, y)\}$, and right arguments of relations $R_R(\ell)
+= \{\lambda x.r(y, x)\}$. Furthermore, $P_{rank}$ is a product so we
+can distribute the log:
+\begin{eqnarray*}
+O_{Q}(\theta, \phi) & = & \sum_{i=1}^n \sum_{\lambda x.c(x) \in C(\ell_i)} \hspace{-.2in} \log
+\sigma (\theta_{c} (\phi_{e_i} - \phi_{e^\prime_i})) \\
+& & \hspace{-.2in} + \hspace{-.2in} \sum_{\lambda x.r(x, y) \in R_L(\ell_i)} \hspace{-.2in} \log \sigma (\theta_{r} ( \phi_{(e_i,y)} - \phi_{(e^\prime_i, y)} )) \\
+& & \hspace{-.2in} + \hspace{-.2in} \sum_{\lambda x.r(y, x) \in R_R(\ell_i)} \hspace{-.2in} \log \sigma (\theta_{r} ( \phi_{(y, e_i)} - \phi_{(y, e^\prime_i)} )) 
+\end{eqnarray*}
+
+This simplification reveals that the main difference between $O_{Q}$
+and $O_{P}$ is the sampling of the unobserved entities $e^\prime$ and
+tuples $t^\prime$. $O_{P}$ samples them in an unconstrained fashion
+from their empirical distributions for every predicate. $O_{Q}$
+considers the larger context in which each predicate occurs, with two
+major effects. First, more negative examples are generated for
+categories because the logical forms $\ell$ are more specific. For
+example, both ``president of Sprint'' and ``president of the US''
+generate instances of the $\pred{president}$ predicate; $O_Q$ will use
+entities that only occur with one of these as negative examples for
+the other. Second, the relation parameters are trained to rank tuples
+with a shared argument, as opposed to tuples in general.
+
+Note that, although $P_{rank}$ generalizes to more complex logical
+forms than existentially-quantified conjunctions, training with these
+logical forms is more difficult because $P_{rank}$ is no longer a
+product. In these cases, it becomes necessary to perform inference
+within the gradient computation, which can be expensive. The
+restriction to conjunctions makes inference trivial, enabling the
+factorization above.
+
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+We evaluate our approach to compositional semantics on a question
+answering task. Each test example is a (compositional) natural
+language question whose answer is a set of Freebase entities. We
+compare our open domain approach to several baselines based on prior
+work, as well as a human-annotated Freebase query for each example.
+
+\subsection{Data}
+
+We used Clueweb09 web
+corpus\footnote{\url{http://www.lemurproject.org/clueweb09.php}} with the
+corresponding Google FACC entity linking \cite{gabrilovich2013} to
+create the training and test data for our experiments. The training
+data is derived from 3 million webpages, and contains 1.7m predicate
+instances, 1.1m queries, 150k entities and 130k entity
+pairs. Predicates that appeared fewer than 6 times in the training
+data were replaced with the predicate \pred{UNK}, resulting in 16k
+categories and 1.4k relations.
+
+Our test data consists of fill-in-the-blank natural language questions
+such as ``Incan emperor \underline{\quad{}}'' or ``Cunningham directed
+Auchtre's second music video \underline{\quad{}}.'' These questions
+were created by applying the training data generation process (Section
+\ref{sec:trainingdata}) to a collection of held-out webpages. Each
+natural language question has a corresponding logical form query
+containing at least one category and relation.
+
+We chose not to use existing data sets for semantic parsing into
+Freebase as our goal is to model the semantics of language that cannot
+necessarily be modelled using the Freebase schema. Existing data sets,
+such as Free917 \cite{cai2013acl} and WebQuestions \cite{berant2013},
+would not allow us to evaluate performance on this subset of
+language. Consequently, we evaluate our system on a new data set with
+unconstrained language. However, we do compare our approach against
+manually-annotated Freebase queries on our new data set (Section
+\ref{sec:spfb}).
+
+All of the data for our experiments is available online at {\small
+  \url{http://rtw.ml.cmu.edu/tacl2015_csf}}.
+
+
+\begin{table}
+\centering
+{\small
+\begin{tabular}{lc}  \toprule
+\# of questions & 220 \\
+\quad{} Avg. \# of predicates / query & 2.77 \\
+\quad{} Avg. \# of categories / query & 1.75 \\
+\quad{} Avg. \# of relations / query & 1.02 \\  
+\quad{} Avg. \# of answers / query & 1.92 \\ \midrule % \quad{} mean \# of answers & 3.63 \\ % 422 correct answers overall.  
+\# of questions with $\geq 1$ answer & \multirow{2}{*}{116} \\
+(found by at least one system) & \\
+% \quad{} Avg. \# of answers / query with $>1$ answer & 3.63 \\
+\bottomrule
+\end{tabular}
+}
+\vspace{-.1in}
+\caption{Statistics of the test data set.}
+\label{table:statistics}
+\vspace{-.15in}
+\end{table}
+
+\subsection{Methodology}
+
+Our evaluation methodology is inspired by information retrieval
+evaluations \cite{manning2008}. Each system predicts a ranked list of
+100 answers for each test question. We then pool the top 30 answers of
+each system and manually judge their correctness. The correct answers
+from the pool are then used to evaluate the precision and recall of
+each system. In particular, we compute average precision (AP) for each
+question and report the mean average precision (MAP) across all
+questions. We also report a weighted version of MAP, where each
+question's AP is weighted by its number of annotated correct
+answers. Average precision is computed as $\frac{1}{m}
+\sum_{k=1}^m\precision(k) \times \correct(k)$, where $\precision(k)$
+is the precision at rank $k$, $\correct(k)$ is an indicator function
+for whether the $k$th answer is correct, and $m$ is the number of
+returned answers (at most 100).
+
+Statistics of the annotated test set are shown in Table
+\ref{table:statistics}. A consequence of our unconstrained data
+generation approach is that some test questions are difficult to
+answer: of the 220 queries, at least one system was able to produce a
+correct answer for 116. The remaining questions are mostly
+unanswerable because they reference rare entities unseen in the
+training data.
+
+
+
+\subsection{Models and Baselines}
+
+
+\begin{table}
+\centering
+{\small
+\begin{tabular}{lcc} \toprule
+ & MAP & Weighted MAP \\ \midrule
+\cb{} & 0.224 & 0.266 \\
+\clb{} & 0.246 & 0.296 \\ \midrule
+\uspr{} & 0.299 & 0.473 \\
+\usqr{} & 0.309 & 0.492 \\ \midrule
+\epr{} & 0.391 & 0.614 \\ 
+\eqr{} & 0.406 & 0.645 \\ \midrule
+Upper bound & 0.527 & 1.0 \\ \bottomrule
+\end{tabular}
+}
+\vspace{-.08in}
+\caption{Mean average precision for our question answering task. The
+  difference in MAP between each pair of adjacent models is
+  statistically significant ($p < .05$) via the sign test.}
+\label{table:results}
+\vspace{-.15in}
+\end{table}
+
+
+We implemented two baseline models based on existing techniques. The
+\pred{CorpusLookup} baseline answers test questions by directly using
+the predicate instances in the training data as its knowledge
+base. For example, given the query $\lambda x.\pred{ceo}(x) \wedge
+\pred{of}(x, \pred{/en/sprint})$, this model will return the set of
+entities $e$ such that $\pred{ceo}(e)$ and $\pred{of}(e,
+\pred{/en/sprint})$ both appear in the training data. All answers
+found in this fashion are assigned probability 1.
+
+The \pred{Clustering} baseline first clusters the predicates in the
+training corpus, then answers questions using the clustered
+predicates. The clustering aggregates predicates with similar
+denotations, ideally identifying synonyms to smooth over sparsity in
+the training data. Our approach is closely based on Lewis and Steedman
+\shortcite{lewis2013}, though is also conceptually related to
+approaches such as DIRT \cite{lin2001} and USP
+\cite{poon2009unsupervised}. We use the Chinese Whispers clustering
+algorithm \cite{biemann2006} and calculate the similarity between
+predicates as the cosine similarity of their TF-IDF weighted entity
+count vectors. The denotation of each cluster is the union of the
+denotations of the clustered predicates, and each entity in the
+denotation is assigned probability 1.
+
+We also trained two probabilistic database models, \uspr{} and
+\usqr{}, using the two objective functions described in Sections
+\ref{sec:pro} and \ref{sec:qro}, respectively. We optimized both
+objectives by performing 100 passes over the training data with
+AdaGrad \cite{duchi2011} using an L2 regularization parameter of
+$\lambda=10^{-4}$. The predicate and entity embeddings have 300
+dimensions. These parameters were selected on the basis of preliminary
+experiments with a small validation set.
+
+Finally, we observed that \clb{} has high precision but low recall,
+while both matrix factorization models have high recall with somewhat
+lower precision. This observation suggested that an ensemble of
+\pred{CorpusLookup} and \pred{Factorization} could outperform either
+model individually. We created two ensembles, \epr{} and \eqr{}, by
+calculating the probability of each predicate as a 50/50 mixture of
+each model's predicted probability.
+
+
+
+\subsection{Results}
+
+Table \ref{table:results} shows the results of our MAP evaluation, and
+Figure \ref{fig:pr-curve} shows a precision/recall curve for each
+model. The MAP numbers are somewhat low because almost half of the
+test questions have no correct answers and all models get an average
+precision of 0 on these questions. The upper bound on MAP is the
+fraction of questions with at least 1 correct answer. Note that the
+models perform well on the answerable questions, as reflected by the
+ratio of the achieved MAP to the upper bound. The weighted MAP metric
+also corrects for these unanswerable questions, as they are assigned 0
+weight in the weighted average.
+
+\begin{figure}
+\vspace{-.15in}
+\center
+\begin{pspicture}(-1.25,0.7)(7,6.5)
+
+\rput[c](2.5,1){{\small Recall}}
+\rput[c](-1.1,3.9){\rotateleft{{\small Precision}}}
+
+% \psframe(3.7,6.3)(6.5,4.3)
+\psline[linecolor=red](4.5,6)(3.8,6)
+\rput[l](4.6,6){{\footnotesize \pred{Ens. ($O_Q$)}}}
+\psline[linecolor=blue](4.5,5.7)(3.8,5.7)
+\rput[l](4.6,5.7){{\footnotesize \pred{Ens. ($O_P$)}}}
+\psline[linecolor=green](4.5,5.4)(3.8,5.4)
+\rput[l](4.6,5.4){{\footnotesize \pred{Fact. ($O_Q$)}}}
+\psline[linecolor=orange](4.5,5.1)(3.8,5.1)
+\rput[l](4.6,5.1){{\footnotesize \pred{Fact. ($O_P$)}}}
+\psline[linecolor=gray,linestyle=dashed,dash=5pt 3pt](4.5,4.8)(3.8,4.8)
+\rput[l](4.6,4.8){{\footnotesize \pred{C.Lookup}}}
+\psline[linecolor=black,linestyle=dashed,dash=5pt 3pt](4.5,4.5)(3.8,4.5)
+\rput[l](4.6,4.5){{\footnotesize \pred{Clustering}}}
+
+\psset{xunit=5\psunit,yunit=6\psunit}
+\psaxes[dx=.2,Dx=.2,dy=.1,Dy=.1,Oy=0.3,labels=all]{-}(0,0.3)(0,0.3)(1,1.01)
+\fileplot[plotstyle=dots,linecolor=red]{curvedata/map_answerable/ensemble_joint.txt}
+\fileplot[plotstyle=line,linecolor=red]{curvedata/map_answerable/ensemble_joint.txt}
+\fileplot[plotstyle=dots,dotstyle=+,linecolor=blue]{curvedata/map_answerable/ensemble_ranking.txt}
+\fileplot[linecolor=blue]{curvedata/map_answerable/ensemble_ranking.txt}
+
+\fileplot[plotstyle=dots,dotstyle=square*,linecolor=green]{curvedata/map_answerable/joint.txt}
+\fileplot[linecolor=green]{curvedata/map_answerable/joint.txt}
+\fileplot[plotstyle=dots,dotstyle=triangle*,linecolor=orange]{curvedata/map_answerable/ranking.txt}
+\fileplot[linecolor=orange]{curvedata/map_answerable/ranking.txt}
+
+\fileplot[plotstyle=dots,linecolor=gray,linestyle=dashed]{curvedata/map_answerable/corpus_lookup.txt}
+\fileplot[linecolor=gray,linestyle=dashed]{curvedata/map_answerable/corpus_lookup.txt}
+\fileplot[plotstyle=dots,dotstyle=+,linecolor=black,linestyle=dashed]{curvedata/map_answerable/clustering.txt}
+\fileplot[linecolor=black,linestyle=dashed]{curvedata/map_answerable/clustering.txt}
+\end{pspicture}
+
+\vspace{-.2in}
+\caption{Averaged 11-point precision/recall curves for the 116
+  answerable test questions.}
+\vspace{-.2in}
+\label{fig:pr-curve}
+\end{figure}
+
+% TODO: example queries and answers. Make a figure
+
+These results demonstrate several findings. First, we find that both
+\pred{Factorization} models outperform the baselines in both MAP and
+weighted MAP. The performance improvement seems to be most significant
+in the high recall regime (right side of Figure
+\ref{fig:pr-curve}). Second, we find that the query ranking objective
+$O_Q$ improves performance over the predicate ranking objective $O_P$
+by 2-4\% on the answerable queries. The precision/recall curves show
+that this improvement is concentrated in the low recall
+regime. Finally, the ensemble models are considerably better than
+their component models; however, even in the ensembled models, we find
+that $O_Q$ outperforms $O_P$ by a few percent.
+
+%% The results in Table \ref{table:results} also
+%% show that both ensembles dramatically outperform their constituent
+%% models. In both the \pred{Factorization} and \pred{Ensemble} models,
+%% the query ranking objective improves performance over the predicate
+%% ranking objective.
+
+%%  presents an 11-point precision/recall curve
+%% for each model. These curves show that both \pred{Factorization}
+%% approaches uniformly outperform \clb{} and \cb{}, but the most
+%% dramatic difference is in the high recall regime. We also see that the
+%% query ranking objective $O_Q$ provides a consistent performance
+%% improvement over the predicate ranking objective $O_P$.
+
+
+\subsection{Comparison to Semantic Parsing to Freebase}
+\label{sec:spfb}
+
+A natural question is whether our open vocabulary approach outperforms
+a closed approach for the same problem, such as semantic parsing to
+Freebase (e.g., Reddy et al. \shortcite{reddy2014}). In order to
+answer this question, we compared our best performing model to a
+manually-annotated Freebase query for each test question. This
+comparison allows us to understand the relative advantages of open and
+closed predicate vocabularies.
+
+The first author manually annotated a Freebase MQL query for each
+natural language question in the test data set. This annotation is
+somewhat subjective, as many of the questions can only be inexactly
+mapped on to the Freebase schema. We used the following guidelines in
+performing the mapping: (1) all relations in the text must be mapped
+to one or more Freebase relations, (2) all entities mentioned in the
+text must be included in the query, (3) adjective modifiers can be
+ignored and (4) entities not mentioned in the text may be included in
+the query. The fourth condition is necessary because many one-place
+predicates, such as $\pred{mayor}(x)$, are represented in Freebase
+using a binary relation to a particular entity, such as
+$\pred{government\_office/title}(x, \pred{/en/mayor})$.
+
+\begin{table}
+\centering
+{\small
+\begin{tabular}{lc}  \toprule
+\# of questions w/ an annotated MQL query & 142 \\
+\quad{} query returns $>1$ answer & 95 \\
+\quad{} query returns no answers & 47 \\  \midrule
+\# of questions w/o an MQL query & 78 \\ \bottomrule
+\end{tabular}
+}
+\vspace{-.1in}
+\caption{Statistics of the Freebase MQL queries annotated for the test data set.}
+\label{table:fbstatistics}
+\vspace{-.1in}
+\end{table}
+
+\begin{table}
+\centering
+\vspace{-.04in}
+{\small
+\begin{tabular}{lcc} \toprule
+ & MAP  \\ \midrule
+\eqr{} & 0.263  \\
+Freebase & 0.385 \\ \bottomrule
+\end{tabular}
+}
+\vspace{-.1in}
+\caption{Mean average precision of our best performing model compared
+  to a manually annotated Freebase query for each test question.}
+\label{table:fbresults}
+\vspace{-.1in}
+\end{table}
+
+Statistics of the annotated queries are shown in Table
+\ref{table:fbstatistics}. Coverage is reasonably high: we were able to
+annotate a Freebase query for 142 questions (65\% of the test set). The
+remaining unannotatable questions are due to missing predicates in
+Freebase, such as a relation defining the emperor of the Incan
+empire. Of the 142 annotated Freebase queries, 95 of them return at
+least one entity answer. The queries with no answers typically
+reference uncommon entities which have few or no known relation
+instances in Freebase. The annotated queries contain an average of
+2.62 Freebase predicates.
+
+We compared our best performing model, \eqr{}, to the manually
+annotated Freebase queries using the same pooled evaluation
+methodology. The set of correct answers contains the correct
+predictions of \eqr{} from the previous evaluation along with all
+answers from Freebase. 
+% (That is, we assume that Freebase has perfect precision.)
+
+Results from this evaluation are shown in Table
+\ref{table:fbresults}.\footnote{The numbers in this table are not
+  comparable to the numbers in Table \ref{table:results} as the
+  correct answers for each question are different.} In terms of
+overall MAP, Freebase outperforms our approach by a fair
+margin. However, this initial impression belies a more complex
+reality, which is shown in Table \ref{table:fbresults2}. This table
+compares both approaches by their relative performance on each test
+question. On approximately one-third of the questions, Freebase has a
+higher AP than our approach. On another third, our approach has a
+higher AP than Freebase. On the final third, both approaches perform
+equally well -- these are typically questions where neither approach
+returns any correct answers (67 of the 75). Freebase outperforms in
+the overall MAP evaluation because it tends to return more correct
+answers to each question.
+
+Note that the annotated Freebase queries have several advantages in
+this evaluation. First, Freebase contains significantly more predicate
+instances than our training data, which allows it to produce more
+complete answers. Second, the Freebase queries correspond to the
+performance of a perfect semantic parser, while current semantic
+parsers achieve accuracies around 68\% \cite{berant2014}.
+
+The results from this experiment suggest that closed and open
+predicate vocabularies are complementary. Freebase produces high
+quality answers when it covers a question. However, many of the
+remaining questions can be answered correctly using an open vocabulary
+approach like ours. This evaluation also suggests that recall is a
+limiting factor of our approach; in the future, recall can be improved
+by using a larger corpus or including Freebase instances during
+training.
+
+\begin{table}
+\centering
+{\small
+\begin{tabular}{lcc} \toprule
+ & \# of queries  \\ \midrule
+Freebase higher AP & 75 (34\%)  \\
+equal AP & 75 (34\%) \\
+\eqr{} higher AP & 70 (31\%) \\ \bottomrule
+\end{tabular}
+}
+\vspace{-.1in}
+\caption{Question-by-question comparison of model performance. Each
+  test question is placed into one of the three buckets above,
+  depending on whether Freebase or \eqr{} achieves a better average
+  precision (AP) for the question.}
+\label{table:fbresults2}
+\vspace{-.1in}
+\end{table}
+
+% \subsection{Examples}
+% TODO
+
+\section{Related Work}
+\label{sec:priorwork}
+
+\subsubsection*{Open Predicate Vocabularies}
+
+There has been considerable work on generating semantic
+representations with an open predicate vocabulary. Much of the work is
+non-compositional, focusing on identifying similar predicates and
+entities. DIRT \cite{lin2001}, Resolver \cite{yates07resolver} and
+other systems \cite{yao2012} cluster synonymous expressions in a
+corpus of relation triples. Matrix factorization is an alternative
+approach to clustering that has been used for relation extraction
+\cite{riedel2013,yao2013} and finding analogies
+\cite{turney2008,speer2008}. All of this work is closely related to
+distributional semantics, which uses distributional information to
+identify semantically similar words and phrases
+\cite{turney2010,griffiths2007}.
+
+Some work has considered the problem of compositional semantics with
+an open predicate vocabulary. Unsupervised semantic parsing
+\cite{poon2009unsupervised,titov2011} is a clustering-based approach
+that incorporates composition using a generative model for each
+sentence that factors according to its parse tree. Lewis and Steedman
+\shortcite{lewis2013} also present a clustering-based approach that
+uses CCG to perform semantic composition. This approach is similar to
+ours, except that we use matrix factorization and Freebase entities.
+
+Finally, some work has focused on the problem of textual inference
+within this paradigm. Fader et al. \shortcite{fader2013} present a
+question answering system that learns to paraphrase a question so that
+it can be answered using a corpus of Open IE triples \cite{fader2011}.
+Distributional similarity has also been used to learn weighted logical
+inference rules that can be used for recognizing textual entailment or
+identifying semantically similar text
+\cite{garrette2011,garrette2013,beltagy2013}. This line of work
+focuses on performing inference between texts, whereas our work
+computes a text's denotation.
+
+% Our  These works combine natural language and
+% knowledge base predicates in a single matrix factorization to predict
+% new instances of the knowledge base predicates. However, they do not
+% define a compositional semantics for longer natural language phrases,
+% as we do in our work. We also introduce a novel objective function
+% that improves performance on compositional queries. Note that our work
+% does not use a universal schema in the sense that it does not combine
+% textual predicates and Freebase predicates in the same schema.
+
+% Several systems have attempted to automatically generalize semantic
+% representations using an open predicate vocabulary. However, existing
+% approaches such as DIRT, USP, Resolver, Lewis and Steedman (TODO:
+% cite) are based on clustering synonyms. Our dimensionality reduction
+% approach is more flexible than clustering, as the learned embedding of
+% predicates can represent (e.g.,) near-synonyms or synonyms in a
+% particular context. Furthermore, the expressive power of CCG enables
+% our approach to represent negation and other linguistic phenomena that
+% cannot be represented in these existing systems (barring Lewis and
+% Steedman).
+
+A significant difference between our work and most of the related work
+above is that our work computes denotations containing Freebase
+entities. Using these entities has two advantages: (1) it enables us
+to use entity linking to disambiguate textual mentions, and (2) it
+facilitates a comparison against alternative approaches that rely on a
+closed predicate vocabulary. Disambiguating textual mentions is a
+major challenge for previous approaches, so an entity-linked corpus is
+a much cleaner source of data. However, our approach could also work
+with automatically constructed entities, for example, created by
+clustering mentions in an unsupervised fashion \cite{singh11}.
+
+% There is an interesting connection between this work and compositional
+% semantics with vector space models
+% \cite{socher2011,hermann2013,krishnamurthy2013vssp}. In both cases,
+% the meanings of individual words are represented as vectors. However,
+% vector space models perform semantic composition directly in the space
+% of vectors (or matrices, etc.), while our approach first maps these
+% vectors to sets of entities, then performs composition using logical
+% operations on these sets. Our approach has the advantage of being able
+% to straightforwardly model phenomena that are challenging for vector
+% space models, such as the action of subordinating conjunctions, e.g.,
+% ``that'' in ``car that I drive.''
+
+\subsubsection*{Semantic Parsing}
+
+Several semantic parsers have been developed for Freebase
+\cite{cai2013acl,kwiatkowski2013,berant2013,berant2014}. Our approach
+is most similar to that of Reddy et al. \shortcite{reddy2014}, which
+uses fixed syntactic parses of unlabeled text to train a Freebase
+semantic parser. Like our approach, this system
+automatically-generates query/answer pairs for training. However, this
+system, like all Freebase semantic parsers, uses a closed predicate
+vocabulary consisting of only Freebase predicates. In contrast, our
+approach uses an open predicate vocabulary and can learn denotations
+for words whose semantics cannot be represented using Freebase
+predicates. Consequently, our approach can answer many questions that
+these Freebase semantic parsers cannot (see Section \ref{sec:spfb}).
+
+The rule-based semantic parser used in this paper is very similar to
+several other rule-based systems that produce logical forms from
+syntactic CCG parses \cite{bos2008,lewis2013}. We developed our own
+system in order to have control over the particulars of the analysis;
+however, our approach is compatible with these systems as well.
+
+\subsubsection*{Probabilistic Databases}
+
+Our system assigns a model-theoretic semantics to statements in
+natural language \cite{dowty81} using a learned distribution over
+possible worlds. This distribution is concisely represented in a
+probabilistic database, which can be viewed as a simple Markov Logic
+Network \cite{richardson2006} where all of the random variables are
+independent. This independence simplifies query evaluation:
+probabilistic databases permit efficient exact inference for safe
+queries \cite{suciu2011probabilistic}, and approximate inference for
+the remainder \cite{gatterbauer2010,gatterbauer2015}.
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+This paper presents an approach for compositional semantics with an
+open predicate vocabulary. Our approach defines a probabilistic model
+over denotations (sets of Freebase entities) conditioned on an input
+text. The model has two components: a rule-based semantic parser that
+produces a logical form for the text, and a probabilistic database
+that defines a distribution over denotations for each predicate. A
+training phase learns the probabilistic database by applying
+probabilistic matrix factorization with a query/answer ranking
+objective to logical forms derived from a large, entity-linked web
+corpus. An experimental analysis demonstrates that this approach
+outperforms several baselines and can answer many questions that
+cannot be answered by semantic parsing into Freebase.
+
+Our approach learns a model-theoretic semantics for natural language
+text tied to Freebase, as do some semantic parsers, except with an
+open predicate vocabulary. This difference influences several other
+aspects of the system's design. First, because no knowledge base with
+the necessary knowledge exists, the system is forced to \emph{learn}
+its knowledge base (in the form of a probabilistic database). Second,
+the system can directly map syntactic CCG parses to logical forms, as
+it is no longer necessary to map words to a closed vocabulary of
+knowledge base predicates. In some sense, our approach is the exact
+opposite of the typical semantic parsing approach: usually, the
+semantic parser is learned and the knowledge base is fixed; here, the
+knowledge base is learned and the semantic parser is fixed. From a
+machine learning perspective, training a probabilistic database via
+matrix factorization is easier than training a semantic parser, as
+there are no difficult inference problems. However, it remains to be
+seen whether a learned knowledge base can achieve similar recall as a
+fixed knowledge base on the subset of language it covers.
+
+There are two limitations of this work. The most obvious limitation is
+the restriction to existentially quantified conjunctions of
+predicates. This limitation is not inherent to the approach, however,
+and can be removed in future work by using a system like Boxer
+\cite{bos2008} for semantic parsing. A more serious limitation is the
+restriction to one- and two-argument predicates, which prevents our
+system from representing events and $n$-ary relations. Conceptually, a
+similar matrix factorization approach could be used to learn
+embeddings for $n$-ary entity tuples; however, in practice, the
+sparsity of these tuples makes learning challenging. Developing
+methods for learning $n$-ary relations is an important problem for
+future work.
+
+% In our evaluation, we noticed two common sources of error. The first
+% is noisy training data due to entity linking and syntactic parsing
+% errors. For example, processing a comma-separated list often results
+% in noun-noun relations between its elements. The consequences of these
+% errors are noticeable in the output of test questions as well. An
+% improved semantic parsing component or a denoising step could improve
+% performance. The second is that the matrix factorization tends to
+% assign more extreme probabilities to more frequent entities as their
+% vector embeddings have greater norms. This can occasionally produce
+% oddly-ranked results. Normalizing the embeddings in some fashion may
+% help.
+
+% TODO: discussion of coverage / expressivity of the approach. Which
+% language phenomena are covered by the representation? What kinds of
+% negation?
+
+A direction for future work is scaling up the size of the training
+corpus to improve recall. Low recall is the main limitation of our
+current system as demonstrated by the experimental analysis. Both
+stages of training, the data generation and matrix factorization, can
+be parallelized using a cluster. All of the relation instances in
+Freebase can also be added to the training corpus. It should be
+feasible to increase the quantity of training data by a factor of
+10-100, for example, to train on all of ClueWeb. Scaling up the
+training data may allow a semantic parser with an open predicate
+vocabulary to outperform comparable closed vocabulary systems.
+
+% An important open problem is extending the matrix factorization
+% approach used here to learn denotations for higher-arity (e.g.,
+% ternary) predicates. Such predicates are necessary to represent
+% events. This problem is challenging due to sparsity in the
+% co-occurrences of entity triples (quadruples, etc.), and because many
+% event mentions will only reference a subset of the event's
+% arguments. One possible approach is to introduce latent event
+% variables and binary relations between events and their arguments.
+
+% Another conclusion from this work is that there are complementary
+% roles for both open and closed predicate vocabularies. An elegant way
+% to combine these approaches would be to construct a semantic parser
+% that is capable of using both Freebase predicates as well as
+% open-domain predicates. This semantic parser would have higher
+% coverage than current approaches, while still obtaining the advantages
+% of Freebase. Another advantage is the ability to learn the semantic
+% analysis component, which may improve the semantic analyses for tricky
+% phenomena like quantifier scoping. These integrated methods are a
+% promising direction for future work.
+
+\section*{Acknowledgments}
+This research was supported in part by DARPA under contract number
+FA8750-13-2-0005, and by a generous grant from Google. We additionally
+thank Matt Gardner, Ndapa Nakashole, Amos Azaria and the anonymous
+reviewers for their helpful comments.
+
+\bibliography{semantic_parsing}{}
+\bibliographystyle{acl2012}
+
+\end{document}

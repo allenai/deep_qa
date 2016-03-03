@@ -1,0 +1,88 @@
+\title{Cover Letter: \\ Learning a Compositional Semantics for Freebase \\ with an Open
+  Predicate Vocabulary} 
+
+\documentclass[10pt]{article}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{mdwlist}
+
+
+\begin{document}
+\maketitle
+
+We appreciate the helpful comments from the reviewers. Our responses
+to the three specific changes are listed below:
+
+\begin{itemize*}
+
+\item {\bf Comparison to Reddy et al. (2014):} We have added a
+  discussion comparing our approach to this one in Section 8 (Related
+  Work). This work is similar to ours in its training data
+  generation. It differs from our work in that it uses a closed
+  predicate vocabulary -- as do all semantic parsers to
+  Freebase. (This difference was acknowledged by the reviewers in
+  their original reviews.)
+
+\item {\bf Coverage and Expressivity of Approach:} We have added a
+  Discussion (Section 3.4) to the semantic parsing portion of the
+  paper describing our system's coverage of linguistic phenomena. Note
+  that we have chosen to drop negation from the description of the
+  semantic parsing system, as it is (1) confusing to the readers, and
+  (2) irrelevant for both the training and evaluation.
+
+\item {\bf Comparing Probabilistic Databases to Possible Worlds
+  Semantics:} We have changed our description of the system to use
+  possible worlds semantics throughout. Section 2 (System Overview)
+  sets up a probabilistic model for the whole system, and Section 4
+  (Probabilistic Database) explains how a probabilistic database
+  represents a probability distribution over possible worlds. Section
+  5 (Inference) has also been improved to explain how the recursive
+  query evaluation algorithm is consistent with the possible worlds
+  semantics. Finally, Section 8 briefly compares probabilistic
+  databases to Markov Logic Networks -- we believe the relationship
+  does not require much explanation, given the improved presentation.
+
+\end{itemize*}
+
+We have also made changes based on the additional suggestions of the
+reviewers. These are fairly minor changes, but we point them out to
+assist in the re-review:
+
+{\bf Reviewer 1}
+
+The changes mentioned above address the comments about the knowledge
+represented in the probabilistic database, and the relationship of
+probabilistic databases to MLNs. The discussion of
+coverage/expressivity also cites Lewis and Steedman (2013). Finally,
+Figure 3 now uses human-readable IDs.
+
+% We have not changed the text describing the clustering baseline,
+% because the clusters look reasonable on manual inspection. Also, note
+% that our training set is approximately 10x larger than the comparable
+% work of Riedel et al. (2013).
+
+{\bf Reviewer 2}
+
+The new presentation of the probabilistic database and explicit
+discussion of the coverage of our semantic parsing approach should
+address many of your concerns. This presentation lays out a general
+probabilistic model for thinking about compositional semantics with an
+open predicate vocabulary, even though our system only implements a
+small piece of it. We also explain the extraction of simplified
+logical forms, which we believe also clarifies the ranking objective
+explanation. Footnote 4 addresses your suggestion of training with
+randomly-generated negative examples (which we tried, and found
+performed poorly). Finally, the discussion section now includes a
+high-level error analysis.
+
+
+{\bf Reviewer 3}
+
+Most of your comments should be addressed by the 3 changes
+above. Additionally, Table 1 has been clarified as suggested, and the
+evaluation discusses how the hyperparameters were selected. Finally,
+the discussion section has been considerably improved.
+
+(Also, thanks for the LaTeX tip.)
+
+\end{document}
+

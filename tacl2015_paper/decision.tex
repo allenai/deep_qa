@@ -1,0 +1,504 @@
+\documentclass{article}[11pt,oneside]
+
+\begin{document}
+
+\begin{verbatim}
+
+As TACL action editor for submission 548, "Learning a Compositional
+Semantics for Freebase with an Open Predicate Vocabulary",   I am happy to
+tell you that I am accepting your paper subject (conditional) to your making
+specific revisions within two months.
+
+LIST OF MANDATORY REVISIONS:
+The following issues were particularly prominent in the reviews below:
+
+* There is a recent paper that seems closely related, "Large-scale semantic
+parsing without Question-Answer Pairs", TACL 2014, Reddy, Lapata, and
+Steedman. Please do a thorough comparison to this.
+
+* Please add more discussion on the coverage and expressivity of the
+approach: Which language phenomena are addressed by the representation in
+this paper? How is negation handled, and which cases of negation are covered
+by the current set of rules?
+
+* Please do a comparison of probabilistic databases to Markov Logic
+Networks, and more generally to probabilistic logic with a probability
+distribution over
+possible worlds.
+
+But please also take into account all other reviewer comments.
+
+Note that the reviewers asked for changes to the explanations of your model,
+but not any additional experiments.
+
+Generally, your revised version will be handled by the same action editor
+(me) and the same reviewers (if necessary) in making the final decision ---
+which, *if* all requested revisions are made, will be final acceptance.
+
+You are allowed one to two extra pages of content to accommodate these
+revisions.  To submit your revised version, follow the instructions in the
+"Revision and Resubmission Policy for TACL Submissions" section of the
+Author Guidelines at
+https://tacl2013.cs.columbia.edu/ojs/index.php/tacl/about/submissions#authorGuidelines
+.
+
+Thank you for submitting to TACL, and I look forward to your revised
+version!
+
+Katrin Erk
+University of Texas, Austin
+katrin.erk@mail.utexas.edu
+------------------------------------------------------
+------------------------------------------------------
+....THE REVIEWS....
+------------------------------------------------------
+------------------------------------------------------
+Reviewer A:
+
+CLARITY: For the reasonably well-prepared reader, is it clear what was done
+and why? Is the paper well-written and well-structured?:
+        5. Very clear.
+
+
+ORIGINALITY/INNOVATIVENESS: How original is the approach? Does this paper
+break new ground in topic, methodology, or content? How exciting and
+innovative is the research it describes?
+Note that a paper could score high for originality even if the results do
+not show a convincing benefit.
+:
+        4. Creative: An intriguing problem, technique, or approach that is
+substantially different from previous research.
+
+SOUNDNESS/CORRECTNESS: First, is the technical approach sound and
+well-chosen? Second, can one trust the claims of the paper -- are they
+supported by properexperiments and are the results of the experiments
+correctlyinterpreted?:
+        4. Generally solid work, although there are some aspects of the approach or
+evaluation I am not sure about.
+
+MEANINGFUL COMPARISON: Does the author make clear where the presented system
+sits with respect to existing literature? Are the references adequate?:
+        4. Mostly solid bibliography and comparison, but there are a few additional
+references that should be included. Discussion of benefits and limitations
+is acceptable but not enlightening.
+
+SUBSTANCE: Does this paper have enough substance (in terms of the amount of
+work), or would it benefit from more ideas or analysis?:
+        4. Represents an appropriate amount of work for a publication in this
+journal. (most submissions)
+
+IMPACT OF IDEAS OR RESULTS: How significant is the work described? If the
+ideas are novel, will they also be useful or inspirational? If the results
+are sound, are they also important? Does the paper bring new insights into
+the nature of the problem?:
+        4. Some of the ideas or results will substantially help other people's
+ongoing research.
+
+REPLICABILITY Will members of the ACL community be able to reproduce or
+verify the results in this paper?
+Members of the ACL community:
+:
+        3. could reproduce the results with some difficulty. The settings of
+parameters are underspecified or subjectively determined; the
+training/evaluation data are not widely available.
+
+IMPACT OF ACCOMPANYING SOFTWARE: If software was submitted along with the
+paper, what is the expected impact of the software package?:
+        1. No usable software released.
+
+IMPACT OF ACCOMPANYING DATASET: If a dataset was submitted along with the
+paper, what is its expected impact? Will it be valuable to others in the
+form in which they are released?:
+        1. No usable datasets submitted.
+
+RECOMMENDATION: Should the paper be accepted or rejected? In deciding on
+your ultimate recommendation, please think over all your scores above. If a
+paper has some weaknesses, but you really got a lot out of it, feel free to
+reccommend it. If a paper is solid but you could live without it, let us
+know that you're ambivalent.:
+        4. Worthy: A good paper that is worthy of being published in TACL.
+
+Detailed Comments for the Authors:
+        This is one of the best papers in the recent literature on combining formal
+and distributional semantics. The model maps CCG parses to logical forms,
+then learns an embedding for the property and relation symbols based on
+their denotations. These embeddings are used to construct a probabilistic
+database, in a similar way to universal schema. The approach allows them to
+capture compositional semantics whilst retaining the 'softness' of
+distributional semantics.
+
+Most of my comments are minor.
+
+The paper introduces a new ranking function which allows compositional
+expressions to be added to the database - which I think is an important
+contribution. The paper claims that their model represents "arbitrary
+natural language phrases" (end of section 2) - but later it suggests that
+only expressions in which all variables are bound to Freebase entities are
+added. For example, I think that this restriction means that a sentence like
+"Every president is a person" wouldn't be added to the database (c.f.
+Rochtaschel et al. 2014, who are interested in adding first-order knowledge
+to probabilistic databases). The paper should be more clear about exactly
+what knowledge is being represented in their database.
+
+I also think that the paper would benefit from a discussion of the
+strengths/weaknesses of using a probabilistic database for knowledge
+representation, compared to alternatives such as Markov logic networks (as
+used by Beltagy et al. 2013). For example, I think that adding a single new
+fact to the database would require it to be retrained?
+
+In the evaluation, they find that manually-annotated Freebase queries
+outperform their model. One approach would be to also include Freebase
+predicates in the database (as in universal schema), and see if the
+combination outperforms Freebase alone. If this isn't possible, explain why.
+Also, I'd be interested to see a result using parsed Freebase queries
+(rather than gold queries), e.g. using Berant's parser.
+
+A clustering baseline performs weakly on the task - it's perhaps worth
+mentioning what kinds of errors it's making (e.g. over-clustering,
+under-clustering, etc.) Lewis and Steedman (2013) use some additional
+techniques, such as modeling ambiguity and dropping weak links in the
+clustering, which may explain the difference in performance.
+
+The authors suggest that recall could be improved by training on a larger
+corpus. The amount of training data they use actually seems relatively small
+by recent standards - is the bottleneck in syntactic parsing times, or in
+the learning?
+
+Some of the post-processing CCG parses sounds very similar to that used by
+Lewis and Steedman (such as converting verbal adjuncts to arguments, adding
+word features to prepositions). If so, this should be referenced.
+
+The related work should discuss the recent Reddy, Lapata and Steedman paper
+(TACL 2014). Like the submission, they learn a semantics for predicates in a
+CCG-derived logical form based on their Freebase-entity arguments. There are
+several important differences, but they're worth discussing.
+
+The paper is generally very well-written, but I think Figure 1 could be made
+more clear. Also, Figure 3 should use human-readable constants rather than
+Freebase IDs.
+
+REVIEWER CONFIDENCE:
+        4. Quite sure. I tried to check the important points carefully. It's
+unlikely, though conceivable, that I missed something that should affect my
+ratings.
+
+------------------------------------------------------
+
+------------------------------------------------------
+Reviewer B:
+
+CLARITY: For the reasonably well-prepared reader, is it clear what was done
+and why? Is the paper well-written and well-structured?:
+        3. Mostly understandable to me with some effort.
+
+
+ORIGINALITY/INNOVATIVENESS: How original is the approach? Does this paper
+break new ground in topic, methodology, or content? How exciting and
+innovative is the research it describes?
+Note that a paper could score high for originality even if the results do
+not show a convincing benefit.
+:
+        3. Respectable: A nice research contribution that represents a notable
+extension of prior approaches or methodologies.
+
+SOUNDNESS/CORRECTNESS: First, is the technical approach sound and
+well-chosen? Second, can one trust the claims of the paper -- are they
+supported by properexperiments and are the results of the experiments
+correctlyinterpreted?:
+        4. Generally solid work, although there are some aspects of the approach or
+evaluation I am not sure about.
+
+MEANINGFUL COMPARISON: Does the author make clear where the presented system
+sits with respect to existing literature? Are the references adequate?:
+        4. Mostly solid bibliography and comparison, but there are a few additional
+references that should be included. Discussion of benefits and limitations
+is acceptable but not enlightening.
+
+SUBSTANCE: Does this paper have enough substance (in terms of the amount of
+work), or would it benefit from more ideas or analysis?:
+        4. Represents an appropriate amount of work for a publication in this
+journal. (most submissions)
+
+IMPACT OF IDEAS OR RESULTS: How significant is the work described? If the
+ideas are novel, will they also be useful or inspirational? If the results
+are sound, are they also important? Does the paper bring new insights into
+the nature of the problem?:
+        4. Some of the ideas or results will substantially help other people's
+ongoing research.
+
+REPLICABILITY Will members of the ACL community be able to reproduce or
+verify the results in this paper?
+Members of the ACL community:
+:
+        3. could reproduce the results with some difficulty. The settings of
+parameters are underspecified or subjectively determined; the
+training/evaluation data are not widely available.
+
+IMPACT OF ACCOMPANYING SOFTWARE: If software was submitted along with the
+paper, what is the expected impact of the software package?:
+        1. No usable software released.
+
+IMPACT OF ACCOMPANYING DATASET: If a dataset was submitted along with the
+paper, what is its expected impact? Will it be valuable to others in the
+form in which they are released?:
+        1. No usable datasets submitted.
+
+RECOMMENDATION: Should the paper be accepted or rejected? In deciding on
+your ultimate recommendation, please think over all your scores above. If a
+paper has some weaknesses, but you really got a lot out of it, feel free to
+reccommend it. If a paper is solid but you could live without it, let us
+know that you're ambivalent.:
+        4. Worthy: A good paper that is worthy of being published in TACL.
+
+Detailed Comments for the Authors:
+        Summary of paper: The goal of this paper is to extend compositional
+semantic parsing to open-domain predicates, as not to be bound by knowledge
+bases such as Freebase. Specifically, a huge number of sentences are parsed
+into logical forms using a simple rule-based semantic parser, where the
+predicates (categories and relations) used are words.  These words are
+embedded into a vector space via matrix factorization (like in universal
+schema).  Experiments demonstrate the value of using matrix factorization
+and training on compositional utterances.
+
+Summary of assessment: Overall, I thought this was a decent paper.  The goal
+of extending semantic parsing to more realistic settings is definitely a
+worthwhile one.  The paper presents a reasonable and natural approach, and
+the experiments demonstrate some promise in this approach.  There are,
+however, several improvements that could be made that would turn this into a
+strong paper:
+
+1) I'd like to see a more rigorous treatment of the semantics.  This paper
+has the opporunity to lay out a foundation for how compositional semantics
+should be handled, but it comes across currently as rather ad-hoc.  Several
+things about the exposition could be improved, as detailed below.
+
+2) At some level, I'm not convinced by the practical utility of learning
+these matrix factorization models based on the particular restricted
+compositional utterances used in the paper, because at the end of the day,
+you're just trying to model a set of relations.  For example, the utterance
+"Tom Cruise plays Maverick in the movie Top Gun" is really just "Tom Cruise
+plays Maverick" and "Tom Cruise plays in the movie Top Gun", which are both
+just triples.  More complex utterances "Top Gun played in 5 movies" couldn't
+be represented with triples and would actually require semantic parsing, but
+this is not handled in the paper.  I understand that there is a 1\%
+improvement by learning from compositional parses, but there's no analysis
+of this.
+
+More detailed comments:
+
+Figure 2: the treatment of appositive constructions seems inappropriate.
+Rather than stringing together a huge conjunction, the appositive
+construction should be an independent conventional implicature statement,
+whose validity is independent of the main statement.
+
+Page 5: when presenting the probabilistic denotations, it would be clearer
+to define things more rigorously.  For example, does this corresponds to a
+world model where each ground predicate is true with some probability
+independently? I believe the answer is no, and that there's some
+approximation in the recursive definition of denotations, which should be
+made clearer.  Comparing with what one gets from Markov logic would be
+helpful.
+
+I would have liked the paper to be more explicit early on about the exact
+set of logical forms handled in two senses: (i) the formal logical
+restrictions (e.g., only conjunctions and existential quantification is
+allowed), and (ii) the practical sizes of the logical forms (e.g., do they
+include 5 predicates or 50 predicates)?  I know statistics are given later
+(in Table 1), but I think it really helps the reader understand the
+motivation and design decisions if this appeared earlier.
+
+5.1: the description of extracting simplified logical forms is not clear to
+me. The examples help, but I didn't get a sense of what the general recipe
+is on an arbitrarily logical form.  This seems like an important part of the
+paper.
+
+Perhaps state in 5.2 that this only handles simple predicate-entity queries
+(the third example in Figure 3)?  Also, is $t_j'$ sampled based on $t_j$ so
+that they share one entity in common.  In general, this part should be
+spelled out in more detail: random from what distribution?
+
+I found the ranking objective in 5.3 to be confusing.  In particular, in the
+definition of $C(\ell)$ and $R_L(\ell)$, and $R_R(\ell)$, it's not clear
+what this set is and that $y$ stands in for a concrete entity (?) in $\ell$,
+but that $x$ is a variable (which doesn't even appear in $\ell$)?  This
+definition also doesn't seem to generalize to all logical forms $\ell$.
+What if the entity $e_i$ was embedded deeply in some large logical form
+$\ell$ with lots of other existentially quantified variables?  I don't see
+how the construction in the paper works for that, or is that outside the
+scope of the paper?  Either way, being explicit would be useful.
+
+At a higher-level note, the ranking objective seems rather ad-hoc.  Since
+you already have defined a probabilistic denotation for a logical form
+$\ell$ (section 4.2), why not just maximize the probability that the
+denotation $\ell_i$ contains $e_i$, and the probability that denotation
+$\ell_i$ does not contain random $e_i'$ that get sampled (appropriately
+weighting the two terms)? I suppose the gradient updates would be more
+involved and require some backpropagation, but conceptually, this would be a
+lot cleaner, and the treatment of probabilistic semantics would be handled
+in one place rather than two.
+
+I was surprised that the Freebase semantic parsing method actually has more
+complete coverage given that the folklore assumption (and indeed the
+motivation for relation extraction) is that there is more data in text.
+
+I would have liked to see much more error analysis of concrete examples of
+compositional utterances that that system gets right and wrong.  What do the
+examples in the test set look like?
+
+REVIEWER CONFIDENCE:
+        4. Quite sure. I tried to check the important points carefully. It's
+unlikely, though conceivable, that I missed something that should affect my
+ratings.
+
+------------------------------------------------------
+
+------------------------------------------------------
+Reviewer C:
+
+CLARITY: For the reasonably well-prepared reader, is it clear what was done
+and why? Is the paper well-written and well-structured?:
+        5. Very clear.
+
+
+ORIGINALITY/INNOVATIVENESS: How original is the approach? Does this paper
+break new ground in topic, methodology, or content? How exciting and
+innovative is the research it describes?
+Note that a paper could score high for originality even if the results do
+not show a convincing benefit.
+:
+        4. Creative: An intriguing problem, technique, or approach that is
+substantially different from previous research.
+
+SOUNDNESS/CORRECTNESS: First, is the technical approach sound and
+well-chosen? Second, can one trust the claims of the paper -- are they
+supported by properexperiments and are the results of the experiments
+correctlyinterpreted?:
+        5. The approach is very apt, and the claims are convincingly supported.
+
+MEANINGFUL COMPARISON: Does the author make clear where the presented system
+sits with respect to existing literature? Are the references adequate?:
+        3. Bibliography and comparison are somewhat helpful, but it could be hard
+for a reader to determine exactly how this work relates to previous work or
+what its benefits and limitations are.
+
+SUBSTANCE: Does this paper have enough substance (in terms of the amount of
+work), or would it benefit from more ideas or analysis?:
+        4. Represents an appropriate amount of work for a publication in this
+journal. (most submissions)
+
+IMPACT OF IDEAS OR RESULTS: How significant is the work described? If the
+ideas are novel, will they also be useful or inspirational? If the results
+are sound, are they also important? Does the paper bring new insights into
+the nature of the problem?:
+        4. Some of the ideas or results will substantially help other people's
+ongoing research.
+
+REPLICABILITY Will members of the ACL community be able to reproduce or
+verify the results in this paper?
+Members of the ACL community:
+:
+        4. could mostly reproduce the results, but there may be some
+variation because of sample variance or minor variations in their
+interpretation of the protocol or method.
+
+IMPACT OF ACCOMPANYING SOFTWARE: If software was submitted along with the
+paper, what is the expected impact of the software package?:
+        1. No usable software released.
+
+IMPACT OF ACCOMPANYING DATASET: If a dataset was submitted along with the
+paper, what is its expected impact? Will it be valuable to others in the
+form in which they are released?:
+        1. No usable datasets submitted.
+
+RECOMMENDATION: Should the paper be accepted or rejected? In deciding on
+your ultimate recommendation, please think over all your scores above. If a
+paper has some weaknesses, but you really got a lot out of it, feel free to
+reccommend it. If a paper is solid but you could live without it, let us
+know that you're ambivalent.:
+        5. Strong: I'd like to see it accepted; it will be one of the better papers
+in TACL.
+
+Detailed Comments for the Authors:
+        Beautifully written paper describing an extension to the Freebase semantic
+parsing problem, incorporating matrix factorisation borrowed from the ideas
+on universal schema. The authors have worked hard to compare against
+ompetitive baselines, and argue convincingly for the open nature of the
+represenation. Careful thought has been given to the machine learning side,
+with extensions to previous objective functions used for similar work.
+
+The only grumble I have relates to an apparent lack of awareness of a highly
+relevant existing TACL paper. It is perhaps generous to suggest an oversight
+on the part of the authors in not citing the following paper which came out
+in October 2014:
+
+Large-scale Semantic Parsing without Question-Answer Pairs
+Siva Reddy, Mirella Lapata, Mark Steedman
+
+The submitted paper must position itself with respect to this paper, since
+both use CCG for freebase semantic parsing. (The Reddy paper does not use an
+"open" representation, so I can see this crucial difference.)
+
+More minor comments follow.
+
+Try this piece of tex to get your CCG categories looking much cleaner
+(without the extraneous space):
+
+\newcommand{\cf}[1]{\mbox{$\it{#1}$}}   % category font, e.g. \cf{NP}
+
+Modifiers of verbs are changed to complements using PP. What if there are
+lots of modifiers? That implies lots of PPs? eg (...((S\NP)/PP/PP)...)?
+Maybe this doesn't matter if the change is only done in post-processing
+before the semantic rules are applied, but it might be a bad idea to have
+this representation as part of the supertagger and/or parser.
+
+Special rules are used to deal with negation. How is this dealt with in the
+semantics. Eg, off the top of my head, what about a query like "All the
+James Bond actors that did *not* appear in Bond movies before 1980?" Is it
+possible to take set complements? Is that how it's handled?
+
+Footnote 2 is a little opaque. I understand the difference between the
+marginal and conditional prob (I think); something like P(entity|query) vs.
+P(entity, query), so in the marginal case there's no distribution over
+possible answers. But why one works better than the other is mysterious, and
+footnote 2 didn't help much.
+
+Just one typo (!): "as opposed tuples in general"
+
+Section 6.2: "Each system predicts..." - which systems? It's not clear at
+this point what the systems are providing the pool.
+
+I'm also not entirely convinced by the use of the pooling methodology here.
+My understanding of pooling in IR is that experiments have been run showing
+that, with enough diversity in the systems making up the pool, the recall in
+the pooled answers is extremely high, making them a good basis for manual
+annotation (since no relevant documents or correct answers are missed). If
+the systems you use are just the handful you evaluate, it's not clear
+pooling has the same guarantees.
+
+I was also puzzled by the idea that there can be more than one answer to a
+query, so a couple of examples here would really help. (I guess there could
+be more than one CEO of a company, for example?)
+
+It also wasn't obvious to me that MAP is the right evaluation, if there are
+so few possible answers. Why not just rank of the first correct answer? What
+do they do in, eg, TREC QA track here?
+
+The last line of table 1 (> 1 answer 116) confused me. Is this the number of
+questions with more than one answer? In the text it says at least one (so
+>=) *system* able to produce the correct answer.
+
+lambda = 10^-4, 300 dimensions: were these parameters tuned? If so, on what
+data? (I guess I'm wondering whether additional tuning was done for your
+system compared to the baselines, and on what data...)
+
+I would change the title of section 7 (Discussion) to Conclusion, since
+there's very little discussion.
+
+REVIEWER CONFIDENCE:
+        4. Quite sure. I tried to check the important points carefully. It's
+unlikely, though conceivable, that I missed something that should affect my
+ratings.
+
+\end{verbatim}
+
+\end{document}

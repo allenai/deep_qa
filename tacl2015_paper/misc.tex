@@ -1,0 +1,156 @@
+\documentclass[11pt]{article}
+
+\usepackage{booktabs}
+\usepackage[pdf]{pstricks}
+\usepackage{pst-pdf}
+\usepackage{pst-plot}
+\usepackage{times}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{soul}
+\usepackage{subfig}
+\usepackage{stmaryrd}
+
+\title{Learning a Compositional Semantics for Freebase \\ with an Open
+  Predicate Vocabulary}
+
+% \author{Author 1\\
+% 	    XYZ Company\\
+% 	    111 Anywhere Street\\
+% 	    Mytown, NY 10000, USA\\
+% 	    {\tt author1@xyz.org}
+% 	  \And
+% 	Author 2\\
+%   	ABC University\\
+%   	900 Main Street\\
+%   	Ourcity, PQ, Canada A1A 1T2\\
+%   {\tt author2@abc.ca}}
+
+\date{}
+
+% Contributions:
+% - compositional model of semantics based on universal schema (cite old work)
+% - new training objective
+% - experimental evaluation
+% 
+% Introduction:
+% 
+% - Fixed schema is inherently limiting
+% - open / universal is good
+%   - need techniques for composition / compositional semantics
+% - 
+
+\newcommand{\pred}[1]{\textsc{#1}}
+% TODO: make this look cleaner!
+\newcommand{\ccgsyn}[1]{\mbox{$\it{#1}$}}
+\newcommand{\true}{\pred{True}}
+
+\newcommand{\clb}{\textsc{CorpusLookup}}
+\newcommand{\cb}{\textsc{Clustering}}
+\newcommand{\uspr}{\textsc{Factorization} (\ensuremath{O_P})}
+\newcommand{\usqr}{\textsc{Factorization} (\ensuremath{O_Q})}
+\newcommand{\epr}{\textsc{Ensemble} (\ensuremath{O_P})}
+\newcommand{\eqr}{\textsc{Ensemble} (\ensuremath{O_Q})}
+\newcommand{\pden}[1]{\ensuremath{\llbracket #1 \rrbracket_{P}}}
+
+\newcommand{\rightedge}[1]{\ensuremath{\xRightarrow[]{#1}}}
+\newcommand{\leftedge}[1]{\ensuremath{\xLeftarrow[]{#1}}}
+\newcommand{\biedge}[1]{\ensuremath{\xLeftrightarrow[]{#1}}}
+\newcommand{\entitysentence}{$(e_1, e_2, s)$}
+\newcommand{\entsents}{\ensuremath{S_{(e_1, e_2)}}}
+
+\newcommand{\bS}{\textbf{S}}
+\newcommand{\bs}{\textbf{s}}
+\newcommand{\bY}{\textbf{Y}}
+\newcommand{\by}{\textbf{y}}
+\newcommand{\bZ}{\textbf{Z}}
+\newcommand{\bz}{\textbf{z}}
+\newcommand{\bell}{\boldsymbol \ell}
+\newcommand{\bEll}{\textbf{L}}
+\newcommand{\bT}{\textbf{T}}
+\newcommand{\boldt}{\textbf{t}}
+\newcommand{\vecell}{\boldsymbol \ell}
+\newcommand{\btheta}{\ensuremath{\textbf{\theta}}}
+
+\newcommand{\km}{\textsc{Asp}}
+\newcommand{\kmsyn}{\textsc{Asp-syn}}
+\newcommand{\kmnobackoff}{\textsc{-backoff}}
+\newcommand{\kmnoccgbank}{\textsc{-ccgbank}}
+\newcommand{\kmold}{\textsc{K\&M-2012}}
+\newcommand{\pipeline}{\textsc{Pipeline}}
+
+\newcommand{\mention}{\pred{m}}
+\newcommand{\mentionspan}[2]{#1}
+
+\newcommand{\fsyn}{\ensuremath{O_{\mbox{syn}}}}
+\newcommand{\fsem}{\ensuremath{O_{\mbox{sem}}}}
+\newcommand{\bt}{\textbf{t}}
+\newcommand{\bd}{\boldsymbol d}
+
+
+\begin{document}
+
+\begin{eqnarray*}
+\ell =  \\
+s =   \\
+t = \\
+\end{eqnarray*}
+
+\begin{eqnarray*}
+\fsem{}(\theta)  = \sum_{(e_1, e_2)} | \max_{\hat{\bell}, \hat{\bt}} \Gamma(\hat{\bell},\hat{\bt{}},\bS{}_{(e_1, e_2)}; \theta)  - \max_{\bell^*, \bt^*} \big( \Psi(\by_{(e_1, e_2)}, \bell^*) + \Gamma(\bell^*,\bt{}^*,\bS{}_{(e_1, e_2)} ;\theta)\big) |_{+}\\
+\end{eqnarray*}
+
+\begin{eqnarray*}
+\fsyn{}(\theta) & = & \sum_{i=1}^n |\max_{\hat{\ell}, \hat{t}} \Gamma(\hat{\ell}, \hat{t} , s_i; \theta) - \max_{\ell^*} \Gamma(\ell^*, t_i , s_i; \theta)|_{+} \\
+\end{eqnarray*}
+
+$O(\theta) = \fsyn{}(\theta) + \fsem{}(\theta)$
+
+
+\begin{eqnarray*}
+P(\gamma | s) = \sum_K \sum_\ell P(\gamma | \ell, K) P(K) P(\ell | s) 
+\end{eqnarray*}
+
+
+\begin{eqnarray*}
+P(K) & = & \prod_{e \in E} \prod_{c \in C} P( c(e) = K_{c,e}) \times \\
+ & & \prod_{e_1\in E} \prod_{e_2 \in E} \prod_{r \in R} P(r(e_1, e_2) = K_{r, e_1, e_2})
+\end{eqnarray*}
+
+
+\begin{eqnarray*}
+P(e \in \gamma | s) & = & \sum_\gamma \textbf{1}(e \in \gamma) P(\gamma | s) \\
+& = & \sum_K \textbf{1}(e \in \llbracket \ell \rrbracket_K) P(K)
+\end{eqnarray*}
+
+\begin{eqnarray*}
+\theta_{prs}^{j+1} \leftarrow \theta_{prs}^j + \alpha_j ( \phi_{prs}(\ell^*, t^*, s^i) - \phi_{prs} (\hat{\ell}, \hat{t}, s^i))
+\end{eqnarray*}
+
+
+\begin{eqnarray*}
+\hat{\ell}, \hat{t} & \leftarrow & \arg \max_{\ell, t} \Gamma(\ell, t , s_i; \theta^t) \\
+\ell^* & \leftarrow & \arg \max_{\ell} \Gamma(\ell, t_i , s_i; \theta^t) \\
+\theta^{t+1} & \leftarrow & \theta^t + \phi(\ell^*, t_i, s_i) - \phi(\hat{\ell}, \hat{t}, s_i)
+\end{eqnarray*}
+
+\begin{eqnarray*}
+\hat{\bell}, \hat{\bt} & \leftarrow & \arg \max_{\bell, \bt} \Gamma(\bell, \bt , \bS{}_{(e_1, e_2)}; \theta^t) \\
+\bell^*, \bt^* & \leftarrow & \arg \max_{\bell, \bt} \Gamma(\bell, \bt , \bS{}_{(e_1, e_2)}; \theta^t) + \Psi(\by_{(e_1, e_2)}, \bell) \\
+\theta^{t+1} & \leftarrow & \theta^t + \phi(\bell^*, \bt^*, \bS{}_{(e_1, e_2)}) - \phi(\hat{\bell}, \hat{\bt}, \bS{}_{(e_1, e_2)}) \\
+\end{eqnarray*}
+
+\begin{figure}
+\center
+\includegraphics[width=5in]{figures/open_vocabulary/ap_plot.pdf}
+\vspace{-1in}
+\caption{Averaged 11-point precision/recall curves for the 116
+  answerable test questions.}
+\vspace{-.1in}
+\label{fig:pr-curve}
+\end{figure}
+
+
+
+\end{document}
