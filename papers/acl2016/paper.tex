@@ -138,7 +138,7 @@ The rest of this paper is organized as follows.  In \secref{background}, we
 describe the relevant background necessary to understand the models we propose,
 and we situate our model in the context of related work.  In \secref{method},
 we give a formal description of our models of predicate semantics.  In
-\secref{experiments}, we present experimental results on fill-in-the-blank
+\secref{evaluation}, we present experimental results on fill-in-the-blank
 natural language query task.  Using web text linked to Freebase as our training
 and test data, we show a 63\% relative improvement over prior work, giving a
 new state-of-the-art result on this dataset.  In \secref{discussion}, we give a
@@ -156,6 +156,7 @@ describe both of these techniques, as well as give a short overview of other
 closely related work.
 
 \subsection{Open-vocabulary semantic parsing}
+\label{sec:jayant-semparse}
 
 
 This system predicts a denotation $\gamma$, i.e., a set of Freebase
@@ -221,17 +222,205 @@ entities.
 
 \subsection{Subgraph feature extraction}
 
-\mattnote{TODO}
+Subgraph feature extraction (SFE) is a technique introduced by Gardner and
+Mitchell~\shortcite{gardner-2015-sfe} for generating feature matrices over node
+pairs in a graph with labeled edges.  Given a pair of nodes in a graph, SFE
+performs a search to characterize a subgraph around those two nodes, then
+extracts various kinds of features from that subgraph, such as the set of edge
+sequences that connect the two nodes.  \mattnote{Give an example graph with
+features.}  Gardner and Mitchell used these features to perform link
+prediction in the graph, using characteristics of the subgraph around two nodes
+to determine if an edge of a particular type should exist between those nodes
+(when the graph corresponds to a knowledge base like Freebase, this task is
+also known as knowledge base completion). Gardner and Mitchell only used these
+features to model formal KB relations, however.
+
+We differ from the work done by Gardner and Mitchell in two ways.  First, we
+apply these features to models of natural language, instead of formal KB
+relations.  There are some non-trivial problems that need to be solved in order
+to make this work, which will be discussed in \secref{method}.  Second, Gardner
+and Mitchell only considered generating feature matrices over node \emph{pairs}
+in a graph, with which one can model binary relations.  The natural language
+queries we wish to answer also involve unary predicates, or categories.  We
+thus extend SFE to also generate feature matrices over \emph{nodes} in a graph,
+an extension that is straightforward and is also discussed in more detail in
+\secref{method}.
+
+\subsection{Other related work}
+
+Some related work on including structured information in distributional
+representations: Manaal's retrofitting semantic lexicons, Sebastian Riedel's
+``Injecting Logical Background Knowledge into Embeddings for Relation
+Extraction'', work on PRA and KBC more generally\ldots Also, the whole line of
+work on knowledge base embeddings (RESCAL, TransE, etc.) is at least slightly
+relevant here, as is PRA.  \mattnote{Actually write
+this section}.
 
 \section{Method}
 \label{sec:method}
 
-\mattnote{TODO}
-
-\section{Experiments}
-\label{sec:experiments}
+\subsection{Adding SFE features to Jayant's models}
+\label{sec:formal-and-distributional}
 
 \mattnote{TODO}
+
+\subsection{Finding relevant features for each predicate}
+\label{sec:computing-pmi}
+
+\mattnote{TODO}
+
+\subsection{Improved logical forms}
+\label{sec:better-lfs}
+
+\mattnote{TODO}
+
+\subsection{Candidate entity generation}
+\label{sec:better-candidates}
+
+\mattnote{TODO}
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+We evaluate our models of predicate semantics on a fill-in-the-blank natural
+language query task.  Each test example is a natural language phrase containing
+at least two Freebase entities, one of which is held out.  The system must
+propose Freebase entities to fill in the blank left by the held out entity, and
+the predicted entities are then judged manually for correctness.  We compare
+our proposed models, which combine distributional and formal elements, with
+distributional-only and formal-only baselines.
+
+\subsection{Data}
+
+We use the dataset introduced by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}, which
+consists of the ClueWeb09 web
+corpus\footnote{http://www.lemuproject.org/clueweb09.php} along with Google's
+FACC entity linking of that corpus to
+Freebase~\cite{gabrilovich-2013-clueweb-entity-linking}.  For training data, 3
+million webpages from this corpus were processed with a CCG parser to produce
+logical forms, as described in \secref{jayant-semparse}.  This produced 2.1m
+predicate instances involving 142k entity pairs and 184k entities.  After
+removing infrequently-seen predicates (seen fewer than 6 times), there were 25k
+categories and 4.2k relations.\footnote{The differences in numbers reported
+here versus those reported by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} are due to the
+improved logical form generation, discussed in \secref{better-lfs}.}
+
+We also used the test set created by Krishnamurthy and Mitchell, which contains
+220 queries generated in the same fashion as the training data from a separate
+section of ClueWeb.  However, we used this set for intermediate evaluations
+while developing our models, and so we also generated another, similar test set
+from a different held out section of ClueWeb.  This final test set contains 307
+queries.  We report results on both of these test sets below.  All of the data
+used in these experiments is available at [url withheld for review].
+
+\subsection{Experiments}
+
+We compare three models in our experiments: a distributional-only model, a
+formal-only model, and our proposed model, which is both distributional and
+formal.  The distributional-only model is the model proposed by Krishnamurthy
+and Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} and
+described in \secref{jayant-semparse}.  The combined model is the model
+described in \secref{sec:formal-and-distributional}, while the formal-only
+model removes the distributional component from the combined model (i.e., all
+parameters $\theta$ and $\phi$ from the distributional portion of the model are
+fixed at zero during training and test).  Note that this formal-only baseline
+is also new to this work---we are not aware of any other work that models
+language in terms of features derived from a formal knowledge base.
+
+In addition to running experiments comparing these three models on the two test
+sets described above, we also evaluated the improvement gained by using our
+modified logical forms (\secref{better-lfs}), and our entity proposal mechanism
+(\secref{better-candidates}).
+
+\subsection{Methodology}
+
+Given a fill-in-the-blank query such as ``Italian architect \blank{}'', each
+system produces a ranked list of 100 candidate entities.  To compare the output
+of the systems, we follow a pooled evaluation protocol commonly used in
+relation extraction and information
+retrieval~\cite{west-2014-kbc-via-qa,riedel-2013-mf-universal-schema}.  We take
+the top 30 predictions from each system and manually annotate whether they are
+correct, and use those annotations to compute the average precision (AP) and
+reciprocal rank (RR) of each system on the query.  Average precision is defined
+as $\frac{1}{m}\sum^m_{k=1} \mathrm{Prec}(k) \times \mathrm{Correct}(k)$, where
+$\mathrm{Prec}(k)$ is the recision at rank $k$, $\mathrm{Correct}(k)$ is an
+indicator function for whether the $k$th answer is correct, and $m$ is number
+of returned answers (up to 100, in this evaluation).  Reciprocal rank is
+computed by first finding the rank $r$ of the first correct prediction made by a
+system.  Reciprocal rank is then $\frac{1}{r}$, ranging from 1 (if the first
+prediction is correct) to 0 (if there is no correct answer returned).  In the
+tables below we report \emph{mean} average precision (MAP) and reciprocal rank
+(MRR), averaged over all of the queries in the test set.  We also report a
+weighted version of MAP, where the AP of each query is scaled by the number of
+annotated correct answers to the query.
+
+\subsection{Results}
+
+\begin{table}
+  \centering
+  \begin{tabular}{|l|r|r|}
+    \hline
+    Method & MAP & MRR \\
+    \hline
+    Distributional-only & .239 & ?? \\
+    Distributional-only (old lfs) & ?? & ?? \\
+    \hline
+    Formal-only & ?? & ?? \\
+    Formal-only (old lfs) & ?? & ?? \\
+    \hline
+    Combined model & \textbf{.340} & ?? \\
+    Combined model (old lfs) & ?? & ?? \\
+    \hline
+  \end{tabular}
+  \caption{Results on the development set for our fill-in-the-blank task.  The
+  combined model improves MAP by 42\% compared to the distributional-only
+  baseline.  Additionally, the improved logical forms presented in
+  \secref{better-lfs} significantly improve all models.}
+  \label{tab:dev-results}
+\end{table}
+
+\tabref{dev-results} shows the results of our experiments on the development
+set (the same as the test set used by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}).  As can be
+seen, the combined model significantly improves performance, giving a 42\%
+relative increase in MAP over the distributional-only baseline.  This table
+also shows the benefit of using our modified logical forms (see
+\secref{better-lfs}); by being able to better model the relations between
+entities, MAP of all of the models is significantly improved.
+
+\begin{table}
+  \centering
+  \begin{tabular}{|l|r|r|}
+    \hline
+    Method & MAP & MRR \\
+    \hline
+    Distributional-only & .231 & ?? \\
+    \ \ \ -related entities & .170 & ?? \\
+    \hline
+    Formal-only & ?? & ?? \\
+    \hline
+    Combined model & \textbf{.376} & ?? \\
+    \hline
+  \end{tabular}
+  \caption{Results on the final test set for our fill-in-the-blank task.  The
+  combined model improves MAP by 63\% relative to the distributional-only
+  baseline.  Additionally, allowing the distributional-only model to use
+  Freebase to propose candidates improves MAP by 6 points absolute due to
+  improved recall.}
+  \label{tab:final-results}
+\end{table}
+
+\tabref{final-results} shows that these improvements are consistent on the
+final test set, as well.  The performance improvement seen by the combined
+model is actually larger on this set, going from a MAP of .231 to .376, a 63\%
+relative improvement.  In this table, we also show the improvement gained by
+allowing the distributional-only model to propose candidate entities that are
+related in Freebase (see \secref{better-candidates}).  Even though these
+candidates are always ranked at the bottom of the list of predictions (with a
+score of 0), the additional recall provided by being able to propose more
+entities raises MAP of the distributional-only model from .170 to .231.
 
 \section{Discussion}
 \label{sec:discussion}
