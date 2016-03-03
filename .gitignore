@@ -1,2 +1,19 @@
 # Ignore emacs temp files
 *~
+/bin/
+target/
+*.pyc
+data/
+output/
+models/
+*results*/
+tmp*/
+*.bbl
+*.d
+*.blg
+*.fls
+*.log
+*.pdf
+*.aux
+*.make
+*.temp

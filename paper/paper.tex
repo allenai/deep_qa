@@ -1,0 +1,187 @@
+\documentclass[11pt]{article}
+\usepackage{acl2016}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{color}
+
+\newcommand{\secref}[1]{Section~\ref{sec:#1}}
+\newcommand{\figref}[1]{Figure~\ref{fig:#1}}
+\newcommand{\algref}[1]{Algorithm~\ref{alg:#1}}
+\newcommand{\tabref}[1]{Table~\ref{tab:#1}}
+\newcommand{\mattnote}[1]{\textcolor{red}{NOTE: #1}}
+\newcommand{\blank}{\_\_\_}
+\newcommand{\predicate}[1]{\ensuremath{\textsc{#1}}}
+\newcommand{\entity}[1]{\ensuremath{\mathrm{#1}}}
+
+%\aclfinalcopy % Uncomment this line for the final submission
+%\def\aclpaperid{***} %  Enter the acl Paper ID here
+
+\title{Combining formal and distributional models of predicate semantics}
+
+\author{}%Matt Gardner and Jayant Krishnamurthy\\
+%Allen Institute for Artificial Intelligence\\
+%Seattle, Washington, USA\\
+%{\tt \{mattg,jayantk\}@allenai.org}}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+  We consider the problem of learning models of predicate (category and
+  relation) semantics using both distributional information and structured
+  information contained in a formal knowledge base.  Most previous approaches
+  to modeling predicate semantics have either been purely distributional (such
+  as word2vec and knowledge base embedding methods) or purely formal (such as
+  most semantic parsers).  Distributional approaches have very broad coverage,
+  but lack the compositional, logical semantics used by semantic parsers, and
+  it has so far been difficult to combine the benefits of both of these
+  techniques.
+
+  In this paper, we present a method that incorporates logical statements
+  derived from a knowledge base into distributional models of categories and
+  relations.  Instead of mapping a phrase to a single logical statement, as
+  done by semantic parsers, our method uses logical statements as features
+  added to distributional models of words, allowing the model to learn that
+  Freebase entities that are "honchos" are people, not buildings, and that they
+  are frequently CEOs or film producers.  We use these models in an
+  open-vocabulary semantic parsing task, showing a 63\% relative improvement in
+  mean average precision over a distributional-only model, and a X\%
+  improvement over a formal-only approach.
+
+\end{abstract}
+
+\section{Introduction}
+
+How should a computer program represent the meaning of a word or a phrase?  The
+answer to this question has a long and rich history.  Motivated by
+Harris's distributional
+hypothesis~\cite{harris-1954-distributional-hypothesis}, much work has been put
+into representing words as collections of the contexts in which they appear.
+Recent work with neural networks and word embeddings have shown that these
+representations can be very useful for a number of natural language processing
+tasks. \mattnote{cite something here}
+
+At the same time, other researchers have found Montague's ideas about English
+as a formal language to be useful~\cite{montague-1974-english-formal-language}.
+Modern semantic parsers make use of a model-theoretic semantics that represents
+words and phrases as formal predicates.  These predicates are then typically
+mapped onto a query over a structured knowledge base, such as
+Freebase~\cite{freebase-2008-bollacker}.  This kind of modeling allows semantic
+parsers to handle the compositional structure of natural language and to
+leverage large, curated knowledge sources to perform various natural language
+processing tasks.  \mattnote{cite some semantic parsing papers}
+
+Both of these approaches to modeling predicate semantics have aspects that are
+very appealing.  It is relatively straightforward to learn a distributional
+vector for every word or phrase in a corpus, allowing easy generalization from
+words labeled with part of speech tags or dependency information to other words
+that are distributionally similar.  Yet distributional approaches struggle to
+make good use of the structured information contained in curated knowledge
+sources like Freebase and WordNet~\cite{wordnet-1995}.  On the other hand,
+because formal approaches to semantics typically model word meaning in terms of
+a structured knowledge source, their applicability is limited to the set of
+concepts represented in that knowledge source---a semantic parser trained with
+Freebase cannot even represent words whose meaning has no correlate in the
+Freebase ontology, such as ``front-runner'' and ``honcho''.
+
+In this work we introduce models of predicate semantics that combine the
+benefits of both distributional and formal approaches.  While there is no
+Freebase predicate that corresponds exactly to the meaning of ``honcho'',
+Freebase \emph{does} contain many predicates that can \emph{partially}
+represent the word.  Our models extract features from Freebase that are
+correlated with words and phrases seen in natural language text, and learns
+weights for those features as additional components of a distributional model
+of the word's meaning.
+
+To demonstrate these models, we focus on the task of fill-in-the-blank natural
+language queries, such as ``Italian architect \blank{}''.  Similar to many
+current semantic parsers, we first convert this natural language query into a
+logical form: $\lambda(\entity{x}) \predicate{architect}(\entity{x}) \land
+\predicate{architect\_N/N}(\entity{Italian}, \entity{x})$.  A typical semantic
+parser (e.g., that of Kwiatkowski et
+al.~\shortcite{kwiatkowski-2013-ontology-matching}) would then try to map this
+logical form to a Freebase query, matching \entity{Italian} to
+(\predicate{/people/person/nationality}, \entity{Italy}) and
+\predicate{architect} to (\predicate{/type/object/type},
+\entity{/architecture/architect}).  In contrast, we follow Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} in learning a
+model for each predicate that can give a \emph{score} to potential arguments.
+However, while the models of Krishnamurthy and Mitchell are purely
+distributional, using Freebase only as a means of finding entities in text, we
+inject additional information from Freebase into the models for each predicate.
+The model we learn for \predicate{architect} has a \emph{feature} capturing the
+fact that an entity has the type \entity{/architecture/architect} in Freebase,
+and the model for \predicate{architect\_N/N} has a \emph{feature} capturing
+whether the first argument is the country of nationality of the second
+argument.
+
+This is a fundamentally new kind of predicate semantics.  It is
+distributional---part of the model is still trained in a manner very similar to
+word2vec---yet it is also formal.  However, instead of committing to a single
+Freebase query to represent a phrase, as traditional formal approaches do, our
+models are flexible, encoding many possible Freebase queries as features that
+can give hints to the model.  Thus words that would be impossible to represent
+as a single Freebase query can still benefit from the information contained in
+Freebase---our model for ``front-runner'' learns that acceptable entities are
+politicians, even though there is no exact encoding of ``front-runner'' in
+Freebase.
+
+The rest of this paper is organized as follows.  In \secref{background}, we
+describe the relevant background necessary to understand the models we propose,
+and we situate our model in the context of related work.  In \secref{method},
+we give a formal description of our models of predicate semantics.  In
+\secref{experiments}, we present experimental results on fill-in-the-blank
+natural language query task.  Using web text linked to Freebase as our training
+and test data, we show a 63\% relative improvement over prior work, giving a
+new state-of-the-art result on this dataset.  In \secref{discussion}, we give a
+detailed discussion of the benefits and drawbacks of the models we have
+proposed.  We then conclude in \secref{conclusion}.
+
+\section{Background}
+\label{sec:background}
+
+Our proposed method is best viewed as the addition of SFE
+features~\cite{gardner-2015-sfe} to Krishnamurthy and
+Mitchell's~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}
+open-vocabulary semantic parser.  Accordingly, in this section we briefly
+describe both of these techniques, as well as give a short overview of other
+closely related work.
+
+\subsection{Open-vocabulary semantic parsing}
+
+\mattnote{TODO - Jayant will write this}
+
+\subsection{Subgraph feature extraction}
+
+\mattnote{TODO}
+
+\section{Method}
+\label{sec:method}
+
+\mattnote{TODO}
+
+\section{Experiments}
+\label{sec:experiments}
+
+\mattnote{TODO}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\mattnote{TODO}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\mattnote{TODO}
+
+%\section*{Acknowledgments}
+
+\bibliography{bib}
+\bibliographystyle{acl2016}
+
+\end{document}
