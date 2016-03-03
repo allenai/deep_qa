@@ -104,8 +104,8 @@ of the word's meaning.
 To demonstrate these models, we focus on the task of fill-in-the-blank natural
 language queries, such as ``Italian architect \blank{}''.  Similar to many
 current semantic parsers, we first convert this natural language query into a
-logical form: $\lambda(\entity{x}) \predicate{architect}(\entity{x}) \land
-\predicate{architect\_N/N}(\entity{Italian}, \entity{x})$.  A typical semantic
+logical form: $\lambda x. \predicate{architect}(x) \land
+\predicate{architect\_N/N}(\entity{Italian}, x)$.  A typical semantic
 parser (e.g., that of Kwiatkowski et
 al.~\shortcite{kwiatkowski-2013-ontology-matching}) would then try to map this
 logical form to a Freebase query, matching \entity{Italian} to
