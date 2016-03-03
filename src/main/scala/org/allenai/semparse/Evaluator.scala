@@ -47,10 +47,12 @@ class Evaluator(
     val wholeJson = parse(fileUtil.readLinesFromFile(queryFile).mkString("\n"))
     for (json <- wholeJson.extract[Seq[JValue]]) {
       val sentence = (json \ "sentence").extract[String]
+      println(s"Scoring queries for sentence: $sentence")
       val queries = (json \ "queries").extract[Seq[JValue]]
       for (query <- queries) {
         numQueries += 1
         val queryExpression = (query \ "queryExpression").extract[String]
+        println(s"Query: $queryExpression")
         val midsInQuery = (query \ "midsInQuery").extract[Seq[String]]
         val midRelationsInQuery = (query \ "midRelationsInQuery").extract[Seq[JValue]]
         val correctIds = (query \ "correctAnswerIds").extract[Seq[String]].toSet
@@ -86,8 +88,10 @@ class Evaluator(
         }
 
         // Now run the expression through the evaluation code and parse the result.
+        println("Evaluating the expression")
         val result = env.evalulateSExpression(expressionToEvaluate).getValue()
         val entityScoreObjects = result.asInstanceOf[Array[Object]]
+        println(s"Done evaluating, ranking ${entityScoreObjects.length} results")
         val entityScores = entityScoreObjects.map(entityScoreObject => {
           val cons = entityScoreObject.asInstanceOf[ConsValue]
           val list = ConsValue.consListToList(cons, classOf[Object])
@@ -103,7 +107,7 @@ class Evaluator(
         writer.write("\n")
         for ((score, entity) <- entityScores) {
           val names = entityNames.getOrElse(entity, "NO ENTITY NAME!")
-          if (score > 0.0) {
+          if (score >= 0.0) {
             if (correctIds.contains(entity)) {
               writer.write("1 ")
             } else if (incorrectIds.contains(entity)) {
@@ -114,7 +118,7 @@ class Evaluator(
             writer.write(s"$score $entity $names\n")
           }
         }
-        val positiveScore = entityScores.filter(_._1 > 0.0)
+        val positiveScore = entityScores.filter(_._1 >= 0.0)
         if (positiveScore.size == 0) writer.write("\n")
         val averagePrecision = Evaluator.computeAveragePrecision(positiveScore.take(runDepth), correctIds)
         averagePrecisionSum += averagePrecision

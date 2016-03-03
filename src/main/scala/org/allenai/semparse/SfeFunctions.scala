@@ -46,6 +46,7 @@ class FindRelatedEntities extends AmbFunctionValue {
       (word, mid, isSource)
     })
 
+    println("Finding related entities")
     val relatedEntities = parsedMidRelations.flatMap {
       case (word, mid, isSource) => featureComputer.findRelatedEntities(word, mid, isSource)
     }
@@ -56,6 +57,7 @@ class FindRelatedEntities extends AmbFunctionValue {
       println("Found too many related entities, skipping")
       Array.empty
     } else {
+      println(s"Returning ${relatedEntities.size} related entities")
       relatedEntities.toArray
     }
   }

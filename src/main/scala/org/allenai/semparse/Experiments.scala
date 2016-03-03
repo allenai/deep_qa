@@ -12,7 +12,7 @@ object Experiments {
     val datasets = Seq("large")//, "small")
     val modelTypes = Seq("uschema")//, "ensemble")
     val rankings = Seq("query")//, "predicate")
-    val withGraphOrNot = Seq(true)//, false)
+    val withGraphOrNot = Seq(false)//, true)
     val baselineConfigs = Seq(
       //("small", "baseline", "ignored", false)
       //("large", "baseline", "ignored", false)
