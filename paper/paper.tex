@@ -1,5 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage{acl2016}
+\usepackage{amsmath}
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage{color}
@@ -12,6 +13,9 @@
 \newcommand{\blank}{\_\_\_}
 \newcommand{\predicate}[1]{\ensuremath{\textsc{#1}}}
 \newcommand{\entity}[1]{\ensuremath{\mathrm{#1}}}
+
+\newcommand{\true}[0]{\predicate{true}}
+\newcommand{\false}[0]{\predicate{false}}
 
 %\aclfinalcopy % Uncomment this line for the final submission
 %\def\aclpaperid{***} %  Enter the acl Paper ID here
@@ -154,7 +158,67 @@ closely related work.
 \subsection{Open-vocabulary semantic parsing}
 \label{sec:jayant-semparse}
 
-\mattnote{TODO - Jayant will write this}
+
+This system predicts a denotation $\gamma$, i.e., a set of Freebase
+entities, for a natural language text $s$, using the following
+probabilistic model:
+
+\begin{align*}
+P(\gamma | s) & = \sum_w \sum_\ell P(\gamma | \ell, w) P(w ; \theta, \phi) P(\ell | s)
+\end{align*}
+
+In this equation, $P(\ell | s)$ represents a semantic parser that
+produces a logical form $\ell$ given the text $s$. This logical form
+contains open-vocabulary predicates, as in the ``architect'' example
+above. This factor is deterministic, meaning that it assigns
+probability one to a single logical form. The second factor $P(w)$
+represents a distribution over possible worlds $w$, where a world is
+an assignment of truth values to all possible predicate
+instances. This distribution can be efficiently represented using a
+probabilistic database because each predicate instance is treated as
+an independent random variable. The truth probabilities of these
+variables are predicted using a matrix factorization approach similiar
+to that of Riedel et al., \shortcite{riedel-2013-mf-universal-schema};
+$\theta$ and $\phi$ represent the parameters of the matrix
+factorization. Finally, $P(\gamma | \ell, w)$ represents the
+deterministic evaluation of the logical form $\ell$ on the world $w$
+to produce a denotation $\gamma$. This factor is similar to other
+semantic parsing work, where it represents the deterministic
+evaluation of a query against a given database. Algorithms from the
+probabilistic databases community enable us to efficiently compute the
+marginal probability that an entity $e$ is in the denotation of a
+sentence, $\sum_\gamma P(e \in \gamma | s)$, for a large number of
+queries; we refer the reader to (TODO).
+
+The training problem in this model is to learn the parameters $\theta$
+and $\phi$ of the probabilistic database. The probability of a
+category instance $c(e)$ and relation instance $r(e_1, e_2)$ in the
+database is given by:
+
+\begin{align*}
+  P(c(e) & = \true{}) & = & \sigma ( \theta_c^T \phi_e ) \\
+  P(r(e_1, e_2) & = \true{}) & = & \sigma ( \theta_r^T \phi_{(e_1, e_2)} )
+\end{align*}
+
+The parameters $\theta$ represent $k$-dimensional embeddings of each
+category and relation predicate, and the parameters $\phi$ represent
+$k$-dimensional embeddings of each Freebase entity and entity
+pair. The probability of a predicate instance is the inner product of
+the corresponding predicate and entity embeddings. Thus, predicates
+with nearby embeddings will have similar distributions over the
+entities in their denotation.
+
+The parameters $\theta$ and $\phi$ are learned from predicate/entity
+co-occurrence counts collected from a large corpus. The training data
+consists of query/entity pairs, $\{(\ell^i, e^i)\}$, where the entity
+$e^i$ is observed to be an element of $\ell^i$'s denotation. These
+pairs are collected by semantically parsing entity-linked sentences
+and simplifying the resulting logical forms to identify conjunctions
+of predicates where all arguments are bound to specific
+entities. Extracting an entity from this conjunction results in a
+query/entity pair. The model is trained using a ranking objective that
+learns to rank the observed entities for each query above unobserved
+entities.
 
 \subsection{Subgraph feature extraction}
 
