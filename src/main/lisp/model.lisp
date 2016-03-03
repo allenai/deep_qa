@@ -1,3 +1,6 @@
+(define sfe-spec-file (car ARGV))
+(define graph-features (create-sfe-feature-computer sfe-spec-file))
+
 (define word-family (word-parameters entity-parameters)
   (lambda (word)
     (lambda (entity)
@@ -111,4 +114,6 @@
                (dictionary-to-array rel-words))
     ))
 
-(define find-related-entities (midsInQuery midRelationsInQuery) (get-all-related-entities midsInQuery))
+;(define find-related-entities (midsInQuery midRelationsInQuery) (get-all-related-entities midsInQuery))
+(define find-related-entities (midsInQuery midRelationsInQuery)
+  (array-merge-sets (get-all-related-entities midsInQuery) (find-related-entities-in-graph midRelationsInQuery graph-features)))
