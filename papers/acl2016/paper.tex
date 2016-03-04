@@ -158,6 +158,7 @@ closely related work.
 \subsection{Open-vocabulary semantic parsing}
 \label{sec:jayant-semparse}
 
+\mattnote{Add a figure here to demonstrate the logical forms.}
 
 This system predicts a denotation $\gamma$, i.e., a set of Freebase
 entities, for a natural language text $s$, using the following
@@ -253,21 +254,60 @@ representations: Manaal's retrofitting semantic lexicons, Sebastian Riedel's
 ``Injecting Logical Background Knowledge into Embeddings for Relation
 Extraction'', work on PRA and KBC more generally\ldots Also, the whole line of
 work on knowledge base embeddings (RESCAL, TransE, etc.) is at least slightly
-relevant here, as is PRA.  \mattnote{Actually write
-this section}.
+relevant here, as is PRA.  \mattnote{Actually write this section}.
 
 \section{Method}
 \label{sec:method}
 
+In this section we present our models of predicate semantics.  In
+\secref{formal-and-distributional} we describe how we modify Krishnamurthy and
+Mitchell's (K&M's) semantic parser to include features from a formal knowledge base.
+In \secref{computing-pmi} we describe how we select those features for each
+predicate.  The remaining two sections then describe other improvements we made
+to K&M's semantic parsing model: lexicalizing preposition and noun-compound
+predicates, and using the Freebase graph to select candidate entities.
+
 \subsection{Adding SFE features to Jayant's models}
 \label{sec:formal-and-distributional}
 
-\mattnote{TODO}
+The modification we make to K&M's semantic parser is simple.  For each entity
+and entity pair in the data we compute an SFE feature vector $\psi(e)$ and
+$\psi(e_1, e_2)$.  For each category and relation, we select a subset of the
+features to have associated weights $\omega_c$ and $\omega_r$.  We then add the
+weights $\omega_c$ and $\omega_r$ as parameters to be learned for each
+predicate, and we add the feature vectors $\psi(e)$ and $\psi(e_1, e_2)$ as
+observed features for each entity and entity pair.  The augmented category and
+relation probabilities are as follows:
+
+\begin{align*}
+  P(c(e) & = \true{}) & = & \sigma ( \theta_c^T \phi_e + \omega_c^T \psi_c(e)) \\
+  P(r(e_1, e_2) & = \true{}) & = & \sigma ( \theta_r^T \phi_{(e_1, e_2)} + \omega_r^T \psi_r(e_1, e_2) )
+\end{align*}
+where we have added subscripts on the $\psi$ functions to indicate that each
+predicate selects its own set of features from the SFE feature vector $\psi$.
+
+Note that now there are three sets of parameters to be learned by the semantic
+parser: (1) $\theta$, low-dimensional distributional vectors trained for each
+predicate; (2) $\phi$, low-dimensional distributional vectors trained for each
+entity and entity pair; and (3) $\omega$, weights associated with the selected
+formal SFE features for each predicate.  All of these parameters are optimized
+jointly, using the same ranking objective used by K&M.
 
 \subsection{Finding relevant features for each predicate}
 \label{sec:computing-pmi}
 
-\mattnote{TODO}
+The feature vectors returned by SFE have dimensionality in the tens of
+millions.  We do not have near enough data to train that many parameters for
+each of our tens of thousands of predicates, nor do we have enough RAM in our
+machines to keep that many parameters in memory.  It is thus necessary to
+select some small number of informative features for each predicate.  We do
+this using pointwise mutual information (PMI).
+
+PMI measures the strength of association between two variables $x$ and $y$; it
+is computed as $\log\frac{p(x,y)}{p(x)p(y)}$.  In our case, we want to
+associate predicates with SFE features.  However, our SFE features are for each
+\emph{entity} and \emph{entity pair}, not each \emph{predicate}.  To associate
+SFE features with predicates, we use the training 
 
 \subsection{Improved logical forms}
 \label{sec:better-lfs}
