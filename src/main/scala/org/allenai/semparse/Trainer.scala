@@ -82,9 +82,9 @@ object Trainer {
     // And, for now, we'll do this sequentially, as parallel output in the terminal would be a big
     // mess (not to mention it'd probably take too much memory).
     Experiments.experimentConfigs.foreach(config => {
-      val (data, modelType, ranking, usingGraphs) = config
+      val (data, modelType, ranking, ensembledEvaluation) = config
       val modelFile = getModelFile(data, ranking, modelType)
-      if (!canTrainConfig(data, modelType, ranking, usingGraphs)) {
+      if (!canTrainConfig(data, modelType, ranking, ensembledEvaluation)) {
         println(s"Configuration $config is not trainable.  Skipping...")
       } else if (fileUtil.fileExists(modelFile)) {
         println(s"Model already trained configuration $config (model file: $modelFile).  Skipping...")
@@ -92,7 +92,7 @@ object Trainer {
         println(s"Training model for $config")
         fileUtil.mkdirs(new File(modelFile).getParent())
         println("Creating environment (which trains and outputs the model)")
-        val env = createTrainingEnvironment(data, modelType, ranking, usingGraphs)
+        val env = createTrainingEnvironment(data, modelType, ranking, ensembledEvaluation)
       }
     })
   }

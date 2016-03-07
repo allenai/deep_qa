@@ -12,132 +12,109 @@ import edu.cmu.ml.rtw.users.matt.util.FileUtil
 import org.json4s._
 import org.json4s.native.JsonMethods.parse
 
-// This class runs an evaluation for a particular experiment configuration, which is encapsulated
-// in the Environment object given as a parameter.  The query file contains all of the test queries
-// that will be evaluated against the environment, and the entity names is just a map from mids to
-// a human-readable entity name, for easier human scanning of the result file.  The file util is my
-// object that abstracts away accessing the file system (and allows for easy faking of the file
-// system, for much easier tests).
+// This class takes the output from Tester (which performs inference over a test set), and a set of
+// annotated results, and performs an evaluation.
 class Evaluator(
-  env: Environment,
+  resultsFile: String,
   queryFile: String,
-  entityNames: => Map[String, String],
   fileUtil: FileUtil = new FileUtil
 ) {
   implicit val formats = DefaultFormats
 
-  val catQueryFormat = "(expression-eval (quote (get-predicate-marginals %s (find-related-entities (list %s) (list %s)))))"
-
-  // NOTE: the test data currently does not have any relation queries, so this does not get used.
-  val relQueryFormat = "(expression-eval (quote (get-relation-marginals %s entity-tuple-array)))"
-  val poolDepth = 100
-  val runDepth = 200
+  def getQueryAnswers(): Map[String, (Set[String], Set[String])] = {
+    val wholeJson = parse(fileUtil.readLinesFromFile(queryFile).mkString("\n"))
+    wholeJson.extract[Seq[JValue]].flatMap(json => {
+      val sentence = (json \ "sentence").extract[String]
+      println(s"Scoring queries for sentence: $sentence")
+      val queries = (json \ "queries").extract[Seq[JValue]]
+      queries.map(query => {
+        val queryExpression = (query \ "queryExpression").extract[String]
+        val correctIds = (query \ "correctAnswerIds").extract[Seq[String]].toSet
+        val incorrectIds = (query \ "incorrectAnswerIds") match {
+          case JArray(values) => values.map(_.extract[String]).toSet
+          case _ => Set[String]()
+        }
+        (queryExpression -> (correctIds.toSet, incorrectIds.toSet))
+      })
+    }).toMap
+  }
 
   def evaluate(writer: FileWriter) {
+    val queryAnswers = getQueryAnswers()
+
+    val queryResponses = new mutable.ListBuffer[(String, String, Seq[String])]()
+    var sentence = ""
+    var query = ""
+    var predictions: List[String] = Nil
+    for (line <- fileUtil.readLinesFromFile(resultsFile)) {
+      if (line.isEmpty()) {
+        if (!query.isEmpty()) {
+          queryResponses += Tuple3(sentence, query, predictions)
+        }
+        sentence = ""
+        query = ""
+        predictions = Nil
+      }
+      if (sentence.isEmpty()) {
+        sentence = line
+      } else if (query.isEmpty()) {
+        query = line
+      } else {
+        predictions = line :: predictions
+      }
+    }
+
+    val numQueries = queryResponses.size
     var averagePrecisionSum = 0.0
     var weightedAPSum = 0.0
-    var numQueries = 0
     var numNoAnswerQueries = 0
     var numAnnotatedTrueEntities = 0
     var numAnnotatedFalseEntities = 0
     val pointPrecisionSum = new Array[Double](11)
 
-    // The test file is a JSON object, which is itself a list of objects containing the query
-    // information.
-    val wholeJson = parse(fileUtil.readLinesFromFile(queryFile).mkString("\n"))
-    for (json <- wholeJson.extract[Seq[JValue]]) {
-      val sentence = (json \ "sentence").extract[String]
-      println(s"Scoring queries for sentence: $sentence")
-      val queries = (json \ "queries").extract[Seq[JValue]]
-      for (query <- queries) {
-        numQueries += 1
-        val queryExpression = (query \ "queryExpression").extract[String]
-        println(s"Query: $queryExpression")
-        val midsInQuery = (query \ "midsInQuery").extract[Seq[String]]
-        val midRelationsInQuery = (query \ "midRelationsInQuery").extract[Seq[JValue]]
-        val correctIds = (query \ "correctAnswerIds").extract[Seq[String]].toSet
-        if (correctIds.size == 0) {
-          numNoAnswerQueries += 1
-        }
-        numAnnotatedTrueEntities += correctIds.size
-        val incorrectIds = (query \ "incorrectAnswerIds") match {
-          case JArray(values) => values.map(_.extract[String]).toSet
-          case _ => Set[String]()
-        }
-        numAnnotatedFalseEntities += incorrectIds.size
-        val isRelationQuery = (query \ "isRelationQuery") match {
-          case JInt(i) => i == 1
-          case _ => false
-        }
-        val expressionToEvaluate = if (isRelationQuery) {
-          // This doesn't happen in the current test data, and so I'm not sure this works right.
-          // For example, I don't think (get-relation-marginals ...) is even defined.
-          println("RELATION QUERY!")
-          relQueryFormat.format(queryExpression)
+    for ((sentence, query, responses) <- queryResponses) {
+      // I think I want this to crash if there's a mismatch, so we'll go with this for now.
+      val (correctIds, incorrectIds) = queryAnswers(query)
+
+      writer.write(sentence)
+      writer.write("\n")
+      writer.write(query)
+      writer.write("\n")
+      for (response <- responses) {
+        val entity = response.split(" ")(1)
+        if (correctIds.contains(entity)) {
+          writer.write("1 ")
+        } else if (incorrectIds.contains(entity)) {
+          writer.write("0 ")
         } else {
-          val midStr = midsInQuery.map(m => "\"" + m + "\"").mkString(" ")
-          val midRelationStr = midRelationsInQuery.map(jval => {
-            val list = jval.extract[Seq[JValue]]
-            val word = list(0).extract[String]
-            val arg = list(1).extract[String]
-            val isSource = list(2).extract[Boolean]
-            val isSourceStr = if (isSource) "#t" else "#f"
-            s"(list $word $arg $isSourceStr)"
-          }).mkString(" ")
-          catQueryFormat.format(queryExpression, midStr, midRelationStr)
+          writer.write("? ")
         }
-
-        // Now run the expression through the evaluation code and parse the result.
-        println("Evaluating the expression")
-        val result = env.evalulateSExpression(expressionToEvaluate).getValue()
-        val entityScoreObjects = result.asInstanceOf[Array[Object]]
-        println(s"Done evaluating, ranking ${entityScoreObjects.length} results")
-        val entityScores = entityScoreObjects.map(entityScoreObject => {
-          val cons = entityScoreObject.asInstanceOf[ConsValue]
-          val list = ConsValue.consListToList(cons, classOf[Object])
-          val score = list.get(0).asInstanceOf[Double].toDouble
-          val entity = list.get(1).asInstanceOf[String]
-          (score, entity)
-        }).toSeq.sortBy(-_._1).take(poolDepth)
-
-        // Finally, compute statistics (like average precision) and output to a result file.
-        writer.write(sentence)
+        writer.write(response)
         writer.write("\n")
-        writer.write(queryExpression)
-        writer.write("\n")
-        for ((score, entity) <- entityScores) {
-          val names = entityNames.getOrElse(entity, "NO ENTITY NAME!")
-          if (score >= 0.0) {
-            if (correctIds.contains(entity)) {
-              writer.write("1 ")
-            } else if (incorrectIds.contains(entity)) {
-              writer.write("0 ")
-            } else {
-              writer.write("? ")
-            }
-            writer.write(s"$score $entity $names\n")
-          }
-        }
-        val positiveScore = entityScores.filter(_._1 >= 0.0)
-        if (positiveScore.size == 0) writer.write("\n")
-        val averagePrecision = Evaluator.computeAveragePrecision(positiveScore.take(runDepth), correctIds)
-        averagePrecisionSum += averagePrecision
-        writer.write(s"AP: $averagePrecision\n")
-        val weightedAveragePrecision = averagePrecision * correctIds.size
-        weightedAPSum += weightedAveragePrecision
-        writer.write(s"WAP: $weightedAveragePrecision\n")
-
-        val pointPrecision = Evaluator.compute11PointPrecision(positiveScore.take(runDepth), correctIds)
-        writer.write("11-point precision/recall: [")
-        for (i <- 0 until pointPrecision.length) {
-          if (i != 0) {
-            writer.write(", ")
-          }
-          writer.write(pointPrecision(i).toString)
-          pointPrecisionSum(i) += pointPrecision(i)
-        }
-        writer.write("]\n\n")
       }
+      val entityScores = responses.map(line => {
+        val fields = line.split(" ")
+        val score = fields(0).toDouble
+        val entity = fields(1)
+        (score, entity)
+      })
+      val averagePrecision = Evaluator.computeAveragePrecision(entityScores, correctIds)
+      averagePrecisionSum += averagePrecision
+      writer.write(s"AP: $averagePrecision\n")
+      val weightedAveragePrecision = averagePrecision * correctIds.size
+      weightedAPSum += weightedAveragePrecision
+      writer.write(s"WAP: $weightedAveragePrecision\n")
+
+      val pointPrecision = Evaluator.compute11PointPrecision(entityScores, correctIds)
+      writer.write("11-point precision/recall: [")
+      for (i <- 0 until pointPrecision.length) {
+        if (i != 0) {
+          writer.write(", ")
+        }
+        writer.write(pointPrecision(i).toString)
+        pointPrecisionSum(i) += pointPrecision(i)
+      }
+      writer.write("]\n\n")
     }
 
     // Now some global statistics.
@@ -245,80 +222,6 @@ object Evaluator {
     midNames.par.mapValues(_.toSeq.sorted.map(n => "\"" + n + "\"").mkString(" ")).seq.toMap
   }
 
-  // This is kind of messy.  The issue is that we have lots of different lisp files that need to be
-  // loaded depending on exactly what we're trying to evaluate (i.e., Jayant's original model, my
-  // model that uses graph-based features, what kind of ranking was used to train, etc.).  This
-  // method takes the experiment configuration and puts together the right input files to give to
-  // an Environment object that will then run the evaluation.
-  def createEvaluationEnvironment(
-    data: String,
-    modelType: String,
-    ranking: String,
-    ensembledEvaluation: Boolean
-  ): Environment = {
-    val dataFiles = data match {
-      case "large" => Experiments.COMMON_LARGE_DATA
-      case "small" => Experiments.COMMON_SMALL_DATA
-      case other => throw new RuntimeException("unrecognized data option")
-    }
-
-    val modelFiles = modelType match {
-      case "baseline" => Seq(Experiments.BASELINE_MODEL_FILE)
-      case "formal" => ensembledEvaluation match {
-        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.FORMAL_MODEL_FILE)
-        case false => Seq(Experiments.FORMAL_MODEL_FILE)
-      }
-      case "distributional" => ensembledEvaluation match {
-        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.DISTRIBUTIONAL_MODEL_FILE)
-        case false => Seq(Experiments.DISTRIBUTIONAL_MODEL_FILE)
-      }
-      case "combined" => ensembledEvaluation match {
-        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.COMBINED_MODEL_FILE)
-        case false => Seq(Experiments.COMBINED_MODEL_FILE)
-      }
-      case other => throw new RuntimeException("unrecognized model type")
-    }
-
-    val evalFile = modelType match {
-      case "baseline" => Seq(Experiments.EVAL_BASELINE_FILE)
-      case other => ensembledEvaluation match {
-        case true => Seq(Experiments.EVAL_ENSEMBLE_FILE)
-        case false => Seq(Experiments.EVAL_USCHEMA_FILE)
-      }
-    }
-
-    val sfeSpecFile = data match {
-      case "large" => Experiments.LARGE_SFE_SPEC_FILE
-      case "small" => Experiments.SMALL_SFE_SPEC_FILE
-      case other => throw new RuntimeException("unrecognized data option")
-    }
-
-
-    val baseInputFiles = dataFiles ++ Experiments.ENV_FILES ++ modelFiles ++ evalFile
-    val baseExtraArgs = Seq(sfeSpecFile)
-
-    // Most of the model lisp files assume there is a serialized parameters object passed in as the
-    // first extra argument.  The baseline, instead, has a lisp file as its "serialized model", so
-    // we have to handle these two cases differently.
-    val (inputFiles, extraArgs) = modelType match {
-      case "baseline" => {
-        val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
-        (baselineModelFile +: baseInputFiles, baseExtraArgs)
-      }
-      case "ensemble" => {
-        val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
-        val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
-        (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
-      }
-      case "uschema" => {
-        val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
-        (baseInputFiles, baseExtraArgs :+ serializedModelFile)
-      }
-    }
-
-    new Environment(inputFiles, extraArgs, true)
-  }
-
   // Given the experiment configuration, where should the output results file live?
   def getOutputFile(
     data: String,
@@ -330,8 +233,8 @@ object Evaluator {
     modelType match {
       // ACK!  I need to make this more general...  The dataset should not be just "large" and
       // "small"
-      case "baseline" => s"results/${data}_acl2016/baseline/results.txt"
-      case other => s"results/${data}_acl2016/${modelType}/${ranking}/${ensemble}/results.txt"
+      case "baseline" => s"results/${data}_acl2016/baseline/annotated_output.txt"
+      case other => s"results/${data}_acl2016/${modelType}/${ranking}/${ensemble}/annotated_output.txt"
     }
   }
 
@@ -350,26 +253,20 @@ object Evaluator {
     // We run an evaluation for experiment listed in Experiments.experimentConfigs, if the model
     // file is available and the evaluation hasn't already been done.
     Experiments.experimentConfigs.par.foreach(config => {
-      val (data, modelType, ranking, usingGraphs) = config
-      val modelFile = Trainer.getModelFile(data, ranking, modelType)
-      val outputFile = getOutputFile(data, modelType, ranking, usingGraphs)
-      if (!fileUtil.fileExists(modelFile)) {
-        println(s"Model not available for configuration $config.  Skipping...")
-      } else if (fileUtil.fileExists(outputFile)) {
+      val (data, modelType, ranking, ensembledEvaluation) = config
+      val resultsFile = Tester.getOutputFile(data, ranking, modelType, ensembledEvaluation)
+      val annotatedFile = getOutputFile(data, modelType, ranking, ensembledEvaluation)
+      if (!fileUtil.fileExists(resultsFile)) {
+        println(s"Results not available for configuration $config.  Skipping...")
+      } else if (fileUtil.fileExists(annotatedFile)) {
         println(s"Evaluation already done for configuration $config.  Skipping...")
       } else {
         println(s"Running evaluation for $config")
         println("Creating environment")
-        val env = createEvaluationEnvironment(data, modelType, ranking, usingGraphs)
-        println("Getting entity names")
-        lazy val entityNames = data match {
-          case "large" => largeEntityNames
-          case "small" => smallEntityNames
-        }
         println("Creating evaluator")
-        val evaluator = new Evaluator(env, Experiments.TEST_DATA_FILE, entityNames)
-        fileUtil.mkdirs(new File(outputFile).getParent())
-        val writer = fileUtil.getFileWriter(outputFile)
+        val evaluator = new Evaluator(resultsFile, Experiments.TEST_DATA_FILE)
+        fileUtil.mkdirs(new File(annotatedFile).getParent())
+        val writer = fileUtil.getFileWriter(annotatedFile)
         evaluator.evaluate(writer)
         writer.close()
       }

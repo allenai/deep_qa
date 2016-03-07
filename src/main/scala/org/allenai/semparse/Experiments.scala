@@ -11,6 +11,9 @@ object Experiments {
   val experimentConfigs: Seq[(String, String, String, Boolean)] = {
     val datasets = Seq("large")//, "small")
     val modelTypes = Seq("formal")//, "distributional", "combined")
+
+    // I don't actually change these in the experiments for the ACL 2016 paper, but these were
+    // options used for the TACL 2015 paper.
     val rankings = Seq("query")//, "predicate")
     val ensembledEvaluation = Seq(false)//, true)
     val baselineConfigs = Seq(
