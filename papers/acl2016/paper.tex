@@ -261,16 +261,16 @@ relevant here, as is PRA.  \mattnote{Actually write this section}.
 
 In this section we present our models of predicate semantics.  In
 \secref{formal-and-distributional} we describe how we modify Krishnamurthy and
-Mitchell's (K&M's) semantic parser to include features from a formal knowledge base.
+Mitchell's (K\&M's) semantic parser to include features from a formal knowledge base.
 In \secref{computing-pmi} we describe how we select those features for each
 predicate.  The remaining two sections then describe other improvements we made
-to K&M's semantic parsing model: lexicalizing preposition and noun-compound
+to K\&M's semantic parsing model: lexicalizing preposition and noun-compound
 predicates, and using the Freebase graph to select candidate entities.
 
 \subsection{Adding SFE features to Jayant's models}
 \label{sec:formal-and-distributional}
 
-The modification we make to K&M's semantic parser is simple.  For each entity
+The modification we make to K\&M's semantic parser is simple.  For each entity
 and entity pair in the data we compute an SFE feature vector $\psi(e)$ and
 $\psi(e_1, e_2)$.  For each category and relation, we select a subset of the
 features to have associated weights $\omega_c$ and $\omega_r$.  We then add the
@@ -291,7 +291,7 @@ parser: (1) $\theta$, low-dimensional distributional vectors trained for each
 predicate; (2) $\phi$, low-dimensional distributional vectors trained for each
 entity and entity pair; and (3) $\omega$, weights associated with the selected
 formal SFE features for each predicate.  All of these parameters are optimized
-jointly, using the same ranking objective used by K&M.
+jointly, using the same ranking objective used by K\&M.
 
 \subsection{Finding relevant features for each predicate}
 \label{sec:computing-pmi}
@@ -307,17 +307,94 @@ PMI measures the strength of association between two variables $x$ and $y$; it
 is computed as $\log\frac{p(x,y)}{p(x)p(y)}$.  In our case, we want to
 associate predicates with SFE features.  However, our SFE features are for each
 \emph{entity} and \emph{entity pair}, not each \emph{predicate}.  To associate
-SFE features with predicates, we use the training 
+SFE features with predicates, we use the training data to find a mapping from
+entities and entity pairs to predicates that they have been seen with in the
+data.  For example, the phrase ``Italian architect Andrea Palladio'' is
+considered a positive training example for the instantiated predicates
+$\predicate{architect}(\entity{Andrea Palladio})$ and
+$\predicate{architect\_N/N}(\entity{Italy}, \entity{Andrea Palladio})$.  We
+then associate the feature vectors for \entity{Andrea Palladio} and
+(\entity{Italy}, \entity{Andrea Palladio}) with the predicates
+\predicate{architect} and \predicate{architect\_N/N}, respectively.  For each
+predicate $\pi$ and feature $f$, we use these counts to calculate the
+probabilities $p(\pi, f)$, $p(\pi)$ and $p(f)$.  After removing features with
+counts below some threshold, we pick the $k$ features with the highest PMI
+values for each predicate to use in our model.
 
 \subsection{Improved logical forms}
 \label{sec:better-lfs}
 
-\mattnote{TODO}
+While we largely follow the semantic parsing framework introduced by K\&M, we
+made one important change in how logical forms are generated.  For the running
+example we have been using this paper, ``Italian architect Andrea Palladio'',
+the relation predicate produced by K\&M's system is
+$\predicate{N/N}(\entity{Italy}, \entity{Andrea Palladio})$.  \predicate{N/N}
+does correctly capture the fact that \entity{Italy} is used syntactically as a
+noun modifier of \entity{Andrea Palladio}, but it leaves out the additional
+information contained in the syntax that ``architect'' was mediating that
+noun-noun dependency.  This means that ``U.S. president Barack Obama'' and
+``Italian architect Andrea Palladio'' are both modeled using the same relation
+predicate, which leads to a very generic and largely useless model for the
+predicate \predicate{N/N}.  By splitting \predicate{N/N} into separate
+predicates (\predicate{architect\_N/N} and \predicate{president\_N/N}), we give
+the model the opportunity to learn more fine-grained relation semantics, and we
+allow our feature selection pipeline to find much more useful features for
+relation predicates.  While it would be ideal to use actual dependency
+relations to determine which words to add to the predicate in complex noun
+phrases, most current parsers treat these kinds of noun phrases as flat, with
+all noun modifiers depending directly on the head of the noun phrase.  We
+approximate this ideal by simply taking all words in between the two entities
+in a noun phrase as the predicate (e.g., ``Illinois attorney general Lisa
+Madigan'' would produce the predicate \predicate{attorney\_general\_N/N}).
+
+A similar issue arises with prepositions and possessives.  For a phrase such as
+``Barack Obama, president of the U.S.'', K\&M's system would produce the
+following relation predicate: $\predicate{of}(\entity{Barack Obama},
+\entity{U.S.})$.  Because this same predicate (\predicate{of}) is used for all
+instances of this preposition, the predicate is forced to model too much and
+becomes overly generic.  When there is a common noun mediating a prepositional
+dependency between two entities, as in the phrase above, we add that noun to
+the predicate, giving the instance $\predicate{president\_of}(\entity{Barack
+Obama}, \entity{U.S.})$.  We do the same for possessives in phrases such as
+``Rome, Italy's capital'', producing the predicate \predicate{'s\_capital}.
 
 \subsection{Candidate entity generation}
 \label{sec:better-candidates}
 
-\mattnote{TODO}
+One final way in which we improved K\&M's semantic parser is in how candidate
+entities are generated during inference.  Because the distributional-only
+predicate models used by K\&M's semantic parser need to learn a vector of
+parameters for each entity pair, they cannot give a non-zero score to any
+entity pair not seen during training time.  When given a query such as
+$\lambda(\entity{x}) \predicate{architect\_N/N}(\entity{x}, \entity{Andrea
+Palladio})$, K\&M's system only needs to consider the set of entities
+$\entity{x}$ that have been seen at training time with \entity{Andrea
+Palladio}; all other entities will get a score of 0.
+
+Our predicate models do not have this limitation.  The distributional component
+will still give an unseen entity pair a score of 0, as it is identical to K\&M's
+model, but the formal component of our simples simply computes an observed
+feature vector from Freebase for the entity pair.  As long as both entities
+appear in Freebase, our model can compute a feature vector and give a non-zero
+score.
+
+While this improvement allows us to handle queries over rare entities much
+better than a distributional-only model, it also complicates inference, as we
+cannot just score entity pairs seen at training time.  Optimizing every query's
+score over all of the millions of entities in Freebase is not computationally
+feasible.  To make inference tractable, for a given query we restrict
+candidates to all entities seen with the query entities during training (as
+done by K\&M), as well as all entities directly connected to the query entities
+in Freebase, or connected by a mediator node\footnote{Mediators in Freebase are
+used to capture relations with more than two arguments, such as employment
+tenure, which has an employer, and employee, a start date, and an end date.}.
+
+For some entities, such as the United States, the set of connected entities can
+still be intractably large, so we limit this expansion to only those entities
+with fewer than 100 directly connected entities.  Our motivation for this is
+that this candidate entity generation is most useful for rarely seen entities,
+for which we have few or no related entities seen during training.  These
+entities also tend to have relatively few connected entities in Freebase.
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -465,7 +542,59 @@ entities raises MAP of the distributional-only model from .170 to .231.
 \section{Discussion}
 \label{sec:discussion}
 
-\mattnote{TODO}
+\mattnote{I will add more detail to some of these examples; I ran out of
+time...}
+
+Our model does very well on most predicates that have clear Freebase
+correlates: prime ministers, presidents, newspapers, companies, and so on.  The
+query ``French newspaper \blank{}'' gets almost perfect average precision.
+
+It does less well on predicates that do not match as closely with Freebase,
+such as ``Microsoft head honcho \blank{}'', ``Patriots linebacker \blank{}'',
+etc.  The combined model handily beats the distributional-only model in most of
+these cases, but it does not have the nearly-perfect AP seen in the more crisp
+queries above.  The ``head honcho'' example is particularly informative---this
+is a phrase that essentially means ``leader'', and the features learned by the
+formal model get some essential hints from Freebase, even though there is no
+direct correlate.  The features capture the fact that entities that are
+``honchos'' are people, and that they tend to be CEOs and film producers.
+
+For ``Patriots linebacker \blank{}'', the issue is that the features for
+\predicate{linebacker\_N/N} are able to capture which athletes play for which
+teams, but they cannot distinguish well between what positions those athletes
+play, so Patriots quarterbacks, wide receivers, and running backs are scored
+highly for this query.  This could be fixed by using more complex features for
+relation predicates, instead of just edge sequences, but that would explode the
+feature space and make the feature selection process more difficult.  It could
+also be fixed by better negative example selection during training.
+
+There are also cases where a predicate has so many possible entities types in
+Freebase that the it cannot learn models that are useful for all queries.  A
+good example of this is ``\blank{} is a NASA mission''.
+
+The SFE features we used cannot capture time very well.  ``17th century French
+mathematician \blank{}''...
+
+Because of the simple logical forms produced by the semantic parser we used, we
+cannot model some complex phenomena, such as counting and other things.  This
+is an orthogonal issue to the predicate semantics we're concerned with in this
+paper, however.
+
+Vice president Al Gore is modeled as $\predicate{vice}(\entity{Al Gore}) \land
+\predicate{president}(\entity{Al Gore})$.  Clearly there is room for better
+processing of multi-word expressions.
+
+\predicate{head\_honcho\_N/N} was never seen in the training data, so the
+phrase ``Microsoft head honcho \blank{}'' has to rely on knowing whether an
+entity is a ``honcho'' and what entities are related to Microsoft by an unknown
+predicate.  \predicate{honcho\_N/N} \emph{is} seen in the training data,
+however; some kind of backoff to simpler phrases would be useful here.
+
+Using connected entities in Freebase as additional candidates during inference
+is helpful, but it is not very sophisticated.  It over-generates for a lot of
+entities and predicates, and under-generates for others.  A mechanism for
+tailoring a search over Freebase to a particular query would be useful, though
+that would move the model more into the realm of reinforcement learning.
 
 \section{Conclusion}
 \label{sec:conclusion}
