@@ -5,14 +5,14 @@ package org.allenai.semparse
 // use, and groups some of them together in useful ways.
 object Experiments {
 
-  // Currently, there are four options in the experiments: which dataset do you use, which model
-  // type, what ranking method, and whether to use graph-based features.  If we add very many more
-  // possibilities, this will need some re-thinking to be more sane.
+  // Currently, there are four options in the experiments: which dataset do you use, ensembled with
+  // baseline or not (for evaluation only), what ranking method, and what model type.  If we add
+  // very many more possibilities, this will need some re-thinking to be more sane.
   val experimentConfigs: Seq[(String, String, String, Boolean)] = {
     val datasets = Seq("large")//, "small")
-    val modelTypes = Seq("uschema")//, "ensemble")
+    val modelTypes = Seq("formal")//, "distributional", "combined")
     val rankings = Seq("query")//, "predicate")
-    val withGraphOrNot = Seq(false)//, true)
+    val ensembledEvaluation = Seq(false)//, true)
     val baselineConfigs = Seq(
       //("small", "baseline", "ignored", false)
       //("large", "baseline", "ignored", false)
@@ -22,7 +22,7 @@ object Experiments {
     val configs = for (data <- datasets;
          modelType <- modelTypes;
          ranking <- rankings;
-         usingGraphs <- withGraphOrNot) yield (data, modelType, ranking, usingGraphs)
+         ensembled <- ensembledEvaluation) yield (data, modelType, ranking, ensembled)
 
     (configs ++ baselineConfigs)
   }
@@ -30,9 +30,10 @@ object Experiments {
   val BASE_ENVIRONMENT_FILE = "src/main/lisp/environment.lisp"
   val USCHEMA_ENVIRONMENT_FILE = "src/main/lisp/uschema_environment.lisp"
 
-  val DISTRIBUTIONAL_MODEL_FILE = "src/main/lisp/model.lisp"
-  val GRAPH_MODEL_FILE = "src/main/lisp/model_with_graphs.lisp"
-  val BASELINE_MODEL_FILE = "src/main/lisp/baseline_model.lisp"
+  val DISTRIBUTIONAL_MODEL_FILE = "src/main/lisp/model_distributional.lisp"
+  val COMBINED_MODEL_FILE = "src/main/lisp/model_combined.lisp"
+  val FORMAL_MODEL_FILE = "src/main/lisp/model_formal.lisp"
+  val BASELINE_MODEL_FILE = "src/main/lisp/model_baseline.lisp"
 
   val PREDICATE_RANKING_FILE = "src/main/lisp/predicate_ranking.lisp"
   val QUERY_RANKING_FILE = "src/main/lisp/query_ranking.lisp"

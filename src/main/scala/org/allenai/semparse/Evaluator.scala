@@ -254,7 +254,7 @@ object Evaluator {
     data: String,
     modelType: String,
     ranking: String,
-    usingGraphs: Boolean
+    ensembledEvaluation: Boolean
   ): Environment = {
     val dataFiles = data match {
       case "large" => Experiments.COMMON_LARGE_DATA
@@ -264,22 +264,27 @@ object Evaluator {
 
     val modelFiles = modelType match {
       case "baseline" => Seq(Experiments.BASELINE_MODEL_FILE)
-      case "ensemble" => usingGraphs match {
-        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.GRAPH_MODEL_FILE)
-        case false => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.DISTRIBUTIONAL_MODEL_FILE)
+      case "formal" => ensembledEvaluation match {
+        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.FORMAL_MODEL_FILE)
+        case false => Seq(Experiments.FORMAL_MODEL_FILE)
       }
-      case "uschema" => usingGraphs match {
-        case true => Seq(Experiments.GRAPH_MODEL_FILE)
+      case "distributional" => ensembledEvaluation match {
+        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.DISTRIBUTIONAL_MODEL_FILE)
         case false => Seq(Experiments.DISTRIBUTIONAL_MODEL_FILE)
+      }
+      case "combined" => ensembledEvaluation match {
+        case true => Seq(Experiments.BASELINE_MODEL_FILE, Experiments.COMBINED_MODEL_FILE)
+        case false => Seq(Experiments.COMBINED_MODEL_FILE)
       }
       case other => throw new RuntimeException("unrecognized model type")
     }
 
     val evalFile = modelType match {
       case "baseline" => Seq(Experiments.EVAL_BASELINE_FILE)
-      case "uschema" => Seq(Experiments.EVAL_USCHEMA_FILE)
-      case "ensemble" => Seq(Experiments.EVAL_ENSEMBLE_FILE)
-      case other => throw new RuntimeException("unrecognized model type")
+      case other => ensembledEvaluation match {
+        case true => Seq(Experiments.EVAL_ENSEMBLE_FILE)
+        case false => Seq(Experiments.EVAL_USCHEMA_FILE)
+      }
     }
 
     val sfeSpecFile = data match {
@@ -297,16 +302,16 @@ object Evaluator {
     // we have to handle these two cases differently.
     val (inputFiles, extraArgs) = modelType match {
       case "baseline" => {
-        val baselineModelFile = Trainer.getModelFile(data, ranking, usingGraphs, true)
+        val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
         (baselineModelFile +: baseInputFiles, baseExtraArgs)
       }
       case "ensemble" => {
-        val serializedModelFile = Trainer.getModelFile(data, ranking, usingGraphs, false)
-        val baselineModelFile = Trainer.getModelFile(data, ranking, usingGraphs, true)
+        val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
+        val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
         (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
       }
       case "uschema" => {
-        val serializedModelFile = Trainer.getModelFile(data, ranking, usingGraphs, false)
+        val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
         (baseInputFiles, baseExtraArgs :+ serializedModelFile)
       }
     }
@@ -319,14 +324,14 @@ object Evaluator {
     data: String,
     modelType: String,
     ranking: String,
-    usingGraphs: Boolean
+    ensembledEvaluation: Boolean
   ) = {
-    val graphs = if (usingGraphs) "with_graph_features" else "no_graph_features"
+    val ensemble = if (ensembledEvaluation) "ensemble" else "uschema"
     modelType match {
       // ACK!  I need to make this more general...  The dataset should not be just "large" and
       // "small"
       case "baseline" => s"results/${data}_acl2016/baseline/results.txt"
-      case other => s"results/${data}_acl2016/${modelType}/${graphs}/${ranking}/results.txt"
+      case other => s"results/${data}_acl2016/${modelType}/${ranking}/${ensemble}/results.txt"
     }
   }
 
@@ -346,7 +351,7 @@ object Evaluator {
     // file is available and the evaluation hasn't already been done.
     Experiments.experimentConfigs.par.foreach(config => {
       val (data, modelType, ranking, usingGraphs) = config
-      val modelFile = Trainer.getModelFile(data, ranking, usingGraphs, modelType == "baseline")
+      val modelFile = Trainer.getModelFile(data, ranking, modelType)
       val outputFile = getOutputFile(data, modelType, ranking, usingGraphs)
       if (!fileUtil.fileExists(modelFile)) {
         println(s"Model not available for configuration $config.  Skipping...")
