@@ -6,28 +6,29 @@ import edu.cmu.ml.rtw.users.matt.util.FileUtil
 
 object Trainer {
 
-  def canTrainConfig(data: String, modelType: String, ranking: String, usingGraph: Boolean) = {
-    // At this point, we just need to filter out the ensemble and baseline model types, and we can
-    // train everything else.
+  def canTrainConfig(data: String, modelType: String, ranking: String, ensembledEvaluation: Boolean) = {
+    // At this point, we just need to filter out the baseline model, and we can train everything
+    // else.
     modelType match {
-      case "uschema" => true
-      case _ => false
+      case "baseline" => false
+      case _ => true
     }
   }
 
-  def getModelFile(data: String, ranking: String, usingGraphs: Boolean, baseline: Boolean) = {
-    val graphs = if (usingGraphs) "with_graph_features" else "no_graph_features"
-    baseline match {
-      case true => s"output/${data}/baseline/model.lisp"
-      case false => s"output/${data}/${graphs}/${ranking}/model.ser"
+  def getModelFile(data: String, ranking: String, modelType: String) = {
+    val model = modelType match {
+      case "baseline" => modelType
+      case other => s"${modelType}/${ranking}"
     }
+    val ending = modelType match { case "baseline" => ".lisp"; case other => ".ser" }
+    s"output/${data}/${model}/model${ending}"
   }
 
   def createTrainingEnvironment(
     data: String,
     modelType: String,
     ranking: String,
-    usingGraphs: Boolean
+    ensembledEvaluation: Boolean
   ): Environment = {
     val dataFiles = data match {
       case "large" => ranking match {
@@ -43,11 +44,9 @@ object Trainer {
 
     val modelFile = modelType match {
       case "baseline" => throw new IllegalStateException("we don't handle training the baseline")
-      case "ensemble" => throw new IllegalStateException("you don't train an ensemble...")
-      case "uschema" => usingGraphs match {
-        case true => Experiments.GRAPH_MODEL_FILE
-        case false => Experiments.DISTRIBUTIONAL_MODEL_FILE
-      }
+      case "formal" =>  Experiments.FORMAL_MODEL_FILE
+      case "distributional" => Experiments.DISTRIBUTIONAL_MODEL_FILE
+      case "combined" => Experiments.COMBINED_MODEL_FILE
       case other => throw new RuntimeException("unrecognized model type")
     }
 
@@ -63,7 +62,7 @@ object Trainer {
       case other => throw new RuntimeException("unrecognized data option")
     }
 
-    val serializedModelFile = getModelFile(data, ranking, usingGraphs, modelType == "baseline")
+    val serializedModelFile = getModelFile(data, ranking, modelType)
 
     val inputFiles =
       dataFiles ++ Experiments.ENV_FILES ++ Seq(rankingFile, modelFile, Experiments.TRAIN_FILE)
@@ -84,7 +83,7 @@ object Trainer {
     // mess (not to mention it'd probably take too much memory).
     Experiments.experimentConfigs.foreach(config => {
       val (data, modelType, ranking, usingGraphs) = config
-      val modelFile = getModelFile(data, ranking, usingGraphs, modelType == "baseline")
+      val modelFile = getModelFile(data, ranking, modelType)
       if (!canTrainConfig(data, modelType, ranking, usingGraphs)) {
         println(s"Configuration $config is not trainable.  Skipping...")
       } else if (fileUtil.fileExists(modelFile)) {
