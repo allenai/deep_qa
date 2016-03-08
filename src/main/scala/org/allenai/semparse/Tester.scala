@@ -179,14 +179,16 @@ object Tester {
         val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
         (baselineModelFile +: baseInputFiles, baseExtraArgs)
       }
-      case "ensemble" => {
-        val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
-        val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
-        (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
-      }
-      case "uschema" => {
-        val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
-        (baseInputFiles, baseExtraArgs :+ serializedModelFile)
+      case other => ensembledEvaluation match {
+        case true => {
+          val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
+          val baselineModelFile = Trainer.getModelFile(data, ranking, modelType)
+          (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
+        }
+        case false => {
+          val serializedModelFile = Trainer.getModelFile(data, ranking, modelType)
+          (baseInputFiles, baseExtraArgs :+ serializedModelFile)
+        }
       }
     }
 

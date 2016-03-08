@@ -45,28 +45,29 @@ class Evaluator(
     val queryResponses = new mutable.ListBuffer[(String, String, Seq[String])]()
     var sentence = ""
     var query = ""
-    var predictions: List[String] = Nil
+    var predictions = new mutable.ListBuffer[String]
     for (line <- fileUtil.readLinesFromFile(resultsFile)) {
       if (line.isEmpty()) {
         if (!query.isEmpty()) {
-          queryResponses += Tuple3(sentence, query, predictions)
+          queryResponses += Tuple3(sentence, query, predictions.toSeq)
         }
         sentence = ""
         query = ""
-        predictions = Nil
+        predictions = new mutable.ListBuffer[String]
       }
       if (sentence.isEmpty()) {
         sentence = line
       } else if (query.isEmpty()) {
         query = line
       } else {
-        predictions = line :: predictions
+        predictions += line
       }
     }
 
     val numQueries = queryResponses.size
     var averagePrecisionSum = 0.0
     var weightedAPSum = 0.0
+    var reciprocalRankSum = 0.0
     var numNoAnswerQueries = 0
     var numAnnotatedTrueEntities = 0
     var numAnnotatedFalseEntities = 0
@@ -75,6 +76,9 @@ class Evaluator(
     for ((sentence, query, responses) <- queryResponses) {
       // I think I want this to crash if there's a mismatch, so we'll go with this for now.
       val (correctIds, incorrectIds) = queryAnswers(query)
+      numAnnotatedTrueEntities += correctIds.size
+      numAnnotatedFalseEntities += incorrectIds.size
+      if (correctIds.size == 0) numNoAnswerQueries += 1
 
       writer.write(sentence)
       writer.write("\n")
@@ -104,6 +108,9 @@ class Evaluator(
       val weightedAveragePrecision = averagePrecision * correctIds.size
       weightedAPSum += weightedAveragePrecision
       writer.write(s"WAP: $weightedAveragePrecision\n")
+      val reciprocalRank = Evaluator.computeReciprocalRank(entityScores, correctIds)
+      reciprocalRankSum += reciprocalRank
+      writer.write(s"RR: $reciprocalRank\n")
 
       val pointPrecision = Evaluator.compute11PointPrecision(entityScores, correctIds)
       writer.write("11-point precision/recall: [")
@@ -120,10 +127,10 @@ class Evaluator(
     // Now some global statistics.
     val meanAveragePrecision = averagePrecisionSum / numQueries
     val weightedMAP = weightedAPSum / numAnnotatedTrueEntities
-    val reweightedMAP = averagePrecisionSum / (numQueries - numNoAnswerQueries)
+    val meanReciprocalRank = reciprocalRankSum / numQueries
     writer.write(s"MAP: $meanAveragePrecision\n")
     writer.write(s"Weighted MAP: $weightedMAP\n")
-    writer.write(s"Reweighted MAP: $reweightedMAP\n")
+    writer.write(s"MRR: $meanReciprocalRank\n")
 
     writer.write("11-point averaged precision/recall: [")
     for (i <- 0 until pointPrecisionSum.length) {
@@ -171,6 +178,32 @@ object Evaluator {
       }
     }
     totalPrecision / correctInstances.size
+  }
+
+  // Another helper method, this time computing reciprocal rank.  Same notes apply here as apply to
+  // computeAveragePrecision.
+  def computeReciprocalRank[T](scores: Seq[(Double, T)], correctInstances: Set[T]): Double = {
+    if (correctInstances.size == 0) return 0
+    var numPredictionsSoFar = 0
+    var correctSoFar = 0.0  // this is a double to avoid casting later
+    var rankAtFirstCorrect = -1
+
+    // These are double scores, so ties should be uncommon, but they do happen.
+    val grouped = scores.groupBy(_._1).toSeq.sortBy(-_._1)
+    for (resultsWithScore <- grouped) {
+      val score = resultsWithScore._1
+      var found = false
+      for ((score, instance) <- resultsWithScore._2) {
+        numPredictionsSoFar += 1
+        if (correctInstances.contains(instance)) {
+          found = true
+        }
+      }
+      if (found && rankAtFirstCorrect == -1) {
+        rankAtFirstCorrect = numPredictionsSoFar
+      }
+    }
+    if (rankAtFirstCorrect == -1) 0 else 1.0 / rankAtFirstCorrect
   }
 
   // Another helper method that could belong in a different class.  Here's we're computing a
@@ -254,10 +287,10 @@ object Evaluator {
     // file is available and the evaluation hasn't already been done.
     Experiments.experimentConfigs.par.foreach(config => {
       val (data, modelType, ranking, ensembledEvaluation) = config
-      val resultsFile = Tester.getOutputFile(data, ranking, modelType, ensembledEvaluation)
+      val resultsFile = Tester.getOutputFile(data, modelType, ranking, ensembledEvaluation)
       val annotatedFile = getOutputFile(data, modelType, ranking, ensembledEvaluation)
       if (!fileUtil.fileExists(resultsFile)) {
-        println(s"Results not available for configuration $config.  Skipping...")
+        println(s"Results file (${resultsFile}) not available for configuration $config.  Skipping...")
       } else if (fileUtil.fileExists(annotatedFile)) {
         println(s"Evaluation already done for configuration $config.  Skipping...")
       } else {
