@@ -10,7 +10,7 @@ object Experiments {
   // very many more possibilities, this will need some re-thinking to be more sane.
   val experimentConfigs: Seq[(String, String, String, Boolean)] = {
     val datasets = Seq("large")//, "small")
-    val modelTypes = Seq("formal")//, "distributional", "combined")
+    val modelTypes = Seq("combined")//, "distributional", "formal")
 
     // I don't actually change these in the experiments for the ACL 2016 paper, but these were
     // options used for the TACL 2015 paper.
