@@ -506,7 +506,14 @@ seen, the combined model significantly improves performance, giving a 42\%
 relative increase in MAP over the distributional-only baseline.  This table
 also shows the benefit of using our modified logical forms (see
 \secref{better-lfs}); by being able to better model the relations between
-entities, MAP of all of the models is significantly improved.
+entities, MAP of all of the models is significantly improved.\footnote{Because
+of the large amount of annotation effort involved, we did not include the
+unique results from this run in the evaluation pool.  It is possible that this
+had the effect of lowering the MAP score for these methods.  However, the large
+majority of the predictions made by these methods were already annotated, and
+spot-checking the unannotated ones showed that practically all of the unique
+predictions made in this scenario were incorrect, and thus annotating them
+would not change the score.}
 
 \begin{table}
   \centering
