@@ -70,7 +70,7 @@ class Tester(
 
         // Now run the expression through the evaluation code and parse the result.
         println("Evaluating the expression")
-        val result = env.evalulateSExpression(expressionToEvaluate).getValue()
+        val result = env.evaluateSExpression(expressionToEvaluate).getValue()
         val entityScoreObjects = result.asInstanceOf[Array[Object]]
         println(s"Done evaluating, ranking ${entityScoreObjects.length} results")
         val entityScores = entityScoreObjects.map(entityScoreObject => {
