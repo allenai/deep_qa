@@ -86,7 +86,7 @@ semantics.
     $\predicate{architect}(\entity{Palladio})~\land~\predicate{architect\_N/N}(\entity{Italy}, \entity{Palladio})$
   \end{minipage}
 
-  \vspace{.1in}
+  \vspace{.2in}
   \begin{minipage}{0.5\linewidth}
     \textbf{Category models}\\
     \begin{tabular}{@{}lll}
@@ -154,11 +154,11 @@ Freebase~\cite{freebase-2008-bollacker}.  This kind of modeling allows semantic
 parsers to handle the compositional structure of natural language and to
 leverage large, curated knowledge sources to perform various natural language
 processing
-tasks~\cite{zettlemoyer-2005-ccg,kwiatkowski-2013-ontology-matching,berant-2013-semantic-parsing-qa}.  However,
-semantic parsers are fundamentally limited by the schema of the ontology they
-are trained on---a semantic parser trained with Freebase cannot even represent
-words whose meaning has no correlate in the Freebase ontology, such as
-``front-runner'' and ``honcho''.
+tasks~\cite{zettlemoyer-2005-ccg,kwiatkowski-2013-ontology-matching,berant-2013-semantic-parsing-qa}.
+However, semantic parsers are fundamentally limited by the schema of the
+ontology they are trained on---a semantic parser trained with Freebase cannot
+even represent words whose meaning has no correlate in the Freebase ontology,
+such as ``front-runner'' and ``honcho''.
 
 In this work we introduce models of predicate semantics that combine the
 benefits of both distributional and formal approaches.  While there is no
@@ -237,22 +237,21 @@ closely related work.
 
 Krishnamurthy and
 Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} introduced a
-technique for learning semantic parsers with open predicate vocabularies.
-Instead of mapping text to Freebase queries, they applied the matrix
-factorization semantics used by Riedel et
+technique for learning semantic parsers with open predicate vocabularies
+(hereafter referred to as K\&M).  Instead of mapping text to Freebase queries,
+they applied the matrix factorization semantics used by Riedel et
 al.~\shortcite{riedel-2013-mf-universal-schema} in knowledge base completion to
 the task of learning predicate semantics in a semantic parser.  This method
 assigns truth values to instantiated predicates like
 \predicate{architect}(\entity{AndreaPalladio}) in a probabilistic database.
-The models Krishnamurthy and Mitchell use for the predicates and entities are
-essentially equivalent to modern techniques for constructing word embeddings,
-implicitly factorizing a cooccurrence matrix between categories and entities,
-and relations and entity pairs~\cite{levy-2014-w2v-as-mf}.  This implicit
-factorization has two sets of parameters: each predicate (category or relation)
-has a learned $k$-dimensional embedding $\theta$, and each entity and entity
-pair has a learned embedding $\phi$.  The probability assigned to a category
-instance $c(e)$ and relation instance $r(e_1, e_2)$ in the probabilistic
-database is given by:
+The models K\&M use for the predicates and entities are essentially equivalent
+to modern techniques for constructing word embeddings, implicitly factorizing a
+cooccurrence matrix between categories and entities, and relations and entity
+pairs~\cite{levy-2014-w2v-as-mf}.  This implicit factorization has two sets of
+parameters: each predicate (category or relation) has a learned $k$-dimensional
+embedding $\theta$, and each entity and entity pair has a learned embedding
+$\phi$.  The probability assigned to a category instance $c(e)$ and relation
+instance $r(e_1, e_2)$ in the probabilistic database is given by:
 
 \begin{align*}
   P(c(e) = \true{}) &= \sigma ( \theta_c^T \phi_e ) \\
@@ -267,9 +266,8 @@ the observed entities for each query above unobserved entities.  The
 probabilistic database produced by these predicate models is then input to a
 reasoning system that can handle a subset of first-order logic.
 
-In this paper, we use the system produced by Krishnamurthy and Mitchell,
-changing only the models of predicate semantics, as described in
-\secref{method}.
+In this paper, we use the system produced by K\&M, changing only the models of
+predicate semantics, as described in \secref{method}.
 
 \subsection{Subgraph feature extraction}
 
@@ -312,11 +310,12 @@ this section}.
 
 In this section we present our models of predicate semantics.  In
 \secref{formal-and-distributional} we describe how we modify Krishnamurthy and
-Mitchell's (K\&M's) semantic parser to include features from a formal knowledge base.
-In \secref{computing-pmi} we describe how we select those features for each
-predicate.  The remaining two sections then describe other improvements we made
-to K\&M's semantic parsing model: lexicalizing preposition and noun-compound
-predicates, and using the Freebase graph to select candidate entities.
+Mitchell's (K\&M's) semantic parser to include features from a formal knowledge
+base.  In \secref{computing-pmi} we describe how we select those features for
+each predicate.  The remaining two sections then describe other improvements we
+made to K\&M's semantic parsing model: lexicalizing preposition and
+noun-compound predicates, and using the Freebase graph to select candidate
+entities.
 
 \subsection{Adding SFE features to Jayant's models}
 \label{sec:formal-and-distributional}
@@ -475,7 +474,7 @@ here versus those reported by Krishnamurthy and
 Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} are due to the
 improved logical form generation, discussed in \secref{better-lfs}.}
 
-We also used the test set created by Krishnamurthy and Mitchell, which contains
+We also used the test set created by K\&M, which contains
 220 queries generated in the same fashion as the training data from a separate
 section of ClueWeb.  However, we used this set for intermediate evaluations
 while developing our models, and so we also generated another, similar test set
@@ -534,13 +533,13 @@ annotated correct answers to the query.
       Method & MAP & Weighted MAP & MRR \\
       \midrule
       Distributional-only & .284 & .371 & .379 \\
-      \ \ \ (old lfs) & ?? & ?? & ?? \\
+      \ \ \ (old lfs) & .269 & .330 & .380 \\
       \midrule
       Formal-only & .276 & .469 & .334 \\
-      \ \ \ (old lfs) & ?? & ?? & ?? \\
+      \ \ \ (old lfs) & .231 & .358 & .216 \\
       \midrule
       Combined model & \textbf{.335} & \textbf{.477} & \textbf{.429} \\
-      \ \ \ (old lfs) & ?? & ?? & ?? \\
+      \ \ \ (old lfs) & .313 & .396 & .413 \\
       \bottomrule
     \end{tabular}
   }
@@ -558,14 +557,15 @@ seen, the combined model significantly improves performance, giving a 42\%
 relative increase in MAP over the distributional-only baseline.  This table
 also shows the benefit of using our modified logical forms (see
 \secref{better-lfs}); by being able to better model the relations between
-entities, MAP of all of the models is significantly improved.\footnote{Because
-of the large amount of annotation effort involved, we did not include the
-unique results from this run in the evaluation pool.  It is possible that this
-had the effect of lowering the MAP score for these methods.  However, the large
-majority of the predictions made by these methods were already annotated, and
-spot-checking the unannotated ones showed that practically all of the unique
-predictions made in this scenario were incorrect, and thus annotating them
-would not change the score.}
+entities, MAP of all of the models is improved.  Not surprisingly, the
+improvement is more pronounced for the models that have formal features, which
+can make better use of rich information from Freebase with our improved logical
+forms.\footnote{Because of the large amount of annotation effort involved, we
+did not include the unique results from this run in the evaluation pool.  This
+has the effect of slightly lowering the MAP score for these methods.  However,
+the large majority of the predictions made by these methods were already
+annotated, and spot-checking the unannotated predictions seemed to indicate
+that annotating them would not substantially change the result shown.}
 
 \begin{table}
   \centering
