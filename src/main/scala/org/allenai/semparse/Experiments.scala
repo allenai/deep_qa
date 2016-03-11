@@ -46,7 +46,7 @@ object Experiments {
   val EVAL_USCHEMA_FILE = "src/main/lisp/eval_uschema.lisp"
   val EVAL_ENSEMBLE_FILE = "src/main/lisp/eval_ensemble.lisp"
 
-  val SMALL_BASE_DATA_FILE = "data/tacl2015-training-sample.txt"
+  val SMALL_BASE_DATA_FILE = "data/tacl2015/tacl2015-training-sample.txt"
   val SMALL_WORD_FILE = "data/small/words.lisp"
   val SMALL_ENTITY_FILE = "data/small/entities.lisp"
   val SMALL_JOINT_ENTITY_FILE = "data/small/joint_entities.lisp"
