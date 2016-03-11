@@ -424,7 +424,7 @@ Palladio}; all other entities will get a score of 0.
 
 Our predicate models do not have this limitation.  The distributional component
 will still give an unseen entity pair a score of 0, as it is identical to K\&M's
-model, but the formal component of our simples simply computes an observed
+model, but the formal component of our models simply computes an observed
 feature vector from Freebase for the entity pair.  As long as both entities
 appear in Freebase, our model can compute a feature vector and give a non-zero
 score.
@@ -436,9 +436,9 @@ score over all of the millions of entities in Freebase is not computationally
 feasible.  To make inference tractable, for a given query we restrict
 candidates to all entities seen with the query entities during training (as
 done by K\&M), as well as all entities directly connected to the query entities
-in Freebase, or connected by a mediator node\footnote{Mediators in Freebase are
+in Freebase, or connected by a mediator node.\footnote{Mediators in Freebase are
 used to capture relations with more than two arguments, such as employment
-tenure, which has an employer, and employee, a start date, and an end date.}.
+tenure, which has an employer, and employee, a start date, and an end date.}
 
 For some entities, such as the United States, the set of connected entities can
 still be intractably large, so we limit this expansion to only those entities
