@@ -6,6 +6,8 @@
 \usepackage{color}
 \usepackage{booktabs}
 \usepackage{subfig}
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
 
 \newcommand{\secref}[1]{Section~\ref{sec:#1}}
 \newcommand{\figref}[1]{Figure~\ref{fig:#1}}
@@ -254,8 +256,8 @@ $\phi$.  The probability assigned to a category instance $c(e)$ and relation
 instance $r(e_1, e_2)$ in the probabilistic database is given by:
 
 \begin{align*}
-  P(c(e) = \true{}) &= \sigma ( \theta_c^T \phi_e ) \\
-  P(r(e_1, e_2) = \true{}) &= \sigma ( \theta_r^T \phi_{(e_1, e_2)} )
+  P(c(e)) &= \sigma ( \theta_c^T \phi_e ) \\
+  P(r(e_1, e_2)) &= \sigma ( \theta_r^T \phi_{(e_1, e_2)} )
 \end{align*}
 
 The probability of a predicate instance is the (sigmoided) inner product of the
@@ -267,22 +269,61 @@ probabilistic database produced by these predicate models is then input to a
 reasoning system that can handle a subset of first-order logic.
 
 In this paper, we use the system produced by K\&M, changing only the models of
-predicate semantics, as described in \secref{method}.
+predicate semantics, as described in \secref{method}.  K\&M introduced several
+variations of their parser; in this work, we use their query ranking objective,
+as it had the best performance, and we evaluate the model they called
+``Factorization'', without ensembling it with a clustering baseline.
 
 \subsection{Subgraph feature extraction}
+
+\begin{figure}
+  {\center
+  \begin{tikzpicture}[
+    ->,
+    shorten >=1pt,
+    auto,
+    node distance=3cm,
+    thick,
+    main node/.style={draw=none,fill=none}
+    ]
+
+    \node[main node] (1) {\entity{Palladio}};
+    \node[main node] (2) [right=4cm of 1] {\entity{Italy}};
+    \node[main node] (3) [below=1.7cm of 1] {\entity{architect}};
+    \node[main node] (4) [below=1.7cm of 2] {\entity{country}};
+    \node[main node] (5) [below right=.1cm and .5cm of 3] {\entity{Villa Capra}};
+
+    \path[]
+      (1) edge node [sloped, anchor=center, above] {\predicate{nationality}} (2)
+      (1) edge node [sloped, anchor=center, above] {\predicate{type}} (3)
+      (1) edge node [sloped, anchor=center, above] {\predicate{designed}} (5)
+      (2) edge node [sloped, anchor=center, above] {\predicate{type}} (4)
+      (5) edge node [sloped, anchor=center, above] {\predicate{located\_in}} (2);
+  \end{tikzpicture}
+  }
+  \textbf{Features between \entity{Palladio} and \entity{Italy}}:\\
+  \textless\predicate{nationality}\textgreater\\
+  \textless\predicate{designed}, \predicate{located\_in}\textgreater
+  \caption{A subset of the Freebase graph, and some example extracted features
+  between \entity{Palladio} and \entity{Italy}.  The actual Freebase relations
+  and entity identifiers used are modified here to aid readability.}
+  \label{fig:sfe}
+\end{figure}
 
 Subgraph feature extraction (SFE) is a technique introduced by Gardner and
 Mitchell~\shortcite{gardner-2015-sfe} for generating feature matrices over node
 pairs in a graph with labeled edges.  Given a pair of nodes in a graph, SFE
 performs a search to characterize a subgraph around those two nodes, then
 extracts various kinds of features from that subgraph, such as the set of edge
-sequences that connect the two nodes.  \mattnote{Give an example graph with
-features.}  Gardner and Mitchell used these features to perform link
-prediction in the graph, using characteristics of the subgraph around two nodes
-to determine if an edge of a particular type should exist between those nodes
-(when the graph corresponds to a knowledge base like Freebase, this task is
-also known as knowledge base completion). Gardner and Mitchell only used these
-features to model formal KB relations, however.
+sequences that connect the two nodes.  \figref{sfe} shows an example subgraph,
+centered around \entity{Andrea Pallado} and \entity{Italy}, and features that
+would be extracted for that entity pair.  Gardner and Mitchell used these
+features to perform link prediction in the graph, using characteristics of the
+subgraph around two nodes to determine if an edge of a particular type should
+exist between those nodes.\footnote{When the graph corresponds to a knowledge
+base like Freebase, this task is also known as knowledge base completion.}
+Gardner and Mitchell only used these features to model formal KB relations,
+however.
 
 We differ from the work done by Gardner and Mitchell in two ways.  First, we
 apply these features to models of natural language, instead of formal KB
@@ -297,13 +338,50 @@ an extension that is straightforward and is also discussed in more detail in
 
 \subsection{Other related work}
 
-Some related work on including structured information in distributional representations: Manaal's
-retrofitting semantic lexicons, Sebastian Riedel's ``Injecting Logical Background Knowledge into
-Embeddings for Relation Extraction'', work on PRA and KBC more generally\ldots Also, the whole line
-of work on knowledge base embeddings (RESCAL, TransE, etc.) is at least slightly relevant here, as
-is PRA.  And all of the semantic parsing approaches that go from text to a pseudo-logical form,
-then to an actual Freebase query (Kwiatkowski, Reddy's TACL paper, Liang?) \mattnote{Actually write
-this section}.
+There is a large body of other work that is closely related to what is
+presented in this paper.  Two recent papers that also attempt to include some
+form of structured knowledge into distributional representations are those by
+Faruqui et al.~\shortcite{faruqui-2015-retrofitting-word-vectors}, and by
+Rockt\"{a}schel et al.~\shortcite{rocktaschel-2015-logical-embeddings}.  A key
+difference between their approaches and ours is that they use the structured
+information only to modify distributional representations, while we include the
+structured information directly in our models, training weights for structured
+information jointly with distributional representations.  Also conceptually
+similar is the Additive Relational Effects model for knowledge base completion
+by Nickel et al.~\shortcite{nickel-2014-are}, which tries to factorize the
+residual of a KB tensor that cannot be explained by observable features that
+are somewhat similar to the formal features we use in this model.  But while
+this model is conceptually similar, it is computationally quite different, and
+would be rather difficult to use in the setting we explore in this work.
+
+Our work draws a lot of inspiration from recent work on knowledge base
+completion.  We are building on top of work in embedding the entities and
+relations in a knowledge
+base~\cite{riedel-2013-mf-universal-schema,nickel-2011-rescal,bordes-2013-transe},
+as well as work on graph-based methods for reasoning with knowledge
+bases~\cite{lao-2010-original-pra,gardner-2014-vector-space-pra,neelakantan-2015-rnn-kbc}.
+
+Lastly, there is an extensive literature on building semantic parsers to answer
+questions against a structured knowledge
+base~\cite{zettlemoyer-2005-ccg,berant-2013-semantic-parsing-qa,%
+kwiatkowski-2013-ontology-matching,krishnamurthy-2012-semantic-parsing}.  The
+vast majority of this work is focused on matching natural language text to
+statements in a specific ontology, with no hope of assigning meaning to
+language that falls outside of that ontology.  Only very recently has there
+been work attempting to learn broad coverage meaning representations in
+semantic parsers.  In addition to the work by Krishnamurthy and Mitchell which
+we extend in this paper, there was recently a nice piece of work by Choi et
+al.~\shortcite{choi-2015-semantic-parsing-partial-ontologies}.  The aim of
+their work is, like typical semantic parsers, to map text onto a single formal
+statement, but they allow some of the predicates to be ``open'' predicates not
+contained in the Freebase ontology.  A key difference between their work and
+ours is that we score surface logical forms directly, using a weighted
+combination of many Freebase queries, instead of trying to map them to a single
+Freebase logical form.  Additionally, while their system might learn that
+``front-runner'' should be modeled as an open predicate that has no
+representation in Freebase, they have no method to assign any further meaning
+to that predicate, while our models learn both distributional and formal
+information about the meaning of ``front-runner''.
 
 \section{Method}
 \label{sec:method}
@@ -317,31 +395,69 @@ made to K\&M's semantic parsing model: lexicalizing preposition and
 noun-compound predicates, and using the Freebase graph to select candidate
 entities.
 
-\subsection{Adding SFE features to Jayant's models}
+\subsection{Formal features for predicate semantics}
 \label{sec:formal-and-distributional}
 
-The modification we make to K\&M's semantic parser is simple.  For each entity
-and entity pair in the data we compute an SFE feature vector $\psi(e)$ and
-$\psi(e_1, e_2)$.  For each category and relation, we select a subset of the
-features to have associated weights $\omega_c$ and $\omega_r$.  We then add the
-weights $\omega_c$ and $\omega_r$ as parameters to be learned for each
+We inject information from a formal knowledge base into our models of predicate
+semantics simply by augmenting the learned distributional feature vectors with
+formal features.
+
+For each entity and entity pair in the data we compute an SFE feature vector
+$\psi(e)$ and $\psi(e_1, e_2)$.  For entity pairs, the vector $\psi(e_1, e_2)$
+is a sparse binary vector containing indicator features for all edge sequences
+that connect nodes $e_1$ and $e_2$ in the Freebase graph, up to length 4.
+These features are shown for the entity pair (\entity{Palladio},
+\entity{Italy}) in the example graph in \figref{sfe}.  For entities, we extract
+similar features to form the sparse binary vector $\psi(e)$.  These features
+are of two types: (1) edge sequences that begin at node $e$ (up to length two),
+and (2) edge sequences that begin at node $e$ along with the node at the end of
+the sequence.  For example, all of the features listed in \figref{sfe} for the
+entity pair (\entity{Palladio}, \entity{Italy}) are also valid features of type
+(1) for the entity \entity{Palladio}, as well as the features
+\textless\predicate{type}\textgreater and
+\textless\predicate{designed}\textgreater.  Examples of of type (2) features
+are \textless\predicate{type}\textgreater:\entity{architect}, and
+\textless\predicate{nationality}\textgreater:\entity{Italy}.  Intuitively,
+features of type (1) capture the fact that an entity participates in particular
+kinds of relations, such as designing architectural structures, while features
+of type (2) capture the way an entity is related to particular other entities.
+Features of type (2) are very specific, and are most useful in practice when
+the entity in the feature is a type node, such as with
+\textless\predicate{type}\textgreater:\entity{architect}, though occasionally
+features of this type involving other entities are also selected in our feature
+selection process.
+
+For each category and relation, we select a subset of the SFE features in the
+vectors $\psi$ to have associated weights $\omega_c$ and $\omega_r$.  We then
+add the weights $\omega_c$ and $\omega_r$ as parameters to be learned for each
 predicate, and we add the feature vectors $\psi(e)$ and $\psi(e_1, e_2)$ as
 observed features for each entity and entity pair.  The augmented category and
 relation probabilities are as follows:
 
 \begin{align*}
-  P(c(e) & = \true{}) & = & \sigma ( \theta_c^T \phi_e + \omega_c^T \psi_c(e)) \\
-  P(r(e_1, e_2) & = \true{}) & = & \sigma ( \theta_r^T \phi_{(e_1, e_2)} + \omega_r^T \psi_r(e_1, e_2) )
+  P(c(e)) &= \sigma ( \theta_c^T \phi_e + \omega_c^T \psi_c(e)) \\
+  P(r(e_1, e_2)) &= \sigma ( \theta_r^T \phi_{(e_1, e_2)} + \omega_r^T \psi_r(e_1, e_2) )
 \end{align*}
 where we have added subscripts on the $\psi$ functions to indicate that each
 predicate selects its own set of features from the SFE feature vector $\psi$.
 
-Note that now there are three sets of parameters to be learned by the semantic
-parser: (1) $\theta$, low-dimensional distributional vectors trained for each
-predicate; (2) $\phi$, low-dimensional distributional vectors trained for each
-entity and entity pair; and (3) $\omega$, weights associated with the selected
-formal SFE features for each predicate.  All of these parameters are optimized
-jointly, using the same ranking objective used by K\&M.
+We pause here to note that these features obtained from SFE correspond exactly
+to a limited set of horn clauses using the Freebase vocabulary, which in turn
+can be seen as Freebase queries that define sets of entities or entity pairs.
+By associating a number of these features with each predicate and assigning
+them weights, what we are effectively doing is mapping language onto a weighted
+combination of possible Freebase statements, instead of onto a single Freebase
+query, as is typically done in the semantic parsing literature.  This is a
+fundamentally new kind of predicate semantics that has not been used previously
+in semantic parsers.
+
+Note also that in our combined model there are now three sets of parameters to
+be learned by the semantic parser: (1) $\theta$, low-dimensional distributional
+vectors trained for each predicate; (2) $\phi$, low-dimensional distributional
+vectors trained for each entity and entity pair; and (3) $\omega$, weights
+associated with the selected formal SFE features for each predicate.  All of
+these parameters are optimized jointly, using the same ranking objective used
+by K\&M.
 
 \subsection{Finding relevant features for each predicate}
 \label{sec:computing-pmi}
@@ -369,7 +485,8 @@ then associate the feature vectors for \entity{Andrea Palladio} and
 predicate $\pi$ and feature $f$, we use these counts to calculate the
 probabilities $p(\pi, f)$, $p(\pi)$ and $p(f)$.  After removing features with
 counts below some threshold, we pick the $k$ features with the highest PMI
-values for each predicate to use in our model.
+values for each predicate to use in our model.\footnote{We used $k=100$ in this
+paper.}
 
 \subsection{Improved logical forms}
 \label{sec:better-lfs}
@@ -601,67 +718,95 @@ candidates are always ranked at the bottom of the list of predictions (with a
 score of 0), the additional recall provided by being able to propose more
 entities raises MAP of the distributional-only model from .163 to .229.
 
+On both of these datasets, the difference between the combined model and the
+distributional model is statistically significant (by a paired permutation
+test, $p < 0.05$).  The difference between the combined model and the formal
+model, and between the formal model and the distributional model, are not
+statistically significant, as each method has certain kinds of queries that it
+performs well on.  Only the combined model is able to consistently outperform
+the distributional model on all kinds of queries.
+
 \section{Discussion}
 \label{sec:discussion}
 
-\mattnote{I will add more detail to some of these examples; I ran out of
-time...}
+Here we discuss some of the successes and failures of our model.
 
-Our model does very well on most predicates that have clear Freebase
-correlates: prime ministers, presidents, newspapers, companies, and so on.  The
-query ``French newspaper \blank{}'' gets almost perfect average precision.
+When a predicate has a clear Freebase correlate (such a
+\predicate{prime\_minister\_N/N}, \predicate{president\_of},
+\predicate{newspaper}, \predicate{company}, etc.), our formal model is able to
+capture the meaning very well.  The query ``French newspaper \blank{}'' has
+nearly perfect average precision, for instance, as does ``Israeli prime
+minister \blank{}''.  The distributional model does much less well here, and in
+combination, the distributional component of the model occasionally lowers its
+performance relative to the formal model.\footnote{This is why the difference
+between the formal model and the combined model is not statistically
+significant.}
 
-It does less well on predicates that do not match as closely with Freebase,
-such as ``Microsoft head honcho \blank{}'', ``Patriots linebacker \blank{}'',
-etc.  The combined model handily beats the distributional-only model in most of
-these cases, but it does not have the nearly-perfect AP seen in the more crisp
-queries above.  The ``head honcho'' example is particularly informative---this
+The formal models also perform well on predicates that can be partially
+expressed by Freebase, such as ``Microsoft head honcho \blank{}'', ``The United
+States, \blank{}'s closest ally'', and ``Patriots linebacker \blank{}'', though
+the models do not have the nearly-perfect AP that they do for the more crisp
+queries above.  The ``head honcho'' example is particularly instructive---this
 is a phrase that essentially means ``leader'', and the features learned by the
 formal model get some essential hints from Freebase, even though there is no
 direct correlate.  The features capture the fact that entities that are
 ``honchos'' are people, and that they tend to be CEOs and film producers.
 
-For ``Patriots linebacker \blank{}'', the issue is that the features for
+For ``Patriots linebacker \blank{}'', the reason that this can only be
+partially expressed in terms of Freebase queries is that the features for
 \predicate{linebacker\_N/N} are able to capture which athletes play for which
 teams, but they cannot distinguish well between what positions those athletes
-play, so Patriots quarterbacks, wide receivers, and running backs are scored
-highly for this query.  This could be fixed by using more complex features for
-relation predicates, instead of just edge sequences, but that would explode the
-feature space and make the feature selection process more difficult.  It could
-also be fixed by better negative example selection during training.
+play.  This leads to Patriots quarterbacks, wide receivers, and running backs
+being scored highly for this query.  This issue could be fixed by using more
+complex features for relation predicates, instead of just edge sequences,
+though that would drammatically increase the size of the feature space and make
+the feature selection process much more difficult.  It could also potentially
+be mitigated by better negative example selection during training.
 
-There are also cases where a predicate has so many possible entities types in
-Freebase that the it cannot learn models that are useful for all queries.  A
-good example of this is ``\blank{} is a NASA mission''.
+There are also cases where a predicate has so many possible entity types in
+Freebase (or no close correlate at all) that the PMI feature selection process
+does not find features that are useful for all queries.  A good example of this
+is ``\blank{} is a NASA mission''; in this case, the distributional model
+outperforms the formal model, because it has learned associations between
+particular NASA missions and NASA.
 
-The SFE features we used cannot capture time very well.  ``17th century French
-mathematician \blank{}''...
+While the new logical forms we introduced in \secref{better-lfs} improved the
+performance of the models, there is still a lot of room for further
+improvement.  For instance, ``Vice president Al Gore'' is modeled as
+$\predicate{vice}(\entity{Al Gore}) \land \predicate{president}(\entity{Al
+Gore})$.  Better processing of multi-word expressions would allow for more
+crisp models of the predicates, so the model for \predicate{president} could
+have more specific features.  Also, the predicate \predicate{head\_honcho\_N/N}
+was never seen in the training data, so an \predicate{unknown} predicate was
+used to score the relation in the phrase ``Microsoft head honcho \blank{}''.
+This means the model had to rely solely on knowing which entities are
+``honchos'' and which entities are related to Microsoft in some unknown manner.
+The predicate \predicate{honcho\_N/N} \emph{is} seen in the training data,
+however; some kind of backoff to simpler phrases for unseen predicates would be
+useful here.
 
-Because of the simple logical forms produced by the semantic parser we used, we
-cannot model some complex phenomena, such as counting and other things.  This
-is an orthogonal issue to the predicate semantics we're concerned with in this
-paper, however.
-
-Vice president Al Gore is modeled as $\predicate{vice}(\entity{Al Gore}) \land
-\predicate{president}(\entity{Al Gore})$.  Clearly there is room for better
-processing of multi-word expressions.
-
-\predicate{head\_honcho\_N/N} was never seen in the training data, so the
-phrase ``Microsoft head honcho \blank{}'' has to rely on knowing whether an
-entity is a ``honcho'' and what entities are related to Microsoft by an unknown
-predicate.  \predicate{honcho\_N/N} \emph{is} seen in the training data,
-however; some kind of backoff to simpler phrases would be useful here.
-
-Using connected entities in Freebase as additional candidates during inference
-is helpful, but it is not very sophisticated.  It over-generates for a lot of
-entities and predicates, and under-generates for others.  A mechanism for
-tailoring a search over Freebase to a particular query would be useful, though
-that would move the model more into the realm of reinforcement learning.
+Finally, using connected entities in Freebase as additional candidates during
+inference is helpful, but it is not very sophisticated.  It over-generates for
+a lot of entities and predicates, and under-generates for others.  A mechanism
+for tailoring a search over Freebase to a particular query would be useful,
+though it would add a lot of additional complexity, possibly requiring methods
+from reinforcement learning to resolve.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-\mattnote{TODO}
+In this paper, we have considered the problem of assigning meaning to
+predicates (both categories and relations) in natural language, using both
+distributional information and information from a formal knowledge base.  To do
+this, we developed a model that can represent words as a weighted combination
+of formal statements, and trained that model jointly with a distributional
+model of word meaning.  This joint model achieved a relative gain of 62\% in
+mean average precision over the distributional model alone.  We also introduced
+a better mapping from surface text to logical forms, and a simple method for
+using Freebase to find candidate entities during inference.  Taken together,
+the methods introduced in this paper improved mean average precision on a
+fill-in-the-blank natural language query task from .163 to .370, a 127\%
+relative improvement.
 
 %\section*{Acknowledgments}
 
