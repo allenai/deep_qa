@@ -3,7 +3,8 @@ package org.allenai.semparse.one_off
 import edu.cmu.ml.rtw.pra.experiments.ExperimentScorer
 import com.mattg.util.FileUtil
 
-// TODO(matt): This should be put into a common space, not a one_off script.
+// TODO(matt): This should be put into a common space, not a one_off script.  And, actually, it
+// should be a Step, probably the one that actually gets called.
 object test_significance {
   val combined_ap_file = "/home/mattg/clone/tacl2015-factorization/results/large/combined_ap.txt"
   val distributional_ap_file = "/home/mattg/clone/tacl2015-factorization/results/large/distributional_ap.txt"

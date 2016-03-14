@@ -55,6 +55,7 @@ object dump_feature_weights {
     out.close()
   }
 
+  // TODO(matt): make this a Step, not a one_off script.
   def main(args: Array[String]) {
     Experiments.experimentConfigs.foreach(config => {
       val (data, modelType, ranking, ensembledEvaluation) = config

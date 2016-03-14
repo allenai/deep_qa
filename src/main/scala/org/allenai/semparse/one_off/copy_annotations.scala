@@ -30,7 +30,9 @@ object copy_annotations {
     copyTo removeField { _._1 == "queries" } merge toCopy
   }
 
-  def main(args: Array[String]) {
+  // This script is useful for copying annotations over from the new logical form file to the old
+  // logical form file.  Hopefully I won't need to use it again...
+  def NOT_main(args: Array[String]) {
     val jsonToCopyFrom = parse(fileUtil.readLinesFromFile(copyFrom).mkString("\n"))
     val queriesToCopyFrom = jsonToCopyFrom.extract[Seq[JValue]]
     val jsonToCopyTo = parse(fileUtil.readLinesFromFile(copyTo).mkString("\n"))
