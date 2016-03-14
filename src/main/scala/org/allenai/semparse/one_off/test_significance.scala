@@ -1,7 +1,7 @@
 package org.allenai.semparse.one_off
 
 import edu.cmu.ml.rtw.pra.experiments.ExperimentScorer
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 // TODO(matt): This should be put into a common space, not a one_off script.
 object test_significance {

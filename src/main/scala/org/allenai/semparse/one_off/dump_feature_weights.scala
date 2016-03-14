@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.models.TableFactor
 import com.jayantkrish.jklol.tensor.SparseTensor
 import com.jayantkrish.jklol.util.IndexedList
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 object dump_feature_weights {
 

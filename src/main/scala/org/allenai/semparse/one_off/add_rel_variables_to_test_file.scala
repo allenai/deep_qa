@@ -6,7 +6,7 @@ import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 class TestJsonAugmenter {
   implicit val formats = DefaultFormats

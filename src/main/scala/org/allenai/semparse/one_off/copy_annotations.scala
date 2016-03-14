@@ -1,6 +1,6 @@
 package org.allenai.semparse.one_off
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 import org.json4s._
 import org.json4s.JsonDSL._
