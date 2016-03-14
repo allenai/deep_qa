@@ -2,7 +2,7 @@ package org.allenai.semparse
 
 import java.io.File
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 object Trainer {
 

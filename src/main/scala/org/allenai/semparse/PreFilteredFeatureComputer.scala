@@ -8,8 +8,8 @@ import edu.cmu.ml.rtw.pra.features.NodePairSubgraphFeatureGenerator
 import edu.cmu.ml.rtw.pra.features.NodeSubgraphFeatureGenerator
 import edu.cmu.ml.rtw.pra.graphs.Graph
 import edu.cmu.ml.rtw.pra.graphs.Graph
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
-import edu.cmu.ml.rtw.users.matt.util.SpecFileReader
+import com.mattg.util.FileUtil
+import com.mattg.util.SpecFileReader
 
 import org.json4s._
 

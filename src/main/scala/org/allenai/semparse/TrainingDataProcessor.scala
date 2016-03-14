@@ -2,7 +2,7 @@ package org.allenai.semparse
 
 import collection.mutable
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 import org.json4s.DefaultFormats
 import org.json4s.JValue

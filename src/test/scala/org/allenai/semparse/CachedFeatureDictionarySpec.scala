@@ -4,7 +4,7 @@ import org.scalatest._
 
 import com.jayantkrish.jklol.tensor.SparseTensor
 
-import edu.cmu.ml.rtw.users.matt.util.FakeFileUtil
+import com.mattg.util.FakeFileUtil
 
 class CachedFeatureDictionarySpec extends FlatSpecLike with Matchers {
 
