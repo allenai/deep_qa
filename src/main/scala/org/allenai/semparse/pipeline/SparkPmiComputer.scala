@@ -3,7 +3,7 @@ package org.allenai.semparse.one_off
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 object SparkPmiComputer {
 

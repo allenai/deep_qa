@@ -6,7 +6,7 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
 
-import edu.cmu.ml.rtw.users.matt.util.FakeFileUtil
+import com.mattg.util.FakeFileUtil
 
 class TestJsonAugmenterSpec extends FlatSpecLike with Matchers {
   implicit val formats = DefaultFormats

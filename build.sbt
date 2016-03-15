@@ -19,7 +19,7 @@ libraryDependencies ++= Seq(
   "org.json4s" %% "json4s-native" % "3.2.11",
   "com.jayantkrish.jklol" %% "jklol" % "1.1-SNAPSHOT",
   "edu.cmu.ml.rtw" %%  "pra" % "3.2.1-SNAPSHOT",
-  "edu.cmu.ml.rtw" %%  "matt-util" % "1.2.6-SNAPSHOT",
+  "edu.cmu.ml.rtw" %%  "matt-util" % "2.1-SNAPSHOT",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 )
 

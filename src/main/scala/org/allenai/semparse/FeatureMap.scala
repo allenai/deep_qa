@@ -1,6 +1,6 @@
 package org.allenai.semparse
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 class FeatureMap(featureFile: String, fileUtil: FileUtil = new FileUtil) {
   lazy val features: Map[String, Seq[String]] = fileUtil.readMapListFromTsvFile(featureFile)

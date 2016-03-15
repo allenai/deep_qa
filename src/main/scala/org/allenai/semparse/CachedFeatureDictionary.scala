@@ -5,7 +5,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder
 import com.jayantkrish.jklol.tensor.Tensor
 import com.jayantkrish.jklol.tensor.TensorBuilder
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 import collection.mutable
 import collection.JavaConverters._

@@ -30,7 +30,7 @@ import edu.uw.easysrl.syntax.tagger.TaggerEmbeddings
 import edu.uw.easysrl.syntax.training.PipelineTrainer.LabelClassifier
 import edu.uw.easysrl.util.Util
 
-import edu.cmu.ml.rtw.users.matt.util.JsonHelper
+import com.mattg.util.JsonHelper
 
 import org.json4s.JValue
 

@@ -2,7 +2,7 @@ package org.allenai.semparse
 
 import org.scalatest._
 
-import edu.cmu.ml.rtw.users.matt.util.FakeFileUtil
+import com.mattg.util.FakeFileUtil
 
 class EvaluationSpec extends FlatSpecLike with Matchers {
 
