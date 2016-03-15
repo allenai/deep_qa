@@ -238,41 +238,57 @@ closely related work.
 \label{sec:jayant-semparse}
 
 Krishnamurthy and
-Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} introduced a
-technique for learning semantic parsers with open predicate vocabularies
-(hereafter referred to as K\&M).  Instead of mapping text to Freebase queries,
-they applied the matrix factorization semantics used by Riedel et
-al.~\shortcite{riedel-2013-mf-universal-schema} in knowledge base completion to
-the task of learning predicate semantics in a semantic parser.  This method
-assigns truth values to instantiated predicates like
-\predicate{architect}(\entity{AndreaPalladio}) in a probabilistic database.
-The models K\&M use for the predicates and entities are essentially equivalent
-to modern techniques for constructing word embeddings, implicitly factorizing a
-cooccurrence matrix between categories and entities, and relations and entity
-pairs~\cite{levy-2014-w2v-as-mf}.  This implicit factorization has two sets of
-parameters: each predicate (category or relation) has a learned $k$-dimensional
-embedding $\theta$, and each entity and entity pair has a learned embedding
-$\phi$.  The probability assigned to a category instance $c(e)$ and relation
-instance $r(e_1, e_2)$ in the probabilistic database is given by:
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}
+introduced a technique for learning semantic parsers with open
+predicate vocabularies (hereafter referred to as K\&M). Instead of
+mapping text directly to Freebase queries, this method parses text to
+a surface logical form whose predicates are derived directly from the
+words in the text. Next, a distribution over denotations for each
+predicate is learned using a matrix factorization approach similar to
+that of Riedel et
+al.~\shortcite{riedel-2013-mf-universal-schema}. This distribution is
+concisely represented using a probabilistic database, which also
+enables efficient probabilistic execution of logical form queries.
+
+This method assigns a truth probability to a predicate instance such
+as \predicate{architect}(\entity{AndreaPalladio}) using probabilistic
+matrix factorization. This factorization has two sets of parameters:
+each category or relation has a learned $k$-dimensional embedding
+$\theta$, and each entity or entity pair has a learned embedding
+$\phi$. The probability assigned to a category instance $c(e)$ or
+relation instance $r(e_1, e_2)$ is given by:
 
 \begin{align*}
   P(c(e)) &= \sigma ( \theta_c^T \phi_e ) \\
   P(r(e_1, e_2)) &= \sigma ( \theta_r^T \phi_{(e_1, e_2)} )
 \end{align*}
 
-The probability of a predicate instance is the (sigmoided) inner product of the
-corresponding predicate and entity embeddings. Thus, predicates with nearby
-embeddings will have similar distributions over the entities in their
-denotation.  The model is trained using a ranking objective that learns to rank
-the observed entities for each query above unobserved entities.  The
-probabilistic database produced by these predicate models is then input to a
-reasoning system that can handle a subset of first-order logic.
+The probability of a predicate instance is the (sigmoided) inner
+product of the corresponding predicate and entity embeddings. Thus,
+predicates with nearby embeddings will have similar distributions over
+the entities in their denotation.
 
-In this paper, we use the system produced by K\&M, changing only the models of
-predicate semantics, as described in \secref{method}.  K\&M introduced several
-variations of their parser; in this work, we use their query ranking objective,
-as it had the best performance, and we evaluate the model they called
-``Factorization'', without ensembling it with a clustering baseline.
+The model is trained using a query ranking objective that learns to
+rank entities observed in the denotation of a logical form above
+unobserved entities. The training data consists of logical form /
+entity pairs $\{(\ell^i, e_^i)\}_{i=1}^n$ that are automatically
+derived from an entity-linked web corpus. Training optimizes the
+ranking objective function using AdaGrad, and produces the parameters
+$\theta$ and $\phi$ as output. Note that this approach is similar to
+modern techniques for constructing word embeddings in that it factors
+a cooccurrence matrix between predicates and
+entities~\cite{levy-2014-w2v-as-mf}. Given the trained predicate and
+entity parameters, the system is capable of efficiently computing the
+marginal probability that an entity is an element of a logical form's
+denotation using approximate inference algorithms for probabilistic
+databases.
+
+This paper extends K\&M by modifying the models of predicate semantics
+as described in \secref{method}. K\&M introduced several variations of
+their parser; in this work, we use their query ranking objective, as
+it had the best performance, and we compare against the model they
+called ``Factorization,'' without ensembling it with a corpus lookup
+baseline.
 
 \subsection{Subgraph feature extraction}
 
