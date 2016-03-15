@@ -10,12 +10,13 @@ import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue
 import com.jayantkrish.jklol.lisp.ConstantValue
 import com.jayantkrish.jklol.lisp.ConsValue
 import com.jayantkrish.jklol.lisp.{Environment => JEnv}
+import com.jayantkrish.jklol.lisp.EvalContext
 import com.jayantkrish.jklol.lisp.LispUtil
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder
 import com.jayantkrish.jklol.lisp.SpecAndParameters
 
 class CreateSfeFeatureComputer extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 1)
     val specFile = argumentValues.get(0).asInstanceOf[String]
     new SfeFeatureComputer(specFile)
@@ -23,7 +24,7 @@ class CreateSfeFeatureComputer extends AmbFunctionValue {
 }
 
 class DisplayParameters extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 1)
     val params = argumentValues.get(0).asInstanceOf[SpecAndParameters]
     val stats = params.getParameters()
@@ -33,7 +34,7 @@ class DisplayParameters extends AmbFunctionValue {
 }
 
 class FindRelatedEntities extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 2)
     val midRelations = ConsValue.consListToList(argumentValues.get(0))
     val featureComputer = argumentValues.get(1).asInstanceOf[SfeFeatureComputer]
@@ -46,6 +47,7 @@ class FindRelatedEntities extends AmbFunctionValue {
       (word, mid, isSource)
     })
 
+    println("Finding related entities")
     val relatedEntities = parsedMidRelations.flatMap {
       case (word, mid, isSource) => featureComputer.findRelatedEntities(word, mid, isSource)
     }
@@ -56,13 +58,14 @@ class FindRelatedEntities extends AmbFunctionValue {
       println("Found too many related entities, skipping")
       Array.empty
     } else {
+      println(s"Returning ${relatedEntities.size} related entities")
       relatedEntities.toArray
     }
   }
 }
 
 class GetCatWordFeatureList extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 2)
     val word = argumentValues.get(0).asInstanceOf[String]
     val featureComputer = argumentValues.get(1).asInstanceOf[SfeFeatureComputer]
@@ -73,7 +76,7 @@ class GetCatWordFeatureList extends AmbFunctionValue {
 }
 
 class GetRelWordFeatureList extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 2)
     val word = argumentValues.get(0).asInstanceOf[String]
     val featureComputer = argumentValues.get(1).asInstanceOf[SfeFeatureComputer]
@@ -84,7 +87,7 @@ class GetRelWordFeatureList extends AmbFunctionValue {
 }
 
 class GetEntityFeatures extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 3)
     val entity = argumentValues.get(0).asInstanceOf[String]
     val word = argumentValues.get(1).asInstanceOf[String]
@@ -95,7 +98,7 @@ class GetEntityFeatures extends AmbFunctionValue {
 
 
 class GetEntityFeatureDifference extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 4)
     val entity = argumentValues.get(0).asInstanceOf[String]
     val neg_entity = argumentValues.get(1).asInstanceOf[String]
@@ -109,7 +112,7 @@ class GetEntityFeatureDifference extends AmbFunctionValue {
 }
 
 class GetEntityPairFeatures extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 4)
     val entity1 = argumentValues.get(0).asInstanceOf[String]
     val entity2 = argumentValues.get(1).asInstanceOf[String]
@@ -122,7 +125,7 @@ class GetEntityPairFeatures extends AmbFunctionValue {
 
 
 class GetEntityPairFeatureDifference extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
     Preconditions.checkArgument(argumentValues.size() == 6)
     val entity1 = argumentValues.get(0).asInstanceOf[String]
     val entity2 = argumentValues.get(1).asInstanceOf[String]
@@ -138,10 +141,10 @@ class GetEntityPairFeatureDifference extends AmbFunctionValue {
 }
 
 class ParArrayMap extends AmbFunctionValue {
-  override def apply(argumentValues: JList[Object], env: JEnv, b: ParametricBfgBuilder) = {
+  override def apply(argumentValues: JList[Object], context: EvalContext, b: ParametricBfgBuilder) = {
     LispUtil.checkArgument(argumentValues.size() == 2)
     val function = argumentValues.get(0).asInstanceOf[AmbFunctionValue]
     val values = argumentValues.get(1).asInstanceOf[Array[Object]]
-    values.par.map(value => function(java.util.Arrays.asList(value), env, b)).seq.toArray
+    values.par.map(value => function(java.util.Arrays.asList(value), context, b)).seq.toArray
   }
 }

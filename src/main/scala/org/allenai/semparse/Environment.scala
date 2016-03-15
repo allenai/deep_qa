@@ -33,12 +33,12 @@ class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boole
   if (verbose) println("Loading initial environment")
   eval.eval(programExpression, environment, fgBuilder)
 
-  def evalulateSExpression(expressionText: String) = {
+  def evaluateSExpression(expressionText: String) = {
     val expression = parser.parse(expressionText)
     eval.eval(expression, environment, new ParametricBfgBuilder(true))
   }
 
-  def evalulateSExpression(expression: SExpression) = {
+  def evaluateSExpression(expression: SExpression) = {
     eval.eval(expression, environment, new ParametricBfgBuilder(true))
   }
 

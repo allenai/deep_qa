@@ -6,7 +6,7 @@ import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable
 
-import edu.cmu.ml.rtw.users.matt.util.FileUtil
+import com.mattg.util.FileUtil
 
 class TestJsonAugmenter {
   implicit val formats = DefaultFormats
@@ -73,7 +73,9 @@ object add_rel_variables_to_test_file {
   val prettyTestFile = "/home/mattg/clone/tacl2015-factorization/data/acl2016-test-augmented-pretty.json"
   val fileUtil = new FileUtil
 
-  def main(args: Array[String]) {
+  // The test files are now checked into the repo, and they have the stuff this script was meant to
+  // add.
+  def NOT_main(args: Array[String]) {
     val augmenter = new TestJsonAugmenter
     //val newLines = fileUtil.getLineIterator(testFile).map(augmenter.augmentLine).toSeq
     val json = parse(fileUtil.readLinesFromFile(testFile).mkString("\n"))

@@ -144,7 +144,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"police_commissioner_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05gt_s\"",
                         false
                     ]
@@ -152,7 +152,7 @@
                 "midsInQuery": [
                     "/m/05gt_s"
                 ],
-                "queryExpression": "(lambda (var609714) (and ((word-cat \"police\") \"/m/05gt_s\") ((word-cat \"commissioner\") \"/m/05gt_s\") ((word-rel \"police_commissioner_N/N\") var609714 \"/m/05gt_s\")))"
+                "queryExpression": "(lambda (var609714) (and ((word-cat \"police\") \"/m/05gt_s\") ((word-cat \"commissioner\") \"/m/05gt_s\") ((word-rel \"special:N/N\") var609714 \"/m/05gt_s\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -227,7 +227,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"police_commissioner_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02_286\"",
                         true
                     ]
@@ -235,7 +235,7 @@
                 "midsInQuery": [
                     "/m/02_286"
                 ],
-                "queryExpression": "(lambda (var134289) (and ((word-cat \"police\") var134289) ((word-cat \"commissioner\") var134289) ((word-rel \"police_commissioner_N/N\") \"/m/02_286\" var134289)))"
+                "queryExpression": "(lambda (var134289) (and ((word-cat \"police\") var134289) ((word-cat \"commissioner\") var134289) ((word-rel \"special:N/N\") \"/m/02_286\" var134289)))"
             }
         ],
         "sentence": "New York City Police Commissioner Ray Kelly"
@@ -329,7 +329,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"supermarket_chain_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0q76g\"",
                         true
                     ]
@@ -337,7 +337,7 @@
                 "midsInQuery": [
                     "/m/0q76g"
                 ],
-                "queryExpression": "(lambda (var644711) (and ((word-cat \"supermarket\") var644711) ((word-cat \"chain\") var644711) ((word-rel \"supermarket_chain_N/N\") \"/m/0q76g\" var644711)))"
+                "queryExpression": "(lambda (var644711) (and ((word-cat \"supermarket\") var644711) ((word-cat \"chain\") var644711) ((word-rel \"special:N/N\") \"/m/0q76g\" var644711)))"
             },
             {
                 "correctAnswerIds": [],
@@ -347,7 +347,7 @@
                 "incorrectAnswerIds": [],
                 "midRelationsInQuery": [
                     [
-                        "\"supermarket_chain_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02vg5b\"",
                         false
                     ]
@@ -355,7 +355,7 @@
                 "midsInQuery": [
                     "/m/02vg5b"
                 ],
-                "queryExpression": "(lambda (var286253) (and ((word-cat \"supermarket\") \"/m/02vg5b\") ((word-cat \"chain\") \"/m/02vg5b\") ((word-rel \"supermarket_chain_N/N\") var286253 \"/m/02vg5b\")))"
+                "queryExpression": "(lambda (var286253) (and ((word-cat \"supermarket\") \"/m/02vg5b\") ((word-cat \"chain\") \"/m/02vg5b\") ((word-rel \"special:N/N\") var286253 \"/m/02vg5b\")))"
             }
         ],
         "sentence": "the Midwest supermarket chain Hy-Vee Inc."
@@ -467,7 +467,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"front-runner_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/07wbk\"",
                         true
                     ]
@@ -475,7 +475,7 @@
                 "midsInQuery": [
                     "/m/07wbk"
                 ],
-                "queryExpression": "(lambda (var366336) (and ((word-cat \"front-runner\") var366336) ((word-rel \"front-runner_N/N\") \"/m/07wbk\" var366336)))"
+                "queryExpression": "(lambda (var366336) (and ((word-cat \"front-runner\") var366336) ((word-rel \"special:N/N\") \"/m/07wbk\" var366336)))"
             },
             {
                 "correctAnswerIds": [
@@ -533,7 +533,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"front-runner_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/06gn7\"",
                         false
                     ]
@@ -541,7 +541,7 @@
                 "midsInQuery": [
                     "/m/06gn7"
                 ],
-                "queryExpression": "(lambda (var76454) (and ((word-cat \"front-runner\") \"/m/06gn7\") ((word-rel \"front-runner_N/N\") var76454 \"/m/06gn7\")))"
+                "queryExpression": "(lambda (var76454) (and ((word-cat \"front-runner\") \"/m/06gn7\") ((word-rel \"special:N/N\") var76454 \"/m/06gn7\")))"
             }
         ],
         "sentence": "Republican front-runner Rudolph Giuliani"
@@ -602,7 +602,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s\"",
+                        "\"'\"",
                         "\"/m/01_8w2\"",
                         true
                     ]
@@ -610,7 +610,7 @@
                 "midsInQuery": [
                     "/m/01_8w2"
                 ],
-                "queryExpression": "(lambda (var101933) (and ((word-cat \"the\") var101933) ((word-rel \"'s\") \"/m/01_8w2\" var101933)))"
+                "queryExpression": "(lambda (var101933) (and ((word-cat \"the\") var101933) ((word-rel \"'\") \"/m/01_8w2\" var101933)))"
             },
             {
                 "correctAnswerIds": [
@@ -657,7 +657,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s\"",
+                        "\"'\"",
                         "\"/m/01bqfl\"",
                         false
                     ]
@@ -665,7 +665,7 @@
                 "midsInQuery": [
                     "/m/01bqfl"
                 ],
-                "queryExpression": "(lambda (var617532) (and ((word-cat \"the\") \"/m/01bqfl\") ((word-rel \"'s\") var617532 \"/m/01bqfl\")))"
+                "queryExpression": "(lambda (var617532) (and ((word-cat \"the\") \"/m/01bqfl\") ((word-rel \"'\") var617532 \"/m/01bqfl\")))"
             }
         ],
         "sentence": "CBS ' The Early Show"
@@ -694,7 +694,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"affiliate_of\"",
+                        "\"of\"",
                         "\"/m/031p57\"",
                         true
                     ]
@@ -702,7 +702,7 @@
                 "midsInQuery": [
                     "/m/031p57"
                 ],
-                "queryExpression": "(lambda (var845384) (and ((word-cat \"affiliate\") \"/m/031p57\") ((word-rel \"affiliate_of\") \"/m/031p57\" var845384)))"
+                "queryExpression": "(lambda (var845384) (and ((word-cat \"affiliate\") \"/m/031p57\") ((word-rel \"of\") \"/m/031p57\" var845384)))"
             },
             {
                 "correctAnswerIds": [],
@@ -734,7 +734,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"affiliate_of\"",
+                        "\"of\"",
                         "\"/m/03lpp_\"",
                         false
                     ]
@@ -742,7 +742,7 @@
                 "midsInQuery": [
                     "/m/03lpp_"
                 ],
-                "queryExpression": "(lambda (var372660) (and ((word-cat \"affiliate\") var372660) ((word-rel \"affiliate_of\") var372660 \"/m/03lpp_\")))"
+                "queryExpression": "(lambda (var372660) (and ((word-cat \"affiliate\") var372660) ((word-rel \"of\") var372660 \"/m/03lpp_\")))"
             }
         ],
         "sentence": "the Harrisburg Senators , affiliate of the Washington Nationals"
@@ -809,7 +809,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"coach_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0jmdb\"",
                         true
                     ]
@@ -817,7 +817,7 @@
                 "midsInQuery": [
                     "/m/0jmdb"
                 ],
-                "queryExpression": "(lambda (var75142) (and ((word-cat \"coach\") var75142) ((word-rel \"coach_N/N\") \"/m/0jmdb\" var75142)))"
+                "queryExpression": "(lambda (var75142) (and ((word-cat \"coach\") var75142) ((word-rel \"special:N/N\") \"/m/0jmdb\" var75142)))"
             },
             {
                 "correctAnswerIds": [
@@ -846,7 +846,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"coach_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05jds0\"",
                         false
                     ]
@@ -854,7 +854,7 @@
                 "midsInQuery": [
                     "/m/05jds0"
                 ],
-                "queryExpression": "(lambda (var760156) (and ((word-cat \"coach\") \"/m/05jds0\") ((word-rel \"coach_N/N\") var760156 \"/m/05jds0\")))"
+                "queryExpression": "(lambda (var760156) (and ((word-cat \"coach\") \"/m/05jds0\") ((word-rel \"special:N/N\") var760156 \"/m/05jds0\")))"
             }
         ],
         "sentence": "Nuggets coach George Karl"
@@ -930,7 +930,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_financial_services_conglomerate\"",
+                        "\"'s\"",
                         "\"/m/025sytz\"",
                         false
                     ]
@@ -938,7 +938,7 @@
                 "midsInQuery": [
                     "/m/025sytz"
                 ],
-                "queryExpression": "(lambda (var465004) (and ((word-cat \"financial\") \"/m/025sytz\") ((word-cat \"services\") \"/m/025sytz\") ((word-cat \"conglomerate\") \"/m/025sytz\") ((word-rel \"'s_financial_services_conglomerate\") var465004 \"/m/025sytz\")))"
+                "queryExpression": "(lambda (var465004) (and ((word-cat \"financial\") \"/m/025sytz\") ((word-cat \"services\") \"/m/025sytz\") ((word-cat \"conglomerate\") \"/m/025sytz\") ((word-rel \"'s\") var465004 \"/m/025sytz\")))"
             },
             {
                 "correctAnswerIds": [
@@ -973,7 +973,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_financial_services_conglomerate\"",
+                        "\"'s\"",
                         "\"/m/02jw08\"",
                         true
                     ]
@@ -981,7 +981,7 @@
                 "midsInQuery": [
                     "/m/02jw08"
                 ],
-                "queryExpression": "(lambda (var954503) (and ((word-cat \"financial\") var954503) ((word-cat \"services\") var954503) ((word-cat \"conglomerate\") var954503) ((word-rel \"'s_financial_services_conglomerate\") \"/m/02jw08\" var954503)))"
+                "queryExpression": "(lambda (var954503) (and ((word-cat \"financial\") var954503) ((word-cat \"services\") var954503) ((word-cat \"conglomerate\") var954503) ((word-rel \"'s\") \"/m/02jw08\" var954503)))"
             }
         ],
         "sentence": "Sandy Weill 's financial services conglomerate Travelers Group"
@@ -1021,7 +1021,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"run_by\"",
+                        "\"by\"",
                         "\"/m/014cnw\"",
                         true
                     ]
@@ -1029,7 +1029,7 @@
                 "midsInQuery": [
                     "/m/014cnw"
                 ],
-                "queryExpression": "(lambda (var69843) (and ((word-cat \"o.t.o.\") \"/m/014cnw\") ((word-cat \"magickal\") \"/m/014cnw\") ((word-cat \"order\") \"/m/014cnw\") ((word-rel \"run_by\") \"/m/014cnw\" var69843)))"
+                "queryExpression": "(lambda (var69843) (and ((word-cat \"o.t.o.\") \"/m/014cnw\") ((word-cat \"magickal\") \"/m/014cnw\") ((word-cat \"order\") \"/m/014cnw\") ((word-cat \"run\") \"/m/014cnw\") ((word-rel \"by\") \"/m/014cnw\" var69843)))"
             },
             {
                 "correctAnswerIds": [],
@@ -1041,7 +1041,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"run_by\"",
+                        "\"by\"",
                         "\"/m/0mr2\"",
                         false
                     ]
@@ -1049,7 +1049,7 @@
                 "midsInQuery": [
                     "/m/0mr2"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"o.t.o.\") x) ((word-cat \"magickal\") x) ((word-cat \"order\") x) ((word-rel \"run_by\") x \"/m/0mr2\")))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"o.t.o.\") x) ((word-cat \"magickal\") x) ((word-cat \"order\") x) ((word-cat \"run\") x) ((word-rel \"by\") x \"/m/0mr2\")))"
             }
         ],
         "sentence": "The O.T.O. is the Ordo Templi Orientis , a Magickal order run by Crowley ."
@@ -1099,7 +1099,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/06tfy_\"",
                         false
                     ]
@@ -1107,7 +1107,7 @@
                 "midsInQuery": [
                     "/m/06tfy_"
                 ],
-                "queryExpression": "(lambda (var640903) (and ((word-cat \"fellow\") \"/m/06tfy_\") ((word-rel \"N/N\") var640903 \"/m/06tfy_\")))"
+                "queryExpression": "(lambda (var640903) (and ((word-cat \"fellow\") \"/m/06tfy_\") ((word-rel \"special:N/N\") var640903 \"/m/06tfy_\")))"
             },
             {
                 "correctAnswerIds": [
@@ -1189,7 +1189,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0d0x8\"",
                         true
                     ]
@@ -1197,7 +1197,7 @@
                 "midsInQuery": [
                     "/m/0d0x8"
                 ],
-                "queryExpression": "(lambda (var320062) (and ((word-cat \"fellow\") var320062) ((word-rel \"N/N\") \"/m/0d0x8\" var320062)))"
+                "queryExpression": "(lambda (var320062) (and ((word-cat \"fellow\") var320062) ((word-rel \"special:N/N\") \"/m/0d0x8\" var320062)))"
             }
         ],
         "sentence": "fellow Georgian Bert Lance"
@@ -1619,7 +1619,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"treasury_secretary_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/09c7w0\"",
                         true
                     ]
@@ -1627,7 +1627,7 @@
                 "midsInQuery": [
                     "/m/09c7w0"
                 ],
-                "queryExpression": "(lambda (var296152) (and ((word-cat \"board\") var296152) ((word-cat \"member\") var296152) ((word-cat \"former\") var296152) ((word-cat \"treasury\") var296152) ((word-cat \"secretary\") var296152) ((word-rel \"treasury_secretary_N/N\") \"/m/09c7w0\" var296152)))"
+                "queryExpression": "(lambda (var296152) (and ((word-cat \"board\") var296152) ((word-cat \"member\") var296152) ((word-cat \"former\") var296152) ((word-cat \"treasury\") var296152) ((word-cat \"secretary\") var296152) ((word-rel \"special:N/N\") \"/m/09c7w0\" var296152)))"
             },
             {
                 "correctAnswerIds": [
@@ -1676,7 +1676,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"treasury_secretary_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02wr9k\"",
                         false
                     ]
@@ -1684,7 +1684,7 @@
                 "midsInQuery": [
                     "/m/02wr9k"
                 ],
-                "queryExpression": "(lambda (var905502) (and ((word-cat \"board\") \"/m/02wr9k\") ((word-cat \"member\") \"/m/02wr9k\") ((word-cat \"former\") \"/m/02wr9k\") ((word-cat \"treasury\") \"/m/02wr9k\") ((word-cat \"secretary\") \"/m/02wr9k\") ((word-rel \"treasury_secretary_N/N\") var905502 \"/m/02wr9k\")))"
+                "queryExpression": "(lambda (var905502) (and ((word-cat \"board\") \"/m/02wr9k\") ((word-cat \"member\") \"/m/02wr9k\") ((word-cat \"former\") \"/m/02wr9k\") ((word-cat \"treasury\") \"/m/02wr9k\") ((word-cat \"secretary\") \"/m/02wr9k\") ((word-rel \"special:N/N\") var905502 \"/m/02wr9k\")))"
             }
         ],
         "sentence": "board member Robert Rubin , the former U.S. Treasury secretary ,"
@@ -1777,7 +1777,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"mayor_of\"",
+                        "\"of\"",
                         "\"/m/0_41f\"",
                         false
                     ]
@@ -1785,7 +1785,7 @@
                 "midsInQuery": [
                     "/m/0_41f"
                 ],
-                "queryExpression": "(lambda (var289551) (and ((word-cat \"republican\") var289551) ((word-cat \"challenger\") var289551) ((word-cat \"mayor\") var289551) ((word-rel \"mayor_of\") var289551 \"/m/0_41f\")))"
+                "queryExpression": "(lambda (var289551) (and ((word-cat \"republican\") var289551) ((word-cat \"challenger\") var289551) ((word-cat \"mayor\") var289551) ((word-rel \"of\") var289551 \"/m/0_41f\")))"
             },
             {
                 "correctAnswerIds": [
@@ -1806,7 +1806,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"mayor_of\"",
+                        "\"of\"",
                         "\"/m/03wcvjl\"",
                         true
                     ]
@@ -1814,7 +1814,7 @@
                 "midsInQuery": [
                     "/m/03wcvjl"
                 ],
-                "queryExpression": "(lambda (var58490) (and ((word-cat \"republican\") \"/m/03wcvjl\") ((word-cat \"challenger\") \"/m/03wcvjl\") ((word-cat \"mayor\") \"/m/03wcvjl\") ((word-rel \"mayor_of\") \"/m/03wcvjl\" var58490)))"
+                "queryExpression": "(lambda (var58490) (and ((word-cat \"republican\") \"/m/03wcvjl\") ((word-cat \"challenger\") \"/m/03wcvjl\") ((word-cat \"mayor\") \"/m/03wcvjl\") ((word-rel \"of\") \"/m/03wcvjl\" var58490)))"
             }
         ],
         "sentence": "Republican challenger Lou Barletta , the mayor of Hazleton ,"
@@ -1937,7 +1937,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"security_services_chief_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03spz\"",
                         true
                     ]
@@ -1945,7 +1945,7 @@
                 "midsInQuery": [
                     "/m/03spz"
                 ],
-                "queryExpression": "(lambda (var540340) (and ((word-cat \"security\") var540340) ((word-cat \"services\") var540340) ((word-cat \"chief\") var540340) ((word-rel \"security_services_chief_N/N\") \"/m/03spz\" var540340)))"
+                "queryExpression": "(lambda (var540340) (and ((word-cat \"security\") var540340) ((word-cat \"services\") var540340) ((word-cat \"chief\") var540340) ((word-rel \"special:N/N\") \"/m/03spz\" var540340)))"
             },
             {
                 "correctAnswerIds": [
@@ -1959,7 +1959,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"security_services_chief_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0f2_6s\"",
                         false
                     ]
@@ -1967,7 +1967,7 @@
                 "midsInQuery": [
                     "/m/0f2_6s"
                 ],
-                "queryExpression": "(lambda (var532703) (and ((word-cat \"security\") \"/m/0f2_6s\") ((word-cat \"services\") \"/m/0f2_6s\") ((word-cat \"chief\") \"/m/0f2_6s\") ((word-rel \"security_services_chief_N/N\") var532703 \"/m/0f2_6s\")))"
+                "queryExpression": "(lambda (var532703) (and ((word-cat \"security\") \"/m/0f2_6s\") ((word-cat \"services\") \"/m/0f2_6s\") ((word-cat \"chief\") \"/m/0f2_6s\") ((word-rel \"special:N/N\") var532703 \"/m/0f2_6s\")))"
             }
         ],
         "sentence": "Diskin , the Israeli security services chief ,"
@@ -2134,7 +2134,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_handmaid\"",
+                        "\"'s\"",
                         "\"/m/01xll2\"",
                         false
                     ]
@@ -2142,7 +2142,7 @@
                 "midsInQuery": [
                     "/m/01xll2"
                 ],
-                "queryExpression": "(lambda (var322330) (and ((word-cat \"handmaid\") \"/m/01xll2\") ((word-rel \"'s_handmaid\") var322330 \"/m/01xll2\")))"
+                "queryExpression": "(lambda (var322330) (and ((word-cat \"handmaid\") \"/m/01xll2\") ((word-rel \"'s\") var322330 \"/m/01xll2\")))"
             },
             {
                 "correctAnswerIds": [
@@ -2186,7 +2186,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_handmaid\"",
+                        "\"'s\"",
                         "\"/m/01x2ts\"",
                         true
                     ]
@@ -2194,7 +2194,7 @@
                 "midsInQuery": [
                     "/m/01x2ts"
                 ],
-                "queryExpression": "(lambda (var80958) (and ((word-cat \"handmaid\") var80958) ((word-rel \"'s_handmaid\") \"/m/01x2ts\" var80958)))"
+                "queryExpression": "(lambda (var80958) (and ((word-cat \"handmaid\") var80958) ((word-rel \"'s\") \"/m/01x2ts\" var80958)))"
             }
         ],
         "sentence": "Zilpah , Leah 's handmaid"
@@ -2355,7 +2355,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"union_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02_d59\"",
                         false
                     ]
@@ -2363,7 +2363,7 @@
                 "midsInQuery": [
                     "/m/02_d59"
                 ],
-                "queryExpression": "(lambda (var584529) (and ((word-cat \"union\") \"/m/02_d59\") ((word-rel \"union_N/N\") var584529 \"/m/02_d59\")))"
+                "queryExpression": "(lambda (var584529) (and ((word-cat \"union\") \"/m/02_d59\") ((word-rel \"special:N/N\") var584529 \"/m/02_d59\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -2454,7 +2454,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"union_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03spz\"",
                         true
                     ]
@@ -2462,7 +2462,7 @@
                 "midsInQuery": [
                     "/m/03spz"
                 ],
-                "queryExpression": "(lambda (var446301) (and ((word-cat \"union\") var446301) ((word-rel \"union_N/N\") \"/m/03spz\" var446301)))"
+                "queryExpression": "(lambda (var446301) (and ((word-cat \"union\") var446301) ((word-rel \"special:N/N\") \"/m/03spz\" var446301)))"
             }
         ],
         "sentence": "the Israeli union Histadrut"
@@ -2514,7 +2514,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"quarterback_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02zh95\"",
                         false
                     ]
@@ -2522,7 +2522,7 @@
                 "midsInQuery": [
                     "/m/02zh95"
                 ],
-                "queryExpression": "(lambda (var666327) (and ((word-cat \"quarterback\") \"/m/02zh95\") ((word-rel \"quarterback_N/N\") var666327 \"/m/02zh95\")))"
+                "queryExpression": "(lambda (var666327) (and ((word-cat \"quarterback\") \"/m/02zh95\") ((word-rel \"special:N/N\") var666327 \"/m/02zh95\")))"
             },
             {
                 "correctAnswerIds": [
@@ -2559,7 +2559,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"quarterback_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04vn5\"",
                         true
                     ]
@@ -2567,7 +2567,7 @@
                 "midsInQuery": [
                     "/m/04vn5"
                 ],
-                "queryExpression": "(lambda (var165098) (and ((word-cat \"quarterback\") var165098) ((word-rel \"quarterback_N/N\") \"/m/04vn5\" var165098)))"
+                "queryExpression": "(lambda (var165098) (and ((word-cat \"quarterback\") var165098) ((word-rel \"special:N/N\") \"/m/04vn5\" var165098)))"
             }
         ],
         "sentence": "Miami quarterback Chad Pennington"
@@ -2602,7 +2602,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"emperor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02bdwn\"",
                         false
                     ]
@@ -2610,7 +2610,7 @@
                 "midsInQuery": [
                     "/m/02bdwn"
                 ],
-                "queryExpression": "(lambda (var871514) (and ((word-cat \"emperor\") \"/m/02bdwn\") ((word-rel \"emperor_N/N\") var871514 \"/m/02bdwn\")))"
+                "queryExpression": "(lambda (var871514) (and ((word-cat \"emperor\") \"/m/02bdwn\") ((word-rel \"special:N/N\") var871514 \"/m/02bdwn\")))"
             },
             {
                 "correctAnswerIds": [
@@ -2644,7 +2644,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"emperor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03yp_\"",
                         true
                     ]
@@ -2652,7 +2652,7 @@
                 "midsInQuery": [
                     "/m/03yp_"
                 ],
-                "queryExpression": "(lambda (var145344) (and ((word-cat \"emperor\") var145344) ((word-rel \"emperor_N/N\") \"/m/03yp_\" var145344)))"
+                "queryExpression": "(lambda (var145344) (and ((word-cat \"emperor\") var145344) ((word-rel \"special:N/N\") \"/m/03yp_\" var145344)))"
             }
         ],
         "sentence": "the Inca emperor Atahualpa"
@@ -2690,7 +2690,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"network_of\"",
+                        "\"of\"",
                         "\"/m/0ljc_\"",
                         false
                     ]
@@ -2698,7 +2698,7 @@
                 "midsInQuery": [
                     "/m/0ljc_"
                 ],
-                "queryExpression": "(lambda (var465144) (and ((word-cat \"sister\") var465144) ((word-cat \"network\") var465144) ((word-rel \"network_of\") var465144 \"/m/0ljc_\")))"
+                "queryExpression": "(lambda (var465144) (and ((word-cat \"sister\") var465144) ((word-cat \"network\") var465144) ((word-rel \"of\") var465144 \"/m/0ljc_\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -2708,7 +2708,7 @@
                 "incorrectAnswerIds": [],
                 "midRelationsInQuery": [
                     [
-                        "\"network_of\"",
+                        "\"of\"",
                         "\"/m/043qmzl\"",
                         true
                     ]
@@ -2716,7 +2716,7 @@
                 "midsInQuery": [
                     "/m/043qmzl"
                 ],
-                "queryExpression": "(lambda (var622076) (and ((word-cat \"sister\") \"/m/043qmzl\") ((word-cat \"network\") \"/m/043qmzl\") ((word-rel \"network_of\") \"/m/043qmzl\" var622076)))"
+                "queryExpression": "(lambda (var622076) (and ((word-cat \"sister\") \"/m/043qmzl\") ((word-cat \"network\") \"/m/043qmzl\") ((word-rel \"of\") \"/m/043qmzl\" var622076)))"
             }
         ],
         "sentence": "Boomerang , the sister network of Cartoon Network ,"
@@ -2765,7 +2765,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"anchor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01w_10\"",
                         false
                     ]
@@ -2773,7 +2773,7 @@
                 "midsInQuery": [
                     "/m/01w_10"
                 ],
-                "queryExpression": "(lambda (var637251) (and ((word-cat \"anchor\") \"/m/01w_10\") ((word-rel \"anchor_N/N\") var637251 \"/m/01w_10\")))"
+                "queryExpression": "(lambda (var637251) (and ((word-cat \"anchor\") \"/m/01w_10\") ((word-rel \"special:N/N\") var637251 \"/m/01w_10\")))"
             },
             {
                 "correctAnswerIds": [
@@ -2818,7 +2818,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"anchor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01bndp\"",
                         true
                     ]
@@ -2826,7 +2826,7 @@
                 "midsInQuery": [
                     "/m/01bndp"
                 ],
-                "queryExpression": "(lambda (var393052) (and ((word-cat \"anchor\") var393052) ((word-rel \"anchor_N/N\") \"/m/01bndp\" var393052)))"
+                "queryExpression": "(lambda (var393052) (and ((word-cat \"anchor\") var393052) ((word-rel \"special:N/N\") \"/m/01bndp\" var393052)))"
             }
         ],
         "sentence": "CBS Evening News anchor Katie Couric"
@@ -2881,7 +2881,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"midfielder_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04pq80\"",
                         false
                     ]
@@ -2889,7 +2889,7 @@
                 "midsInQuery": [
                     "/m/04pq80"
                 ],
-                "queryExpression": "(lambda (var903838) (and ((word-cat \"midfielder\") \"/m/04pq80\") ((word-rel \"midfielder_N/N\") var903838 \"/m/04pq80\")))"
+                "queryExpression": "(lambda (var903838) (and ((word-cat \"midfielder\") \"/m/04pq80\") ((word-rel \"special:N/N\") var903838 \"/m/04pq80\")))"
             },
             {
                 "correctAnswerIds": [
@@ -2938,7 +2938,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"midfielder_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0xbm\"",
                         true
                     ]
@@ -2946,7 +2946,7 @@
                 "midsInQuery": [
                     "/m/0xbm"
                 ],
-                "queryExpression": "(lambda (var342119) (and ((word-cat \"midfielder\") var342119) ((word-rel \"midfielder_N/N\") \"/m/0xbm\" var342119)))"
+                "queryExpression": "(lambda (var342119) (and ((word-cat \"midfielder\") var342119) ((word-rel \"special:N/N\") \"/m/0xbm\" var342119)))"
             }
         ],
         "sentence": "Arsenal midfielder Mathieu Flamini"
@@ -2974,7 +2974,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0flsmt\"",
                         false
                     ]
@@ -2982,7 +2982,7 @@
                 "midsInQuery": [
                     "/m/0flsmt"
                 ],
-                "queryExpression": "(lambda (var659724) (and ((word-cat \"baguette\") \"/m/0flsmt\") ((word-rel \"N/N\") var659724 \"/m/0flsmt\")))"
+                "queryExpression": "(lambda (var659724) (and ((word-cat \"baguette\") \"/m/0flsmt\") ((word-rel \"special:N/N\") var659724 \"/m/0flsmt\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -3064,7 +3064,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0b90_r\"",
                         true
                     ]
@@ -3072,7 +3072,7 @@
                 "midsInQuery": [
                     "/m/0b90_r"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"baguette\") x) ((word-rel \"N/N\") \"/m/0b90_r\" x)))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"baguette\") x) ((word-rel \"special:N/N\") \"/m/0b90_r\" x)))"
             }
         ],
         "sentence": "A Bolillo is simply a Mexican baguette ."
@@ -3278,7 +3278,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_stadium\"",
+                        "\"'s\"",
                         "\"/m/01twt2\"",
                         false
                     ]
@@ -3286,7 +3286,7 @@
                 "midsInQuery": [
                     "/m/01twt2"
                 ],
-                "queryExpression": "(lambda (var409377) (and ((word-cat \"first\") \"/m/01twt2\") ((word-cat \"domed\") \"/m/01twt2\") ((word-cat \"stadium\") \"/m/01twt2\") ((word-rel \"'s_stadium\") var409377 \"/m/01twt2\")))"
+                "queryExpression": "(lambda (var409377) (and ((word-cat \"first\") \"/m/01twt2\") ((word-cat \"domed\") \"/m/01twt2\") ((word-cat \"stadium\") \"/m/01twt2\") ((word-rel \"'s\") var409377 \"/m/01twt2\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -3376,7 +3376,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_stadium\"",
+                        "\"'s\"",
                         "\"/m/09c7w0\"",
                         true
                     ]
@@ -3384,7 +3384,7 @@
                 "midsInQuery": [
                     "/m/09c7w0"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"first\") x) ((word-cat \"domed\") x) ((word-cat \"stadium\") x) ((word-rel \"'s_stadium\") \"/m/09c7w0\" x)))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"first\") x) ((word-cat \"domed\") x) ((word-cat \"stadium\") x) ((word-rel \"'s\") \"/m/09c7w0\" x)))"
             }
         ],
         "sentence": "The Astrodome was America 's first domed stadium"
@@ -3442,7 +3442,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"opponent_of\"",
+                        "\"of\"",
                         "\"/m/013846\"",
                         true
                     ]
@@ -3450,7 +3450,7 @@
                 "midsInQuery": [
                     "/m/013846"
                 ],
-                "queryExpression": "(lambda (var889296) (and ((word-cat \"outspoken\") \"/m/013846\") ((word-cat \"opponent\") \"/m/013846\") ((word-rel \"opponent_of\") \"/m/013846\" var889296)))"
+                "queryExpression": "(lambda (var889296) (and ((word-cat \"outspoken\") \"/m/013846\") ((word-cat \"opponent\") \"/m/013846\") ((word-rel \"of\") \"/m/013846\" var889296)))"
             },
             {
                 "correctAnswerIds": [],
@@ -3463,7 +3463,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"opponent_of\"",
+                        "\"of\"",
                         "\"/m/01myjy\"",
                         false
                     ]
@@ -3471,7 +3471,7 @@
                 "midsInQuery": [
                     "/m/01myjy"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"outspoken\") x) ((word-cat \"opponent\") x) ((word-rel \"opponent_of\") x \"/m/01myjy\")))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"outspoken\") x) ((word-cat \"opponent\") x) ((word-rel \"of\") x \"/m/01myjy\")))"
             }
         ],
         "sentence": "Garfield was an outspoken opponent of the HUAC"
@@ -3669,7 +3669,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"oil_company_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01z215\"",
                         true
                     ]
@@ -3677,7 +3677,7 @@
                 "midsInQuery": [
                     "/m/01z215"
                 ],
-                "queryExpression": "(lambda (var490490) (and ((word-cat \"oil\") var490490) ((word-cat \"company\") var490490) ((word-rel \"oil_company_N/N\") \"/m/01z215\" var490490)))"
+                "queryExpression": "(lambda (var490490) (and ((word-cat \"oil\") var490490) ((word-cat \"company\") var490490) ((word-rel \"special:N/N\") \"/m/01z215\" var490490)))"
             },
             {
                 "correctAnswerIds": [
@@ -3722,7 +3722,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"oil_company_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01qjg2\"",
                         false
                     ]
@@ -3730,7 +3730,7 @@
                 "midsInQuery": [
                     "/m/01qjg2"
                 ],
-                "queryExpression": "(lambda (var340974) (and ((word-cat \"oil\") \"/m/01qjg2\") ((word-cat \"company\") \"/m/01qjg2\") ((word-rel \"oil_company_N/N\") var340974 \"/m/01qjg2\")))"
+                "queryExpression": "(lambda (var340974) (and ((word-cat \"oil\") \"/m/01qjg2\") ((word-cat \"company\") \"/m/01qjg2\") ((word-rel \"special:N/N\") var340974 \"/m/01qjg2\")))"
             }
         ],
         "sentence": "Saudi oil company Aramco"
@@ -3769,7 +3769,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"honcho_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01wtd2\"",
                         false
                     ]
@@ -3777,7 +3777,7 @@
                 "midsInQuery": [
                     "/m/01wtd2"
                 ],
-                "queryExpression": "(lambda (var284202) (and ((word-cat \"honcho\") \"/m/01wtd2\") ((word-rel \"honcho_N/N\") var284202 \"/m/01wtd2\")))"
+                "queryExpression": "(lambda (var284202) (and ((word-cat \"honcho\") \"/m/01wtd2\") ((word-rel \"special:N/N\") var284202 \"/m/01wtd2\")))"
             },
             {
                 "correctAnswerIds": [
@@ -3853,7 +3853,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"honcho_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0f2wj\"",
                         true
                     ]
@@ -3861,7 +3861,7 @@
                 "midsInQuery": [
                     "/m/0f2wj"
                 ],
-                "queryExpression": "(lambda (var519939) (and ((word-cat \"honcho\") var519939) ((word-rel \"honcho_N/N\") \"/m/0f2wj\" var519939)))"
+                "queryExpression": "(lambda (var519939) (and ((word-cat \"honcho\") var519939) ((word-rel \"special:N/N\") \"/m/0f2wj\" var519939)))"
             }
         ],
         "sentence": "Hollywood honcho Sonny Werblin"
@@ -3935,7 +3935,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"leader_of\"",
+                        "\"of\"",
                         "\"/m/05rznz\"",
                         false
                     ]
@@ -3944,7 +3944,7 @@
                     "/m/05rznz",
                     "/m/06tw8"
                 ],
-                "queryExpression": "(lambda (var279990) (and ((word-cat \"leader\") var279990) ((word-cat \"troubled\") \"/m/05rznz\") ((word-rel \"'s\") \"/m/06tw8\" \"/m/05rznz\") ((word-rel \"leader_of\") var279990 \"/m/05rznz\")))"
+                "queryExpression": "(lambda (var279990) (and ((word-cat \"leader\") var279990) ((word-cat \"troubled\") \"/m/05rznz\") ((word-rel \"'s\") \"/m/06tw8\" \"/m/05rznz\") ((word-rel \"of\") var279990 \"/m/05rznz\")))"
             },
             {
                 "correctAnswerIds": [
@@ -4009,7 +4009,7 @@
                         true
                     ],
                     [
-                        "\"leader_of\"",
+                        "\"of\"",
                         "\"/m/076nrk\"",
                         true
                     ]
@@ -4018,7 +4018,7 @@
                     "/m/076nrk",
                     "/m/06tw8"
                 ],
-                "queryExpression": "(lambda (var565521) (and ((word-cat \"leader\") \"/m/076nrk\") ((word-cat \"troubled\") var565521) ((word-rel \"'s\") \"/m/06tw8\" var565521) ((word-rel \"leader_of\") \"/m/076nrk\" var565521)))"
+                "queryExpression": "(lambda (var565521) (and ((word-cat \"leader\") \"/m/076nrk\") ((word-cat \"troubled\") var565521) ((word-rel \"'s\") \"/m/06tw8\" var565521) ((word-rel \"of\") \"/m/076nrk\" var565521)))"
             },
             {
                 "correctAnswerIds": [
@@ -4081,7 +4081,7 @@
                     "/m/076nrk",
                     "/m/05rznz"
                 ],
-                "queryExpression": "(lambda (var688022) (and ((word-cat \"leader\") \"/m/076nrk\") ((word-cat \"troubled\") \"/m/05rznz\") ((word-rel \"'s\") var688022 \"/m/05rznz\") ((word-rel \"leader_of\") \"/m/076nrk\" \"/m/05rznz\")))"
+                "queryExpression": "(lambda (var688022) (and ((word-cat \"leader\") \"/m/076nrk\") ((word-cat \"troubled\") \"/m/05rznz\") ((word-rel \"'s\") var688022 \"/m/05rznz\") ((word-rel \"of\") \"/m/076nrk\" \"/m/05rznz\")))"
             }
         ],
         "sentence": "Salva Kiir , the leader of Sudan 's troubled South"
@@ -4107,7 +4107,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"member_of\"",
+                        "\"of\"",
                         "\"/m/07s8y4f\"",
                         true
                     ]
@@ -4115,7 +4115,7 @@
                 "midsInQuery": [
                     "/m/07s8y4f"
                 ],
-                "queryExpression": "(lambda (var902965) (and ((word-cat \"member\") \"/m/07s8y4f\") ((word-rel \"member_of\") \"/m/07s8y4f\" var902965)))"
+                "queryExpression": "(lambda (var902965) (and ((word-cat \"member\") \"/m/07s8y4f\") ((word-rel \"of\") \"/m/07s8y4f\" var902965)))"
             },
             {
                 "correctAnswerIds": [],
@@ -4139,7 +4139,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"member_of\"",
+                        "\"of\"",
                         "\"/m/048vz1\"",
                         false
                     ]
@@ -4147,7 +4147,7 @@
                 "midsInQuery": [
                     "/m/048vz1"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"member\") x) ((word-rel \"member_of\") x \"/m/048vz1\")))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"member\") x) ((word-rel \"of\") x \"/m/048vz1\")))"
             }
         ],
         "sentence": "George is a member of the Steelworkers ,"
@@ -4192,7 +4192,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_partner\"",
+                        "\"'\"",
                         "\"/m/043hg\"",
                         true
                     ]
@@ -4200,7 +4200,7 @@
                 "midsInQuery": [
                     "/m/043hg"
                 ],
-                "queryExpression": "(lambda (var993838) (and ((word-cat \"long-time\") var993838) ((word-cat \"partner\") var993838) ((word-rel \"'s_partner\") \"/m/043hg\" var993838)))"
+                "queryExpression": "(lambda (var993838) (and ((word-cat \"long-time\") var993838) ((word-cat \"partner\") var993838) ((word-rel \"'\") \"/m/043hg\" var993838)))"
             },
             {
                 "correctAnswerIds": [
@@ -4242,7 +4242,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_partner\"",
+                        "\"'\"",
                         "\"/m/0k03wb\"",
                         false
                     ]
@@ -4250,7 +4250,7 @@
                 "midsInQuery": [
                     "/m/0k03wb"
                 ],
-                "queryExpression": "(lambda (var81222) (and ((word-cat \"long-time\") \"/m/0k03wb\") ((word-cat \"partner\") \"/m/0k03wb\") ((word-rel \"'s_partner\") var81222 \"/m/0k03wb\")))"
+                "queryExpression": "(lambda (var81222) (and ((word-cat \"long-time\") \"/m/0k03wb\") ((word-cat \"partner\") \"/m/0k03wb\") ((word-rel \"'\") var81222 \"/m/0k03wb\")))"
             }
         ],
         "sentence": "Sayles ' long-time partner Maggie Renzi"
@@ -4302,7 +4302,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"tight_end_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0487_\"",
                         true
                     ]
@@ -4310,7 +4310,7 @@
                 "midsInQuery": [
                     "/m/0487_"
                 ],
-                "queryExpression": "(lambda (var785829) (and ((word-cat \"tight\") var785829) ((word-cat \"end\") var785829) ((word-rel \"tight_end_N/N\") \"/m/0487_\" var785829)))"
+                "queryExpression": "(lambda (var785829) (and ((word-cat \"tight\") var785829) ((word-cat \"end\") var785829) ((word-rel \"special:N/N\") \"/m/0487_\" var785829)))"
             },
             {
                 "correctAnswerIds": [],
@@ -4323,7 +4323,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"tight_end_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04j_jy\"",
                         false
                     ]
@@ -4331,7 +4331,7 @@
                 "midsInQuery": [
                     "/m/04j_jy"
                 ],
-                "queryExpression": "(lambda (var734741) (and ((word-cat \"tight\") \"/m/04j_jy\") ((word-cat \"end\") \"/m/04j_jy\") ((word-rel \"tight_end_N/N\") var734741 \"/m/04j_jy\")))"
+                "queryExpression": "(lambda (var734741) (and ((word-cat \"tight\") \"/m/04j_jy\") ((word-cat \"end\") \"/m/04j_jy\") ((word-rel \"special:N/N\") var734741 \"/m/04j_jy\")))"
             }
         ],
         "sentence": "Kansas City tight end Tony Gonzalez"
@@ -4405,7 +4405,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_love\"",
+                        "\"'s\"",
                         "\"/m/01dbwx\"",
                         false
                     ]
@@ -4413,7 +4413,7 @@
                 "midsInQuery": [
                     "/m/01dbwx"
                 ],
-                "queryExpression": "(lambda (var787002) (and ((word-cat \"confused\") \"/m/01dbwx\") ((word-cat \"love\") \"/m/01dbwx\") ((word-rel \"'s_love\") var787002 \"/m/01dbwx\")))"
+                "queryExpression": "(lambda (var787002) (and ((word-cat \"confused\") \"/m/01dbwx\") ((word-cat \"love\") \"/m/01dbwx\") ((word-rel \"'s\") var787002 \"/m/01dbwx\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -4465,7 +4465,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_love\"",
+                        "\"'s\"",
                         "\"/m/0261d9m\"",
                         true
                     ]
@@ -4473,7 +4473,7 @@
                 "midsInQuery": [
                     "/m/0261d9m"
                 ],
-                "queryExpression": "(lambda (var291407) (and ((word-cat \"confused\") var291407) ((word-cat \"love\") var291407) ((word-rel \"'s_love\") \"/m/0261d9m\" var291407)))"
+                "queryExpression": "(lambda (var291407) (and ((word-cat \"confused\") var291407) ((word-cat \"love\") var291407) ((word-rel \"'s\") \"/m/0261d9m\" var291407)))"
             }
         ],
         "sentence": "Ophelia , Hamlet 's confused love ,"
@@ -4629,7 +4629,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"icon_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/09_41f\"",
                         false
                     ]
@@ -4639,7 +4639,7 @@
                     "/m/09_41f",
                     "/m/025sq23"
                 ],
-                "queryExpression": "(lambda (var561746) (and ((word-rel \"N/N\") \"/m/03rt9\" \"/m/025sq23\") ((word-cat \"icon\") \"/m/09_41f\") ((word-rel \"icon_N/N\") var561746 \"/m/09_41f\") ((word-rel \"bought\") \"/m/025sq23\" \"/m/09_41f\")))"
+                "queryExpression": "(lambda (var561746) (and ((word-rel \"special:N/N\") \"/m/03rt9\" \"/m/025sq23\") ((word-cat \"icon\") \"/m/09_41f\") ((word-rel \"special:N/N\") var561746 \"/m/09_41f\") ((word-rel \"bought\") \"/m/025sq23\" \"/m/09_41f\")))"
             },
             {
                 "correctAnswerIds": [
@@ -4710,7 +4710,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"icon_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02jx1\"",
                         true
                     ],
@@ -4725,7 +4725,7 @@
                     "/m/02jx1",
                     "/m/025sq23"
                 ],
-                "queryExpression": "(lambda (var457844) (and ((word-rel \"N/N\") \"/m/03rt9\" \"/m/025sq23\") ((word-cat \"icon\") var457844) ((word-rel \"icon_N/N\") \"/m/02jx1\" var457844) ((word-rel \"bought\") \"/m/025sq23\" var457844)))"
+                "queryExpression": "(lambda (var457844) (and ((word-rel \"special:N/N\") \"/m/03rt9\" \"/m/025sq23\") ((word-cat \"icon\") var457844) ((word-rel \"special:N/N\") \"/m/02jx1\" var457844) ((word-rel \"bought\") \"/m/025sq23\" var457844)))"
             },
             {
                 "correctAnswerIds": [],
@@ -4794,7 +4794,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03rt9\"",
                         true
                     ],
@@ -4809,7 +4809,7 @@
                     "/m/02jx1",
                     "/m/09_41f"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-rel \"N/N\") \"/m/03rt9\" x) ((word-cat \"icon\") \"/m/09_41f\") ((word-rel \"icon_N/N\") \"/m/02jx1\" \"/m/09_41f\") ((word-rel \"bought\") x \"/m/09_41f\")))"
+                "queryExpression": "(lambda (x) (and ((word-rel \"special:N/N\") \"/m/03rt9\" x) ((word-cat \"icon\") \"/m/09_41f\") ((word-rel \"special:N/N\") \"/m/02jx1\" \"/m/09_41f\") ((word-rel \"bought\") x \"/m/09_41f\")))"
             }
         ],
         "sentence": "Irish Waterford bought the English icon Wedgewood ,"
@@ -4912,7 +4912,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"company_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0345h\"",
                         true
                     ]
@@ -4920,7 +4920,7 @@
                 "midsInQuery": [
                     "/m/0345h"
                 ],
-                "queryExpression": "(lambda (var400891) (and ((word-cat \"company\") var400891) ((word-rel \"company_N/N\") \"/m/0345h\" var400891)))"
+                "queryExpression": "(lambda (var400891) (and ((word-cat \"company\") var400891) ((word-rel \"special:N/N\") \"/m/0345h\" var400891)))"
             },
             {
                 "correctAnswerIds": [
@@ -4942,7 +4942,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"company_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/016l20\"",
                         false
                     ]
@@ -4950,7 +4950,7 @@
                 "midsInQuery": [
                     "/m/016l20"
                 ],
-                "queryExpression": "(lambda (var273943) (and ((word-cat \"company\") \"/m/016l20\") ((word-rel \"company_N/N\") var273943 \"/m/016l20\")))"
+                "queryExpression": "(lambda (var273943) (and ((word-cat \"company\") \"/m/016l20\") ((word-rel \"special:N/N\") var273943 \"/m/016l20\")))"
             }
         ],
         "sentence": "the German company Siemens"
@@ -5026,7 +5026,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"chief_executive_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03wpxhv\"",
                         false
                     ]
@@ -5034,7 +5034,7 @@
                 "midsInQuery": [
                     "/m/03wpxhv"
                 ],
-                "queryExpression": "(lambda (var625821) (and ((word-cat \"chief\") \"/m/03wpxhv\") ((word-cat \"executive\") \"/m/03wpxhv\") ((word-rel \"chief_executive_N/N\") var625821 \"/m/03wpxhv\")))"
+                "queryExpression": "(lambda (var625821) (and ((word-cat \"chief\") \"/m/03wpxhv\") ((word-cat \"executive\") \"/m/03wpxhv\") ((word-rel \"special:N/N\") var625821 \"/m/03wpxhv\")))"
             },
             {
                 "correctAnswerIds": [
@@ -5061,7 +5061,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"chief_executive_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/077w0b\"",
                         true
                     ]
@@ -5069,7 +5069,7 @@
                 "midsInQuery": [
                     "/m/077w0b"
                 ],
-                "queryExpression": "(lambda (var497200) (and ((word-cat \"chief\") var497200) ((word-cat \"executive\") var497200) ((word-rel \"chief_executive_N/N\") \"/m/077w0b\" var497200)))"
+                "queryExpression": "(lambda (var497200) (and ((word-cat \"chief\") var497200) ((word-cat \"executive\") var497200) ((word-rel \"special:N/N\") \"/m/077w0b\" var497200)))"
             }
         ],
         "sentence": "on Sprint chief executive Dan Hesse"
@@ -5129,7 +5129,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01_8w2\"",
                         true
                     ]
@@ -5137,7 +5137,7 @@
                 "midsInQuery": [
                     "/m/01_8w2"
                 ],
-                "queryExpression": "(lambda (var929794) (and ((word-cat \"correspondent\") var929794) ((word-rel \"correspondent_N/N\") \"/m/01_8w2\" var929794)))"
+                "queryExpression": "(lambda (var929794) (and ((word-cat \"correspondent\") var929794) ((word-rel \"special:N/N\") \"/m/01_8w2\" var929794)))"
             },
             {
                 "correctAnswerIds": [
@@ -5156,7 +5156,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/08796h\"",
                         false
                     ]
@@ -5164,7 +5164,7 @@
                 "midsInQuery": [
                     "/m/08796h"
                 ],
-                "queryExpression": "(lambda (var200963) (and ((word-cat \"correspondent\") \"/m/08796h\") ((word-rel \"correspondent_N/N\") var200963 \"/m/08796h\")))"
+                "queryExpression": "(lambda (var200963) (and ((word-cat \"correspondent\") \"/m/08796h\") ((word-rel \"special:N/N\") var200963 \"/m/08796h\")))"
             }
         ],
         "sentence": "CBS News correspondent Richard Roth"
@@ -5219,7 +5219,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_adviser\"",
+                        "\"'s\"",
                         "\"/m/026ms60\"",
                         false
                     ]
@@ -5227,7 +5227,7 @@
                 "midsInQuery": [
                     "/m/026ms60"
                 ],
-                "queryExpression": "(lambda (var859197) (and ((word-cat \"transition\") \"/m/026ms60\") ((word-cat \"intelligence\") \"/m/026ms60\") ((word-cat \"adviser\") \"/m/026ms60\") ((word-rel \"'s_adviser\") var859197 \"/m/026ms60\")))"
+                "queryExpression": "(lambda (var859197) (and ((word-cat \"transition\") \"/m/026ms60\") ((word-cat \"intelligence\") \"/m/026ms60\") ((word-cat \"adviser\") \"/m/026ms60\") ((word-rel \"'s\") var859197 \"/m/026ms60\")))"
             },
             {
                 "correctAnswerIds": [
@@ -5305,7 +5305,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_adviser\"",
+                        "\"'s\"",
                         "\"/m/02mjmr\"",
                         true
                     ]
@@ -5313,7 +5313,7 @@
                 "midsInQuery": [
                     "/m/02mjmr"
                 ],
-                "queryExpression": "(lambda (var63477) (and ((word-cat \"transition\") var63477) ((word-cat \"intelligence\") var63477) ((word-cat \"adviser\") var63477) ((word-rel \"'s_adviser\") \"/m/02mjmr\" var63477)))"
+                "queryExpression": "(lambda (var63477) (and ((word-cat \"transition\") var63477) ((word-cat \"intelligence\") var63477) ((word-cat \"adviser\") var63477) ((word-rel \"'s\") \"/m/02mjmr\" var63477)))"
             }
         ],
         "sentence": "John Brennan , Obama 's transition intelligence adviser ,"
@@ -5392,7 +5392,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"sen._N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01xcd1\"",
                         false
                     ]
@@ -5400,7 +5400,7 @@
                 "midsInQuery": [
                     "/m/01xcd1"
                 ],
-                "queryExpression": "(lambda (var457996) (and ((word-cat \"sen.\") \"/m/01xcd1\") ((word-rel \"sen._N/N\") var457996 \"/m/01xcd1\")))"
+                "queryExpression": "(lambda (var457996) (and ((word-cat \"sen.\") \"/m/01xcd1\") ((word-rel \"special:N/N\") var457996 \"/m/01xcd1\")))"
             },
             {
                 "correctAnswerIds": [
@@ -5472,7 +5472,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"sen._N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03v0t\"",
                         true
                     ]
@@ -5480,7 +5480,7 @@
                 "midsInQuery": [
                     "/m/03v0t"
                 ],
-                "queryExpression": "(lambda (var170049) (and ((word-cat \"sen.\") var170049) ((word-rel \"sen._N/N\") \"/m/03v0t\" var170049)))"
+                "queryExpression": "(lambda (var170049) (and ((word-cat \"sen.\") var170049) ((word-rel \"special:N/N\") \"/m/03v0t\" var170049)))"
             }
         ],
         "sentence": "Illinois Sen. Dick Durbin"
@@ -5556,7 +5556,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/036w8x\"",
                         true
                     ]
@@ -5564,7 +5564,7 @@
                 "midsInQuery": [
                     "/m/036w8x"
                 ],
-                "queryExpression": "(lambda (var573654) (and ((word-cat \"three-time\") var573654) ((word-rel \"N/N\") \"/m/036w8x\" var573654)))"
+                "queryExpression": "(lambda (var573654) (and ((word-cat \"three-time\") var573654) ((word-rel \"special:N/N\") \"/m/036w8x\" var573654)))"
             },
             {
                 "correctAnswerIds": [],
@@ -5584,7 +5584,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0f2ctg\"",
                         false
                     ]
@@ -5592,7 +5592,7 @@
                 "midsInQuery": [
                     "/m/0f2ctg"
                 ],
-                "queryExpression": "(lambda (var740574) (and ((word-cat \"three-time\") \"/m/0f2ctg\") ((word-rel \"N/N\") var740574 \"/m/0f2ctg\")))"
+                "queryExpression": "(lambda (var740574) (and ((word-cat \"three-time\") \"/m/0f2ctg\") ((word-rel \"special:N/N\") var740574 \"/m/0f2ctg\")))"
             }
         ],
         "sentence": "A three-time All-American , McCoy"
@@ -5685,7 +5685,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_machine\"",
+                        "\"'s\"",
                         "\"/m/0kc6x\"",
                         true
                     ]
@@ -5693,7 +5693,7 @@
                 "midsInQuery": [
                     "/m/0kc6x"
                 ],
-                "queryExpression": "(lambda (var544598) (and ((word-cat \"commentating\") var544598) ((word-cat \"machine\") var544598) ((word-rel \"'s_machine\") \"/m/0kc6x\" var544598)))"
+                "queryExpression": "(lambda (var544598) (and ((word-cat \"commentating\") var544598) ((word-cat \"machine\") var544598) ((word-rel \"'s\") \"/m/0kc6x\" var544598)))"
             },
             {
                 "correctAnswerIds": [
@@ -5732,7 +5732,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_machine\"",
+                        "\"'s\"",
                         "\"/m/05cb2t\"",
                         false
                     ]
@@ -5740,7 +5740,7 @@
                 "midsInQuery": [
                     "/m/05cb2t"
                 ],
-                "queryExpression": "(lambda (var570790) (and ((word-cat \"commentating\") \"/m/05cb2t\") ((word-cat \"machine\") \"/m/05cb2t\") ((word-rel \"'s_machine\") var570790 \"/m/05cb2t\")))"
+                "queryExpression": "(lambda (var570790) (and ((word-cat \"commentating\") \"/m/05cb2t\") ((word-cat \"machine\") \"/m/05cb2t\") ((word-rel \"'s\") var570790 \"/m/05cb2t\")))"
             }
         ],
         "sentence": "ESPN 's commentating machine Skip Bayless"
@@ -5972,7 +5972,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/026kgdc\"",
                         false
                     ]
@@ -5981,7 +5981,7 @@
                     "/m/026kgdc",
                     "/m/081sq"
                 ],
-                "queryExpression": "(lambda (var135073) (and ((word-cat \"correspondent\") \"/m/026kgdc\") ((word-rel \"correspondent_N/N\") \"/m/081sq\" \"/m/026kgdc\") ((word-rel \"correspondent_N/N\") var135073 \"/m/026kgdc\")))"
+                "queryExpression": "(lambda (var135073) (and ((word-cat \"correspondent\") \"/m/026kgdc\") ((word-rel \"special:N/N\") \"/m/081sq\" \"/m/026kgdc\") ((word-rel \"special:N/N\") var135073 \"/m/026kgdc\")))"
             },
             {
                 "correctAnswerIds": [
@@ -6045,12 +6045,12 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/081sq\"",
                         true
                     ],
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01_8w2\"",
                         true
                     ]
@@ -6059,7 +6059,7 @@
                     "/m/01_8w2",
                     "/m/081sq"
                 ],
-                "queryExpression": "(lambda (var483999) (and ((word-cat \"correspondent\") var483999) ((word-rel \"correspondent_N/N\") \"/m/081sq\" var483999) ((word-rel \"correspondent_N/N\") \"/m/01_8w2\" var483999)))"
+                "queryExpression": "(lambda (var483999) (and ((word-cat \"correspondent\") var483999) ((word-rel \"special:N/N\") \"/m/081sq\" var483999) ((word-rel \"special:N/N\") \"/m/01_8w2\" var483999)))"
             },
             {
                 "correctAnswerIds": [
@@ -6125,7 +6125,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/026kgdc\"",
                         false
                     ]
@@ -6134,7 +6134,7 @@
                     "/m/01_8w2",
                     "/m/026kgdc"
                 ],
-                "queryExpression": "(lambda (var754245) (and ((word-cat \"correspondent\") \"/m/026kgdc\") ((word-rel \"correspondent_N/N\") var754245 \"/m/026kgdc\") ((word-rel \"correspondent_N/N\") \"/m/01_8w2\" \"/m/026kgdc\")))"
+                "queryExpression": "(lambda (var754245) (and ((word-cat \"correspondent\") \"/m/026kgdc\") ((word-rel \"special:N/N\") var754245 \"/m/026kgdc\") ((word-rel \"special:N/N\") \"/m/01_8w2\" \"/m/026kgdc\")))"
             }
         ],
         "sentence": "CBS News White House correspondent Chip Reid"
@@ -6223,7 +6223,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"pilot_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02rjqfl\"",
                         true
                     ],
@@ -6237,7 +6237,7 @@
                     "/m/02rjqfl",
                     "/m/09b6zr"
                 ],
-                "queryExpression": "(lambda (var331899) (and ((word-cat \"onetime\") var331899) ((word-cat \"pilot\") var331899) ((word-rel \"pilot_N/N\") \"/m/02rjqfl\" var331899) ((word-rel \"commended\") \"/m/09b6zr\" var331899)))"
+                "queryExpression": "(lambda (var331899) (and ((word-cat \"onetime\") var331899) ((word-cat \"pilot\") var331899) ((word-rel \"special:N/N\") \"/m/02rjqfl\" var331899) ((word-rel \"commended\") \"/m/09b6zr\" var331899)))"
             },
             {
                 "correctAnswerIds": [
@@ -6309,7 +6309,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"pilot_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05bfczx\"",
                         false
                     ]
@@ -6318,7 +6318,7 @@
                     "/m/05bfczx",
                     "/m/09b6zr"
                 ],
-                "queryExpression": "(lambda (var465598) (and ((word-cat \"onetime\") \"/m/05bfczx\") ((word-cat \"pilot\") \"/m/05bfczx\") ((word-rel \"pilot_N/N\") var465598 \"/m/05bfczx\") ((word-rel \"commended\") \"/m/09b6zr\" \"/m/05bfczx\")))"
+                "queryExpression": "(lambda (var465598) (and ((word-cat \"onetime\") \"/m/05bfczx\") ((word-cat \"pilot\") \"/m/05bfczx\") ((word-rel \"special:N/N\") var465598 \"/m/05bfczx\") ((word-rel \"commended\") \"/m/09b6zr\" \"/m/05bfczx\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -6400,7 +6400,7 @@
                     "/m/05bfczx",
                     "/m/02rjqfl"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"onetime\") \"/m/05bfczx\") ((word-cat \"pilot\") \"/m/05bfczx\") ((word-rel \"pilot_N/N\") \"/m/02rjqfl\" \"/m/05bfczx\") ((word-rel \"commended\") x \"/m/05bfczx\")))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"onetime\") \"/m/05bfczx\") ((word-cat \"pilot\") \"/m/05bfczx\") ((word-rel \"special:N/N\") \"/m/02rjqfl\" \"/m/05bfczx\") ((word-rel \"commended\") x \"/m/05bfczx\")))"
             }
         ],
         "sentence": "Bush also commended Sullenberger , a onetime Air Force pilot ,"
@@ -6619,7 +6619,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"spokesman_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/081sq\"",
                         true
                     ]
@@ -6627,7 +6627,7 @@
                 "midsInQuery": [
                     "/m/081sq"
                 ],
-                "queryExpression": "(lambda (var769725) (and ((word-cat \"spokesman\") var769725) ((word-rel \"spokesman_N/N\") \"/m/081sq\" var769725)))"
+                "queryExpression": "(lambda (var769725) (and ((word-cat \"spokesman\") var769725) ((word-rel \"special:N/N\") \"/m/081sq\" var769725)))"
             },
             {
                 "correctAnswerIds": [
@@ -6662,7 +6662,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"spokesman_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01nq7q\"",
                         false
                     ]
@@ -6670,7 +6670,7 @@
                 "midsInQuery": [
                     "/m/01nq7q"
                 ],
-                "queryExpression": "(lambda (var793492) (and ((word-cat \"spokesman\") \"/m/01nq7q\") ((word-rel \"spokesman_N/N\") var793492 \"/m/01nq7q\")))"
+                "queryExpression": "(lambda (var793492) (and ((word-cat \"spokesman\") \"/m/01nq7q\") ((word-rel \"special:N/N\") var793492 \"/m/01nq7q\")))"
             }
         ],
         "sentence": "White House spokesman Scott McClellan"
@@ -6764,7 +6764,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_president\"",
+                        "\"'s\"",
                         "\"/m/0157m\"",
                         true
                     ]
@@ -6772,7 +6772,7 @@
                 "midsInQuery": [
                     "/m/0157m"
                 ],
-                "queryExpression": "(lambda (var495942) (and ((word-cat \"vice\") var495942) ((word-cat \"president\") var495942) ((word-rel \"'s_president\") \"/m/0157m\" var495942) ))"
+                "queryExpression": "(lambda (var495942) (and ((word-cat \"vice\") var495942) ((word-cat \"president\") var495942) ((word-rel \"'s\") \"/m/0157m\" var495942) ))"
             },
             {
                 "correctAnswerIds": [
@@ -6823,7 +6823,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_president\"",
+                        "\"'s\"",
                         "\"/m/0d05fv\"",
                         false
                     ]
@@ -6831,7 +6831,7 @@
                 "midsInQuery": [
                     "/m/0d05fv"
                 ],
-                "queryExpression": "(lambda (var941159) (and ((word-cat \"vice\") \"/m/0d05fv\") ((word-cat \"president\") \"/m/0d05fv\") ((word-rel \"'s_president\") var941159 \"/m/0d05fv\") ))"
+                "queryExpression": "(lambda (var941159) (and ((word-cat \"vice\") \"/m/0d05fv\") ((word-cat \"president\") \"/m/0d05fv\") ((word-rel \"'s\") var941159 \"/m/0d05fv\") ))"
             }
         ],
         "sentence": "Clinton 's vice president , Al Gore"
@@ -6889,7 +6889,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"representative_in\"",
+                        "\"in\"",
                         "\"/m/064lp7c\"",
                         true
                     ]
@@ -6898,7 +6898,7 @@
                     "/m/064lp7c",
                     "/m/03m6j"
                 ],
-                "queryExpression": "(lambda (var986921) (and ((word-cat \"representative\") \"/m/064lp7c\") ((word-rel \"representative_N/N\") \"/m/03m6j\" \"/m/064lp7c\") ((word-rel \"representative_in\") \"/m/064lp7c\" var986921)))"
+                "queryExpression": "(lambda (var986921) (and ((word-cat \"representative\") \"/m/064lp7c\") ((word-rel \"special:N/N\") \"/m/03m6j\" \"/m/064lp7c\") ((word-rel \"in\") \"/m/064lp7c\" var986921)))"
             },
             {
                 "correctAnswerIds": [],
@@ -6972,12 +6972,12 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"representative_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03m6j\"",
                         true
                     ],
                     [
-                        "\"representative_in\"",
+                        "\"in\"",
                         "\"/m/04hqz\"",
                         false
                     ]
@@ -6986,7 +6986,7 @@
                     "/m/04hqz",
                     "/m/03m6j"
                 ],
-                "queryExpression": "(lambda (var260684) (and ((word-cat \"representative\") var260684) ((word-rel \"representative_N/N\") \"/m/03m6j\" var260684) ((word-rel \"representative_in\") var260684 \"/m/04hqz\")))"
+                "queryExpression": "(lambda (var260684) (and ((word-cat \"representative\") var260684) ((word-rel \"special:N/N\") \"/m/03m6j\" var260684) ((word-rel \"in\") var260684 \"/m/04hqz\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -7027,7 +7027,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"representative_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/064lp7c\"",
                         false
                     ]
@@ -7036,7 +7036,7 @@
                     "/m/064lp7c",
                     "/m/04hqz"
                 ],
-                "queryExpression": "(lambda (var537718) (and ((word-cat \"representative\") \"/m/064lp7c\") ((word-rel \"representative_N/N\") var537718 \"/m/064lp7c\") ((word-rel \"representative_in\") \"/m/064lp7c\" \"/m/04hqz\")))"
+                "queryExpression": "(lambda (var537718) (and ((word-cat \"representative\") \"/m/064lp7c\") ((word-rel \"special:N/N\") var537718 \"/m/064lp7c\") ((word-rel \"in\") \"/m/064lp7c\" \"/m/04hqz\")))"
             }
         ],
         "sentence": "Osama Hamdan , the Hamas representative in Lebanon ,"
@@ -7145,7 +7145,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/09b6zr\"",
                         false
                     ]
@@ -7153,7 +7153,7 @@
                 "midsInQuery": [
                     "/m/09b6zr"
                 ],
-                "queryExpression": "(lambda (var536168) (and ((word-cat \"president\") \"/m/09b6zr\") ((word-rel \"president_N/N\") var536168 \"/m/09b6zr\")))"
+                "queryExpression": "(lambda (var536168) (and ((word-cat \"president\") \"/m/09b6zr\") ((word-rel \"special:N/N\") var536168 \"/m/09b6zr\")))"
             },
             {
                 "correctAnswerIds": [
@@ -7212,7 +7212,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/09c7w0\"",
                         true
                     ]
@@ -7220,7 +7220,7 @@
                 "midsInQuery": [
                     "/m/09c7w0"
                 ],
-                "queryExpression": "(lambda (var235218) (and ((word-cat \"president\") var235218) ((word-rel \"president_N/N\") \"/m/09c7w0\" var235218)))"
+                "queryExpression": "(lambda (var235218) (and ((word-cat \"president\") var235218) ((word-rel \"special:N/N\") \"/m/09c7w0\" var235218)))"
             }
         ],
         "sentence": "US President George W. Bush"
@@ -7423,7 +7423,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"championships_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0gh43\"",
                         true
                     ]
@@ -7431,7 +7431,7 @@
                 "midsInQuery": [
                     "/m/0gh43"
                 ],
-                "queryExpression": "(lambda (var496020) (and ((word-cat \"division\") var496020) ((word-cat \"basketball\") var496020) ((word-cat \"championships\") var496020) ((word-rel \"championships_N/N\") \"/m/0gh43\" var496020)))"
+                "queryExpression": "(lambda (var496020) (and ((word-cat \"division\") var496020) ((word-cat \"basketball\") var496020) ((word-cat \"championships\") var496020) ((word-rel \"special:N/N\") \"/m/0gh43\" var496020)))"
             },
             {
                 "correctAnswerIds": [
@@ -7491,7 +7491,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"championships_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02jp2w\"",
                         false
                     ]
@@ -7499,7 +7499,7 @@
                 "midsInQuery": [
                     "/m/02jp2w"
                 ],
-                "queryExpression": "(lambda (var97999) (and ((word-cat \"division\") \"/m/02jp2w\") ((word-cat \"basketball\") \"/m/02jp2w\") ((word-cat \"championships\") \"/m/02jp2w\") ((word-rel \"championships_N/N\") var97999 \"/m/02jp2w\")))"
+                "queryExpression": "(lambda (var97999) (and ((word-cat \"division\") \"/m/02jp2w\") ((word-cat \"basketball\") \"/m/02jp2w\") ((word-cat \"championships\") \"/m/02jp2w\") ((word-rel \"special:N/N\") var97999 \"/m/02jp2w\")))"
             }
         ],
         "sentence": "March Madness , the NCAA Division Basketball Championships"
@@ -7571,7 +7571,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02vk52z\"",
                         true
                     ]
@@ -7579,7 +7579,7 @@
                 "midsInQuery": [
                     "/m/02vk52z"
                 ],
-                "queryExpression": "(lambda (var222340) (and ((word-cat \"president\") var222340) ((word-rel \"president_N/N\") \"/m/02vk52z\" var222340)))"
+                "queryExpression": "(lambda (var222340) (and ((word-cat \"president\") var222340) ((word-rel \"special:N/N\") \"/m/02vk52z\" var222340)))"
             },
             {
                 "correctAnswerIds": [
@@ -7596,7 +7596,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03xv7z\"",
                         false
                     ]
@@ -7687,7 +7687,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01html\"",
                         false
                     ]
@@ -7695,7 +7695,7 @@
                 "midsInQuery": [
                     "/m/01html"
                 ],
-                "queryExpression": "(lambda (var478012) (and ((word-cat \"president\") \"/m/01html\") ((word-rel \"president_N/N\") var478012 \"/m/01html\")))"
+                "queryExpression": "(lambda (var478012) (and ((word-cat \"president\") \"/m/01html\") ((word-rel \"special:N/N\") var478012 \"/m/01html\")))"
             },
             {
                 "correctAnswerIds": [
@@ -7760,7 +7760,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0604m\"",
                         true
                     ]
@@ -7768,7 +7768,7 @@
                 "midsInQuery": [
                     "/m/0604m"
                 ],
-                "queryExpression": "(lambda (var702686) (and ((word-cat \"president\") var702686) ((word-rel \"president_N/N\") \"/m/0604m\" var702686)))"
+                "queryExpression": "(lambda (var702686) (and ((word-cat \"president\") var702686) ((word-rel \"special:N/N\") \"/m/0604m\" var702686)))"
             }
         ],
         "sentence": "to Palestinian Authority President Mahmoud Abbas"
@@ -7819,7 +7819,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"prog-rock_trio_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01t_xp_\"",
                         false
                     ]
@@ -7827,7 +7827,7 @@
                 "midsInQuery": [
                     "/m/01t_xp_"
                 ],
-                "queryExpression": "(lambda (var867994) (and ((word-cat \"prog-rock\") \"/m/01t_xp_\") ((word-cat \"trio\") \"/m/01t_xp_\") ((word-rel \"prog-rock_trio_N/N\") var867994 \"/m/01t_xp_\")))"
+                "queryExpression": "(lambda (var867994) (and ((word-cat \"prog-rock\") \"/m/01t_xp_\") ((word-cat \"trio\") \"/m/01t_xp_\") ((word-rel \"special:N/N\") var867994 \"/m/01t_xp_\")))"
             },
             {
                 "correctAnswerIds": [
@@ -7924,7 +7924,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"prog-rock_trio_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0d060g\"",
                         true
                     ]
@@ -7932,7 +7932,7 @@
                 "midsInQuery": [
                     "/m/0d060g"
                 ],
-                "queryExpression": "(lambda (var464855) (and ((word-cat \"prog-rock\") var464855) ((word-cat \"trio\") var464855) ((word-rel \"prog-rock_trio_N/N\") \"/m/0d060g\" var464855)))"
+                "queryExpression": "(lambda (var464855) (and ((word-cat \"prog-rock\") var464855) ((word-cat \"trio\") var464855) ((word-rel \"special:N/N\") \"/m/0d060g\" var464855)))"
             }
         ],
         "sentence": "the Canadian prog-rock trio Rush"
@@ -8017,7 +8017,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"offensive_coordinator_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05g3b\"",
                         true
                     ]
@@ -8025,7 +8025,7 @@
                 "midsInQuery": [
                     "/m/05g3b"
                 ],
-                "queryExpression": "(lambda (var461116) (and ((word-cat \"offensive\") var461116) ((word-cat \"coordinator\") var461116) ((word-rel \"offensive_coordinator_N/N\") \"/m/05g3b\" var461116)))"
+                "queryExpression": "(lambda (var461116) (and ((word-cat \"offensive\") var461116) ((word-cat \"coordinator\") var461116) ((word-rel \"special:N/N\") \"/m/05g3b\" var461116)))"
             },
             {
                 "correctAnswerIds": [
@@ -8060,7 +8060,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"offensive_coordinator_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0b04bt\"",
                         false
                     ]
@@ -8068,7 +8068,7 @@
                 "midsInQuery": [
                     "/m/0b04bt"
                 ],
-                "queryExpression": "(lambda (var588415) (and ((word-cat \"offensive\") \"/m/0b04bt\") ((word-cat \"coordinator\") \"/m/0b04bt\") ((word-rel \"offensive_coordinator_N/N\") var588415 \"/m/0b04bt\")))"
+                "queryExpression": "(lambda (var588415) (and ((word-cat \"offensive\") \"/m/0b04bt\") ((word-cat \"coordinator\") \"/m/0b04bt\") ((word-rel \"special:N/N\") var588415 \"/m/0b04bt\")))"
             }
         ],
         "sentence": "Patriots offensive coordinator Josh McDaniels"
@@ -8126,7 +8126,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"leader_of\"",
+                        "\"of\"",
                         "\"/m/03j8h2\"",
                         false
                     ]
@@ -8134,7 +8134,7 @@
                 "midsInQuery": [
                     "/m/03j8h2"
                 ],
-                "queryExpression": "(lambda (var698593) (and ((word-cat \"powerful\") var698593) ((word-cat \"black\") var698593) ((word-cat \"leader\") var698593) ((word-rel \"leader_of\") var698593 \"/m/03j8h2\")))"
+                "queryExpression": "(lambda (var698593) (and ((word-cat \"powerful\") var698593) ((word-cat \"black\") var698593) ((word-cat \"leader\") var698593) ((word-rel \"of\") var698593 \"/m/03j8h2\")))"
             },
             {
                 "correctAnswerIds": [
@@ -8161,7 +8161,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"leader_of\"",
+                        "\"of\"",
                         "\"/m/0dg6td\"",
                         true
                     ]
@@ -8169,7 +8169,7 @@
                 "midsInQuery": [
                     "/m/0dg6td"
                 ],
-                "queryExpression": "(lambda (var91048) (and ((word-cat \"powerful\") \"/m/0dg6td\") ((word-cat \"black\") \"/m/0dg6td\") ((word-cat \"leader\") \"/m/0dg6td\") ((word-rel \"leader_of\") \"/m/0dg6td\" var91048)))"
+                "queryExpression": "(lambda (var91048) (and ((word-cat \"powerful\") \"/m/0dg6td\") ((word-cat \"black\") \"/m/0dg6td\") ((word-cat \"leader\") \"/m/0dg6td\") ((word-rel \"of\") \"/m/0dg6td\" var91048)))"
             }
         ],
         "sentence": "Emil Jones , the powerful black leader of the Illinois Senate ,"
@@ -8207,7 +8207,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"newspaper_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03cjgp6\"",
                         false
                     ]
@@ -8215,7 +8215,7 @@
                 "midsInQuery": [
                     "/m/03cjgp6"
                 ],
-                "queryExpression": "(lambda (var818617) (and ((word-cat \"leading\") \"/m/03cjgp6\") ((word-cat \"newspaper\") \"/m/03cjgp6\") ((word-rel \"newspaper_N/N\") var818617 \"/m/03cjgp6\")))"
+                "queryExpression": "(lambda (var818617) (and ((word-cat \"leading\") \"/m/03cjgp6\") ((word-cat \"newspaper\") \"/m/03cjgp6\") ((word-rel \"special:N/N\") var818617 \"/m/03cjgp6\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -8244,7 +8244,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"newspaper_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/06nm1\"",
                         true
                     ]
@@ -8252,7 +8252,7 @@
                 "midsInQuery": [
                     "/m/06nm1"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"leading\") x) ((word-cat \"newspaper\") x) ((word-rel \"newspaper_N/N\") \"/m/06nm1\" x)))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"leading\") x) ((word-cat \"newspaper\") x) ((word-rel \"special:N/N\") \"/m/06nm1\" x)))"
             }
         ],
         "sentence": "Su Voz is the leading Spanish newspaper ."
@@ -8315,7 +8315,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"prime_minister_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0235fz\"",
                         false
                     ]
@@ -8323,7 +8323,7 @@
                 "midsInQuery": [
                     "/m/0235fz"
                 ],
-                "queryExpression": "(lambda (var882993) (and ((word-cat \"former\") \"/m/0235fz\") ((word-cat \"prime\") \"/m/0235fz\") ((word-cat \"minister\") \"/m/0235fz\") ((word-rel \"prime_minister_N/N\") var882993 \"/m/0235fz\")))"
+                "queryExpression": "(lambda (var882993) (and ((word-cat \"former\") \"/m/0235fz\") ((word-cat \"prime\") \"/m/0235fz\") ((word-cat \"minister\") \"/m/0235fz\") ((word-rel \"special:N/N\") var882993 \"/m/0235fz\")))"
             },
             {
                 "correctAnswerIds": [
@@ -8387,7 +8387,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"prime_minister_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04hqz\"",
                         true
                     ]
@@ -8395,7 +8395,7 @@
                 "midsInQuery": [
                     "/m/04hqz"
                 ],
-                "queryExpression": "(lambda (var152440) (and ((word-cat \"former\") var152440) ((word-cat \"prime\") var152440) ((word-cat \"minister\") var152440) ((word-rel \"prime_minister_N/N\") \"/m/04hqz\" var152440)))"
+                "queryExpression": "(lambda (var152440) (and ((word-cat \"former\") var152440) ((word-cat \"prime\") var152440) ((word-cat \"minister\") var152440) ((word-rel \"special:N/N\") \"/m/04hqz\" var152440)))"
             }
         ],
         "sentence": "former Lebanese Prime Minister Rafik Hariri"
@@ -8511,7 +8511,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"club_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/035qy\"",
                         true
                     ]
@@ -8519,7 +8519,7 @@
                 "midsInQuery": [
                     "/m/035qy"
                 ],
-                "queryExpression": "(lambda (var337875) (and ((word-cat \"club\") var337875) ((word-rel \"club_N/N\") \"/m/035qy\" var337875)))"
+                "queryExpression": "(lambda (var337875) (and ((word-cat \"club\") var337875) ((word-rel \"special:N/N\") \"/m/035qy\" var337875)))"
             },
             {
                 "correctAnswerIds": [
@@ -8565,7 +8565,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"club_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/025rpyx\"",
                         false
                     ]
@@ -8573,7 +8573,7 @@
                 "midsInQuery": [
                     "/m/025rpyx"
                 ],
-                "queryExpression": "(lambda (var892241) (and ((word-cat \"club\") \"/m/025rpyx\") ((word-rel \"club_N/N\") var892241 \"/m/025rpyx\")))"
+                "queryExpression": "(lambda (var892241) (and ((word-cat \"club\") \"/m/025rpyx\") ((word-rel \"special:N/N\") var892241 \"/m/025rpyx\")))"
             }
         ],
         "sentence": "the Greek club Panathinaikos"
@@ -8642,7 +8642,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01pt2r\"",
                         false
                     ]
@@ -8650,7 +8650,7 @@
                 "midsInQuery": [
                     "/m/01pt2r"
                 ],
-                "queryExpression": "(lambda (var902684) (and ((word-cat \"president\") \"/m/01pt2r\") ((word-rel \"president_N/N\") var902684 \"/m/01pt2r\")))"
+                "queryExpression": "(lambda (var902684) (and ((word-cat \"president\") \"/m/01pt2r\") ((word-rel \"special:N/N\") var902684 \"/m/01pt2r\")))"
             },
             {
                 "correctAnswerIds": [
@@ -8702,7 +8702,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"president_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0165v\"",
                         true
                     ]
@@ -8710,7 +8710,7 @@
                 "midsInQuery": [
                     "/m/0165v"
                 ],
-                "queryExpression": "(lambda (var745718) (and ((word-cat \"president\") var745718) ((word-rel \"president_N/N\") \"/m/0165v\" var745718)))"
+                "queryExpression": "(lambda (var745718) (and ((word-cat \"president\") var745718) ((word-rel \"special:N/N\") \"/m/0165v\" var745718)))"
             }
         ],
         "sentence": "Bolivian president Evo Morales"
@@ -8760,7 +8760,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"politician_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0cf98g\"",
                         false
                     ]
@@ -8768,7 +8768,7 @@
                 "midsInQuery": [
                     "/m/0cf98g"
                 ],
-                "queryExpression": "(lambda (var346401) (and ((word-cat \"prominent\") \"/m/0cf98g\") ((word-cat \"politician\") \"/m/0cf98g\") ((word-rel \"politician_N/N\") var346401 \"/m/0cf98g\")))"
+                "queryExpression": "(lambda (var346401) (and ((word-cat \"prominent\") \"/m/0cf98g\") ((word-cat \"politician\") \"/m/0cf98g\") ((word-rel \"special:N/N\") var346401 \"/m/0cf98g\")))"
             },
             {
                 "correctAnswerIds": [
@@ -8848,7 +8848,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"politician_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0hzlz\"",
                         true
                     ]
@@ -8856,7 +8856,7 @@
                 "midsInQuery": [
                     "/m/0hzlz"
                 ],
-                "queryExpression": "(lambda (var808961) (and ((word-cat \"prominent\") var808961) ((word-cat \"politician\") var808961) ((word-rel \"politician_N/N\") \"/m/0hzlz\" var808961)))"
+                "queryExpression": "(lambda (var808961) (and ((word-cat \"prominent\") var808961) ((word-cat \"politician\") var808961) ((word-rel \"special:N/N\") \"/m/0hzlz\" var808961)))"
             }
         ],
         "sentence": "Ronnie Kasrils , a prominent South African politician ,"
@@ -8942,7 +8942,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"press_secretary_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/081sq\"",
                         true
                     ]
@@ -8950,7 +8950,7 @@
                 "midsInQuery": [
                     "/m/081sq"
                 ],
-                "queryExpression": "(lambda (var876327) (and ((word-cat \"press\") var876327) ((word-cat \"secretary\") var876327) ((word-rel \"press_secretary_N/N\") \"/m/081sq\" var876327)))"
+                "queryExpression": "(lambda (var876327) (and ((word-cat \"press\") var876327) ((word-cat \"secretary\") var876327) ((word-rel \"special:N/N\") \"/m/081sq\" var876327)))"
             },
             {
                 "correctAnswerIds": [
@@ -8983,7 +8983,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"press_secretary_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0ghdy9\"",
                         false
                     ]
@@ -8991,7 +8991,7 @@
                 "midsInQuery": [
                     "/m/0ghdy9"
                 ],
-                "queryExpression": "(lambda (var131860) (and ((word-cat \"press\") \"/m/0ghdy9\") ((word-cat \"secretary\") \"/m/0ghdy9\") ((word-rel \"press_secretary_N/N\") var131860 \"/m/0ghdy9\")))"
+                "queryExpression": "(lambda (var131860) (and ((word-cat \"press\") \"/m/0ghdy9\") ((word-cat \"secretary\") \"/m/0ghdy9\") ((word-rel \"special:N/N\") var131860 \"/m/0ghdy9\")))"
             }
         ],
         "sentence": "White House press secretary Dana Perino"
@@ -9059,7 +9059,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"artist_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01j6nyq\"",
                         false
                     ]
@@ -9067,7 +9067,7 @@
                 "midsInQuery": [
                     "/m/01j6nyq"
                 ],
-                "queryExpression": "(lambda (var888735) (and ((word-cat \"artist\") \"/m/01j6nyq\") ((word-rel \"artist_N/N\") var888735 \"/m/01j6nyq\")))"
+                "queryExpression": "(lambda (var888735) (and ((word-cat \"artist\") \"/m/01j6nyq\") ((word-rel \"special:N/N\") var888735 \"/m/01j6nyq\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -9077,7 +9077,7 @@
                 "incorrectAnswerIds": [],
                 "midRelationsInQuery": [
                     [
-                        "\"artist_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0145rs\"",
                         true
                     ]
@@ -9085,7 +9085,7 @@
                 "midsInQuery": [
                     "/m/0145rs"
                 ],
-                "queryExpression": "(lambda (var792709) (and ((word-cat \"artist\") var792709) ((word-rel \"artist_N/N\") \"/m/0145rs\" var792709)))"
+                "queryExpression": "(lambda (var792709) (and ((word-cat \"artist\") var792709) ((word-rel \"special:N/N\") \"/m/0145rs\" var792709)))"
             }
         ],
         "sentence": "CCM artist Steve Camp"
@@ -9119,7 +9119,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"managing_director_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/08fbf_\"",
                         false
                     ]
@@ -9127,7 +9127,7 @@
                 "midsInQuery": [
                     "/m/08fbf_"
                 ],
-                "queryExpression": "(lambda (var81618) (and ((word-cat \"managing\") \"/m/08fbf_\") ((word-cat \"director\") \"/m/08fbf_\") ((word-rel \"managing_director_N/N\") var81618 \"/m/08fbf_\") ))"
+                "queryExpression": "(lambda (var81618) (and ((word-cat \"managing\") \"/m/08fbf_\") ((word-cat \"director\") \"/m/08fbf_\") ((word-rel \"special:N/N\") var81618 \"/m/08fbf_\") ))"
             },
             {
                 "correctAnswerIds": [],
@@ -9147,7 +9147,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"managing_director_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05wc_h\"",
                         true
                     ]
@@ -9155,7 +9155,7 @@
                 "midsInQuery": [
                     "/m/05wc_h"
                 ],
-                "queryExpression": "(lambda (var179220) (and ((word-cat \"managing\") var179220) ((word-cat \"director\") var179220) ((word-rel \"managing_director_N/N\") \"/m/05wc_h\" var179220) ))"
+                "queryExpression": "(lambda (var179220) (and ((word-cat \"managing\") var179220) ((word-cat \"director\") var179220) ((word-rel \"special:N/N\") \"/m/05wc_h\" var179220) ))"
             }
         ],
         "sentence": "DMRC Managing Director , E. Sreedharan ,"
@@ -9270,7 +9270,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_train\"",
+                        "\"'s\"",
                         "\"/m/02rhf9\"",
                         false
                     ]
@@ -9280,7 +9280,7 @@
                     "/m/01gmn0",
                     "/m/02rhf9"
                 ],
-                "queryExpression": "(lambda (var865832) (and ((word-cat \"long-distance\") \"/m/02rhf9\") ((word-cat \"train\") \"/m/02rhf9\") ((word-rel \"'s_train\") var865832 \"/m/02rhf9\") ((word-rel \"in\") \"/m/01gmn0\" \"/m/07z1m\") ((word-rel \"crosses\") \"/m/02rhf9\" \"/m/01gmn0\")))"
+                "queryExpression": "(lambda (var865832) (and ((word-cat \"long-distance\") \"/m/02rhf9\") ((word-cat \"train\") \"/m/02rhf9\") ((word-rel \"'s\") var865832 \"/m/02rhf9\") ((word-rel \"in\") \"/m/01gmn0\" \"/m/07z1m\") ((word-rel \"crosses\") \"/m/02rhf9\" \"/m/01gmn0\")))"
             },
             {
                 "correctAnswerIds": [
@@ -9358,7 +9358,7 @@
                     "/m/0dn_w",
                     "/m/02rhf9"
                 ],
-                "queryExpression": "(lambda (var420033) (and ((word-cat \"long-distance\") \"/m/02rhf9\") ((word-cat \"train\") \"/m/02rhf9\") ((word-rel \"'s_train\") \"/m/0dn_w\" \"/m/02rhf9\") ((word-rel \"in\") var420033 \"/m/07z1m\") ((word-rel \"crosses\") \"/m/02rhf9\" var420033)))"
+                "queryExpression": "(lambda (var420033) (and ((word-cat \"long-distance\") \"/m/02rhf9\") ((word-cat \"train\") \"/m/02rhf9\") ((word-rel \"'s\") \"/m/0dn_w\" \"/m/02rhf9\") ((word-rel \"in\") var420033 \"/m/07z1m\") ((word-rel \"crosses\") \"/m/02rhf9\" var420033)))"
             },
             {
                 "correctAnswerIds": [],
@@ -9423,7 +9423,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_train\"",
+                        "\"'s\"",
                         "\"/m/0dn_w\"",
                         true
                     ],
@@ -9438,7 +9438,7 @@
                     "/m/0dn_w",
                     "/m/01gmn0"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"long-distance\") x) ((word-cat \"train\") x) ((word-rel \"'s_train\") \"/m/0dn_w\" x) ((word-rel \"in\") \"/m/01gmn0\" \"/m/07z1m\") ((word-rel \"crosses\") x \"/m/01gmn0\")))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"long-distance\") x) ((word-cat \"train\") x) ((word-rel \"'s\") \"/m/0dn_w\" x) ((word-rel \"in\") \"/m/01gmn0\" \"/m/07z1m\") ((word-rel \"crosses\") x \"/m/01gmn0\")))"
             }
         ],
         "sentence": "Amtrak 's long-distance train , the \" Crescent , \" crosses the James River in Virginia ."
@@ -9475,7 +9475,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"romance_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02qpt1w\"",
                         false
                     ]
@@ -9484,7 +9484,7 @@
                     "/m/02qpt1w",
                     "/m/081lh"
                 ],
-                "queryExpression": "(lambda (var249437) (and ((word-cat \"romance\") \"/m/02qpt1w\") ((word-rel \"romance_N/N\") var249437 \"/m/02qpt1w\") ((word-rel \"'s_romance\") \"/m/081lh\" \"/m/02qpt1w\") ))"
+                "queryExpression": "(lambda (var249437) (and ((word-cat \"romance\") \"/m/02qpt1w\") ((word-rel \"special:N/N\") var249437 \"/m/02qpt1w\") ((word-rel \"'s\") \"/m/081lh\" \"/m/02qpt1w\") ))"
             },
             {
                 "correctAnswerIds": [
@@ -9551,12 +9551,12 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"romance_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/06mkj\"",
                         true
                     ],
                     [
-                        "\"'s_romance\"",
+                        "\"'s\"",
                         "\"/m/081lh\"",
                         true
                     ]
@@ -9565,7 +9565,7 @@
                     "/m/06mkj",
                     "/m/081lh"
                 ],
-                "queryExpression": "(lambda (var751661) (and ((word-cat \"romance\") var751661) ((word-rel \"romance_N/N\") \"/m/06mkj\" var751661) ((word-rel \"'s_romance\") \"/m/081lh\" var751661) ))"
+                "queryExpression": "(lambda (var751661) (and ((word-cat \"romance\") var751661) ((word-rel \"special:N/N\") \"/m/06mkj\" var751661) ((word-rel \"'s\") \"/m/081lh\" var751661) ))"
             },
             {
                 "correctAnswerIds": [
@@ -9610,7 +9610,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_romance\"",
+                        "\"'s\"",
                         "\"/m/02qpt1w\"",
                         false
                     ]
@@ -9619,7 +9619,7 @@
                     "/m/06mkj",
                     "/m/02qpt1w"
                 ],
-                "queryExpression": "(lambda (var948773) (and ((word-cat \"romance\") \"/m/02qpt1w\") ((word-rel \"romance_N/N\") \"/m/06mkj\" \"/m/02qpt1w\") ((word-rel \"'s_romance\") var948773 \"/m/02qpt1w\") ))"
+                "queryExpression": "(lambda (var948773) (and ((word-cat \"romance\") \"/m/02qpt1w\") ((word-rel \"special:N/N\") \"/m/06mkj\" \"/m/02qpt1w\") ((word-rel \"'s\") var948773 \"/m/02qpt1w\") ))"
             }
         ],
         "sentence": "Woody Allen 's Spanish romance \" Vicky Cristina Barcelona \""
@@ -9767,7 +9767,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"negotiator_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04zh9h\"",
                         false
                     ]
@@ -9775,7 +9775,7 @@
                 "midsInQuery": [
                     "/m/04zh9h"
                 ],
-                "queryExpression": "(lambda (var13718) (and ((word-cat \"former\") \"/m/04zh9h\") ((word-cat \"negotiator\") \"/m/04zh9h\") ((word-rel \"negotiator_N/N\") var13718 \"/m/04zh9h\")))"
+                "queryExpression": "(lambda (var13718) (and ((word-cat \"former\") \"/m/04zh9h\") ((word-cat \"negotiator\") \"/m/04zh9h\") ((word-rel \"special:N/N\") var13718 \"/m/04zh9h\")))"
             },
             {
                 "correctAnswerIds": [
@@ -9851,7 +9851,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"negotiator_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04wsz\"",
                         true
                     ]
@@ -9859,7 +9859,7 @@
                 "midsInQuery": [
                     "/m/04wsz"
                 ],
-                "queryExpression": "(lambda (var357356) (and ((word-cat \"former\") var357356) ((word-cat \"negotiator\") var357356) ((word-rel \"negotiator_N/N\") \"/m/04wsz\" var357356)))"
+                "queryExpression": "(lambda (var357356) (and ((word-cat \"former\") var357356) ((word-cat \"negotiator\") var357356) ((word-rel \"special:N/N\") \"/m/04wsz\" var357356)))"
             }
         ],
         "sentence": "former Middle East negotiator Dennis Ross"
@@ -9912,7 +9912,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"area_of\"",
+                        "\"of\"",
                         "\"/m/040q6l\"",
                         true
                     ]
@@ -9920,7 +9920,7 @@
                 "midsInQuery": [
                     "/m/040q6l"
                 ],
-                "queryExpression": "(lambda (var725) (and ((word-cat \"urban\") \"/m/040q6l\") ((word-cat \"area\") \"/m/040q6l\") ((word-rel \"area_of\") \"/m/040q6l\" var725)))"
+                "queryExpression": "(lambda (var725) (and ((word-cat \"urban\") \"/m/040q6l\") ((word-cat \"area\") \"/m/040q6l\") ((word-rel \"of\") \"/m/040q6l\" var725)))"
             },
             {
                 "correctAnswerIds": [
@@ -9938,7 +9938,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"area_of\"",
+                        "\"of\"",
                         "\"/m/047t_\"",
                         false
                     ]
@@ -9946,7 +9946,7 @@
                 "midsInQuery": [
                     "/m/047t_"
                 ],
-                "queryExpression": "(lambda (var36577) (and ((word-cat \"urban\") var36577) ((word-cat \"area\") var36577) ((word-rel \"area_of\") var36577 \"/m/047t_\")))"
+                "queryExpression": "(lambda (var36577) (and ((word-cat \"urban\") var36577) ((word-cat \"area\") var36577) ((word-rel \"of\") var36577 \"/m/047t_\")))"
             }
         ],
         "sentence": "in South Tarawa , the urban area of Kiribati"
@@ -9973,7 +9973,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_player\"",
+                        "\"'s\"",
                         "\"/m/0137n0\"",
                         true
                     ]
@@ -9981,7 +9981,7 @@
                 "midsInQuery": [
                     "/m/0137n0"
                 ],
-                "queryExpression": "(lambda (var629780) (and ((word-cat \"harmonica\") var629780) ((word-cat \"player\") var629780) ((word-rel \"'s_player\") \"/m/0137n0\" var629780) ))"
+                "queryExpression": "(lambda (var629780) (and ((word-cat \"harmonica\") var629780) ((word-cat \"player\") var629780) ((word-rel \"'s\") \"/m/0137n0\" var629780) ))"
             },
             {
                 "correctAnswerIds": [
@@ -10013,7 +10013,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_player\"",
+                        "\"'s\"",
                         "\"/m/01mmqhf\"",
                         false
                     ]
@@ -10021,7 +10021,7 @@
                 "midsInQuery": [
                     "/m/01mmqhf"
                 ],
-                "queryExpression": "(lambda (var132858) (and ((word-cat \"harmonica\") \"/m/01mmqhf\") ((word-cat \"player\") \"/m/01mmqhf\") ((word-rel \"'s_player\") var132858 \"/m/01mmqhf\") ))"
+                "queryExpression": "(lambda (var132858) (and ((word-cat \"harmonica\") \"/m/01mmqhf\") ((word-cat \"player\") \"/m/01mmqhf\") ((word-rel \"'s\") var132858 \"/m/01mmqhf\") ))"
             }
         ],
         "sentence": "with Nelson 's harmonica player , Mickey Raphael"
@@ -10116,7 +10116,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"gov._N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03v0t\"",
                         true
                     ]
@@ -10124,7 +10124,7 @@
                 "midsInQuery": [
                     "/m/03v0t"
                 ],
-                "queryExpression": "(lambda (var131982) (and ((word-cat \"gov.\") var131982) ((word-rel \"gov._N/N\") \"/m/03v0t\" var131982)))"
+                "queryExpression": "(lambda (var131982) (and ((word-cat \"gov.\") var131982) ((word-rel \"special:N/N\") \"/m/03v0t\" var131982)))"
             },
             {
                 "correctAnswerIds": [
@@ -10194,7 +10194,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"gov._N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0264ht\"",
                         false
                     ]
@@ -10202,7 +10202,7 @@
                 "midsInQuery": [
                     "/m/0264ht"
                 ],
-                "queryExpression": "(lambda (var715848) (and ((word-cat \"gov.\") \"/m/0264ht\") ((word-rel \"gov._N/N\") var715848 \"/m/0264ht\")))"
+                "queryExpression": "(lambda (var715848) (and ((word-cat \"gov.\") \"/m/0264ht\") ((word-rel \"special:N/N\") var715848 \"/m/0264ht\")))"
             }
         ],
         "sentence": "Illinois Gov. Rod Blagojevich ,"
@@ -10254,7 +10254,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"mayor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04g5_v\"",
                         false
                     ]
@@ -10262,7 +10262,7 @@
                 "midsInQuery": [
                     "/m/04g5_v"
                 ],
-                "queryExpression": "(lambda (var635534) (and ((word-cat \"mayor\") \"/m/04g5_v\") ((word-rel \"mayor_N/N\") var635534 \"/m/04g5_v\")))"
+                "queryExpression": "(lambda (var635534) (and ((word-cat \"mayor\") \"/m/04g5_v\") ((word-rel \"special:N/N\") var635534 \"/m/04g5_v\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -10279,7 +10279,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"mayor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0fvzz\"",
                         true
                     ]
@@ -10287,7 +10287,7 @@
                 "midsInQuery": [
                     "/m/0fvzz"
                 ],
-                "queryExpression": "(lambda (var804851) (and ((word-cat \"mayor\") var804851) ((word-rel \"mayor_N/N\") \"/m/0fvzz\" var804851)))"
+                "queryExpression": "(lambda (var804851) (and ((word-cat \"mayor\") var804851) ((word-rel \"special:N/N\") \"/m/0fvzz\" var804851)))"
             }
         ],
         "sentence": "Harrisburg Mayor Stephen R. Reed ,"
@@ -10345,7 +10345,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"defenseman_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03h62f1\"",
                         false
                     ]
@@ -10353,7 +10353,7 @@
                 "midsInQuery": [
                     "/m/03h62f1"
                 ],
-                "queryExpression": "(lambda (var732357) (and ((word-cat \"defenseman\") \"/m/03h62f1\") ((word-rel \"defenseman_N/N\") var732357 \"/m/03h62f1\")))"
+                "queryExpression": "(lambda (var732357) (and ((word-cat \"defenseman\") \"/m/03h62f1\") ((word-rel \"special:N/N\") var732357 \"/m/03h62f1\")))"
             },
             {
                 "correctAnswerIds": [
@@ -10400,7 +10400,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"defenseman_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04l57x\"",
                         true
                     ]
@@ -10408,7 +10408,7 @@
                 "midsInQuery": [
                     "/m/04l57x"
                 ],
-                "queryExpression": "(lambda (var789306) (and ((word-cat \"defenseman\") var789306) ((word-rel \"defenseman_N/N\") \"/m/04l57x\" var789306)))"
+                "queryExpression": "(lambda (var789306) (and ((word-cat \"defenseman\") var789306) ((word-rel \"special:N/N\") \"/m/04l57x\" var789306)))"
             }
         ],
         "sentence": "Bears defenseman Johnny Boychuk"
@@ -10701,7 +10701,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"chairman_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0409b0_\"",
                         false
                     ]
@@ -10709,7 +10709,7 @@
                 "midsInQuery": [
                     "/m/0409b0_"
                 ],
-                "queryExpression": "(lambda (var723841) (and ((word-cat \"chairman\") \"/m/0409b0_\") ((word-rel \"chairman_N/N\") var723841 \"/m/0409b0_\")))"
+                "queryExpression": "(lambda (var723841) (and ((word-cat \"chairman\") \"/m/0409b0_\") ((word-rel \"special:N/N\") var723841 \"/m/0409b0_\")))"
             },
             {
                 "correctAnswerIds": [
@@ -10787,7 +10787,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"chairman_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/07wbk\"",
                         true
                     ]
@@ -10795,7 +10795,7 @@
                 "midsInQuery": [
                     "/m/07wbk"
                 ],
-                "queryExpression": "(lambda (var710753) (and ((word-cat \"chairman\") var710753) ((word-rel \"chairman_N/N\") \"/m/07wbk\" var710753)))"
+                "queryExpression": "(lambda (var710753) (and ((word-cat \"chairman\") var710753) ((word-rel \"special:N/N\") \"/m/07wbk\" var710753)))"
             }
         ],
         "sentence": "GOP chairman Glenn Thompson"
@@ -10894,7 +10894,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"presidential_candidate_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/02mjmr\"",
                         false
                     ]
@@ -10902,7 +10902,7 @@
                 "midsInQuery": [
                     "/m/02mjmr"
                 ],
-                "queryExpression": "(lambda (var112683) (and ((word-cat \"first\") \"/m/02mjmr\") ((word-cat \"black\") \"/m/02mjmr\") ((word-cat \"presidential\") \"/m/02mjmr\") ((word-cat \"candidate\") \"/m/02mjmr\") ((word-rel \"presidential_candidate_N/N\") var112683 \"/m/02mjmr\")))"
+                "queryExpression": "(lambda (var112683) (and ((word-cat \"first\") \"/m/02mjmr\") ((word-cat \"black\") \"/m/02mjmr\") ((word-cat \"presidential\") \"/m/02mjmr\") ((word-cat \"candidate\") \"/m/02mjmr\") ((word-rel \"special:N/N\") var112683 \"/m/02mjmr\")))"
             },
             {
                 "correctAnswerIds": [
@@ -10983,7 +10983,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"presidential_candidate_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/09c7w0\"",
                         true
                     ]
@@ -10991,7 +10991,7 @@
                 "midsInQuery": [
                     "/m/09c7w0"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"first\") x) ((word-cat \"black\") x) ((word-cat \"presidential\") x) ((word-cat \"candidate\") x) ((word-rel \"presidential_candidate_N/N\") \"/m/09c7w0\" x)))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"first\") x) ((word-cat \"black\") x) ((word-cat \"presidential\") x) ((word-cat \"candidate\") x) ((word-rel \"special:N/N\") \"/m/09c7w0\" x)))"
             }
         ],
         "sentence": "Obama is the first black U.S. presidential candidate ."
@@ -11057,7 +11057,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/041r07\"",
                         false
                     ]
@@ -11065,7 +11065,7 @@
                 "midsInQuery": [
                     "/m/041r07"
                 ],
-                "queryExpression": "(lambda (var267096) (and ((word-cat \"chief\") \"/m/041r07\") ((word-cat \"correspondent\") \"/m/041r07\") ((word-rel \"correspondent_N/N\") var267096 \"/m/041r07\")))"
+                "queryExpression": "(lambda (var267096) (and ((word-cat \"chief\") \"/m/041r07\") ((word-cat \"correspondent\") \"/m/041r07\") ((word-rel \"special:N/N\") var267096 \"/m/041r07\")))"
             },
             {
                 "correctAnswerIds": [
@@ -11156,7 +11156,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"correspondent_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0rh6k\"",
                         true
                     ]
@@ -11164,7 +11164,7 @@
                 "midsInQuery": [
                     "/m/0rh6k"
                 ],
-                "queryExpression": "(lambda (var143406) (and ((word-cat \"chief\") var143406) ((word-cat \"correspondent\") var143406) ((word-rel \"correspondent_N/N\") \"/m/0rh6k\" var143406)))"
+                "queryExpression": "(lambda (var143406) (and ((word-cat \"chief\") var143406) ((word-cat \"correspondent\") var143406) ((word-rel \"special:N/N\") \"/m/0rh6k\" var143406)))"
             }
         ],
         "sentence": "chief Washington correspondent Bob Schieffer"
@@ -11657,7 +11657,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"gov._N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01d_c9\"",
                         false
                     ]
@@ -11665,7 +11665,7 @@
                 "midsInQuery": [
                     "/m/01d_c9"
                 ],
-                "queryExpression": "(lambda (var476200) (and ((word-cat \"gov.\") \"/m/01d_c9\") ((word-rel \"gov._N/N\") var476200 \"/m/01d_c9\")))"
+                "queryExpression": "(lambda (var476200) (and ((word-cat \"gov.\") \"/m/01d_c9\") ((word-rel \"special:N/N\") var476200 \"/m/01d_c9\")))"
             },
             {
                 "correctAnswerIds": [
@@ -11736,7 +11736,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"gov._N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05tbn\"",
                         true
                     ]
@@ -11744,7 +11744,7 @@
                 "midsInQuery": [
                     "/m/05tbn"
                 ],
-                "queryExpression": "(lambda (var937847) (and ((word-cat \"gov.\") var937847) ((word-rel \"gov._N/N\") \"/m/05tbn\" var937847)))"
+                "queryExpression": "(lambda (var937847) (and ((word-cat \"gov.\") var937847) ((word-rel \"special:N/N\") \"/m/05tbn\" var937847)))"
             }
         ],
         "sentence": "Pennsylvania Gov. Tom Ridge"
@@ -11927,7 +11927,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s\"",
+                        "\"'\"",
                         "\"/m/0ws7\"",
                         true
                     ]
@@ -11935,7 +11935,7 @@
                 "midsInQuery": [
                     "/m/0ws7"
                 ],
-                "queryExpression": "(lambda (var507706) (and ((word-cat \"wr\") var507706) ((word-rel \"'s\") \"/m/0ws7\" var507706)))"
+                "queryExpression": "(lambda (var507706) (and ((word-cat \"wr\") var507706) ((word-rel \"'\") \"/m/0ws7\" var507706)))"
             },
             {
                 "correctAnswerIds": [],
@@ -11951,7 +11951,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s\"",
+                        "\"'\"",
                         "\"/m/0443b8\"",
                         false
                     ]
@@ -11959,7 +11959,7 @@
                 "midsInQuery": [
                     "/m/0443b8"
                 ],
-                "queryExpression": "(lambda (var380622) (and ((word-cat \"wr\") \"/m/0443b8\") ((word-rel \"'s\") var380622 \"/m/0443b8\")))"
+                "queryExpression": "(lambda (var380622) (and ((word-cat \"wr\") \"/m/0443b8\") ((word-rel \"'\") var380622 \"/m/0443b8\")))"
             }
         ],
         "sentence": "the Arizona Cardinals ' WR Larry Fitzgerald"
@@ -11985,7 +11985,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"capital_of\"",
+                        "\"of\"",
                         "\"/m/0845b\"",
                         true
                     ]
@@ -11993,7 +11993,7 @@
                 "midsInQuery": [
                     "/m/0845b"
                 ],
-                "queryExpression": "(lambda (var453765) (and ((word-cat \"capital\") \"/m/0845b\") ((word-rel \"capital_of\") \"/m/0845b\" var453765) ((word-cat \"one\") \"/m/0845b\")))"
+                "queryExpression": "(lambda (var453765) (and ((word-cat \"capital\") \"/m/0845b\") ((word-rel \"of\") \"/m/0845b\" var453765) ((word-cat \"one\") \"/m/0845b\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -12009,7 +12009,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"capital_of\"",
+                        "\"of\"",
                         "\"/m/09nff9\"",
                         false
                     ]
@@ -12017,7 +12017,7 @@
                 "midsInQuery": [
                     "/m/09nff9"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"capital\") x) ((word-rel \"capital_of\") x \"/m/09nff9\") ((word-cat \"one\") x)))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"capital\") x) ((word-rel \"of\") x \"/m/09nff9\") ((word-cat \"one\") x)))"
             }
         ],
         "sentence": "Wroclaw , the capital of Lower Silesia , is one ."
@@ -12107,7 +12107,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"composer_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05ddf\"",
                         false
                     ]
@@ -12115,7 +12115,7 @@
                 "midsInQuery": [
                     "/m/05ddf"
                 ],
-                "queryExpression": "(lambda (var516734) (and ((word-cat \"composer\") \"/m/05ddf\") ((word-rel \"composer_N/N\") var516734 \"/m/05ddf\") ((word-cat \"violinist\") \"/m/05ddf\") ((word-cat \"violist\") \"/m/05ddf\")))"
+                "queryExpression": "(lambda (var516734) (and ((word-cat \"composer\") \"/m/05ddf\") ((word-rel \"special:N/N\") var516734 \"/m/05ddf\") ((word-cat \"violinist\") \"/m/05ddf\") ((word-cat \"violist\") \"/m/05ddf\")))"
             },
             {
                 "correctAnswerIds": [
@@ -12203,7 +12203,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"composer_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03rjj\"",
                         true
                     ]
@@ -12211,7 +12211,7 @@
                 "midsInQuery": [
                     "/m/03rjj"
                 ],
-                "queryExpression": "(lambda (var465752) (and ((word-cat \"composer\") var465752) ((word-rel \"composer_N/N\") \"/m/03rjj\" var465752) ((word-cat \"violinist\") var465752) ((word-cat \"violist\") var465752)))"
+                "queryExpression": "(lambda (var465752) (and ((word-cat \"composer\") var465752) ((word-rel \"special:N/N\") \"/m/03rjj\" var465752) ((word-cat \"violinist\") var465752) ((word-cat \"violist\") var465752)))"
             }
         ],
         "sentence": "Niccolo Paganini , Italian composer , violinist , violist ,"
@@ -12292,7 +12292,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"pitcher_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/07sgyc\"",
                         false
                     ]
@@ -12300,7 +12300,7 @@
                 "midsInQuery": [
                     "/m/07sgyc"
                 ],
-                "queryExpression": "(lambda (var721041) (and ((word-cat \"pitcher\") \"/m/07sgyc\") ((word-rel \"pitcher_N/N\") var721041 \"/m/07sgyc\")))"
+                "queryExpression": "(lambda (var721041) (and ((word-cat \"pitcher\") \"/m/07sgyc\") ((word-rel \"special:N/N\") var721041 \"/m/07sgyc\")))"
             },
             {
                 "correctAnswerIds": [
@@ -12374,7 +12374,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"pitcher_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/0cqt41\"",
                         true
                     ]
@@ -12382,7 +12382,7 @@
                 "midsInQuery": [
                     "/m/0cqt41"
                 ],
-                "queryExpression": "(lambda (var398621) (and ((word-cat \"pitcher\") var398621) ((word-rel \"pitcher_N/N\") \"/m/0cqt41\" var398621)))"
+                "queryExpression": "(lambda (var398621) (and ((word-cat \"pitcher\") var398621) ((word-rel \"special:N/N\") \"/m/0cqt41\" var398621)))"
             }
         ],
         "sentence": "Yankees pitcher Cory Lidle"
@@ -12443,7 +12443,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"socialite_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/022q32\"",
                         false
                     ]
@@ -12451,7 +12451,7 @@
                 "midsInQuery": [
                     "/m/022q32"
                 ],
-                "queryExpression": "(lambda (var11856) (and ((word-cat \"socialite\") \"/m/022q32\") ((word-rel \"socialite_N/N\") var11856 \"/m/022q32\")))"
+                "queryExpression": "(lambda (var11856) (and ((word-cat \"socialite\") \"/m/022q32\") ((word-rel \"special:N/N\") var11856 \"/m/022q32\")))"
             },
             {
                 "correctAnswerIds": [
@@ -12543,7 +12543,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"socialite_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01n7q\"",
                         true
                     ]
@@ -12551,7 +12551,7 @@
                 "midsInQuery": [
                     "/m/01n7q"
                 ],
-                "queryExpression": "(lambda (var306672) (and ((word-cat \"socialite\") var306672) ((word-rel \"socialite_N/N\") \"/m/01n7q\" var306672)))"
+                "queryExpression": "(lambda (var306672) (and ((word-cat \"socialite\") var306672) ((word-rel \"special:N/N\") \"/m/01n7q\" var306672)))"
             }
         ],
         "sentence": "California socialite Nicole Richie"
@@ -12595,7 +12595,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"commander_of\"",
+                        "\"of\"",
                         "\"/m/063c3v\"",
                         false
                     ]
@@ -12603,7 +12603,7 @@
                 "midsInQuery": [
                     "/m/063c3v"
                 ],
-                "queryExpression": "(lambda (var312152) (and ((word-cat \"commander\") var312152) ((word-rel \"commander_of\") var312152 \"/m/063c3v\")))"
+                "queryExpression": "(lambda (var312152) (and ((word-cat \"commander\") var312152) ((word-rel \"of\") var312152 \"/m/063c3v\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -12622,7 +12622,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"commander_of\"",
+                        "\"of\"",
                         "\"/m/02rdd4s\"",
                         true
                     ]
@@ -12630,7 +12630,7 @@
                 "midsInQuery": [
                     "/m/02rdd4s"
                 ],
-                "queryExpression": "(lambda (var620202) (and ((word-cat \"commander\") \"/m/02rdd4s\") ((word-rel \"commander_of\") \"/m/02rdd4s\" var620202)))"
+                "queryExpression": "(lambda (var620202) (and ((word-cat \"commander\") \"/m/02rdd4s\") ((word-rel \"of\") \"/m/02rdd4s\" var620202)))"
             }
         ],
         "sentence": "Lee , a commander of the U.S. Navy Reserve ,"
@@ -12699,7 +12699,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"quarterback_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/070xg\"",
                         true
                     ]
@@ -12707,7 +12707,7 @@
                 "midsInQuery": [
                     "/m/070xg"
                 ],
-                "queryExpression": "(lambda (var865649) (and ((word-cat \"quarterback\") var865649) ((word-rel \"quarterback_N/N\") \"/m/070xg\" var865649)))"
+                "queryExpression": "(lambda (var865649) (and ((word-cat \"quarterback\") var865649) ((word-rel \"special:N/N\") \"/m/070xg\" var865649)))"
             },
             {
                 "correctAnswerIds": [
@@ -12724,7 +12724,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"quarterback_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03zy1_\"",
                         false
                     ]
@@ -12732,7 +12732,7 @@
                 "midsInQuery": [
                     "/m/03zy1_"
                 ],
-                "queryExpression": "(lambda (var509004) (and ((word-cat \"quarterback\") \"/m/03zy1_\") ((word-rel \"quarterback_N/N\") var509004 \"/m/03zy1_\")))"
+                "queryExpression": "(lambda (var509004) (and ((word-cat \"quarterback\") \"/m/03zy1_\") ((word-rel \"special:N/N\") var509004 \"/m/03zy1_\")))"
             }
         ],
         "sentence": "Seahawks quarterback Matt Hasselbeck"
@@ -12785,7 +12785,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_receiver\"",
+                        "\"'s\"",
                         "\"/m/04rk9k\"",
                         false
                     ]
@@ -12793,7 +12793,7 @@
                 "midsInQuery": [
                     "/m/04rk9k"
                 ],
-                "queryExpression": "(lambda (var966728) (and ((word-cat \"star\") \"/m/04rk9k\") ((word-cat \"wide\") \"/m/04rk9k\") ((word-cat \"receiver\") \"/m/04rk9k\") ((word-rel \"'s_receiver\") var966728 \"/m/04rk9k\")))"
+                "queryExpression": "(lambda (var966728) (and ((word-cat \"star\") \"/m/04rk9k\") ((word-cat \"wide\") \"/m/04rk9k\") ((word-cat \"receiver\") \"/m/04rk9k\") ((word-rel \"'s\") var966728 \"/m/04rk9k\")))"
             },
             {
                 "correctAnswerIds": [
@@ -12837,7 +12837,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_receiver\"",
+                        "\"'s\"",
                         "\"/m/0zjyp\"",
                         true
                     ]
@@ -12845,7 +12845,7 @@
                 "midsInQuery": [
                     "/m/0zjyp"
                 ],
-                "queryExpression": "(lambda (var86399) (and ((word-cat \"star\") var86399) ((word-cat \"wide\") var86399) ((word-cat \"receiver\") var86399) ((word-rel \"'s_receiver\") \"/m/0zjyp\" var86399)))"
+                "queryExpression": "(lambda (var86399) (and ((word-cat \"star\") var86399) ((word-cat \"wide\") var86399) ((word-cat \"receiver\") var86399) ((word-rel \"'s\") \"/m/0zjyp\" var86399)))"
             }
         ],
         "sentence": "Aliquippa 's star wide receiver Jonathan Baldwin"
@@ -12920,7 +12920,7 @@
                     "/m/0mwrr",
                     "/m/0d075m"
                 ],
-                "queryExpression": "(lambda (var826607) (and ((word-cat \"rep.\") var826607) ((word-cat \"caucus\") \"/m/0mwrr\") ((word-cat \"administrator\") \"/m/0mwrr\") ((word-rel \"'s_administrator\") \"/m/0d075m\" \"/m/0mwrr\") ((word-rel \"of\") var826607 \"/m/0mwrr\")))"
+                "queryExpression": "(lambda (var826607) (and ((word-cat \"rep.\") var826607) ((word-cat \"caucus\") \"/m/0mwrr\") ((word-cat \"administrator\") \"/m/0mwrr\") ((word-rel \"'\") \"/m/0d075m\" \"/m/0mwrr\") ((word-rel \"of\") var826607 \"/m/0mwrr\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -12984,7 +12984,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_administrator\"",
+                        "\"'\"",
                         "\"/m/0d075m\"",
                         true
                     ],
@@ -12998,7 +12998,7 @@
                     "/m/03y8g47",
                     "/m/0d075m"
                 ],
-                "queryExpression": "(lambda (var968590) (and ((word-cat \"rep.\") \"/m/03y8g47\") ((word-cat \"caucus\") var968590) ((word-cat \"administrator\") var968590) ((word-rel \"'s_administrator\") \"/m/0d075m\" var968590) ((word-rel \"of\") \"/m/03y8g47\" var968590)))"
+                "queryExpression": "(lambda (var968590) (and ((word-cat \"rep.\") \"/m/03y8g47\") ((word-cat \"caucus\") var968590) ((word-cat \"administrator\") var968590) ((word-rel \"'\") \"/m/0d075m\" var968590) ((word-rel \"of\") \"/m/03y8g47\" var968590)))"
             },
             {
                 "correctAnswerIds": [],
@@ -13008,7 +13008,7 @@
                 "incorrectAnswerIds": [],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_administrator\"",
+                        "\"'\"",
                         "\"/m/0mwrr\"",
                         false
                     ]
@@ -13017,7 +13017,7 @@
                     "/m/03y8g47",
                     "/m/0mwrr"
                 ],
-                "queryExpression": "(lambda (var571845) (and ((word-cat \"rep.\") \"/m/03y8g47\") ((word-cat \"caucus\") \"/m/0mwrr\") ((word-cat \"administrator\") \"/m/0mwrr\") ((word-rel \"'s_administrator\") var571845 \"/m/0mwrr\") ((word-rel \"of\") \"/m/03y8g47\" \"/m/0mwrr\")))"
+                "queryExpression": "(lambda (var571845) (and ((word-cat \"rep.\") \"/m/03y8g47\") ((word-cat \"caucus\") \"/m/0mwrr\") ((word-cat \"administrator\") \"/m/0mwrr\") ((word-rel \"'\") var571845 \"/m/0mwrr\") ((word-rel \"of\") \"/m/03y8g47\" \"/m/0mwrr\")))"
             }
         ],
         "sentence": "Rep. Dan Surra of Elk County , the Democrats ' caucus administrator ,"
@@ -13062,7 +13062,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"director_at\"",
+                        "\"at\"",
                         "\"/m/0637cw\"",
                         true
                     ]
@@ -13070,7 +13070,7 @@
                 "midsInQuery": [
                     "/m/0637cw"
                 ],
-                "queryExpression": "(lambda (var399523) (and ((word-cat \"director\") \"/m/0637cw\") ((word-rel \"director_at\") \"/m/0637cw\" var399523)))"
+                "queryExpression": "(lambda (var399523) (and ((word-cat \"director\") \"/m/0637cw\") ((word-rel \"at\") \"/m/0637cw\" var399523)))"
             },
             {
                 "correctAnswerIds": [
@@ -13121,7 +13121,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"director_at\"",
+                        "\"at\"",
                         "\"/m/07tgn\"",
                         false
                     ]
@@ -13129,7 +13129,7 @@
                 "midsInQuery": [
                     "/m/07tgn"
                 ],
-                "queryExpression": "(lambda (x) (and ((word-cat \"director\") x) ((word-rel \"director_at\") x \"/m/07tgn\")))"
+                "queryExpression": "(lambda (x) (and ((word-cat \"director\") x) ((word-rel \"at\") x \"/m/07tgn\")))"
             }
         ],
         "sentence": "Charles Spence is Director at Oxford University ."
@@ -13227,7 +13227,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"capital_of\"",
+                        "\"of\"",
                         "\"/m/01bkb\"",
                         false
                     ]
@@ -13235,7 +13235,7 @@
                 "midsInQuery": [
                     "/m/01bkb"
                 ],
-                "queryExpression": "(lambda (var148241) (and ((word-cat \"capital\") var148241) ((word-rel \"capital_of\") var148241 \"/m/01bkb\")))"
+                "queryExpression": "(lambda (var148241) (and ((word-cat \"capital\") var148241) ((word-rel \"of\") var148241 \"/m/01bkb\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -13283,7 +13283,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"capital_of\"",
+                        "\"of\"",
                         "\"/m/02nbh1\"",
                         true
                     ]
@@ -13291,7 +13291,7 @@
                 "midsInQuery": [
                     "/m/02nbh1"
                 ],
-                "queryExpression": "(lambda (var232155) (and ((word-cat \"capital\") \"/m/02nbh1\") ((word-rel \"capital_of\") \"/m/02nbh1\" var232155)))"
+                "queryExpression": "(lambda (var232155) (and ((word-cat \"capital\") \"/m/02nbh1\") ((word-rel \"of\") \"/m/02nbh1\" var232155)))"
             }
         ],
         "sentence": "Denpasar , the capital of Bali"
@@ -13458,7 +13458,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_ally\"",
+                        "\"'s\"",
                         "\"/m/03spz\"",
                         true
                     ]
@@ -13466,7 +13466,7 @@
                 "midsInQuery": [
                     "/m/03spz"
                 ],
-                "queryExpression": "(lambda (var802744) (and ((word-cat \"closest\") var802744) ((word-cat \"ally\") var802744) ((word-rel \"'s_ally\") \"/m/03spz\" var802744)))"
+                "queryExpression": "(lambda (var802744) (and ((word-cat \"closest\") var802744) ((word-cat \"ally\") var802744) ((word-rel \"'s\") \"/m/03spz\" var802744)))"
             },
             {
                 "correctAnswerIds": [
@@ -13567,7 +13567,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"'s_ally\"",
+                        "\"'s\"",
                         "\"/m/09c7w0\"",
                         false
                     ]
@@ -13575,7 +13575,7 @@
                 "midsInQuery": [
                     "/m/09c7w0"
                 ],
-                "queryExpression": "(lambda (var620930) (and ((word-cat \"closest\") \"/m/09c7w0\") ((word-cat \"ally\") \"/m/09c7w0\") ((word-rel \"'s_ally\") var620930 \"/m/09c7w0\")))"
+                "queryExpression": "(lambda (var620930) (and ((word-cat \"closest\") \"/m/09c7w0\") ((word-cat \"ally\") \"/m/09c7w0\") ((word-rel \"'s\") var620930 \"/m/09c7w0\")))"
             }
         ],
         "sentence": "the United States , Israel 's closest ally"
@@ -13629,7 +13629,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"chief_minister_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05cry8\"",
                         false
                     ]
@@ -13637,7 +13637,7 @@
                 "midsInQuery": [
                     "/m/05cry8"
                 ],
-                "queryExpression": "(lambda (var688518) (and ((word-cat \"chief\") \"/m/05cry8\") ((word-cat \"minister\") \"/m/05cry8\") ((word-rel \"chief_minister_N/N\") var688518 \"/m/05cry8\")))"
+                "queryExpression": "(lambda (var688518) (and ((word-cat \"chief\") \"/m/05cry8\") ((word-cat \"minister\") \"/m/05cry8\") ((word-rel \"special:N/N\") var688518 \"/m/05cry8\")))"
             },
             {
                 "correctAnswerIds": [],
@@ -13650,7 +13650,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"chief_minister_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03p7r\"",
                         true
                     ]
@@ -13658,7 +13658,7 @@
                 "midsInQuery": [
                     "/m/03p7r"
                 ],
-                "queryExpression": "(lambda (var841204) (and ((word-cat \"chief\") var841204) ((word-cat \"minister\") var841204) ((word-rel \"chief_minister_N/N\") \"/m/03p7r\" var841204)))"
+                "queryExpression": "(lambda (var841204) (and ((word-cat \"chief\") var841204) ((word-cat \"minister\") var841204) ((word-rel \"special:N/N\") \"/m/03p7r\" var841204)))"
             }
         ],
         "sentence": "Haryana Chief Minister Bhupinder Singh Hooda"
@@ -13739,7 +13739,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"redshirt_sophomore_defensive_end_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04hgpt\"",
                         true
                     ]
@@ -13747,7 +13747,7 @@
                 "midsInQuery": [
                     "/m/04hgpt"
                 ],
-                "queryExpression": "(lambda (var274268) (and ((word-cat \"redshirt\") var274268) ((word-cat \"sophomore\") var274268) ((word-cat \"defensive\") var274268) ((word-cat \"end\") var274268) ((word-rel \"redshirt_sophomore_defensive_end_N/N\") \"/m/04hgpt\" var274268)))"
+                "queryExpression": "(lambda (var274268) (and ((word-cat \"redshirt\") var274268) ((word-cat \"sophomore\") var274268) ((word-cat \"defensive\") var274268) ((word-cat \"end\") var274268) ((word-rel \"special:N/N\") \"/m/04hgpt\" var274268)))"
             },
             {
                 "correctAnswerIds": [
@@ -13792,7 +13792,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"redshirt_sophomore_defensive_end_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/04qbglv\"",
                         false
                     ]
@@ -13800,7 +13800,7 @@
                 "midsInQuery": [
                     "/m/04qbglv"
                 ],
-                "queryExpression": "(lambda (var805234) (and ((word-cat \"redshirt\") \"/m/04qbglv\") ((word-cat \"sophomore\") \"/m/04qbglv\") ((word-cat \"defensive\") \"/m/04qbglv\") ((word-cat \"end\") \"/m/04qbglv\") ((word-rel \"redshirt_sophomore_defensive_end_N/N\") var805234 \"/m/04qbglv\")))"
+                "queryExpression": "(lambda (var805234) (and ((word-cat \"redshirt\") \"/m/04qbglv\") ((word-cat \"sophomore\") \"/m/04qbglv\") ((word-cat \"defensive\") \"/m/04qbglv\") ((word-cat \"end\") \"/m/04qbglv\") ((word-rel \"special:N/N\") var805234 \"/m/04qbglv\")))"
             }
         ],
         "sentence": "PSU redshirt sophomore defensive end Aaron Maybin"
@@ -13896,7 +13896,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"attorney_general_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/03v0t\"",
                         true
                     ]
@@ -13904,7 +13904,7 @@
                 "midsInQuery": [
                     "/m/03v0t"
                 ],
-                "queryExpression": "(lambda (var891285) (and ((word-cat \"former\") var891285) ((word-cat \"attorney\") var891285) ((word-cat \"general\") var891285) ((word-rel \"attorney_general_N/N\") \"/m/03v0t\" var891285)))"
+                "queryExpression": "(lambda (var891285) (and ((word-cat \"former\") var891285) ((word-cat \"attorney\") var891285) ((word-cat \"general\") var891285) ((word-rel \"special:N/N\") \"/m/03v0t\" var891285)))"
             },
             {
                 "correctAnswerIds": [
@@ -13955,7 +13955,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"attorney_general_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/09sztf\"",
                         false
                     ]
@@ -13963,7 +13963,7 @@
                 "midsInQuery": [
                     "/m/09sztf"
                 ],
-                "queryExpression": "(lambda (var243922) (and ((word-cat \"former\") \"/m/09sztf\") ((word-cat \"attorney\") \"/m/09sztf\") ((word-cat \"general\") \"/m/09sztf\") ((word-rel \"attorney_general_N/N\") var243922 \"/m/09sztf\")))"
+                "queryExpression": "(lambda (var243922) (and ((word-cat \"former\") \"/m/09sztf\") ((word-cat \"attorney\") \"/m/09sztf\") ((word-cat \"general\") \"/m/09sztf\") ((word-rel \"special:N/N\") var243922 \"/m/09sztf\")))"
             }
         ],
         "sentence": "former Illinois Attorney General Roland Burris"
@@ -14032,7 +14032,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"mayor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/01y6p4\"",
                         false
                     ]
@@ -14040,7 +14040,7 @@
                 "midsInQuery": [
                     "/m/01y6p4"
                 ],
-                "queryExpression": "(lambda (var86209) (and ((word-cat \"mayor\") \"/m/01y6p4\") ((word-rel \"mayor_N/N\") var86209 \"/m/01y6p4\")))"
+                "queryExpression": "(lambda (var86209) (and ((word-cat \"mayor\") \"/m/01y6p4\") ((word-rel \"special:N/N\") var86209 \"/m/01y6p4\")))"
             },
             {
                 "correctAnswerIds": [
@@ -14110,7 +14110,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"mayor_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/030qb3t\"",
                         true
                     ]
@@ -14118,7 +14118,7 @@
                 "midsInQuery": [
                     "/m/030qb3t"
                 ],
-                "queryExpression": "(lambda (var568966) (and ((word-cat \"mayor\") var568966) ((word-rel \"mayor_N/N\") \"/m/030qb3t\" var568966)))"
+                "queryExpression": "(lambda (var568966) (and ((word-cat \"mayor\") var568966) ((word-rel \"special:N/N\") \"/m/030qb3t\" var568966)))"
             }
         ],
         "sentence": "Los Angeles Mayor Antonio Villaraigosa"
@@ -14205,7 +14205,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"linebacker_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/05g3b\"",
                         true
                     ]
@@ -14213,7 +14213,7 @@
                 "midsInQuery": [
                     "/m/05g3b"
                 ],
-                "queryExpression": "(lambda (var251102) (and ((word-cat \"linebacker\") var251102) ((word-rel \"linebacker_N/N\") \"/m/05g3b\" var251102)))"
+                "queryExpression": "(lambda (var251102) (and ((word-cat \"linebacker\") var251102) ((word-rel \"special:N/N\") \"/m/05g3b\" var251102)))"
             },
             {
                 "correctAnswerIds": [
@@ -14238,7 +14238,7 @@
                 ],
                 "midRelationsInQuery": [
                     [
-                        "\"linebacker_N/N\"",
+                        "\"special:N/N\"",
                         "\"/m/06b7z7\"",
                         false
                     ]
@@ -14246,7 +14246,7 @@
                 "midsInQuery": [
                     "/m/06b7z7"
                 ],
-                "queryExpression": "(lambda (var377563) (and ((word-cat \"linebacker\") \"/m/06b7z7\") ((word-rel \"linebacker_N/N\") var377563 \"/m/06b7z7\")))"
+                "queryExpression": "(lambda (var377563) (and ((word-cat \"linebacker\") \"/m/06b7z7\") ((word-rel \"special:N/N\") var377563 \"/m/06b7z7\")))"
             }
         ],
         "sentence": "Patriots linebacker Ted Johnson"

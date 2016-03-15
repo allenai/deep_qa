@@ -1,3 +1,6 @@
+(define sfe-spec-file (car ARGV))
+(define graph-features (create-sfe-feature-computer sfe-spec-file))
+
 (define word-family (word-parameters entity-parameters)
   (lambda (word)
     (lambda (entity)
@@ -6,11 +9,10 @@
           (make-inner-product-classifier
             var #t (get-cat-word-params word word-parameters) (get-entity-params entity entity-parameters))
           var)
-        #f)
-      )))
+        #f))))
 
 (define word-rel-family (word-rel-params entity-tuple-params)
-  (define word-rel (word)
+  (lambda (word)
     (lambda (entity1 entity2)
       (if (dictionary-contains (list entity1 entity2) entity-tuples)
         (let ((var (make-entity-var (cons entity1 entity2))))
@@ -18,10 +20,7 @@
             var #t (get-rel-word-params word word-rel-params)
             (get-entity-tuple-params entity1 entity2 entity-tuple-params))
           var)
-        #f
-        )
-      ))
-  word-rel)
+        #f))))
 
 (define get-word-cat (parameters)
   (let ((word-parameters (get-ith-parameter parameters 0))
@@ -111,4 +110,6 @@
                (dictionary-to-array rel-words))
     ))
 
-(define find-related-entities (midsInQuery midRelationsInQuery) (get-all-related-entities midsInQuery))
+;(define find-related-entities (midsInQuery midRelationsInQuery) (get-all-related-entities midsInQuery))
+(define find-related-entities (midsInQuery midRelationsInQuery)
+  (array-merge-sets (get-all-related-entities midsInQuery) (find-related-entities-in-graph midRelationsInQuery graph-features)))
