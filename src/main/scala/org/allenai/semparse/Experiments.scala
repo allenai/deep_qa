@@ -1,34 +1,7 @@
 package org.allenai.semparse
 
-// This defines the experiments that we want to run, which is used by the main methods in Trainer
-// and Evaluator.  It also keeps pointers to all of the lisp input files and data files that we
-// use, and groups some of them together in useful ways.
-object Experiments {
-
-  // Currently, there are four options in the experiments: which dataset do you use, ensembled with
-  // baseline or not (for evaluation only), what ranking method, and what model type.  If we add
-  // very many more possibilities, this will need some re-thinking to be more sane.
-  val experimentConfigs: Seq[(String, String, String, Boolean)] = {
-    val datasets = Seq("large")//, "small")
-    val modelTypes = Seq("combined")//, "distributional", "formal")
-
-    // I don't actually change these in the experiments for the ACL 2016 paper, but these were
-    // options used for the TACL 2015 paper.
-    val rankings = Seq("query")//, "predicate")
-    val ensembledEvaluation = Seq(false)//, true)
-    val baselineConfigs = Seq(
-      //("small", "baseline", "ignored", false)
-      //("large", "baseline", "ignored", false)
-    )
-
-    // Generate all possible combinations
-    val configs = for (data <- datasets;
-         modelType <- modelTypes;
-         ranking <- rankings;
-         ensembled <- ensembledEvaluation) yield (data, modelType, ranking, ensembled)
-
-    (configs ++ baselineConfigs)
-  }
+// This object just keeps track of all of the (hand-written) lisp input files that we use.
+object LispFiles {
 
   val BASE_ENVIRONMENT_FILE = "src/main/lisp/environment.lisp"
   val USCHEMA_ENVIRONMENT_FILE = "src/main/lisp/uschema_environment.lisp"
