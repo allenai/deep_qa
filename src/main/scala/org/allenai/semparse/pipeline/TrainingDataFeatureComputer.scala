@@ -78,10 +78,10 @@ class TrainingDataFeatureComputer(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
-  val dataName = (params \ "data name").extract[String]
-  val sfeSpecFile = (params \ "sfe spec file").extract[String]
   val trainingDataParams = (params \ "training data")
+  val sfeSpecFile = (params \ "sfe spec file").extract[String]
   val trainingDataProcessor = new TrainingDataProcessor(trainingDataParams, fileUtil)
+  val dataName = trainingDataProcessor.dataName
   val outDir = s"data/$dataName/"
 
   val midFile = s"${outDir}/training_mids.tsv"
