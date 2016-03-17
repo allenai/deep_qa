@@ -15,6 +15,18 @@ class SparkPmiComputer(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
+  val validParams = Seq(
+    "max word count",
+    "max feature count",
+    "min mid feature count",
+    "min mid pair feature count",
+    "features per word",
+    "use squared pmi",
+    "run locally",
+    "training data features"
+  )
+  JsonHelper.ensureNoExtras(params, "pmi computer", validParams)
+
   // If we've seen a MID too many times, it blows up the word-feature computation.  The US, God,
   // and TV all show up more than 12k times in the large dataset.  I think we can get a good enough
   // PMI computation without these really frequent MIDs.  These parameters throw out a few
@@ -46,7 +58,7 @@ class SparkPmiComputer(
   val processor = featureComputer.trainingDataProcessor
   val dataName = processor.dataName
 
-  val outDir = s"data/${dataName}/"
+  val outDir = s"data/${dataName}"
 
   val midMatrixFile = if (runningLocally) {
     s"$outDir/pre_filtered_mid_features.tsv"
@@ -73,13 +85,13 @@ class SparkPmiComputer(
   }
 
   val catWordFeatureFile = if (runningLocally) {
-    "$outDir/cat_word_features.tsv"
+    s"$outDir/cat_word_features.tsv"
   } else {
     (params \ "cat word feature file").extract[String]  // some S3 URI
   }
 
   val relWordFeatureFile = if (runningLocally) {
-    "$outDir/rel_word_features.tsv"
+    s"$outDir/rel_word_features.tsv"
   } else {
     (params \ "rel word feature file").extract[String]  // some S3 URI
   }
