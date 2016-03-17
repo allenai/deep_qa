@@ -108,7 +108,6 @@ class TrainingDataFeatureComputer(
   def processInMemory() {
     val fileUtil = new FileUtil
     val computer = new PreFilteredFeatureComputer(sfeSpecFile, fileUtil)
-    computer.graph.
 
     {
       // This block is so that midFeatures goes out of scope and can be garbage collected once it's
