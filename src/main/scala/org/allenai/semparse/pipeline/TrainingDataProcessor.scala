@@ -1,11 +1,14 @@
-package org.allenai.semparse
+package org.allenai.semparse.pipeline
 
 import collection.mutable
 
 import com.mattg.util.FileUtil
+import com.mattg.util.JsonHelper
+import com.mattg.pipeline.Step
 
 import org.json4s.DefaultFormats
-import org.json4s.JValue
+import org.json4s._
+import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods.parse
 
 // I was was tired of having such a nasty pipeline of so many different scripts to run to get this
@@ -128,20 +131,42 @@ class TrainingData(
 }
 
 class TrainingDataProcessor(
-  trainingFile: String,
-  outDir: String,
-  wordCountThreshold: Int,
-  linesToUse: Option[Int],
+  params: JValue,
   fileUtil: FileUtil = new FileUtil
-) {
+) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
+
+  val trainingDataFile = (params \ "training data file").extract[String]
+  val dataName = (params \ "data name").extract[String]
+  val wordCountThreshold = (params \ "word count threshold").extract[Int]
+  val linesToUse: Option[Int] = (params \ "lines to use") match {
+    case JNothing => None
+    case jval => Some(jval.extract[Int])
+  }
+
+  val outDir = s"data/$dataName/"
+
+  override def paramFile = outDir + "tdp_params.json"
+  override def name = "Training data processor"
+  override def inputs = Set((trainingDataFile, None))
+  override def outputs = Set(
+    s"$outDir/words.lisp",
+    s"$outDir/entities.lisp",
+    s"$outDir/joint_entities.lisp",
+    s"$outDir/predicate_ranking_lf.lisp",
+    s"$outDir/query_ranking_lf.lisp",
+    s"$outDir/training_mids.tsv",
+    s"$outDir/training_mid_pairs.tsv",
+    s"$outDir/training_mid_words.tsv",
+    s"$outDir/training_mid_pair_words.tsv"
+  )
 
   val midRegex = "\"/m/[^\"]*\"".r
   val catWordRegex = "word-cat \"([^\"]*)\"".r
   val relWordRegex = "word-rel \"([^\"]*)\"".r
   fileUtil.mkdirs(outDir)
 
-  def processTrainingFile() {
+  override def _runStep() {
     val wordCounts = getWordCountsFromTrainingFile()
     val trainingData = readTrainingData(wordCounts)
 
@@ -190,8 +215,8 @@ class TrainingDataProcessor(
   }
 
   def getTrainingFileIterator() = linesToUse match {
-    case None => fileUtil.getLineIterator(trainingFile)
-    case Some(lines) => fileUtil.getLineIterator(trainingFile).take(lines)
+    case None => fileUtil.getLineIterator(trainingDataFile)
+    case Some(lines) => fileUtil.getLineIterator(trainingDataFile).take(lines)
   }
 
   // We need to get cat and rel word counts in a pass over the training file, so we can use the
@@ -472,25 +497,23 @@ class TrainingDataProcessor(
   }
 }
 
+// TODO(matt): remove this once the whole pipeline is converted to the new system.
 object process_training_data {
   def main(args: Array[String]) {
     // This is so you can have a small dataset while developing things.
     println("Processing a sample of the data")
-    val smallProcessor = new TrainingDataProcessor(
-      "data/acl2016-training.txt",
-      "data/small/",
-      2,
-      Some(100000)
-    )
-    smallProcessor.processTrainingFile()
+    val smallParams = ("training data file" -> "data/acl2016-training.txt") ~
+      ("data name" -> "acl2016-sample") ~
+      ("word count threshold" -> 2) ~
+      ("lines to use" -> 100000)
+    val smallProcessor = new TrainingDataProcessor(smallParams)
+    smallProcessor._runStep()
 
     println("Processing the whole data")
-    val largeProcessor = new TrainingDataProcessor(
-      "data/acl2016-training.txt",
-      "data/large/",
-      5,
-      None
-    )
-    largeProcessor.processTrainingFile()
+    val params = ("training data file" -> "data/acl2016-training.txt") ~
+      ("data name" -> "acl2016") ~
+      ("word count threshold" -> 5)
+    val largeProcessor = new TrainingDataProcessor(params)
+    largeProcessor._runStep()
   }
 }
