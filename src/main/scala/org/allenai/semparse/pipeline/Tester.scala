@@ -5,6 +5,8 @@ import java.io.File
 
 import scala.collection.mutable
 
+import org.allenai.semparse.Environment
+
 import com.jayantkrish.jklol.lisp.ConsValue
 
 import com.mattg.util.FileUtil
@@ -21,16 +23,18 @@ class Tester(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
-  // Parameters we take.
-  val poolDepth = JsonHelper.extractWithDefault(params, "pool depth", 100)
+  // Parameters we take.  Only the query file is required.
   val queryFile = (params \ "test query file").extract[String]
-  val dataName = (params \ "data name").extract[String]
-  val ranking = JsonHelper.extractOptionWithDefault(params, "ranking", Seq("query", "predicate"), "query")
-  val modelType = JsonHelper.extractOption(params, "model type", Seq("baseline", "distributional", "formal", "combined"))
+  val poolDepth = JsonHelper.extractWithDefault(params, "pool depth", 100)
   val ensembledEvaluation = JsonHelper.extractWithDefault(params, "ensembled evaluation", false)
 
-  // Original training data file, which we process to get a set of entity names.
-  val trainingDataFile = (params \ "training data file").extract[String]
+  // Some of the parameters we need we'll grab from steps we depend on.
+  val trainer = new Trainer(params \ "trainer", fileUtil)
+  val processor = trainer.processor
+  val dataName = processor.dataName
+  val ranking = trainer.ranking
+  val modelType = trainer.modelType
+  val trainingDataFile = processor.trainingDataFile
 
   // These are code files that are common to all models, and just specify the base lisp
   // environment.
@@ -88,11 +92,7 @@ class Tester(
     }
   }
 
-  // At this point we're finally ready to override the Step methods.  To do this, we first create
-  // the Step objects we depend on.
-  val processor = new TrainingDataProcessor(params \ "training data", fileUtil)
-  val trainer = new Trainer(params \ "trainer", fileUtil)
-
+  // At this point we're finally ready to override the Step methods.
   override def paramFile = outputFile.replace("output.txt", "params.json")
   override def name = "Model tester"
   override def inputs =

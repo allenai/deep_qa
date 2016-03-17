@@ -496,24 +496,3 @@ class TrainingDataProcessor(
     fileUtil.writeLinesToFile(outDir + "training-mid-pair-words.tsv", midPairWords)
   }
 }
-
-// TODO(matt): remove this once the whole pipeline is converted to the new system.
-object process_training_data {
-  def main(args: Array[String]) {
-    // This is so you can have a small dataset while developing things.
-    println("Processing a sample of the data")
-    val smallParams = ("training data file" -> "data/acl2016-training.txt") ~
-      ("data name" -> "acl2016-sample") ~
-      ("word count threshold" -> 2) ~
-      ("lines to use" -> 100000)
-    val smallProcessor = new TrainingDataProcessor(smallParams)
-    smallProcessor._runStep()
-
-    println("Processing the whole data")
-    val params = ("training data file" -> "data/acl2016-training.txt") ~
-      ("data name" -> "acl2016") ~
-      ("word count threshold" -> 5)
-    val largeProcessor = new TrainingDataProcessor(params)
-    largeProcessor._runStep()
-  }
-}

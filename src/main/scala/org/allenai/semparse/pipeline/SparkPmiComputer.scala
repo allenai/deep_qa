@@ -15,11 +15,6 @@ class SparkPmiComputer(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
-  val dataName = (params \ "data name").extract[String]
-  val outDir = s"data/${dataName}/"
-  val runningLocally = JsonHelper.extractWithDefault(params, "run locally", true)
-  val midOrPair = JsonHelper.extractOption(params, "mid or pair", Seq("mid", "mid_pair"))
-
   // If we've seen a MID too many times, it blows up the word-feature computation.  The US, God,
   // and TV all show up more than 12k times in the large dataset.  I think we can get a good enough
   // PMI computation without these really frequent MIDs.  These parameters throw out a few
@@ -28,57 +23,92 @@ class SparkPmiComputer(
   val maxFeatureCount = JsonHelper.extractWithDefault(params, "max feature count", 50000)
 
   // This parameter, on the other hand, filters out a large number of infrequently seen features.
-  val minFeatureCountDefault = midOrPair match { case "mid" => 2000; case "mid_pair" => 100 }
-  val minFeatureCount = JsonHelper.extractWithDefault(params, "min feature count", minFeatureCountDefault)
+  val minMidFeatureCount = JsonHelper.extractWithDefault(params, "min mid feature count", 2000)
+  val minMidPairFeatureCount = JsonHelper.extractWithDefault(params, "min mid pair feature count", 100)
 
   // How many features should we keep per word?
   val featuresPerWord = JsonHelper.extractWithDefault(params, "features per word", 100)
 
   val useSquaredPmi = JsonHelper.extractWithDefault(params, "use squared pmi", false)
 
+  // You can run this on a cluster, if you want, but then you have to put all of your data on S3,
+  // and specify in your experiment configuration where those files are, and get your AWS keys into
+  // your shell environment, and so on...
+  val runningLocally = JsonHelper.extractWithDefault(params, "run locally", true)
+
   // TODO(matt): maybe this should be a parameter...?  But this one is purely computational, and
   // changing it does not change the output, so I don't really want it to get saved in the param
   // file...
   val numPartitions = 2000
 
-  val matrixFile = if (runningLocally) {
-    s"$outDir/pre_filtered_${midOrPair}_features.tsv"
+  // OK, that's all of the parameters specific to this step, now to set up the inputs and outputs.
+  val featureComputer = new TrainingDataFeatureComputer(params \ "training data features", fileUtil)
+  val processor = featureComputer.trainingDataProcessor
+  val dataName = processor.dataName
+
+  val outDir = s"data/${dataName}/"
+
+  val midMatrixFile = if (runningLocally) {
+    s"$outDir/pre_filtered_mid_features.tsv"
   } else {
-    (params \ "matrix file").extract[String]  // some S3 URI
+    (params \ "mid matrix file").extract[String]  // some S3 URI
+  }
+
+  val midPairMatrixFile = if (runningLocally) {
+    s"$outDir/pre_filtered_mid_pair_features.tsv"
+  } else {
+    (params \ "mid pair matrix file").extract[String]  // some S3 URI
   }
 
   val midWordFile = if (runningLocally) {
-    s"$outDir/training_${midOrPair}_words.tsv"
+    s"$outDir/training_mid_words.tsv"
   } else {
     (params \ "mid word file").extract[String]  // some S3 URI
   }
 
-  val wordFeatureFile = if (runningLocally) {
-    midOrPair match {
-      case "mid" => s"$outDir/cat_word_features.tsv"
-      case "mid_pair" => s"$outDir/rel_word_features.tsv"
-    }
+  val midPairWordFile = if (runningLocally) {
+    s"$outDir/training_mid_pair_words.tsv"
   } else {
-    (params \ "word feature file").extract[String]  // some S3 URI
+    (params \ "mid pair word file").extract[String]  // some S3 URI
   }
 
-  val filteredFeatureFile = if (runningLocally) {
-    s"$outDir/${midOrPair}_features.tsv"
+  val catWordFeatureFile = if (runningLocally) {
+    "$outDir/cat_word_features.tsv"
   } else {
-    (params \ "filtered feature file").extract[String]  // some S3 URI
+    (params \ "cat word feature file").extract[String]  // some S3 URI
   }
 
-  val processor = new TrainingDataProcessor(params \ "training data", fileUtil)
-  val featureComputer = new TrainingDataFeatureComputer(params \ "training data features", fileUtil)
-  override def paramFile = s"$outDir/pmi_${midOrPair}_params.json"
+  val relWordFeatureFile = if (runningLocally) {
+    "$outDir/rel_word_features.tsv"
+  } else {
+    (params \ "rel word feature file").extract[String]  // some S3 URI
+  }
+
+  val filteredMidFeatureFile = if (runningLocally) {
+    s"$outDir/mid_features.tsv"
+  } else {
+    (params \ "filtered mid feature file").extract[String]  // some S3 URI
+  }
+
+  val filteredMidPairFeatureFile = if (runningLocally) {
+    s"$outDir/mid_pair_features.tsv"
+  } else {
+    (params \ "filtered mid pair feature file").extract[String]  // some S3 URI
+  }
+
+  override def paramFile = s"$outDir/pmi_params.json"
   override def name = "Spark PMI computer"
   override def inputs = Set(
-    (matrixFile, if (runningLocally) Some(featureComputer) else None),
-    (midWordFile, if (runningLocally) Some(processor) else None)
+    (midMatrixFile, if (runningLocally) Some(featureComputer) else None),
+    (midPairMatrixFile, if (runningLocally) Some(featureComputer) else None),
+    (midWordFile, if (runningLocally) Some(processor) else None),
+    (midPairWordFile, if (runningLocally) Some(processor) else None)
   )
   override def outputs = Set(
-    wordFeatureFile,
-    filteredFeatureFile
+    catWordFeatureFile,
+    relWordFeatureFile,
+    filteredMidFeatureFile,
+    filteredMidPairFeatureFile
   )
 
   /**
@@ -95,7 +125,7 @@ class SparkPmiComputer(
    *    that we don't have to keep around and load a huge file with millions of features.
    */
   override def _runStep() {
-    val conf = new SparkConf().setAppName(s"Compute PMI ($midOrPair)")
+    val conf = new SparkConf().setAppName(s"Compute PMI")
       .set("spark.driver.maxResultSize", "0")
       .set("spark.network.timeout", "1000000")
       .set("spark.akka.frameSize", "1028")
@@ -106,11 +136,40 @@ class SparkPmiComputer(
 
     val sc = new SparkContext(conf)
 
+    computePmi(
+      sc,
+      "mid",
+      minMidFeatureCount,
+      midMatrixFile,
+      midWordFile,
+      catWordFeatureFile,
+      filteredMidFeatureFile
+    )
+    computePmi(
+      sc,
+      "mid_pair",
+      minMidPairFeatureCount,
+      midPairMatrixFile,
+      midPairWordFile,
+      relWordFeatureFile,
+      filteredMidPairFeatureFile
+    )
+  }
+
+  def computePmi(
+    sc: SparkContext,
+    midOrPair: String,
+    minFeatureCount: Int,
+    matrixFile: String,
+    wordFile: String,
+    wordFeatureFile: String,
+    filteredFeatureFile: String
+  ) {
     // PB here and below is "pre-broadcast" - it's a sign that you probably shouldn't be using this
     // variable anywhere except in a call to sc.broadcast()
 
     // Step 1a
-    val midWordCountsPB = sc.textFile(midWordFile).map(line => {
+    val midWordCountsPB = sc.textFile(wordFile).map(line => {
       val fields = line.split("\t")
       val mid = fields(0).replace(",", " ")
       val words = fields.drop(1).toSeq
@@ -198,7 +257,7 @@ class SparkPmiComputer(
           // Always include CONNECTED and bias as potential features.  bias will get automatically
           // added to every entity / entity pair, and CONNECTED means that two entities have a direct
           // connection in the graph.
-          val defaultFeatures = if (midOrPair == "mid pair") Seq(("bias", 1.0), ("CONNECTED", 1.0)) else Seq(("bias", 1.0))
+          val defaultFeatures = if (midOrPair == "mid_pair") Seq(("bias", 1.0), ("CONNECTED", 1.0)) else Seq(("bias", 1.0))
           val grouped = featureScores.groupBy(_._2).toSeq.sortBy(-_._1).take(featuresPerWord)
           val kept = grouped.flatMap(entry => {
             val score = entry._1

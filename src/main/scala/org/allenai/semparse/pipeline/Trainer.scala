@@ -2,6 +2,8 @@ package org.allenai.semparse.pipeline
 
 import java.io.File
 
+import org.allenai.semparse.Environment
+
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
 import com.mattg.pipeline.Step
@@ -15,9 +17,13 @@ class Trainer(
   implicit val formats = DefaultFormats
 
   // The parameters we take.
-  val dataName = (params \ "data name").extract[String]
   val ranking = JsonHelper.extractOptionWithDefault(params, "ranking", Seq("query", "predicate"), "query")
   val modelType = JsonHelper.extractOption(params, "model type", Seq("distributional", "formal", "combined"))
+
+  // A few necessary things from previous steps.
+  val pmiComputer = new SparkPmiComputer(params \ "feature computer", fileUtil)
+  val processor = pmiComputer.featureComputer.trainingDataProcessor
+  val dataName = processor.dataName
 
   // The output file.
   val serializedModelFile = s"output/$dataName/$modelType/$ranking/model.ser"
@@ -50,18 +56,12 @@ class Trainer(
     Seq(entityFile, wordsFile, logicalFormFile)
   }
 
-  val midFeatureFiles = Seq(
+  val featureFiles = Seq(
     s"data/${dataName}/mid_features.tsv",
-    s"data/${dataName}/cat_word_features.tsv"
-  )
-  val midPairFeatureFiles = Seq(
     s"data/${dataName}/mid_pair_features.tsv",
+    s"data/${dataName}/cat_word_features.tsv",
     s"data/${dataName}/rel_word_features.tsv"
   )
-
-  val processor = new TrainingDataProcessor(params \ "training data", fileUtil)
-  val midPmiComputer = new SparkPmiComputer(params \ "mid feature computer", fileUtil)
-  val midPairPmiComputer = new SparkPmiComputer(params \ "mid pair feature computer", fileUtil)
 
   // The path to the model file already encodes all of our parameters, really, but this will also
   // check that our data parameters haven't changed (i.e., using a different subset of the data,
@@ -72,8 +72,7 @@ class Trainer(
     handwrittenLispFiles.map((_, None)).toSet ++
     Set((sfeSpecFile, None)) ++
     dataFiles.map((_, Some(processor))).toSet ++
-    midFeatureFiles.map((_, Some(midPmiComputer))).toSet ++
-    midPairFeatureFiles.map((_, Some(midPairPmiComputer))).toSet
+    featureFiles.map((_, Some(pmiComputer))).toSet
   override def outputs = Set(
     serializedModelFile
   )
