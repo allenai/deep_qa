@@ -16,6 +16,9 @@ class Trainer(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
+  val validParams = Seq("model type", "ranking", "feature computer")
+  JsonHelper.ensureNoExtras(params, "trainer", validParams)
+
   // The parameters we take.
   val ranking = JsonHelper.extractOptionWithDefault(params, "ranking", Seq("query", "predicate"), "query")
   val modelType = JsonHelper.extractOption(params, "model type", Seq("distributional", "formal", "combined"))
@@ -42,7 +45,7 @@ class Trainer(
     Seq(baseEnvFile, uschemaEnvFile, rankingLispFile, lispModelFile, trainingLispFile)
 
   // This one is a (hand-written) parameter file that will be passed to lisp code.
-  val sfeSpecFile = s"src/main/resources/sfe_spec.json"
+  val sfeSpecFile = pmiComputer.featureComputer.sfeSpecFile
 
   // These are data files, produced by TrainingDataProcessor.
   val entityFile = s"data/${dataName}/entities.lisp"

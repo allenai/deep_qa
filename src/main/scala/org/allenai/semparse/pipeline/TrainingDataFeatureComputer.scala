@@ -10,6 +10,7 @@ import edu.cmu.ml.rtw.pra.graphs.Graph
 import edu.cmu.ml.rtw.pra.graphs.Graph
 
 import com.mattg.util.FileUtil
+import com.mattg.util.JsonHelper
 import com.mattg.util.SpecFileReader
 import com.mattg.pipeline.Step
 
@@ -78,11 +79,14 @@ class TrainingDataFeatureComputer(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
+  val validParams = Seq("training data", "sfe spec file")
+  JsonHelper.ensureNoExtras(params, "feature matrix computer", validParams)
+
   val trainingDataParams = (params \ "training data")
   val sfeSpecFile = (params \ "sfe spec file").extract[String]
   val trainingDataProcessor = new TrainingDataProcessor(trainingDataParams, fileUtil)
   val dataName = trainingDataProcessor.dataName
-  val outDir = s"data/$dataName/"
+  val outDir = s"data/$dataName"
 
   val midFile = s"${outDir}/training_mids.tsv"
   val midPairFile = s"${outDir}/training_mid_pairs.tsv"
@@ -97,13 +101,14 @@ class TrainingDataFeatureComputer(
   )
   override def outputs = Set(midFeatureFile, midPairFeatureFile)
 
-  override def _runStep(args: Array[String]) {
+  override def _runStep() {
     processInMemory()
   }
 
   def processInMemory() {
     val fileUtil = new FileUtil
     val computer = new PreFilteredFeatureComputer(sfeSpecFile, fileUtil)
+    computer.graph.
 
     {
       // This block is so that midFeatures goes out of scope and can be garbage collected once it's

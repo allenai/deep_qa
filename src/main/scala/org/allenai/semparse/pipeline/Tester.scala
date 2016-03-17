@@ -23,13 +23,16 @@ class Tester(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
+  val validParams = Seq("test query file", "pool depth", "ensembled evaluation", "model")
+  JsonHelper.ensureNoExtras(params, "tester", validParams)
+
   // Parameters we take.  Only the query file is required.
   val queryFile = (params \ "test query file").extract[String]
   val poolDepth = JsonHelper.extractWithDefault(params, "pool depth", 100)
   val ensembledEvaluation = JsonHelper.extractWithDefault(params, "ensembled evaluation", false)
 
   // Some of the parameters we need we'll grab from steps we depend on.
-  val trainer = new Trainer(params \ "trainer", fileUtil)
+  val trainer = new Trainer(params \ "model", fileUtil)
   val processor = trainer.processor
   val dataName = processor.dataName
   val ranking = trainer.ranking
@@ -56,7 +59,7 @@ class Tester(
   val handwrittenLispFiles = Seq(baseEnvFile, uschemaEnvFile) ++ lispModelFiles ++ Seq(evalLispFile)
 
   // This one is a (hand-written) parameter file that will be passed to lisp code.
-  val sfeSpecFile = s"src/main/resources/sfe_spec.json"
+  val sfeSpecFile = trainer.sfeSpecFile
 
   // These are data files, produced by TrainingDataProcessor.
   val entityFile = s"data/${dataName}/entities.lisp"
@@ -64,8 +67,7 @@ class Tester(
 
   val dataFiles = Seq(entityFile, wordsFile)
 
-  // TODO(matt): might make sense to just grab this path directly from Trainer.
-  val serializedModelFile = s"output/$dataName/$modelType/$ranking/model.ser"
+  val serializedModelFile = trainer.serializedModelFile
   val baselineModelFile = s"output/$dataName/baseline/model.lisp"
 
   val baseInputFiles = dataFiles ++ handwrittenLispFiles

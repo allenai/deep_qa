@@ -115,13 +115,13 @@ object Experiments {
 
   val newLfSampleFormalModelFinalTestParams: JValue =
     ("test query file" -> FINAL_TEST_SET) ~
-    ("model" -> newLfFormalModelParams)
+    ("model" -> newLfSampleFormalModelParams)
   val newLfSampleDistributionalModelFinalTestParams: JValue =
     ("test query file" -> FINAL_TEST_SET) ~
-    ("model" -> newLfDistributionalModelParams)
+    ("model" -> newLfSampleDistributionalModelParams)
   val newLfSampleCombinedModelFinalTestParams: JValue =
     ("test query file" -> FINAL_TEST_SET) ~
-    ("model" -> newLfCombinedModelParams)
+    ("model" -> newLfSampleCombinedModelParams)
 
 
   def main(args: Array[String]) {
