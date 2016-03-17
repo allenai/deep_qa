@@ -26,22 +26,4 @@ class EvaluationSpec extends FlatSpecLike with Matchers {
     names("/m/0f8l9c") should be("\"France\" \"French\"")
     names("/m/03xp6r") should be("\"AF\" \"Air Force\"")
   }
-
-
-  "computeAveragePrecision" should "give the correct answer with a simple example" in {
-    val scores = Seq((1.0, "a"), (.8, "b"), (.4, "c"))
-    Evaluator.computeAveragePrecision(scores, Set("b")) should be(.5)
-    Evaluator.computeAveragePrecision(scores, Set("b", "c")) should be(.5833 +- .0001)
-    Evaluator.computeAveragePrecision(scores, Set("a", "b", "c")) should be(1)
-    Evaluator.computeAveragePrecision(scores, Set("a", "b")) should be(1)
-    Evaluator.computeAveragePrecision(scores, Set("a", "b", "d", "e", "f")) should be(.4 +- .0001)
-  }
-
-  it should "respect ties in scores, too" in {
-    val scores = Seq((1.0, "a"), (1.0, "b"), (.8, "c"), (.8, "d"))
-    Evaluator.computeAveragePrecision(scores, Set("a")) should be(.5 +- .0001)
-    Evaluator.computeAveragePrecision(scores, Set("b")) should be(.5 +- .0001)
-    Evaluator.computeAveragePrecision(scores, Set("c")) should be(.25 +- .0001)
-    Evaluator.computeAveragePrecision(scores, Set("d")) should be(.25 +- .0001)
-  }
 }

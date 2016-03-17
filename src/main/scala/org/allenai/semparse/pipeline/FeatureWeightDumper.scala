@@ -1,10 +1,8 @@
-package org.allenai.semparse.one_off
+package org.allenai.semparse.pipeline
 
 import scala.collection.JavaConverters._
 
 import org.allenai.semparse.Environment
-import org.allenai.semparse.Experiments
-import org.allenai.semparse.Trainer
 
 import com.jayantkrish.jklol.lisp.ListParameterSpec
 import com.jayantkrish.jklol.lisp.SpecAndParameters
@@ -14,18 +12,33 @@ import com.jayantkrish.jklol.tensor.SparseTensor
 import com.jayantkrish.jklol.util.IndexedList
 
 import com.mattg.util.FileUtil
+import com.mattg.pipeline.Step
 
-object dump_feature_weights {
+import org.json4s._
 
-  val fileUtil = new FileUtil
+class FeatureWeightDumper(
+  params: JValue,
+  fileUtil: FileUtil = new FileUtil
+) extends Step(None, fileUtil) {
 
-  def getCatWordParamIndex(modelType: String): Int = modelType match {
+  val trainer = new Trainer(params, fileUtil)
+
+  val modelFile = trainer.serializedModelFile
+
+  val wordFile = s"data/${trainer.dataName}/just_words.lisp"
+  val catWordFile = modelFile.replace("model.ser", "cat_word_feature_weights.txt")
+  val relWordFile = modelFile.replace("model.ser", "rel_word_feature_weights.txt")
+
+  override def inputs = Set((wordFile, None), (modelFile, Some(trainer)))
+  override def outputs = Set(catWordFile, relWordFile)
+
+  val catWordParamIndex = trainer.modelType match {
     case "formal" => 0
     case "combined" => 1
     case "distributional" => throw new IllegalStateException("distributional model has no such parameters")
   }
 
-  def getRelWordParamIndex(modelType: String): Int = modelType match {
+  val relWordParamIndex = trainer.modelType match {
     case "formal" => 1
     case "combined" => 4
     case "distributional" => throw new IllegalStateException("distributional model has no such parameters")
@@ -55,31 +68,21 @@ object dump_feature_weights {
     out.close()
   }
 
-  // TODO(matt): make this a Step, not a one_off script.
-  def main(args: Array[String]) {
-    Experiments.experimentConfigs.foreach(config => {
-      val (data, modelType, ranking, ensembledEvaluation) = config
-      val wordFile = s"data/${data}/just_words.lisp"
-      val modelFile = Trainer.getModelFile(data, ranking, modelType)
-      val catWordParamIndex = getCatWordParamIndex(modelType)
-      val relWordParamIndex = getRelWordParamIndex(modelType)
-      println(s"Loading initial environment (word file: $wordFile)")
-      val env = new Environment(Seq(wordFile), Seq())
-      println("Getting cat and rel words")
-      val catWords = env.evaluateSExpression("cat-words").getValue().asInstanceOf[IndexedList[Object]]
-      val relWords = env.evaluateSExpression("rel-words").getValue().asInstanceOf[IndexedList[Object]]
-      println(s"Deserializing the model from $modelFile")
-      val params = env.evaluateSExpression("(deserialize \""+ modelFile + "\")").getValue().asInstanceOf[SpecAndParameters]
+  override def _runStep() {
+    println(s"Loading initial environment (word file: $wordFile)")
+    val env = new Environment(Seq(wordFile), Seq())
+    println("Getting cat and rel words")
+    val catWords = env.evaluateSExpression("cat-words").getValue().asInstanceOf[IndexedList[Object]]
+    val relWords = env.evaluateSExpression("rel-words").getValue().asInstanceOf[IndexedList[Object]]
+    println(s"Deserializing the model from $modelFile")
+    val params = env.evaluateSExpression("(deserialize \""+ modelFile + "\")").getValue().asInstanceOf[SpecAndParameters]
 
-      val paramsList = params.getParameterSpec.asInstanceOf[ListParameterSpec]
-      val catWordParams = getWordParams(params, catWordParamIndex)
-      val relWordParams = getWordParams(params, relWordParamIndex)
-      println("Outputting cat word features")
-      val catWordFile = modelFile.replace("model.ser", "cat_word_feature_weights.txt")
-      writeParams(catWordFile, catWords, catWordParams)
-      println("Outputting rel word features")
-      val relWordFile = modelFile.replace("model.ser", "rel_word_feature_weights.txt")
-      writeParams(relWordFile, relWords, relWordParams)
-    })
+    val paramsList = params.getParameterSpec.asInstanceOf[ListParameterSpec]
+    val catWordParams = getWordParams(params, catWordParamIndex)
+    val relWordParams = getWordParams(params, relWordParamIndex)
+    println("Outputting cat word features")
+    writeParams(catWordFile, catWords, catWordParams)
+    println("Outputting rel word features")
+    writeParams(relWordFile, relWords, relWordParams)
   }
 }
