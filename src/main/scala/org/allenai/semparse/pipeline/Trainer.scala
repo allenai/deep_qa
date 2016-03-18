@@ -1,99 +1,90 @@
-package org.allenai.semparse
+package org.allenai.semparse.pipeline
 
 import java.io.File
 
+import org.allenai.semparse.Environment
+
 import com.mattg.util.FileUtil
+import com.mattg.util.JsonHelper
+import com.mattg.pipeline.Step
 
-object Trainer {
+import org.json4s._
 
-  def canTrainConfig(data: String, modelType: String, ranking: String, ensembledEvaluation: Boolean) = {
-    // At this point, we just need to filter out the baseline model, and we can train everything
-    // else.
-    modelType match {
-      case "baseline" => false
-      case _ => true
-    }
+class Trainer(
+  params: JValue,
+  fileUtil: FileUtil = new FileUtil
+) extends Step(Some(params), fileUtil) {
+  implicit val formats = DefaultFormats
+
+  val validParams = Seq("model type", "ranking", "feature computer")
+  JsonHelper.ensureNoExtras(params, "trainer", validParams)
+
+  // The parameters we take.
+  val ranking = JsonHelper.extractOptionWithDefault(params, "ranking", Seq("query", "predicate"), "query")
+  val modelType = JsonHelper.extractOption(params, "model type", Seq("distributional", "formal", "combined"))
+
+  // A few necessary things from previous steps.
+  val pmiComputer = new SparkPmiComputer(params \ "feature computer", fileUtil)
+  val processor = pmiComputer.featureComputer.trainingDataProcessor
+  val dataName = processor.dataName
+
+  // The output file.
+  val serializedModelFile = s"output/$dataName/$modelType/$ranking/model.ser"
+
+  // These are code files that are common to all models, and just specify the base lisp
+  // environment.
+  val baseEnvFile = "src/main/lisp/environment.lisp"
+  val uschemaEnvFile = "src/main/lisp/uschema_environment.lisp"
+
+  // These are code files, specifying the model we're using.
+  val lispModelFile = s"src/main/lisp/model_${modelType}.lisp"
+  val rankingLispFile = s"src/main/lisp/${ranking}_ranking.lisp"
+  val trainingLispFile = "src/main/lisp/train_model.lisp"
+
+  val handwrittenLispFiles =
+    Seq(baseEnvFile, uschemaEnvFile, rankingLispFile, lispModelFile, trainingLispFile)
+
+  // This one is a (hand-written) parameter file that will be passed to lisp code.
+  val sfeSpecFile = pmiComputer.featureComputer.sfeSpecFile
+
+  // These are data files, produced by TrainingDataProcessor.
+  val entityFile = s"data/${dataName}/entities.lisp"
+  val wordsFile = s"data/${dataName}/words.lisp"
+  val jointEntityFile = s"data/${dataName}/joint_entities.lisp"
+  val logicalFormFile = s"data/${dataName}/${ranking}_ranking_lf.lisp"
+
+  val dataFiles = if (ranking == "query") {
+    Seq(entityFile, wordsFile, jointEntityFile, logicalFormFile)
+  } else {
+    Seq(entityFile, wordsFile, logicalFormFile)
   }
 
-  def getModelFile(data: String, ranking: String, modelType: String) = {
-    val model = modelType match {
-      case "baseline" => modelType
-      case other => s"${modelType}/${ranking}"
-    }
-    val ending = modelType match { case "baseline" => ".lisp"; case other => ".ser" }
-    s"output/${data}/${model}/model${ending}"
-  }
+  val featureFiles = Seq(
+    s"data/${dataName}/mid_features.tsv",
+    s"data/${dataName}/mid_pair_features.tsv",
+    s"data/${dataName}/cat_word_features.tsv",
+    s"data/${dataName}/rel_word_features.tsv"
+  )
 
-  def createTrainingEnvironment(
-    data: String,
-    modelType: String,
-    ranking: String,
-    ensembledEvaluation: Boolean
-  ): Environment = {
-    val dataFiles = data match {
-      case "large" => ranking match {
-        case "predicate" => Experiments.PREDICATE_RANKING_LARGE_DATA
-        case "query" => Experiments.QUERY_RANKING_LARGE_DATA
-      }
-      case "small" => ranking match {
-        case "predicate" => Experiments.PREDICATE_RANKING_SMALL_DATA
-        case "query" => Experiments.QUERY_RANKING_SMALL_DATA
-      }
-      case other => throw new RuntimeException("unrecognized data option")
-    }
+  // The path to the model file already encodes all of our parameters, really, but this will also
+  // check that our data parameters haven't changed (i.e., using a different subset of the data,
+  // but calling it by the same name).
+  override def paramFile = serializedModelFile.replace("model.ser", "params.json")
+  override def name = "Model trainer"
+  override def inputs =
+    handwrittenLispFiles.map((_, None)).toSet ++
+    Set((sfeSpecFile, None)) ++
+    dataFiles.map((_, Some(processor))).toSet ++
+    featureFiles.map((_, Some(pmiComputer))).toSet
+  override def outputs = Set(
+    serializedModelFile
+  )
 
-    val modelFile = modelType match {
-      case "baseline" => throw new IllegalStateException("we don't handle training the baseline")
-      case "formal" =>  Experiments.FORMAL_MODEL_FILE
-      case "distributional" => Experiments.DISTRIBUTIONAL_MODEL_FILE
-      case "combined" => Experiments.COMBINED_MODEL_FILE
-      case other => throw new RuntimeException("unrecognized model type")
-    }
+  override def _runStep() {
+    val inputFiles = dataFiles ++ handwrittenLispFiles
+    val extraArgs = Seq(sfeSpecFile, dataName, serializedModelFile)
 
-    val rankingFile = ranking match {
-      case "predicate" => Experiments.PREDICATE_RANKING_FILE
-      case "query" => Experiments.QUERY_RANKING_FILE
-      case other => throw new RuntimeException("unrecognized ranking type")
-    }
-
-    val sfeSpecFile = data match {
-      case "large" => Experiments.LARGE_SFE_SPEC_FILE
-      case "small" => Experiments.SMALL_SFE_SPEC_FILE
-      case other => throw new RuntimeException("unrecognized data option")
-    }
-
-    val serializedModelFile = getModelFile(data, ranking, modelType)
-
-    val inputFiles =
-      dataFiles ++ Experiments.ENV_FILES ++ Seq(rankingFile, modelFile, Experiments.TRAIN_FILE)
-    val extraArgs = Seq(sfeSpecFile, serializedModelFile)
-
-
+    // Just creating the environment will train and output the model.
     new Environment(inputFiles, extraArgs, true)
-  }
-
-  def main(args: Array[String]) {
-    val fileUtil = new FileUtil
-
-    // We train a model for each experiment listed in Experiments.experimentConfigs, if the
-    // configuration is one that we can actually train, and if the model file isn't already
-    // present.
-    //
-    // And, for now, we'll do this sequentially, as parallel output in the terminal would be a big
-    // mess (not to mention it'd probably take too much memory).
-    Experiments.experimentConfigs.foreach(config => {
-      val (data, modelType, ranking, ensembledEvaluation) = config
-      val modelFile = getModelFile(data, ranking, modelType)
-      if (!canTrainConfig(data, modelType, ranking, ensembledEvaluation)) {
-        println(s"Configuration $config is not trainable.  Skipping...")
-      } else if (fileUtil.fileExists(modelFile)) {
-        println(s"Model already trained configuration $config (model file: $modelFile).  Skipping...")
-      } else {
-        println(s"Training model for $config")
-        fileUtil.mkdirs(new File(modelFile).getParent())
-        println("Creating environment (which trains and outputs the model)")
-        val env = createTrainingEnvironment(data, modelType, ranking, ensembledEvaluation)
-      }
-    })
   }
 }

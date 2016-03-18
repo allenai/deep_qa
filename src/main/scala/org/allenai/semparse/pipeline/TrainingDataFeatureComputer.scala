@@ -1,4 +1,4 @@
-package org.allenai.semparse
+package org.allenai.semparse.pipeline
 
 import edu.cmu.ml.rtw.pra.experiments.Outputter
 import edu.cmu.ml.rtw.pra.experiments.RelationMetadata
@@ -8,8 +8,11 @@ import edu.cmu.ml.rtw.pra.features.NodePairSubgraphFeatureGenerator
 import edu.cmu.ml.rtw.pra.features.NodeSubgraphFeatureGenerator
 import edu.cmu.ml.rtw.pra.graphs.Graph
 import edu.cmu.ml.rtw.pra.graphs.Graph
+
 import com.mattg.util.FileUtil
+import com.mattg.util.JsonHelper
 import com.mattg.util.SpecFileReader
+import com.mattg.pipeline.Step
 
 import org.json4s._
 
@@ -70,21 +73,41 @@ class PreFilteredFeatureComputer(
   }
 }
 
-object compute_full_feature_vectors {
-  val dataSize = "small"
-  val midFile = s"data/${dataSize}/training-mids.tsv"
-  val midPairFile = s"data/${dataSize}/training-mid-pairs.tsv"
-  val midFeatureFile = s"data/${dataSize}/pre-filtered-mid-features.tsv"
-  val midPairFeatureFile = s"data/${dataSize}/pre-filtered-mid-pair-features.tsv"
-  val specFile = s"src/main/resources/sfe_spec_${dataSize}.json"
+class TrainingDataFeatureComputer(
+  params: JValue,
+  fileUtil: FileUtil = new FileUtil
+) extends Step(Some(params), fileUtil) {
+  implicit val formats = DefaultFormats
 
-  def main(args: Array[String]) {
+  val validParams = Seq("training data", "sfe spec file")
+  JsonHelper.ensureNoExtras(params, "feature matrix computer", validParams)
+
+  val trainingDataParams = (params \ "training data")
+  val sfeSpecFile = (params \ "sfe spec file").extract[String]
+  val trainingDataProcessor = new TrainingDataProcessor(trainingDataParams, fileUtil)
+  val dataName = trainingDataProcessor.dataName
+  val outDir = s"data/$dataName"
+
+  val midFile = s"${outDir}/training_mids.tsv"
+  val midPairFile = s"${outDir}/training_mid_pairs.tsv"
+  val midFeatureFile = s"${outDir}/pre_filtered_mid_features.tsv"
+  val midPairFeatureFile = s"${outDir}/pre_filtered_mid_pair_features.tsv"
+
+  override def paramFile = outDir + "tdfc_params.json"
+  override def name = "Training data feature computer"
+  override def inputs = Set(
+    (midFile, Some(trainingDataProcessor)),
+    (midPairFile, Some(trainingDataProcessor))
+  )
+  override def outputs = Set(midFeatureFile, midPairFeatureFile)
+
+  override def _runStep() {
     processInMemory()
   }
 
   def processInMemory() {
     val fileUtil = new FileUtil
-    val computer = new PreFilteredFeatureComputer(specFile, fileUtil)
+    val computer = new PreFilteredFeatureComputer(sfeSpecFile, fileUtil)
 
     {
       // This block is so that midFeatures goes out of scope and can be garbage collected once it's
@@ -116,7 +139,7 @@ object compute_full_feature_vectors {
 
   def processMemoryConstrained() {
     val fileUtil = new FileUtil
-    val computer = new PreFilteredFeatureComputer(specFile, fileUtil)
+    val computer = new PreFilteredFeatureComputer(sfeSpecFile, fileUtil)
     val midWriter = fileUtil.getFileWriter(midFeatureFile)
     fileUtil.parProcessFileInChunks(midFile, (lines: Seq[String]) => {
       val midFeatures = lines.map(line => {
