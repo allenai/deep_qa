@@ -15,16 +15,17 @@
 \newcommand{\tabref}[1]{Table~\ref{tab:#1}}
 \newcommand{\mattnote}[1]{\textcolor{red}{NOTE: #1}}
 \newcommand{\blank}{\underline{\hspace{.5cm}}}
-\newcommand{\predicate}[1]{\ensuremath{\textsc{#1}}}
+\newcommand{\lexicalpredicate}[1]{\ensuremath{\textit{#1}}}
+\newcommand{\formalpredicate}[1]{\ensuremath{\textsc{#1}}}
 \newcommand{\entity}[1]{\ensuremath{\textsc{#1}}}
 
-\newcommand{\true}[0]{\predicate{true}}
-\newcommand{\false}[0]{\predicate{false}}
+\newcommand{\true}[0]{\formalpredicate{true}}
+\newcommand{\false}[0]{\formalpredicate{false}}
 
 %\aclfinalcopy % Uncomment this line for the final submission
 %\def\aclpaperid{***} %  Enter the acl Paper ID here
 
-\title{Combining formal and distributional models of predicate semantics}
+\title{Combining Formal and Distributional Models of Predicate Semantics}
 
 \author{}%Matt Gardner and Jayant Krishnamurthy\\
 %Allen Institute for Artificial Intelligence\\
@@ -64,50 +65,39 @@
 \section{Introduction}
 
 How should a computer program represent the meaning of a word or a
-phrase? Recent work has suggested two vastly different approaches --
-distributional vector space models and semantic parsing -- each with
-its own advantages and disadvantages. On one hand, distributional
-models produce a vector representation of the meaning of each word
-from a large unlabeled text corpus. These models have broad coverage
-but a shallow semantics centered around word similarity. On the other
-hand, semantic parsing translates natural language into logical
-queries against a formal knowledge base, such as Freebase. This
-approach produces a rich compositional semantics and furthermore can
-leverage structured information from the knowledge base, e.g., to
-answer natural language questions. However, semantic parsers have
-limited coverage as they can only represent the meanings of words that
-can be mapped to knowledge base predicates. A critical question is
-\emph{how do we obtain the benefits of both approaches?}
-
-
-% The answer to this question has a long and rich history.  Motivated by
-% , much work has been put into representing words as collections of the
-% contexts in which they appear.  Recent work with neural networks and
-% word embeddings have shown that these representations can be very
-% useful for a number of natural language processing tasks (see, e.g.,
-% the work Mikolov et al.~\shortcite{mikolov-2013-word2vec} and papers
-% that cite them).  This approach to modeling semantics is appealing
-% because word embeddings can be trained on unlabeled text, allowing for
-% very broad coverage, although shallow, semantics.
+phrase? Recent work has suggested two vastly different
+approaches---distributional vector space models and semantic
+parsing---each with its own advantages and disadvantages. On one hand,
+distributional models produce a vector representation of the meaning
+of each word from a large unlabeled text corpus. These models have
+broad coverage but a shallow semantics centered around word
+similarity. On the other hand, semantic parsing translates natural
+language into logical queries against a formal knowledge base, such as
+Freebase. This approach produces a rich compositional semantics and
+furthermore can leverage structured information from the knowledge
+base, e.g., to answer natural language questions. However, semantic
+parsers have limited coverage as they can only represent the meanings
+of words that can be mapped to knowledge base predicates. A critical
+question is \emph{how do we obtain the benefits of both approaches?}
 
 \begin{figure*}[ht]
   \small
   \begin{minipage}{0.28\linewidth}
-    \textbf{Input Text}\\Italian architect Andrea Palladio
+    \textbf{Input Text}\\Italian architect \blank{}
   \end{minipage}
 %
   ~~ $\rightarrow$ ~~~~~~
 %
   \begin{minipage}{0.7\linewidth}
     \textbf{Logical Form}\\
-    $\predicate{architect}(\entity{Palladio})~\land~\predicate{architect\_N/N}(\entity{Italy}, \entity{Palladio})$
+    $\lexicalpredicate{architect}(x)~\land~\lexicalpredicate{architect\_N/N}(\entity{Italy}, x)$
   \end{minipage}
 
   \vspace{.2in}
   \begin{minipage}{0.5\linewidth}
     \textbf{Category models}\\
     \begin{tabular}{@{}lll}
-      \predicate{architect}: & $\theta$: &[.2, -.6, \ldots] \\
+      \lexicalpredicate{architect}: & $\theta$: &[.2, -.6, \ldots] \\
       & $\omega$: & \textsc{type:architect} $\rightarrow$ .52 \\
       &           & \textsc{type:designer} $\rightarrow$ .32 \\
       &           & \textsc{nationality:Italy} $\rightarrow$ .20 \\
@@ -117,7 +107,7 @@ can be mapped to knowledge base predicates. A critical question is
   \begin{minipage}{0.5\linewidth}
     \textbf{Relation models}\\
     \begin{tabular}{@{}lll}
-      \predicate{architect\_N/N}: & $\theta$: &[-.9, .1, \ldots] \\
+      \lexicalpredicate{architect\_N/N}: & $\theta$: &[-.9, .1, \ldots] \\
       & $\omega$: & \textsc{/person/nationality\textsuperscript{-1}} $\rightarrow$ .29 \\
       &           & \textsc{/structure/architect} $\rightarrow$ .11 \\
       &           & \textsc{/person/ethnicity\textsuperscript{-1}} $\rightarrow$ .05 \\
@@ -125,57 +115,58 @@ can be mapped to knowledge base predicates. A critical question is
     \end{tabular}
   \end{minipage}
 
-  \vspace{.1in}
   \begin{minipage}{0.5\linewidth}
     \textbf{Entity models}\\
     \begin{tabular}{@{}lll}
-      \predicate{Palladio}: & $\phi$: &[.15, -.8, \ldots] \\
+      \entity{Palladio}: & $\phi$: &[.15, -.8, \ldots] \\
       & $\psi$: & \textsc{type:architect} $\rightarrow$ 1 \\
-      &           & \textsc{type:designer} $\rightarrow$ 0 \\
       &           & \textsc{nationality:Italy} $\rightarrow$ 1 \\
+      &           & $\cdots$ \\
+      \entity{Obama}: & $\phi$: &[.85, .1, \ldots] \\
+      & $\psi$: & \textsc{type:politician} $\rightarrow$ 1 \\
+      &           & \textsc{nationality:Italy} $\rightarrow$ 0 \\
       &           & $\cdots$
     \end{tabular}
   \end{minipage}
   \begin{minipage}{0.5\linewidth}
     \textbf{Entity pair models}\\
     \begin{tabular}{@{}lll}
-      \predicate{(Italy, Palladio)}: & $\phi$: &[-.8, .2, \ldots] \\
+      \entity{(Italy, Palladio)}: & $\phi$: &[-.8, .2, \ldots] \\
       & $\omega$: & \textsc{/person/nationality\textsuperscript{-1}} $\rightarrow$ 1 \\
       &           & \textsc{/structure/architect} $\rightarrow$ 0 \\
-      &           & \textsc{/person/ethnicity\textsuperscript{-1}} $\rightarrow$ 0 \\
+      &           & $\cdots$ \\
+      \entity{(Italy, Obama)}: & $\phi$: &[-.2, -.2, \ldots] \\
+      & $\omega$: & \textsc{/person/nationality\textsuperscript{-1}} $\rightarrow$ 0 \\
+      &           & \textsc{/structure/architect} $\rightarrow$ 0 \\
       &           & $\cdots$
     \end{tabular}
   \end{minipage}
 
+  \begin{minipage}{0.5\linewidth}
+    \textbf{Output}\\
+    \begin{tabular}{@{}ll}
+      $\mathrm{prob}(\entity{Palladio})$: & 0.79 \\
+      $\mathrm{prob}(\entity{Obama})$: & 0.01 \\
+      $\cdots$ \\
+    \end{tabular}
+  \end{minipage}
+
   \vspace{-.1in}
-  \caption{Overview of the components of our model.  Given an input text, we
-  use a CCG parser and an entity linker to produce a logical form that is a
-  conjunction of predicates involving the entities in the text.  For each
-  predicate (both categories and relations), we learn a distributional vector
-  $\theta$, as well as weights $\omega$ associated with formal features from
-  Freebase (which are shortened to fit in the figure).  For each entity and
-  entity pair, we also learn a distributional vector $\phi$, and we extract a
-  feature vector $\psi$ from Freebase.  These models are combined to assign a
-  probability to the input text, assigning a high probability to the above
-  text, and a low probability to ``Italian architect Barack Obama''.}
+  \caption{Overview of the components of our model.  Given an input
+  text, we use a CCG parser and an entity linker to produce a logical
+  form that is a conjunction of predicates involving the entities in
+  the text.  For each predicate (both categories and relations), we
+  learn a distributional vector $\theta$, as well as weights $\omega$
+  associated with formal features from Freebase (which are shortened
+  to fit in the figure).  For each entity and entity pair, we also
+  learn a distributional vector $\phi$, and we extract a feature
+  vector $\psi$ from Freebase.  These models are combined to assign a
+  probability to candidate entities, assigning a high probability to
+  \entity{Andrea Palladio} and a low probability to \entity{Barack
+  Obama}.}
   \label{fig:overview}
   \vspace{-.1in}
 \end{figure*}
-
-% At the same time, other researchers have found Montague's ideas about English
-% as a formal language to be useful~\cite{montague-1974-english-formal-language}.
-% Modern semantic parsers make use of a model-theoretic semantics that represents
-% words and phrases as formal predicates.  These predicates are then typically
-% mapped onto a query over a structured knowledge base, such as
-% Freebase~\cite{freebase-2008-bollacker}.  This kind of modeling allows semantic
-% parsers to handle the compositional structure of natural language and to
-% leverage large, curated knowledge sources to perform various natural language
-% processing
-% tasks~\cite{zettlemoyer-2005-ccg,kwiatkowski-2013-ontology-matching,berant-2013-semantic-parsing-qa}.
-% However, semantic parsers are fundamentally limited by the schema of the
-% ontology they are trained on---a semantic parser trained with Freebase cannot
-% even represent words whose meaning has no correlate in the Freebase ontology,
-% such as ``front-runner'' and ``honcho''.
 
 Krishnamurthy and
 Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}
@@ -185,8 +176,8 @@ natural language queries against Freebase, such as ``Hollywood honcho
 \blank{},'' using \emph{distributional} models of predicate
 semantics. The method semantically parses text to a surface logical
 form containing predicates derived from the text itself, such as
-$\lambda x.\predicate{honcho}(x) \land
-\predicate{honcho\_N/N}(\entity{Hollywood}, x)$, then learns the
+$\lambda x.\lexicalpredicate{honcho}(x) \land
+\lexicalpredicate{honcho\_N/N}(\entity{Hollywood}, x)$, then learns the
 denotations of these predicates using distributional information from
 a large, entity-linked corpus. This method combines the broad coverage
 of distributional approaches with the compositionality of semantic
@@ -199,7 +190,7 @@ information. Our key observation is that, while there is no Freebase
 predicate that corresponds exactly to the meaning of ``honcho,''
 Freebase \emph{does} contain predicates that \emph{partially}
 represent its meaning. For example, an entity that can be called
-``honcho'' is likely to have type \predicate{person}. We therefore
+``honcho'' is likely to have type \formalpredicate{person}. We therefore
 incorporate \emph{features} based on Freebase paths into the predicate
 models of K\&M and learn per-predicate weights for these features
 using distributional information (\figref{overview}). This approach
@@ -214,82 +205,16 @@ relative improvement in mean average precision over K\&M. (TODO: other
 empirical findings? It would be nice to talk about what features get
 learned for what words, etc.)
 
-% Thus, we extend K\&M to incorporate such features from Freebase into
-% its predicate models. Our model automatically generates such features
-% and learns per-predicate weights for them using distributional
-% statistics.
-
-% In this work we introduce models of predicate semantics that combine the
-% benefits of both distributional and formal approaches.  While there is no
-% Freebase predicate that corresponds exactly to the meaning of ``honcho'',
-% Freebase \emph{does} contain many predicates that can \emph{partially}
-% represent the word.  Our models extract features from Freebase that are
-% correlated with words and phrases seen in natural language text, and learns
-% weights for those features as additional components of a distributional model
-% of the word's meaning.
-
-% To demonstrate these models, we focus on the task of fill-in-the-blank natural
-% language queries, such as ``Italian architect \blank{}''.  Similar to many
-% current semantic parsers, we first convert this natural language query into a
-% logical form: $\lambda x. \predicate{architect}(x) \land
-% \predicate{architect\_N/N}(\entity{Italy},
-% x)$.\footnote{\predicate{architect\_N/N} represents a noun-compound
-% relationship between two entities mediated by the word ``architect'', as in
-% ``Italian architect Andrea Palladio''.  This is in contrast to, e.g.,
-% \predicate{'s\_architect} or \predicate{architect\_of}, both of which also are
-% mediated by ``architect'', but through different syntax.  N/N is how
-% CCG~\cite{steedman-2006-ccg} represents a noun compound.} A typical semantic
-% parser (e.g., that of Kwiatkowski et
-% al.~\shortcite{kwiatkowski-2013-ontology-matching}) would then try to map this
-% logical form to a single Freebase query, likely involving
-% (\predicate{/people/person/nationality}: \entity{Italy}) and
-% (\predicate{/type/object/type}: \entity{/architecture/architect}).  Instead of
-% restricting ourselves to modeling only what can be represented as a Freebase
-% query, we follow Krishnamurthy and
-% Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} in learning a
-% model for each predicate that can give a \emph{score} to potential arguments.
-% The model for \predicate{architect}, e.g., should give high scores to
-% \entity{Andrea Palladio} and \entity{Frank Lloyd Wright}, and low scores to
-% \entity{Italy}, \entity{BarackObama}, etc.  However, while the models of
-% Krishnamurthy and Mitchell are purely distributional, using Freebase only as a
-% means of finding entities in text, we inject additional information from
-% Freebase into the models for each predicate.  The model we learn for
-% \predicate{architect} has a \emph{feature} capturing the fact that an entity
-% has the type \entity{/architecture/architect} in Freebase, and the model for
-% \predicate{architect\_N/N} has a \emph{feature} capturing whether the first
-% argument is the country of nationality of the second argument.  An overview of
-% the components of our model is given in \figref{overview}.
-% 
-% This is a new kind of predicate semantics.  It is distributional---part of the
-% model is still trained in a manner very similar to word2vec---yet it is also
-% formal.  However, instead of committing to a single Freebase query to represent
-% a phrase, as traditional formal approaches do, our models are flexible,
-% encoding many possible Freebase queries as features that can give hints to the
-% model.  Thus words that would be impossible to represent as a single Freebase
-% query can still benefit from the information contained in Freebase---our model
-% for ``front-runner'' learns that acceptable entities are politicians, even
-% though there is no exact encoding of ``front-runner'' in Freebase.
-% 
-% The rest of this paper is organized as follows.  In \secref{background}, we
-% describe the relevant background necessary to understand the models we propose,
-% and we situate our model in the context of related work.  In \secref{method},
-% we give a formal description of our models of predicate semantics.  In
-% \secref{evaluation}, we present experimental results on fill-in-the-blank
-% natural language query task.  Using web text linked to Freebase as our training
-% and test data, we show a 62\% relative improvement over prior work, giving a
-% new state-of-the-art result on this dataset.  In \secref{discussion}, we give a
-% detailed discussion of the benefits and drawbacks of the models we have
-% proposed.  We then conclude in \secref{conclusion}.
-
 \section{Background}
 \label{sec:background}
 
-Our proposed method is best viewed as the addition of SFE
-features~\cite{gardner-2015-sfe} to Krishnamurthy and
-Mitchell's~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}
-open-vocabulary semantic parser.  Accordingly, in this section we briefly
-describe both of these techniques, as well as give a short overview of other
-closely related work.
+In this work, we make heavy use of the open-vocabulary semantic parser
+of Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}, as
+well as features derived from a knowledge base using a technique
+called subgraph feature extraction~\cite[SFE]{gardner-2015-sfe}.
+Accordingly, in this section we briefly describe both of these
+techniques.
 
 \subsection{Open-vocabulary semantic parsing}
 \label{sec:jayant-semparse}
@@ -308,7 +233,7 @@ concisely represented using a probabilistic database, which also
 enables efficient probabilistic execution of logical form queries.
 
 The truth probability of a predicate instance such as
-\predicate{architect}(\entity{AndreaPalladio}) is learned using
+\lexicalpredicate{architect}(\entity{AndreaPalladio}) is learned using
 probabilistic matrix factorization. This factorization has two sets of
 parameters: each category or relation has a learned $k$-dimensional
 embedding $\theta$, and each entity or entity pair has a learned
@@ -362,23 +287,23 @@ baseline.
     \node[main node] (5) [below right=.1cm and .5cm of 3] {\entity{Villa Capra}};
 
     \path[]
-      (1) edge node [sloped, anchor=center, above] {\predicate{nationality}} (2)
-      (1) edge node [sloped, anchor=center, above] {\predicate{type}} (3)
-      (1) edge node [sloped, anchor=center, above] {\predicate{designed}} (5)
-      (2) edge node [sloped, anchor=center, above] {\predicate{type}} (4)
-      (5) edge node [sloped, anchor=center, above] {\predicate{located\_in}} (2);
+      (1) edge node [sloped, anchor=center, above] {\formalpredicate{nationality}} (2)
+      (1) edge node [sloped, anchor=center, above] {\formalpredicate{type}} (3)
+      (1) edge node [sloped, anchor=center, above] {\formalpredicate{designed}} (5)
+      (2) edge node [sloped, anchor=center, above] {\formalpredicate{type}} (4)
+      (5) edge node [sloped, anchor=center, above] {\formalpredicate{located\_in}} (2);
   \end{tikzpicture}
   }
   \textbf{Features between \entity{Palladio} and \entity{Italy}}:\\
-  \textless\predicate{nationality}\textgreater\\
-  \textless\predicate{designed}, \predicate{located\_in}\textgreater
+  \textless\formalpredicate{nationality}\textgreater\\
+  \textless\formalpredicate{designed}, \formalpredicate{located\_in}\textgreater
 
   \textbf{Features for \entity{Palladio}}:\\
-  \textless\predicate{nationality}\textgreater\\
-  \textless\predicate{nationality}\textgreater:\entity{Italy}\\
-  \textless\predicate{type}\textgreater:\entity{Architect}\\
-  \textless\predicate{designed}, \predicate{located\_in}\textgreater \\
-  \textless\predicate{designed}, \predicate{located\_in}\textgreater:\entity{Italy}
+  \textless\formalpredicate{nationality}\textgreater\\
+  \textless\formalpredicate{nationality}\textgreater:\entity{Italy}\\
+  \textless\formalpredicate{type}\textgreater:\entity{Architect}\\
+  \textless\formalpredicate{designed}, \formalpredicate{located\_in}\textgreater \\
+  \textless\formalpredicate{designed}, \formalpredicate{located\_in}\textgreater:\entity{Italy}
   
   \caption{A subset of the Freebase graph, and some example extracted features
   between \entity{Palladio} and \entity{Italy}.  The actual Freebase relations
@@ -412,53 +337,6 @@ thus extend SFE to also generate feature matrices over \emph{nodes} in a graph,
 an extension that is straightforward and is also discussed in more detail in
 \secref{method}.
 
-\subsection{Other related work}
-
-There is a large body of other work that is closely related to what is
-presented in this paper.  Two recent papers that also attempt to include some
-form of structured knowledge into distributional representations are those by
-Faruqui et al.~\shortcite{faruqui-2015-retrofitting-word-vectors}, and by
-Rockt\"{a}schel et al.~\shortcite{rocktaschel-2015-logical-embeddings}.  A key
-difference between their approaches and ours is that they use the structured
-information only to modify distributional representations, while we include the
-structured information directly in our models, training weights for structured
-information jointly with distributional representations.  Also conceptually
-similar is the Additive Relational Effects model for knowledge base completion
-by Nickel et al.~\shortcite{nickel-2014-are}, which tries to factorize the
-residual of a KB tensor that cannot be explained by observable features that
-are somewhat similar to the formal features we use in this model.  But while
-this model is conceptually similar, it is computationally quite different, and
-would be rather difficult to use in the setting we explore in this work.
-
-Our work draws a lot of inspiration from recent work on knowledge base
-completion.  We are building on top of work in embedding the entities and
-relations in a knowledge
-base~\cite{riedel-2013-mf-universal-schema,nickel-2011-rescal,bordes-2013-transe},
-as well as work on graph-based methods for reasoning with knowledge
-bases~\cite{lao-2010-original-pra,gardner-2014-vector-space-pra,neelakantan-2015-rnn-kbc}.
-
-Lastly, there is an extensive literature on building semantic parsers to answer
-questions against a structured knowledge
-base~\cite{zettlemoyer-2005-ccg,berant-2013-semantic-parsing-qa,%
-kwiatkowski-2013-ontology-matching,krishnamurthy-2012-semantic-parsing}.  The
-vast majority of this work is focused on matching natural language text to
-statements in a specific ontology, with no hope of assigning meaning to
-language that falls outside of that ontology.  Only very recently has there
-been work attempting to learn broad coverage meaning representations in
-semantic parsers.  In addition to the work by Krishnamurthy and Mitchell which
-we extend in this paper, there was recently a nice piece of work by Choi et
-al.~\shortcite{choi-2015-semantic-parsing-partial-ontologies}.  The aim of
-their work is, like typical semantic parsers, to map text onto a single formal
-statement, but they allow some of the predicates to be ``open'' predicates not
-contained in the Freebase ontology.  A key difference between their work and
-ours is that we score surface logical forms directly, using a weighted
-combination of many Freebase queries, instead of trying to map them to a single
-Freebase logical form.  Additionally, while their system might learn that
-``front-runner'' should be modeled as an open predicate that has no
-representation in Freebase, they have no method to assign any further meaning
-to that predicate, while our models learn both distributional and formal
-information about the meaning of ``front-runner''.
-
 \section{Method}
 \label{sec:method}
 
@@ -466,28 +344,99 @@ This section presents our approach to open vocabulary semantic
 parsing. Our approach follows the same structure as described in
 Section \ref{sec:jayant-semparse}: we generate a surface logical form
 from a query, then evaluate it against a probabilistic database with
-learned predicate instance probabilities.  Section
-\ref{sec:better-lfs} describes logical form generation, which improves
-on prior work by lexicalizing additional predicates. Section 
+learned predicate instance probabilities. Section \ref{sec:better-lfs}
+describes our logical form generation, which improves the analyses of
+noun-mediated relations relative to prior work. Sections
+\ref{sec:formal-and-distributional} and \ref{sec:feature-generation}
+describe our improved predicate models and the corresponding feature
+generation process. Finally, Section \ref{sec:better-candidates}
+describes an improvement on candidate entity generation for question
+answering.
 
 
-However, we improve both
-logical form generation and the predicate models.
+% In \secref{formal-and-distributional} we describe how we modify
+% Krishnamurthy and Mitchell's (K\&M's) semantic parser to include
+% features from a formal knowledge base.  In \secref{computing-pmi} we
+% describe how we select those features for each predicate.  The
+% remaining two sections then describe other improvements we made to
+% K\&M's semantic parsing model: lexicalizing preposition and
+% noun-compound predicates, and using the Freebase graph to select
+% candidate entities.
+
+\subsection{Logical form generation}
+\label{sec:better-lfs}
+
+As in K\&M, we generate logical forms from natural language statements
+by computing a syntactic CCG parse, then applying a collection of
+rules to produce logical forms. However, their logical form analyses
+do not model noun-mediated relations well. For example, given the
+phrase ``Italian architect Andrea Palladio,'' their system's logical
+form would include the relation
+$\lexicalpredicate{N/N}(\entity{Italy}, \entity{Andrea
+  Palladio})$. Here, the \lexicalpredicate{N/N} predicate represents a
+generic noun modifier relation; however, this relation is too vague
+for the predicate model to accurately learn its denotation. A similar
+problem occurs with prepositions and possessives, e.g., it is
+similarly hard to learn the denotation of the predicate
+\lexicalpredicate{of}.
+
+Our system improves the analysis of noun-mediated relations by simply
+including the noun in the predicate name. In the architect example
+above, our system produces the relation
+\lexicalpredicate{architect\_N/N}. It does this by simply
+concatenating all intervening noun modifiers between two entity
+mentions and including them in the predicate name; for example,
+``Illinois attorney general Lisa Madigan'' produces the predicate
+\lexicalpredicate{attorney\_general\_N/N}). (While it would be
+preferable to use actual dependency relations to determine which words
+to add to the predicate, this is not possible because our parser
+produces flat analyses of noun phrases where all noun modifiers depend
+directly on the head of the noun phrase.) We similarly improve the
+analyses of prepositions and possessives to include the head noun. For
+example, ``Barack Obama, president of the U.S.'' produces the
+predicate instance $\lexicalpredicate{president\_of}(\entity{Barack
+  Obama}, \entity{U.S.})$, and ``Rome, Italy's capital'' produces the
+predicate \lexicalpredicate{'s\_capital}. This process generates more
+specific predicates that we empirically found were easier for the
+predicate models to learn.
 
 
-In
-\secref{formal-and-distributional} we describe how we modify
-Krishnamurthy and Mitchell's (K\&M's) semantic parser to include
-features from a formal knowledge base.  In \secref{computing-pmi} we
-describe how we select those features for each predicate.  The
-remaining two sections then describe other improvements we made to
-K\&M's semantic parsing model: lexicalizing preposition and
-noun-compound predicates, and using the Freebase graph to select
-candidate entities.
+% While we largely follow the semantic parsing framework introduced by K\&M, we
+% made one important change in how logical forms are generated.  For the running
+% example we have been using this paper, ``Italian architect Andrea Palladio'',
+% the relation predicate produced by K\&M's system is
+% $\lexicalpredicate{N/N}(\entity{Italy}, \entity{Andrea Palladio})$.
+% \lexicalpredicate{N/N}
+% does correctly capture the fact that \entity{Italy} is used syntactically as a
+% noun modifier of \entity{Andrea Palladio}, but it leaves out the additional
+% information contained in the syntax that ``architect'' was mediating that
+% noun-noun dependency.  This means that ``U.S. president Barack Obama'' and
+% ``Italian architect Andrea Palladio'' are both modeled using the same relation
+% predicate, which leads to a very generic and largely useless model for the
+% predicate \lexicalpredicate{N/N}.  By splitting \lexicalpredicate{N/N} into separate
+% predicates (\lexicalpredicate{architect\_N/N} and \lexicalpredicate{president\_N/N}), we give
+% the model the opportunity to learn more fine-grained relation semantics, and we
+% allow our feature selection pipeline to find much more useful features for
+% relation predicates.  While it would be ideal to use actual dependency
+% relations to determine which words to add to the predicate in complex noun
+% phrases, most current parsers treat these kinds of noun phrases as flat, with
+% all noun modifiers depending directly on the head of the noun phrase.  We
+% approximate this ideal by simply taking all words in between the two entities
+% in a noun phrase as the predicate (e.g., ``Illinois attorney general Lisa
+% Madigan'' would produce the predicate \lexicalpredicate{attorney\_general\_N/N}).
 
+% A similar issue arises with prepositions and possessives.  For a phrase such as
+% ``Barack Obama, president of the U.S.'', K\&M's system would produce the
+% following relation predicate: $\lexicalpredicate{of}(\entity{Barack Obama},
+% \entity{U.S.})$.  Because this same predicate (\lexicalpredicate{of}) is used for all
+% instances of this preposition, the predicate is forced to model too much and
+% becomes overly generic.  When there is a common noun mediating a prepositional
+% dependency between two entities, as in the phrase above, we add that noun to
+% the predicate, giving the instance $\lexicalpredicate{president\_of}(\entity{Barack
+% Obama}, \entity{U.S.})$.  We do the same for possessives in phrases such as
+% ``Rome, Italy's capital'', producing the predicate \lexicalpredicate{'s\_capital}.
 
-
-\subsection{Overview}
+\subsection{Predicate models}
 \label{sec:formal-and-distributional}
 
 % TODO: ``query'' features?
@@ -507,9 +456,9 @@ predicate and entity embeddings, as described in Section
 \ref{sec:jayant-semparse}. The second term in the sum represents our
 new features and their learned weights. $\psi_c(e)$ and $\psi_r(e_1,
 e_2)$ are SFE feature vectors for each entity and entity pair; a
-different set of features is chosen for each predicate in order to
-maximize their usefulness. The terms $\omega_c$ and $\omega_r$
-represent learned weights for these features.
+different set of features is chosen for each predicate $c$ and $r$ in
+order to maximize their usefulness. The terms $\omega_c$ and
+$\omega_r$ represent learned weights for these features.
 
 Each SFE feature can be viewed as either a Freebase query or a horn
 clause implication rule using the Freebase schema. In both cases, the
@@ -527,8 +476,8 @@ In our model, there are now three sets of parameters to be learned:
 predicate; (2) $\phi$, low-dimensional distributional vectors trained
 for each entity and entity pair; and (3) $\omega$, weights associated
 with the selected formal SFE features for each predicate.  All of
-these parameters are optimized jointly, using the same ranking
-objective used by K\&M (TODO: not sure how to eliminate this backref).
+these parameters are optimized jointly, using the same query ranking
+objective used by K\&M.
 
 % For each category and relation, we select a subset of the SFE features in the
 % vectors $\psi$ to have associated weights $\omega_c$ and $\omega_r$.  We then
@@ -538,6 +487,7 @@ objective used by K\&M (TODO: not sure how to eliminate this backref).
 % relation probabilities are as follows:
 
 \subsection{Generating predicate features}
+\label{sec:feature-generation}
 
 The feature vectors $\psi_c(e)$ and $\psi_r(e_1, e_2)$ are constructed
 using a two-stage process. First, we generate a predicate-independent
@@ -595,12 +545,12 @@ features by first summing the entity and entity pair feature vectors
 seen with each predicate in the training data. For example, the phrase
 ``Italian architect Andrea Palladio'' is considered a positive
 training example for the instantiated predicates
-$\predicate{architect}(\entity{Andrea Palladio})$ and
-$\predicate{architect\_N/N}(\entity{Italy}, \entity{Andrea
+$\formalpredicate{architect}(\entity{Andrea Palladio})$ and
+$\formalpredicate{architect\_N/N}(\entity{Italy}, \entity{Andrea
   Palladio})$. We then add the feature vectors for \entity{Andrea
   Palladio} and (\entity{Italy}, \entity{Andrea Palladio}) to the
-feature counts for the predicates \predicate{architect} and
-\predicate{architect\_N/N}, respectively. Next, for each predicate
+feature counts for the predicates \formalpredicate{architect} and
+\formalpredicate{architect\_N/N}, respectively. Next, for each predicate
 $\pi$ and feature $f$, we use these counts to calculate three
 probabilities: $p(\pi, f)$, $p(\pi)$ and $p(f)$. (TODO: how did you
 calculate these?). The PMI of a predicate/feature pair is then $\log
@@ -617,244 +567,284 @@ values for each predicate to use in our model.
 % probabilities $p(\pi, f)$, $p(\pi)$ and $p(f)$.  
 
 
-\subsection{Improved logical forms}
-\label{sec:better-lfs}
-
-While we largely follow the semantic parsing framework introduced by K\&M, we
-made one important change in how logical forms are generated.  For the running
-example we have been using this paper, ``Italian architect Andrea Palladio'',
-the relation predicate produced by K\&M's system is
-$\predicate{N/N}(\entity{Italy}, \entity{Andrea Palladio})$.  \predicate{N/N}
-does correctly capture the fact that \entity{Italy} is used syntactically as a
-noun modifier of \entity{Andrea Palladio}, but it leaves out the additional
-information contained in the syntax that ``architect'' was mediating that
-noun-noun dependency.  This means that ``U.S. president Barack Obama'' and
-``Italian architect Andrea Palladio'' are both modeled using the same relation
-predicate, which leads to a very generic and largely useless model for the
-predicate \predicate{N/N}.  By splitting \predicate{N/N} into separate
-predicates (\predicate{architect\_N/N} and \predicate{president\_N/N}), we give
-the model the opportunity to learn more fine-grained relation semantics, and we
-allow our feature selection pipeline to find much more useful features for
-relation predicates.  While it would be ideal to use actual dependency
-relations to determine which words to add to the predicate in complex noun
-phrases, most current parsers treat these kinds of noun phrases as flat, with
-all noun modifiers depending directly on the head of the noun phrase.  We
-approximate this ideal by simply taking all words in between the two entities
-in a noun phrase as the predicate (e.g., ``Illinois attorney general Lisa
-Madigan'' would produce the predicate \predicate{attorney\_general\_N/N}).
-
-A similar issue arises with prepositions and possessives.  For a phrase such as
-``Barack Obama, president of the U.S.'', K\&M's system would produce the
-following relation predicate: $\predicate{of}(\entity{Barack Obama},
-\entity{U.S.})$.  Because this same predicate (\predicate{of}) is used for all
-instances of this preposition, the predicate is forced to model too much and
-becomes overly generic.  When there is a common noun mediating a prepositional
-dependency between two entities, as in the phrase above, we add that noun to
-the predicate, giving the instance $\predicate{president\_of}(\entity{Barack
-Obama}, \entity{U.S.})$.  We do the same for possessives in phrases such as
-``Rome, Italy's capital'', producing the predicate \predicate{'s\_capital}.
-
-
 \subsection{Candidate entity generation}
 \label{sec:better-candidates}
 
-One final way in which we improved K\&M's semantic parser is in how candidate
-entities are generated during inference.  Because the distributional-only
-predicate models used by K\&M's semantic parser need to learn a vector of
-parameters for each entity pair, they cannot give a non-zero score to any
-entity pair not seen during training time.  When given a query such as
-$\lambda(\entity{x}) \predicate{architect\_N/N}(\entity{x}, \entity{Andrea
-Palladio})$, K\&M's system only needs to consider the set of entities
-$\entity{x}$ that have been seen at training time with \entity{Andrea
-Palladio}; all other entities will get a score of 0.
+A key benefit of our predicate models is that they are able to assign
+scores to entity pairs that were never seen in the training data. The
+purely-distributional model of K\&M has no basis for assigning these
+scores and therefore assumes $P(r(e_1,e_2)) = 0$ for unseen entity
+pairs $(e_1,e_2)$. This assumption limits the recall of their system
+when it is applied to question answering, as these entity pairs will
+not have been observed for many correct, but rare entity answers. In
+contrast, our predicate models can score any entity pair: the
+distributional component of an unseen pair will be zero, but the SFE
+component is always applicable. This benefit allows our model to
+considerably improve question answering performance on rare entities.
 
-Our predicate models do not have this limitation.  The distributional component
-will still give an unseen entity pair a score of 0, as it is identical to K\&M's
-model, but the formal component of our models simply computes an observed
-feature vector from Freebase for the entity pair.  As long as both entities
-appear in Freebase, our model can compute a feature vector and give a non-zero
-score.
+% One final way in which we improved K\&M's semantic parser is in how candidate
+% entities are generated during inference.  Because the distributional-only
+% predicate models used by K\&M's semantic parser need to learn a vector of
+% parameters for each entity pair, they cannot give a non-zero score to any
+% entity pair not seen during training time.  When given a query such as
+% $\lambda(x).\lexicalpredicate{architect\_N/N}(x, \entity{Andrea
+% Palladio})$, K\&M's system only needs to consider the set of entities
+% $\entity{x}$ that have been seen at training time with \entity{Andrea
+% Palladio}; all other entities will get a score of 0.
+% 
+% Our predicate models do not have this limitation.  The distributional component
+% will still give an unseen entity pair a score of 0, as it is identical to K\&M's
+% model, but the formal component of our models simply computes an observed
+% feature vector from Freebase for the entity pair.  As long as both entities
+% appear in Freebase, our model can compute a feature vector and give a non-zero
+% score.
 
-While this improvement allows us to handle queries over rare entities much
-better than a distributional-only model, it also complicates inference, as we
-cannot just score entity pairs seen at training time.  Optimizing every query's
-score over all of the millions of entities in Freebase is not computationally
-feasible.  To make inference tractable, for a given query we restrict
-candidates to all entities seen with the query entities during training (as
-done by K\&M), as well as all entities directly connected to the query entities
-in Freebase, or connected by a mediator node.\footnote{Mediators in Freebase are
-used to capture relations with more than two arguments, such as employment
-tenure, which has an employer, and employee, a start date, and an end date.}
+However, this benefit has an associated drawback: given a logical form
+query, it is computationally and statistically undesirable to consider
+\emph{all} Freebase entities as answers. Scoring millions of entities
+is slow, and furthermore makes it more difficult to identify correct
+answers (as their frequency in the candidate set
+decreases). Therefore, when answering a query, we compute a set of
+candidate entities and only score these candidates. Our candidate set
+consists of all entities seen with the query entities in the training
+set as well as all entities directly connected to the query entities
+in Freebase, or connected by a mediator node.\footnote{Mediators in
+  Freebase are used to capture relations with more than two arguments,
+  such as employment tenure, which has an employer, and employee, a
+  start date, and an end date.}
 
-For some entities, such as the United States, the set of connected entities can
-still be intractably large, so we limit this expansion to only those entities
-with fewer than 100 directly connected entities.  Our motivation for this is
-that this candidate entity generation is most useful for rarely seen entities,
-for which we have few or no related entities seen during training.  These
-entities also tend to have relatively few connected entities in Freebase.
+% While this improvement allows us to handle queries over rare entities much
+% better than a distributional-only model, it also complicates inference, as we
+% cannot just score entity pairs seen at training time.  Optimizing every query's
+% score over all of the millions of entities in Freebase is not computationally
+% feasible.  To make inference tractable, for a given query we restrict
+% candidates to all entities seen with the query entities during training (as
+% done by K\&M), as well as all entities directly connected to the query entities
+% in Freebase, or connected by a mediator node.\footnote{Mediators in Freebase are
+% used to capture relations with more than two arguments, such as employment
+% tenure, which has an employer, and employee, a start date, and an end date.}
+
+Unfortunately, for some entities, such as the United States, the set
+of connected entities can be intractably large; we therefore limit
+this expansion to only those entities with fewer than 100 directly
+connected entities.  Our motivation for this is that this candidate
+entity generation is most useful for rarely seen entities, for which
+we have few or no related entities seen during training.  These
+entities also tend to have relatively few connected entities in
+Freebase.
 
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluate our models of predicate semantics on a fill-in-the-blank natural
-language query task.  Each test example is a natural language phrase containing
-at least two Freebase entities, one of which is held out.  The system must
-propose Freebase entities to fill in the blank left by the held out entity, and
-the predicted entities are then judged manually for correctness.  We compare
-our proposed models, which combine distributional and formal elements, with
-distributional-only and formal-only baselines.
+We evaluate our models of predicate semantics on a fill-in-the-blank
+natural language query task.  Each test example is a natural language
+phrase containing at least two Freebase entities, one of which is held
+out.  The system must propose Freebase entities to fill in the blank
+left by the held out entity, and the predicted entities are then
+judged manually for correctness.  We compare our proposed models,
+which combine distributional and formal elements, with a
+distributional-only baseline from prior work.  All of the data and
+code used in these experiments is available at [url withheld for
+review].
 
 \subsection{Data}
 
 We use the dataset introduced by Krishnamurthy and
-Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}, which
-consists of the ClueWeb09 web
-corpus\footnote{http://www.lemuproject.org/clueweb09.php} along with Google's
-FACC entity linking of that corpus to
-Freebase~\cite{gabrilovich-2013-clueweb-entity-linking}.  For training data, 3
-million webpages from this corpus were processed with a CCG parser to produce
-logical forms, as described in \secref{jayant-semparse}.  This produced 2.1m
-predicate instances involving 142k entity pairs and 184k entities.  After
-removing infrequently-seen predicates (seen fewer than 6 times), there were 25k
-categories and 4.2k relations.\footnote{The differences in numbers reported
-here versus those reported by Krishnamurthy and
-Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} are due to the
-improved logical form generation, discussed in \secref{better-lfs}.}
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary},
+which consists of the ClueWeb09 web
+corpus\footnote{http://www.lemuproject.org/clueweb09.php} along with
+Google's FACC entity linking of that corpus to
+Freebase~\cite{gabrilovich-2013-clueweb-entity-linking}.  For training
+data, 3 million webpages from this corpus were processed with a CCG
+parser to produce logical forms.  This produced 2.1m predicate
+instances involving 142k entity pairs and 184k entities.  After
+removing infrequently-seen predicates (seen fewer than 6 times), there
+were 25k categories and 4.2k relations.  The differences in numbers
+reported here versus those reported by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} are
+due to our improved logical form generation, discussed in
+\secref{better-lfs}.
 
-We also used the test set created by K\&M, which contains
-220 queries generated in the same fashion as the training data from a separate
-section of ClueWeb.  However, we used this set for intermediate evaluations
-while developing our models, and so we also generated another, similar test set
-from a different held out section of ClueWeb.  This final test set contains 307
-queries.  We report results on both of these test sets below.  All of the data
-used in these experiments is available at [url withheld for review].
+We also used the test set created by Krishnamurthy and Mitchell, which
+contains 220 queries generated in the same fashion as the training
+data from a separate section of ClueWeb.  However, as they did not
+release a development set in with their data, we used this set as a
+development set.  For a final evaluation, we generated another,
+similar test set from a different held out section of ClueWeb, in the
+same fashion as done by Krishnamurthy and Mitchell.  This final test
+set contains 307 queries.  We report results on both of these test
+sets below.
 
-\subsection{Experiments}
+\subsection{Models}
 
-We compare three models in our experiments: a distributional-only model, a
-formal-only model, and our proposed model, which is both distributional and
-formal.  The distributional-only model is the model proposed by Krishnamurthy
-and Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} and
-described in \secref{jayant-semparse}.  The combined model is the model
-described in \secref{formal-and-distributional}, while the formal-only
-model removes the distributional component from the combined model (i.e., all
-parameters $\theta$ and $\phi$ from the distributional portion of the model are
-fixed at zero during training and test).  Note that this formal-only baseline
-is also new to this work---we are not aware of any other work that models
-language in terms of features derived from a formal knowledge base.
-
-In addition to running experiments comparing these three models on the two test
-sets described above, we also evaluated the improvement gained by using our
-modified logical forms (\secref{better-lfs}), and our entity proposal mechanism
+We compare three models in our experiments: (1) a distributional-only
+model (the prior work of Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}); (2)
+a formal-only model (new to this work), where the distributional
+parameters $\theta$ and $\phi$ in \secref{formal-and-distributional}
+are fixed at zero; and (3) the combined model described in
+\secref{formal-and-distributional} (also new to this work).  Except
+where noted, all experiments use our modified logical forms
+(\secref{better-lfs}) and our entity proposal mechanism
 (\secref{better-candidates}).
 
 \subsection{Methodology}
 
-Given a fill-in-the-blank query such as ``Italian architect \blank{}'', each
-system produces a ranked list of 100 candidate entities.  To compare the output
-of the systems, we follow a pooled evaluation protocol commonly used in
-relation extraction and information
-retrieval~\cite{west-2014-kbc-via-qa,riedel-2013-mf-universal-schema}.  We take
-the top 30 predictions from each system and manually annotate whether they are
-correct, and use those annotations to compute the average precision (AP) and
-reciprocal rank (RR) of each system on the query.  Average precision is defined
-as $\frac{1}{m}\sum^m_{k=1} \mathrm{Prec}(k) \times \mathrm{Correct}(k)$, where
-$\mathrm{Prec}(k)$ is the recision at rank $k$, $\mathrm{Correct}(k)$ is an
-indicator function for whether the $k$th answer is correct, and $m$ is number
-of returned answers (up to 100, in this evaluation).  Reciprocal rank is
-computed by first finding the rank $r$ of the first correct prediction made by a
-system.  Reciprocal rank is then $\frac{1}{r}$, ranging from 1 (if the first
-prediction is correct) to 0 (if there is no correct answer returned).  In the
-tables below we report \emph{mean} average precision (MAP) and reciprocal rank
-(MRR), averaged over all of the queries in the test set.  We also report a
-weighted version of MAP, where the AP of each query is scaled by the number of
-annotated correct answers to the query.
+Given a fill-in-the-blank query such as ``Italian architect
+\blank{}'', each system produces a ranked list of 100 candidate
+entities.  To compare the output of the systems, we follow a pooled
+evaluation protocol commonly used in relation extraction and
+information
+retrieval~\cite{west-2014-kbc-via-qa,riedel-2013-mf-universal-schema}.
+We take the top 30 predictions from each system and manually annotate
+whether they are correct, and use those annotations to compute the
+average precision (AP) and reciprocal rank (RR) of each system on the
+query.  Average precision is defined as $\frac{1}{m}\sum^m_{k=1}
+\mathrm{Prec}(k) \times \mathrm{Correct}(k)$, where $\mathrm{Prec}(k)$
+is the recision at rank $k$, $\mathrm{Correct}(k)$ is an indicator
+function for whether the $k$th answer is correct, and $m$ is number of
+returned answers (up to 100, in this evaluation).  Reciprocal rank is
+computed by first finding the rank $r$ of the first correct prediction
+made by a system.  Reciprocal rank is then $\frac{1}{r}$, ranging from
+1 (if the first prediction is correct) to 0 (if there is no correct
+answer returned).  In the tables below we report \emph{mean} average
+precision (MAP) and reciprocal rank (MRR), averaged over all of the
+queries in the test set.  We also report a weighted version of MAP,
+where the AP of each query is scaled by the number of annotated
+correct answers to the query (shown as W-MAP in the tables for space
+considerations).
 
 \subsection{Results}
 
 \begin{table}
   \centering
   {\small
-    \begin{tabular}{lccc}
+    \begin{tabular}{lcc}
       \toprule
-      Method & MAP & Weighted MAP & MRR \\
+      Method & K\&M's LFs & Our LFs \\
       \midrule
-      Distributional-only & .284 & .371 & .379 \\
-      \ \ \ (old lfs) & .269 & .330 & .380 \\
+      Distributional-only & .269 & \textbf{.284} \\
       \midrule
-      Formal-only & .276 & .469 & .334 \\
-      \ \ \ (old lfs) & .231 & .358 & .216 \\
+      Formal-only & .231 & \textbf{.276} \\
       \midrule
-      Combined model & \textbf{.335} & \textbf{.477} & \textbf{.429} \\
-      \ \ \ (old lfs) & .313 & .396 & .413 \\
+      Combined model & .313 & \textbf{.335} \\
       \bottomrule
     \end{tabular}
   }
-  \caption{Results on the development set for our fill-in-the-blank task.  The
-  combined model improves MAP by 42\% compared to the distributional-only
-  baseline.  Additionally, the improved logical forms presented in
-  \secref{better-lfs} significantly improve all models.}
-  \label{tab:dev-results}
+  \caption{Comparison of models using logical forms from prior work
+  versus those introduced in this paper.  The metric shown is mean
+  average precision on the dev set.  With our logical forms,
+  performance of all models improves, quite substantially in the case
+  of the formal model.}
+  \label{tab:better-lfs}
 \end{table}
 
-\tabref{dev-results} shows the results of our experiments on the development
-set (the same as the test set used by Krishnamurthy and
-Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}).  As can be
-seen, the combined model significantly improves performance, giving a 42\%
-relative increase in MAP over the distributional-only baseline.  This table
-also shows the benefit of using our modified logical forms (see
-\secref{better-lfs}); by being able to better model the relations between
-entities, MAP of all of the models is improved.  Not surprisingly, the
-improvement is more pronounced for the models that have formal features, which
-can make better use of rich information from Freebase with our improved logical
-forms.\footnote{Because of the large amount of annotation effort involved, we
-did not include the unique results from this run in the evaluation pool.  This
-has the effect of slightly lowering the MAP score for these methods.  However,
-the large majority of the predictions made by these methods were already
-annotated, and spot-checking the unannotated predictions seemed to indicate
-that annotating them would not substantially change the result shown.}
+We first show the effect of using the new logical forms introduced in
+\secref{better-lfs}.  As can be seen in \tabref{better-lfs}, with
+improved logical forms, all models are better able to capture the
+semantics of language.  This improvement is more pronounced in the
+formal models, which have more capacity to get specific features from
+Freebase with the new logical forms.  As our logical forms are able to
+give all models better performance, the remaining experiments we
+present all use these logical forms.
 
 \begin{table}
   \centering
   {\small
     \begin{tabular}{lccc}
       \toprule
-      Method & MAP & Weighted MAP & MRR \\
+      Method & MAP & W-MAP & MRR \\
       \midrule
-      Distributional-only & .229 & .275 & .312 \\
-      \ \ \ -related entities & .163 & .163 & .288 \\
+      Distributional model & .163 & .163 & .288 \\
       \midrule
-      Formal-only & .355 & .495 & .419 \\
-      \midrule
-      Combined model & \textbf{.370} & \textbf{.513} & \textbf{.469} \\
+      With freebase entities & .\textbf{229} & \textbf{.275} & \textbf{.312} \\
+      \bottomrule
+      Relative improvement & 40\% & 69\% & 8\% \\
       \bottomrule
     \end{tabular}
   }
-  \caption{Results on the final test set for our fill-in-the-blank task.  The
-  combined model improves MAP by 62\% relative to the distributional-only
-  baseline.  Additionally, allowing the distributional-only model to use
-  Freebase to propose candidates improves MAP by 6.6 points absolute due to
-  improved recall.}
+  \caption{Allowing Krishnamurthy and Mitchell's model to propose
+  candidate entities from Freebase improves mean average precision
+  substantially, by allowing the model to have higher recall.}
+  \label{tab:better-candidates}
+\end{table}
+
+We next show the improvement gained by using the simple candidate
+entity generation outlined in \secref{better-candidates}.  By simply
+appending the list of connected entities to the end of the rankings
+returned by the distributional model, MAP improves by 40\% (see
+\tabref{better-candidates}).  The connectedness of an entity pair in
+Freebase is very informative, especially for rare entities that are
+not seen together during training.
+
+\begin{table}
+  \centering
+  {\small
+    \begin{tabular}{lccc}
+      \toprule
+      Method & MAP & W-MAP & MRR \\
+      \midrule
+      Prior work (distributional) & .284 & .371 & .379 \\
+      \midrule
+      Our formal model & .276 & .469 & .334 \\
+      \midrule
+      Our combined model & \textbf{.335} & \textbf{.477} & \textbf{.429} \\
+      \bottomrule
+      Relative improvement & 18\% & 29\% & 13\% \\
+      \bottomrule
+    \end{tabular}
+  }
+  \caption{Results on the development set for our fill-in-the-blank task.  The
+  combined model significantly improves MAP over prior work.}
+  \label{tab:dev-results}
+\end{table}
+
+\tabref{dev-results} shows the results of our experiments on the
+development set (the same as the test set used by Krishnamurthy and
+Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary}).  As
+can be seen, the combined model significantly improves performance,
+giving a relative gain in weighted MAP of 29\%.
+
+\begin{table}
+  \centering
+  {\small
+    \begin{tabular}{lccc}
+      \toprule
+      Method & MAP & W-MAP & MRR \\
+      \midrule
+      Prior work (distributional) & .229 & .275 & .312 \\
+      \midrule
+      Our formal model & .355 & .495 & .419 \\
+      \midrule
+      Our combined model & \textbf{.370} & \textbf{.513} & \textbf{.469} \\
+      \bottomrule
+      Relative improvement & 62\% & 87\% & 50\% \\
+      \bottomrule
+    \end{tabular}
+  }
+  \caption{Results on the final test set for our fill-in-the-blank
+  task.  The combined model improves over prior work by 50--87\% on
+  our metrics.  Note that these improvements over the baseline are
+  \emph{after} the baseline has been improved by the methods developed
+  in this paper, shown in \tabref{better-lfs} and
+  \tabref{better-candidates}.  The cumulative effect of the methods
+  presented in this work is an improvement of over 120\% in MAP.}
   \label{tab:final-results}
 \end{table}
 
-\tabref{final-results} shows that these improvements are consistent on the
-final test set, as well.  The performance improvement seen by the combined
-model is actually larger on this set, going from a MAP of .229 to .370, a 62\%
-relative improvement.  In this table, we also show the improvement gained by
-allowing the distributional-only model to propose candidate entities that are
-related in Freebase (see \secref{better-candidates}).  Even though these
-candidates are always ranked at the bottom of the list of predictions (with a
-score of 0), the additional recall provided by being able to propose more
-entities raises MAP of the distributional-only model from .163 to .229.
+\tabref{final-results} shows that these improvements are consistent on
+the final test set, as well.  The performance improvement seen by the
+combined model is actually larger on this set, with gains on our
+metrics ranging from 50\% to 97\%.
 
-On both of these datasets, the difference between the combined model and the
-distributional model is statistically significant (by a paired permutation
-test, $p < 0.05$).  The difference between the combined model and the formal
-model, and between the formal model and the distributional model, are not
-statistically significant, as each method has certain kinds of queries that it
-performs well on.  Only the combined model is able to consistently outperform
-the distributional model on all kinds of queries.
+On both of these datasets, the difference in MAP between the combined
+model and the distributional model is statistically significant (by a
+paired permutation test, $p < 0.05$).  The difference between the
+combined model and the formal model, and between the formal model and
+the distributional model, are not statistically significant, as each
+method has certain kinds of queries that it performs well on.  Only
+the combined model is able to consistently outperform the
+distributional model on all kinds of queries.
 
 \subsection{Discussion}
 
@@ -877,7 +867,7 @@ There are also some areas where our model can be improved. First, in
 some cases, the edge sequence features used by the model are not
 expressive enough to identify the correct relation in Freebase. An
 example of this problem is the ``linebacker'' example above, where the
-features for \predicate{linebacker\_N/N} can capture which athletes
+features for \lexicalpredicate{linebacker\_N/N} can capture which athletes
 play for which teams, but not the \emph{positions} of those
 athletes. Second, our model can underperform on predicates with no
 close mapping to Freebase. An example where this problem occurs is the
@@ -885,78 +875,69 @@ query ``\blank{} is a NASA mission.'' Third, there remains room to
 further improve the logical forms produced by the semantic parser,
 specifically for multi-word expressions. One problem occurs with
 multi-word noun modifiers, e.g., ``Vice president Al Gore'' is mapped
-to $\predicate{vice}(\entity{Al Gore}) \land
-\predicate{president}(\entity{Al Gore})$. Another problem is that
+to $\lexicalpredicate{vice}(\entity{Al Gore}) \land
+\lexicalpredicate{president}(\entity{Al Gore})$. Another problem is that
 there is no backoff with multi-word relations. For example, the
-predicate \predicate{head\_honcho\_N/N} was never seen in the training
-data, so it is replaced with \predicate{unknown}; however, it would be
-better to replace it with \predicate{honcho\_N/N}, which \emph{was}
+predicate \lexicalpredicate{head\_honcho\_N/N} was never seen in the training
+data, so it is replaced with \lexicalpredicate{unknown}; however, it would be
+better to replace it with \lexicalpredicate{honcho\_N/N}, which \emph{was}
 seen in the training data. Finally, although using connected entities
 in Freebase as additional candidates during inference is helpful, it
 often over- or under-generates candidates. A more tailored, per-query
 search process could improve performance.
 
+\section{Related work}
 
-% The ``head honcho'' example is particularly instructive---this is a
-% phrase that essentially means ``leader'', and the features learned by
-% the formal model get some essential hints from Freebase, even though
-% there is no direct correlate.  The features capture the fact that
-% entities that are ``honchos'' are people, and that they tend to be
-% CEOs and film producers.
-% 
-% When a predicate has a clear Freebase correlate (such a
-% \predicate{prime\_minister\_N/N}, \predicate{president\_of},
-% \predicate{newspaper}, \predicate{company}, etc.), our formal model is able to
-% capture the meaning very well.  The   The distributional model does much less well here, and in
-% combination, the distributional component of the model occasionally lowers its
-% performance relative to the formal model.\footnote{This is why the difference
-% between the formal model and the combined model is not statistically
-% significant.}
-% 
-% The formal models also perform well on predicates that can be partially
-% expressed by Freebase, such as , though
-% the models do not have the nearly-perfect AP that they do for the more crisp
-% queries above.  
-% 
-% For ``Patriots linebacker \blank{}'', the reason that this can only be
-% partially expressed in terms of Freebase queries is that the features for
-% \predicate{linebacker\_N/N} are able to capture which athletes play for which
-% teams, but they cannot distinguish well between what positions those athletes
-% play.  This leads to Patriots quarterbacks, wide receivers, and running backs
-% being scored highly for this query.  This issue could be fixed by using more
-% complex features for relation predicates, instead of just edge sequences,
-% though that would drammatically increase the size of the feature space and make
-% the feature selection process much more difficult.  It could also potentially
-% be mitigated by better negative example selection during training.
-% 
-% There are also cases where a predicate has so many possible entity types in
-% Freebase (or no close correlate at all) that the PMI feature selection process
-% does not find features that are useful for all queries.  A good example of this
-% is ``\blank{} is a NASA mission''; in this case, the distributional model
-% outperforms the formal model, because it has learned associations between
-% particular NASA missions and NASA.
-% 
-% While the new logical forms we introduced in \secref{better-lfs} improved the
-% performance of the models, there is still a lot of room for further
-% improvement.  For instance, ``Vice president Al Gore'' is modeled as
-% $\predicate{vice}(\entity{Al Gore}) \land \predicate{president}(\entity{Al
-% Gore})$.  Better processing of multi-word expressions would allow for more
-% crisp models of the predicates, so the model for \predicate{president} could
-% have more specific features.  Also, the predicate \predicate{head\_honcho\_N/N}
-% was never seen in the training data, so an \predicate{unknown} predicate was
-% used to score the relation in the phrase ``Microsoft head honcho \blank{}''.
-% This means the model had to rely solely on knowing which entities are
-% ``honchos'' and which entities are related to Microsoft in some unknown manner.
-% The predicate \predicate{honcho\_N/N} \emph{is} seen in the training data,
-% however; some kind of backoff to simpler phrases for unseen predicates would be
-% useful here.
+There is a large body of other work that is closely related to what is
+presented in this paper.  Two recent papers that also attempt to
+include some form of structured knowledge into distributional
+representations are those by Faruqui et
+al.~\shortcite{faruqui-2015-retrofitting-word-vectors}, and by
+Rockt\"{a}schel et
+al.~\shortcite{rocktaschel-2015-logical-embeddings}.  A key difference
+between their approaches and ours is that they use the structured
+information only to modify distributional representations, while we
+include the structured information directly in our models, training
+weights for structured information jointly with distributional
+representations.  Also conceptually similar is the Additive Relational
+Effects model for knowledge base completion by Nickel et
+al.~\shortcite{nickel-2014-are}, which tries to factorize the residual
+of a KB tensor that cannot be explained by observable features that
+are somewhat similar to the formal features we use in this model.  But
+while this model is conceptually similar, it is computationally quite
+different, and would be rather difficult to use in the setting we
+explore in this work.
 
-% Finally, using connected entities in Freebase as additional candidates during
-% inference is helpful, but it is not very sophisticated.  It over-generates for
-% a lot of entities and predicates, and under-generates for others.  A mechanism
-% for tailoring a search over Freebase to a particular query would be useful,
-% though it would add a lot of additional complexity, possibly requiring methods
-% from reinforcement learning to resolve.
+Our work draws a lot of inspiration from recent work on knowledge base
+completion.  We are building on top of work in embedding the entities
+and relations in a knowledge
+base~\cite{riedel-2013-mf-universal-schema,nickel-2011-rescal,bordes-2013-transe},
+as well as work on graph-based methods for reasoning with knowledge
+bases~\cite{lao-2010-original-pra,gardner-2014-vector-space-pra,neelakantan-2015-rnn-kbc}.
+
+Lastly, there is an extensive literature on building semantic parsers
+to answer questions against a structured knowledge
+base~\cite{zettlemoyer-2005-ccg,berant-2013-semantic-parsing-qa,%
+kwiatkowski-2013-ontology-matching,krishnamurthy-2012-semantic-parsing}.
+The vast majority of this work is focused on matching natural language
+text to statements in a specific ontology, with no hope of assigning
+meaning to language that falls outside of that ontology.  Only very
+recently has there been work attempting to learn broad coverage
+meaning representations in semantic parsers.  In addition to the work
+by Krishnamurthy and Mitchell which we extend in this paper, there was
+recently a nice piece of work by Choi et
+al.~\shortcite{choi-2015-semantic-parsing-partial-ontologies}.  The
+aim of their work is, like typical semantic parsers, to map text onto
+a single formal statement, but they allow some of the predicates to be
+``open'' predicates not contained in the Freebase ontology.  A key
+difference between their work and ours is that we score surface
+logical forms directly, using a weighted combination of many Freebase
+queries, instead of trying to map them to a single Freebase logical
+form.  Additionally, while their system might learn that
+``front-runner'' should be modeled as an open predicate that has no
+representation in Freebase, they have no method to assign any further
+meaning to that predicate, while our models learn both distributional
+and formal information about the meaning of ``front-runner''.
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -968,44 +949,27 @@ base. Our model represents words as a weighted combination of
 knowledge base queries plus a distributional component. Both of these
 components are jointly trained to correctly predict entity answers to
 fill-in-the-blank natural language queries. This combined model
-achieved a relative gain of 62\% in mean average precision over the
-distributional model alone. We also introduced a better mapping from
-surface text to logical forms, and a simple method for using Freebase
-to find candidate entities during inference.  Taken together, the
-methods introduced in this paper improved mean average precision on a
-fill-in-the-blank natural language query task from .163 to .370, a
-127\% relative improvement.
-
-% There are many directions for future work in this model. One is to
-% address some of the model limitations previously discussed to improve
-% performance. Specifically, feature generation, feature selection and
-% candidate entity generation could be better tailored to each
-% predicate. This problem is challenging because it requires expanding
-% an already very expressive class of features ...  (TODO: reinforcement
-% learning?) Although the features we consider are already more
-% expressive than would be considered by a typical semantic parser, it
-% seems necessary to include even more complex Freebase queries. Another
-% direction (TODO:.... )
+achieved relative gains of over 50\% in mean average precision and
+mean reciprocal rank versus prior work.  We also introduced a better
+mapping from surface text to logical forms, and a simple method for
+using Freebase to find candidate entities during inference.  Taken
+together, the methods introduced in this paper improved mean average
+precision on our task from .163 to .370, a 127\% relative improvement.
 
 A consequence of this work is that it suggests a new direction for
 semantic parsing research. Existing semantic parsers map language to a
 single knowledge base query, an approach that successfully leverages a
 knowledge base's predicate instances, but is fundamentally limited by
-the its schema. In contrast, our approach maps language to a
+its schema. In contrast, our approach maps language to a
 \emph{weighted combination of queries} plus a distributional
 component; this approach is capable of representing a much broader
 class of concepts while still using the knowledge base when it is
 helpful. Furthermore, it is capable of using the knowledge base even
 when the meaning of the language cannot be exactly represented by a
-knowledge base predicate, a common occurrence. We believe that this
-kind of approach could significantly expand the applicability of
-semantic parsing techniques to more complex domains where the
-assumptions of traditional techniques are limiting.
-
-
-TODO: We could say more about what we learned. A big message is that
-we should use the KB as \emph{features}.
-
+knowledge base predicate, which is a common occurrence. We believe
+that this kind of approach could significantly expand the
+applicability of semantic parsing techniques to more complex domains
+where the assumptions of traditional techniques are too limiting.
 
 %\section*{Acknowledgments}
 

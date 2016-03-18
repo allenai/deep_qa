@@ -1,4 +1,4 @@
-(define best-params (deserialize (cadr ARGV)))
+(define best-params (deserialize (caddr ARGV)))
 
 (define BASELINE-PROB 0.5)
 ; original value

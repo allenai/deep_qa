@@ -1,5 +1,6 @@
 (define sfe-spec-file (car ARGV))
-(define graph-features (create-sfe-feature-computer sfe-spec-file))
+(define data-name (cadr ARGV))
+(define graph-features (create-sfe-feature-computer sfe-spec-file data-name))
 
 (define word-family (word-parameters entity-parameters)
   (lambda (word)

@@ -17,9 +17,10 @@ import com.jayantkrish.jklol.lisp.SpecAndParameters
 
 class CreateSfeFeatureComputer extends AmbFunctionValue {
   override def apply(argumentValues: JList[Object], c: EvalContext, b: ParametricBfgBuilder) = {
-    Preconditions.checkArgument(argumentValues.size() == 1)
+    Preconditions.checkArgument(argumentValues.size() == 2)
     val specFile = argumentValues.get(0).asInstanceOf[String]
-    new SfeFeatureComputer(specFile)
+    val dataName = argumentValues.get(1).asInstanceOf[String]
+    new SfeFeatureComputer(specFile, dataName)
   }
 }
 

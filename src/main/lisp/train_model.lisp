@@ -1,5 +1,5 @@
 (display "Running universal schema")
-(define output-model-filename (cadr ARGV))
+(define output-model-filename (caddr ARGV))
 
 (display "Making training data")
 (define training-data (array-zip training-inputs
