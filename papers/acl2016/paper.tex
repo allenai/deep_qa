@@ -372,6 +372,14 @@ baseline.
   \textbf{Features between \entity{Palladio} and \entity{Italy}}:\\
   \textless\predicate{nationality}\textgreater\\
   \textless\predicate{designed}, \predicate{located\_in}\textgreater
+
+  \textbf{Features for \entity{Palladio}}:\\
+  \textless\predicate{nationality}\textgreater\\
+  \textless\predicate{nationality}\textgreater:\entity{Italy}\\
+  \textless\predicate{type}\textgreater:\entity{Architect}\\
+  \textless\predicate{designed}, \predicate{located\_in}\textgreater \\
+  \textless\predicate{designed}, \predicate{located\_in}\textgreater:\entity{Italy}
+  
   \caption{A subset of the Freebase graph, and some example extracted features
   between \entity{Palladio} and \entity{Italy}.  The actual Freebase relations
   and entity identifiers used are modified here to aid readability.}
@@ -454,107 +462,160 @@ information about the meaning of ``front-runner''.
 \section{Method}
 \label{sec:method}
 
-In this section we present our models of predicate semantics.  In
-\secref{formal-and-distributional} we describe how we modify Krishnamurthy and
-Mitchell's (K\&M's) semantic parser to include features from a formal knowledge
-base.  In \secref{computing-pmi} we describe how we select those features for
-each predicate.  The remaining two sections then describe other improvements we
-made to K\&M's semantic parsing model: lexicalizing preposition and
-noun-compound predicates, and using the Freebase graph to select candidate
-entities.
+This section presents our approach to open vocabulary semantic
+parsing. Our approach follows the same structure as described in
+Section \ref{sec:jayant-semparse}: we generate a surface logical form
+from a query, then evaluate it against a probabilistic database with
+learned predicate instance probabilities.  Section
+\ref{sec:better-lfs} describes logical form generation, which improves
+on prior work by lexicalizing additional predicates. Section 
 
-\subsection{Formal features for predicate semantics}
+
+However, we improve both
+logical form generation and the predicate models.
+
+
+In
+\secref{formal-and-distributional} we describe how we modify
+Krishnamurthy and Mitchell's (K\&M's) semantic parser to include
+features from a formal knowledge base.  In \secref{computing-pmi} we
+describe how we select those features for each predicate.  The
+remaining two sections then describe other improvements we made to
+K\&M's semantic parsing model: lexicalizing preposition and
+noun-compound predicates, and using the Freebase graph to select
+candidate entities.
+
+
+
+\subsection{Overview}
 \label{sec:formal-and-distributional}
 
-We inject information from a formal knowledge base into our models of predicate
-semantics simply by augmenting the learned distributional feature vectors with
-formal features.
+% TODO: ``query'' features?
 
-For each entity and entity pair in the data we compute an SFE feature vector
-$\psi(e)$ and $\psi(e_1, e_2)$.  For entity pairs, the vector $\psi(e_1, e_2)$
-is a sparse binary vector containing indicator features for all edge sequences
-that connect nodes $e_1$ and $e_2$ in the Freebase graph, up to length 4.
-These features are shown for the entity pair (\entity{Palladio},
-\entity{Italy}) in the example graph in \figref{sfe}.  For entities, we extract
-similar features to form the sparse binary vector $\psi(e)$.  These features
-are of two types: (1) edge sequences that begin at node $e$ (up to length two),
-and (2) edge sequences that begin at node $e$ along with the node at the end of
-the sequence.  For example, all of the features listed in \figref{sfe} for the
-entity pair (\entity{Palladio}, \entity{Italy}) are also valid features of type
-(1) for the entity \entity{Palladio}, as well as the features
-\textless\predicate{type}\textgreater and
-\textless\predicate{designed}\textgreater.  Examples of of type (2) features
-are \textless\predicate{type}\textgreater:\entity{architect}, and
-\textless\predicate{nationality}\textgreater:\entity{Italy}.  Intuitively,
-features of type (1) capture the fact that an entity participates in particular
-kinds of relations, such as designing architectural structures, while features
-of type (2) capture the way an entity is related to particular other entities.
-Features of type (2) are very specific, and are most useful in practice when
-the entity in the feature is a type node, such as with
-\textless\predicate{type}\textgreater:\entity{architect}, though occasionally
-features of this type involving other entities are also selected in our feature
-selection process.
-
-For each category and relation, we select a subset of the SFE features in the
-vectors $\psi$ to have associated weights $\omega_c$ and $\omega_r$.  We then
-add the weights $\omega_c$ and $\omega_r$ as parameters to be learned for each
-predicate, and we add the feature vectors $\psi(e)$ and $\psi(e_1, e_2)$ as
-observed features for each entity and entity pair.  The augmented category and
-relation probabilities are as follows:
+We inject information from a knowledge base into our predicate models
+by augmenting the learned embeddings with features. The truth
+probability of a category instance $c(e)$ or relation instance $r(e_1,
+e_2)$ in our model is given by:
 
 \begin{align*}
   P(c(e)) &= \sigma ( \theta_c^T \phi_e + \omega_c^T \psi_c(e)) \\
   P(r(e_1, e_2)) &= \sigma ( \theta_r^T \phi_{(e_1, e_2)} + \omega_r^T \psi_r(e_1, e_2) )
 \end{align*}
-where we have added subscripts on the $\psi$ functions to indicate that each
-predicate selects its own set of features from the SFE feature vector $\psi$.
 
-We pause here to note that these features obtained from SFE correspond exactly
-to a limited set of horn clauses using the Freebase vocabulary, which in turn
-can be seen as Freebase queries that define sets of entities or entity pairs.
-By associating a number of these features with each predicate and assigning
-them weights, what we are effectively doing is mapping language onto a weighted
-combination of possible Freebase statements, instead of onto a single Freebase
-query, as is typically done in the semantic parsing literature.  This is a
-fundamentally new kind of predicate semantics that has not been used previously
-in semantic parsers.
+In the above equation, the $\theta$ and $\phi$ terms are learned
+predicate and entity embeddings, as described in Section
+\ref{sec:jayant-semparse}. The second term in the sum represents our
+new features and their learned weights. $\psi_c(e)$ and $\psi_r(e_1,
+e_2)$ are SFE feature vectors for each entity and entity pair; a
+different set of features is chosen for each predicate in order to
+maximize their usefulness. The terms $\omega_c$ and $\omega_r$
+represent learned weights for these features.
 
-Note also that in our combined model there are now three sets of parameters to
-be learned by the semantic parser: (1) $\theta$, low-dimensional distributional
-vectors trained for each predicate; (2) $\phi$, low-dimensional distributional
-vectors trained for each entity and entity pair; and (3) $\omega$, weights
-associated with the selected formal SFE features for each predicate.  All of
-these parameters are optimized jointly, using the same ranking objective used
-by K\&M.
+Each SFE feature can be viewed as either a Freebase query or a horn
+clause implication rule using the Freebase schema. In both cases, the
+feature defines a set of entities (or entity pairs), and the
+associated feature weight measures the likelihood that an entity in
+this set is also in the denotation of the surface predicate. Our
+models include \emph{many} such features for each surface predicate,
+effectively mapping each surface predicate onto a \emph{weighted
+  combination of Freebase queries}. This approach is fundamentally
+different from typical semantic parsers that map language to a single
+Freebase query.
 
-\subsection{Finding relevant features for each predicate}
-\label{sec:computing-pmi}
+In our model, there are now three sets of parameters to be learned:
+(1) $\theta$, low-dimensional distributional vectors trained for each
+predicate; (2) $\phi$, low-dimensional distributional vectors trained
+for each entity and entity pair; and (3) $\omega$, weights associated
+with the selected formal SFE features for each predicate.  All of
+these parameters are optimized jointly, using the same ranking
+objective used by K\&M (TODO: not sure how to eliminate this backref).
 
-The feature vectors returned by SFE have dimensionality in the tens of
-millions.  We do not have near enough data to train that many parameters for
-each of our tens of thousands of predicates, nor do we have enough RAM in our
-machines to keep that many parameters in memory.  It is thus necessary to
-select some small number of informative features for each predicate.  We do
-this using pointwise mutual information (PMI).
+% For each category and relation, we select a subset of the SFE features in the
+% vectors $\psi$ to have associated weights $\omega_c$ and $\omega_r$.  We then
+% add the weights $\omega_c$ and $\omega_r$ as parameters to be learned for each
+% predicate, and we add the feature vectors $\psi(e)$ and $\psi(e_1, e_2)$ as
+% observed features for each entity and entity pair.  The augmented category and
+% relation probabilities are as follows:
 
-PMI measures the strength of association between two variables $x$ and $y$; it
-is computed as $\log\frac{p(x,y)}{p(x)p(y)}$.  In our case, we want to
-associate predicates with SFE features.  However, our SFE features are for each
-\emph{entity} and \emph{entity pair}, not each \emph{predicate}.  To associate
-SFE features with predicates, we use the training data to find a mapping from
-entities and entity pairs to predicates that they have been seen with in the
-data.  For example, the phrase ``Italian architect Andrea Palladio'' is
-considered a positive training example for the instantiated predicates
+\subsection{Generating predicate features}
+
+The feature vectors $\psi_c(e)$ and $\psi_r(e_1, e_2)$ are constructed
+using a two-stage process. First, we generate a predicate-independent
+feature vector $\psi(e)$ for each entity $e$ and $\psi(e_1, e_2)$ for
+each entity pair $(e_1, e_2)$ using SFE. This step generates very
+high-dimensional feature vectors, where most of the
+features are not relevant for any given predicate. Next, we perform
+per-predicate feature selection to identify a subset of these features
+that are relevant for each category and relation predicate.
+
+The predicate-independent feature extraction stage computes the
+following feature vectors. For entity pairs, the vector $\psi(e_1,
+e_2)$ is a sparse binary vector containing indicator features for all
+edge sequences that connect nodes $e_1$ and $e_2$ in the Freebase
+graph, up to length 4.  For an entity $e$, we extract two kinds of
+features: (1) all edge sequences up to length two that begin at $e$,
+and (2) the same sequences paired with the entity at their
+endpoint. Features of type (1) capture the kinds of relations that an
+entity participates in, e.g., designing architectural structures,
+while features of type (2) capture relations to other particular
+entities. This second kind of feature is most helpful when the
+endpoint entity is a type, such as \entity{architect}, although there
+are some other valuable features of this kind. \figref{sfe} shows some
+example entity and entity pair features extracted from a subset of the
+Freebase graph.
+
+
+% For each category and relation, we select a subset of the SFE features in the
+% vectors $\psi$ to have associated weights $\omega_c$ and $\omega_r$.  We then
+% add the weights $\omega_c$ and $\omega_r$ as parameters to be learned for each
+% predicate, and we add the feature vectors $\psi(e)$ and $\psi(e_1, e_2)$ as
+% observed features for each entity and entity pair.  The augmented category and
+% relation probabilities are as follows:
+% 
+% \begin{align*}
+%   P(c(e)) &= \sigma ( \theta_c^T \phi_e + \omega_c^T \psi_c(e)) \\
+%   P(r(e_1, e_2)) &= \sigma ( \theta_r^T \phi_{(e_1, e_2)} + \omega_r^T \psi_r(e_1, e_2) )
+% \end{align*}
+% where we have added subscripts on the $\psi$ functions to indicate that each
+% predicate selects its own set of features from the SFE feature vector $\psi$.
+
+% The feature vectors returned by SFE have dimensionality in the tens of
+% millions.  We do not have near enough data to train that many parameters for
+% each of our tens of thousands of predicates, nor do we have enough RAM in our
+% machines to keep that many parameters in memory.  It is thus necessary to
+% select some small number of informative features for each predicate.  We do
+% this using pointwise mutual information (PMI).
+
+The feature selection step uses pointwise mutual information (PMI) to
+reduce the number of features considered by the model for each
+predicate. The feature vectors generated above have tens of millions
+of dimensions, but, for any given surface predicate, only a handful of
+these dimensions represent relevant Freebase queries. We select
+features by first summing the entity and entity pair feature vectors
+seen with each predicate in the training data. For example, the phrase
+``Italian architect Andrea Palladio'' is considered a positive
+training example for the instantiated predicates
 $\predicate{architect}(\entity{Andrea Palladio})$ and
-$\predicate{architect\_N/N}(\entity{Italy}, \entity{Andrea Palladio})$.  We
-then associate the feature vectors for \entity{Andrea Palladio} and
-(\entity{Italy}, \entity{Andrea Palladio}) with the predicates
-\predicate{architect} and \predicate{architect\_N/N}, respectively.  For each
-predicate $\pi$ and feature $f$, we use these counts to calculate the
-probabilities $p(\pi, f)$, $p(\pi)$ and $p(f)$.  After removing features with
-counts below some threshold, we pick the $k$ features with the highest PMI
-values for each predicate to use in our model.\footnote{We used $k=100$ in this
-paper.}
+$\predicate{architect\_N/N}(\entity{Italy}, \entity{Andrea
+  Palladio})$. We then add the feature vectors for \entity{Andrea
+  Palladio} and (\entity{Italy}, \entity{Andrea Palladio}) to the
+feature counts for the predicates \predicate{architect} and
+\predicate{architect\_N/N}, respectively. Next, for each predicate
+$\pi$ and feature $f$, we use these counts to calculate three
+probabilities: $p(\pi, f)$, $p(\pi)$ and $p(f)$. (TODO: how did you
+calculate these?). The PMI of a predicate/feature pair is then $\log
+\frac{p(\pi, f)}{p(\pi)p(f)}$. After removing features with counts
+below a threshold, we pick the $k=100$ features with the highest PMI
+values for each predicate to use in our model.
+
+% PMI measures the strength of association between two variables $x$ and $y$; it
+% is computed as $\log\frac{p(x,y)}{p(x)p(y)}$.  In our case, we want to
+% associate predicates with SFE features.  However, our SFE features are for each
+% \emph{entity} and \emph{entity pair}, not each \emph{predicate}.  To associate
+% SFE features with predicates, we  For each
+% predicate $\pi$ and feature $f$, we use these counts to calculate the
+% probabilities $p(\pi, f)$, $p(\pi)$ and $p(f)$.  
+
 
 \subsection{Improved logical forms}
 \label{sec:better-lfs}
@@ -592,6 +653,7 @@ dependency between two entities, as in the phrase above, we add that noun to
 the predicate, giving the instance $\predicate{president\_of}(\entity{Barack
 Obama}, \entity{U.S.})$.  We do the same for possessives in phrases such as
 ``Rome, Italy's capital'', producing the predicate \predicate{'s\_capital}.
+
 
 \subsection{Candidate entity generation}
 \label{sec:better-candidates}
