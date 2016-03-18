@@ -533,11 +533,12 @@ corpus\footnote{http://www.lemuproject.org/clueweb09.php} along with
 Google's FACC entity linking of that corpus to
 Freebase~\cite{gabrilovich-2013-clueweb-entity-linking}.  For training
 data, 3 million webpages from this corpus were processed with a CCG
-parser to produce logical forms.  This produced 2.1m predicate
-instances involving 142k entity pairs and 184k entities.  After
-removing infrequently-seen predicates (seen fewer than 6 times), there
-were 25k categories and 4.2k relations.  The differences in numbers
-reported here versus those reported by Krishnamurthy and
+parser to produce logical forms~\cite{krishnamurthy-2014-joint-ccg}.
+This produced 2.1m predicate instances involving 142k entity pairs and
+184k entities.  After removing infrequently-seen predicates (seen
+fewer than 6 times), there were 25k categories and 4.2k relations.
+The differences in numbers reported here versus those reported by
+Krishnamurthy and
 Mitchell~\shortcite{krishnamurthy-2015-semparse-open-vocabulary} are
 due to our improved logical form generation, discussed in
 \secref{better-lfs}.
@@ -767,56 +768,53 @@ search process could improve performance.
 
 \section{Related work}
 
-There is a large body of other work that is closely related to what is
-presented in this paper.  Two recent papers that also attempt to
-include some form of structured knowledge into distributional
-representations are those by Faruqui et
-al.~\shortcite{faruqui-2015-retrofitting-word-vectors}, and by
-Rockt\"{a}schel et
-al.~\shortcite{rocktaschel-2015-logical-embeddings}.  A key difference
-between their approaches and ours is that they use the structured
-information only to modify distributional representations, while we
-include the structured information directly in our models, training
-weights for structured information jointly with distributional
-representations.  Also conceptually similar is the Additive Relational
-Effects model for knowledge base completion by Nickel et
-al.~\shortcite{nickel-2014-are}, which tries to factorize the residual
-of a KB tensor that cannot be explained by observable features that
-are somewhat similar to the formal features we use in this model.  But
-while this model is conceptually similar, it is computationally quite
-different, and would be rather difficult to use in the setting we
-explore in this work.
+In addition to the work described in \secref{background}, there are
+three broad classes of work that are related to what we have presented
+in this paper.
 
-Our work draws a lot of inspiration from recent work on knowledge base
-completion.  We are building on top of work in embedding the entities
-and relations in a knowledge
-base~\cite{riedel-2013-mf-universal-schema,nickel-2011-rescal,bordes-2013-transe},
-as well as work on graph-based methods for reasoning with knowledge
-bases~\cite{lao-2010-original-pra,gardner-2014-vector-space-pra,neelakantan-2015-rnn-kbc}.
+The first line of research that our work is related to is knowledge
+base completion.  In addition to SFE~\cite{gardner-2015-sfe}, our work
+draws inspiration from work on embedding the entities and relations in
+a knowledge base~\cite{riedel-2013-mf-universal-schema,%
+nickel-2011-rescal,bordes-2013-transe,nickel-2014-are,%
+toutanova-2015-joint-text-kb-embedding}, as well as work on
+graph-based methods for reasoning with knowledge
+bases~\cite{lao-2010-original-pra,gardner-2014-vector-space-pra,%
+neelakantan-2015-rnn-kbc}.
+
+Second, our work is conceptually related to many methods that aim to
+learn word embeddings that are informed by some kind of external
+knowledge~\cite{faruqui-2015-retrofitting-word-vectors,%
+rocktaschel-2015-logical-embeddings,schwartz-2016-symmetric-patterns-w2v,%
+yu-2014-w2v-with-semantic-knowledge}.
+A key difference between these approaches and ours is that they use
+the structured information only to modify distributional
+representations, while we include the structured information directly
+in our models, training weights for structured information jointly
+with distributional representations.
 
 Lastly, there is an extensive literature on building semantic parsers
 to answer questions against a structured knowledge
 base~\cite{zettlemoyer-2005-ccg,berant-2013-semantic-parsing-qa,%
-kwiatkowski-2013-ontology-matching,krishnamurthy-2012-semantic-parsing}.
-The vast majority of this work is focused on matching natural language
-text to statements in a specific ontology, with no hope of assigning
-meaning to language that falls outside of that ontology.  Only very
-recently has there been work attempting to learn broad coverage
-meaning representations in semantic parsers.  In addition to the work
-by Krishnamurthy and Mitchell which we extend in this paper, there was
-recently a nice piece of work by Choi et
-al.~\shortcite{choi-2015-semantic-parsing-partial-ontologies}.  The
-aim of their work is, like typical semantic parsers, to map text onto
-a single formal statement, but they allow some of the predicates to be
-``open'' predicates not contained in the Freebase ontology.  A key
-difference between their work and ours is that we score surface
-logical forms directly, using a weighted combination of many Freebase
-queries, instead of trying to map them to a single Freebase logical
-form.  Additionally, while their system might learn that
-``front-runner'' should be modeled as an open predicate that has no
-representation in Freebase, they have no method to assign any further
-meaning to that predicate, while our models learn both distributional
-and formal information about the meaning of ``front-runner''.
+kwiatkowski-2013-ontology-matching,krishnamurthy-2012-semantic-parsing,%
+li-2015-semantic-parsing-scfg}.  The vast majority of this work is
+focused on matching natural language text to statements in a specific
+schema, with no hope of assigning meaning to language that falls
+outside of that schema.  Only very recently has there been work
+attempting to learn broad coverage meaning representations in semantic
+parsers.  In addition to the work by Krishnamurthy and Mitchell
+discussed in \secref{background}, and work by Lewis and
+Steedman~\shortcite{lewis-2013-combined-distributional-and-logical-semantics}
+which Krishnamurthy and Mitchell extended, Choi et
+al.~\shortcite{choi-2015-semantic-parsing-partial-ontologies},
+extended a traditional semantic parser with the notion of ``open''
+predicates not contained in the Freebase ontology.  A key difference
+between their work and ours is that, while their system might learn
+that ``front-runner'' should be modeled as an open predicate that has
+no representation in Freebase, they have no method to assign any
+further meaning to that predicate, whereas our models learn both
+distributional and formal information about the meaning of
+``front-runner''.
 
 \section{Conclusion}
 \label{sec:conclusion}
