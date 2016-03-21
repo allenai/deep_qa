@@ -11,7 +11,7 @@ object Experiments {
 
   val NEW_LF_TRAINING_DATA_FILE = "data/acl2016-training.txt"
   val NEW_LF_TRAINING_DATA_NAME = "acl2016"
-  val OLD_LF_TRAINING_DATA_FILE = "data/tacl2015/tacl2015-training.txt"
+  val OLD_LF_TRAINING_DATA_FILE = "data/tacl2015-training.txt"
   val OLD_LF_TRAINING_DATA_NAME = "tacl2015"
 
   val newLfTrainingDataParams: JValue =
@@ -85,6 +85,16 @@ object Experiments {
     ("model type" -> "combined") ~
     ("feature computer" -> newLfTrainingDataPmiParams)
 
+  val oldLfFormalModelParams: JValue =
+    ("model type" -> "formal") ~
+    ("feature computer" -> oldLfTrainingDataPmiParams)
+  val oldLfDistributionalModelParams: JValue =
+    ("model type" -> "distributional") ~
+    ("feature computer" -> oldLfTrainingDataPmiParams)
+  val oldLfCombinedModelParams: JValue =
+    ("model type" -> "combined") ~
+    ("feature computer" -> oldLfTrainingDataPmiParams)
+
   val newLfSampleFormalModelParams: JValue =
     ("model type" -> "formal") ~
     ("feature computer" -> newLfTrainingDataSamplePmiParams)
@@ -99,50 +109,105 @@ object Experiments {
   // STEP 5: TESTING
   // *********************************
 
-  val FINAL_TEST_SET = "src/main/resources/acl2016_final_test_set_annotated.json"
-  val DEV_SET = "src/main/resources/acl2016_dev_set_annotated.json"
-  val DEV_SET_OLD_LFS = "src/main/resources/acl2016_dev_set_old_lfs_annotated.json"
+  // TODO(matt): Make the test set expansion with Freebase an option here; it currently is just
+  // hard-coded to always happen.  So Table 2 doesn't have a nice experiment set up...
+
+  val FINAL_TEST_SET = ("acl2016_test", "src/main/resources/acl2016_final_test_set_annotated.json")
+  val DEV_SET = ("acl2016_dev", "src/main/resources/acl2016_dev_set_annotated.json")
+  val DEV_SET_OLD_LFS = ("tacl2015_test", "src/main/resources/acl2016_dev_set_old_lfs_annotated.json")
 
   val newLfFormalModelFinalTestParams: JValue =
-    ("test query file" -> FINAL_TEST_SET) ~
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfFormalModelParams)
   val newLfDistributionalModelFinalTestParams: JValue =
-    ("test query file" -> FINAL_TEST_SET) ~
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfDistributionalModelParams)
   val newLfCombinedModelFinalTestParams: JValue =
-    ("test query file" -> FINAL_TEST_SET) ~
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfCombinedModelParams)
 
+  val newLfFormalModelDevSetParams: JValue =
+    ("test name" -> DEV_SET._1) ~
+    ("test query file" -> DEV_SET._2) ~
+    ("model" -> newLfFormalModelParams)
+  val newLfDistributionalModelDevSetParams: JValue =
+    ("test name" -> DEV_SET._1) ~
+    ("test query file" -> DEV_SET._2) ~
+    ("model" -> newLfDistributionalModelParams)
+  val newLfCombinedModelDevSetParams: JValue =
+    ("test name" -> DEV_SET._1) ~
+    ("test query file" -> DEV_SET._2) ~
+    ("model" -> newLfCombinedModelParams)
+
+  val oldLfFormalModelTaclTestSetParams: JValue =
+    ("test name" -> DEV_SET_OLD_LFS._1) ~
+    ("test query file" -> DEV_SET_OLD_LFS._2) ~
+    ("model" -> oldLfFormalModelParams)
+  val oldLfDistributionalModelTaclTestSetParams: JValue =
+    ("test name" -> DEV_SET_OLD_LFS._1) ~
+    ("test query file" -> DEV_SET_OLD_LFS._2) ~
+    ("model" -> oldLfDistributionalModelParams)
+  val oldLfCombinedModelTaclTestSetParams: JValue =
+    ("test name" -> DEV_SET_OLD_LFS._1) ~
+    ("test query file" -> DEV_SET_OLD_LFS._2) ~
+    ("model" -> oldLfCombinedModelParams)
+
   val newLfSampleFormalModelFinalTestParams: JValue =
-    ("test query file" -> FINAL_TEST_SET) ~
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfSampleFormalModelParams)
   val newLfSampleDistributionalModelFinalTestParams: JValue =
-    ("test query file" -> FINAL_TEST_SET) ~
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfSampleDistributionalModelParams)
   val newLfSampleCombinedModelFinalTestParams: JValue =
-    ("test query file" -> FINAL_TEST_SET) ~
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfSampleCombinedModelParams)
 
 
   def main(args: Array[String]) {
-    runFinalTestSetOnSampleData()
-    //runFinalTestSet()
+    //runFinalTestSetOnSampleData()  // this one's just for testing stuff
+    runTacl2015Test()  // Table 1 in the paper
+    runDevSet()  // Table 1 and Table 3 in the paper
+    runFinalTestSet()  // Table 4 in the paper
+  }
+
+  def runTacl2015Test() {
+    val methods = Seq(
+      ("formal-tacl2015-test", oldLfFormalModelTaclTestSetParams),
+      ("distributional-tacl2015-test", oldLfDistributionalModelTaclTestSetParams),
+      ("combined-tacl2015-test", oldLfCombinedModelTaclTestSetParams)
+    )
+    new Evaluator(methods).runPipeline()
+  }
+
+  def runDevSet() {
+    val methods = Seq(
+      ("formal-acl2016-dev", newLfFormalModelDevSetParams),
+      ("distributional-acl2016-dev", newLfDistributionalModelDevSetParams),
+      ("combined-acl2016-dev", newLfCombinedModelDevSetParams)
+    )
+    new Evaluator(methods).runPipeline()
   }
 
   def runFinalTestSet() {
     val methods = Seq(
-      ("formal", newLfFormalModelFinalTestParams),
-      ("distributional", newLfDistributionalModelFinalTestParams),
-      ("combined", newLfCombinedModelFinalTestParams)
+      ("formal-acl2016", newLfFormalModelFinalTestParams),
+      ("distributional-acl2016", newLfDistributionalModelFinalTestParams),
+      ("combined-acl2016", newLfCombinedModelFinalTestParams)
     )
     new Evaluator(methods).runPipeline()
   }
 
   def runFinalTestSetOnSampleData() {
     val methods = Seq(
-      ("formal", newLfSampleFormalModelFinalTestParams),
-      ("distributional", newLfSampleDistributionalModelFinalTestParams),
-      ("combined", newLfSampleCombinedModelFinalTestParams)
+      ("formal-acl2016-sample", newLfSampleFormalModelFinalTestParams),
+      ("distributional-acl2016-sample", newLfSampleDistributionalModelFinalTestParams),
+      ("combined-acl2016-sample", newLfSampleCombinedModelFinalTestParams)
     )
     new Evaluator(methods).runPipeline()
   }

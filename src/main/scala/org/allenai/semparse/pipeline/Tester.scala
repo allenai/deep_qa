@@ -23,10 +23,11 @@ class Tester(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
-  val validParams = Seq("test query file", "pool depth", "ensembled evaluation", "model")
+  val validParams = Seq("test name", "test query file", "pool depth", "ensembled evaluation", "model")
   JsonHelper.ensureNoExtras(params, "tester", validParams)
 
-  // Parameters we take.  Only the query file is required.
+  // Parameters we take.  Only the test name and query file are required.
+  val testName = (params \ "test name").extract[String]
   val queryFile = (params \ "test query file").extract[String]
   val poolDepth = JsonHelper.extractWithDefault(params, "pool depth", 100)
   val ensembledEvaluation = JsonHelper.extractWithDefault(params, "ensembled evaluation", false)
@@ -91,8 +92,8 @@ class Tester(
     modelType match {
       // ACK!  I need to make this more general...  The dataset should not be just "large" and
       // "small"
-      case "baseline" => s"results/${dataName}/baseline/output.txt"
-      case other => s"results/${dataName}/${modelType}/${ranking}/${ensemble}/output.txt"
+      case "baseline" => s"results/${testName}/${dataName}/baseline/output.txt"
+      case other => s"results/${testName}/${dataName}/${modelType}/${ranking}/${ensemble}/output.txt"
     }
   }
 
