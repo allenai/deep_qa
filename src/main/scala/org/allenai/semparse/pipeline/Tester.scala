@@ -39,21 +39,23 @@ class Tester(
   val modelType = trainer.modelType
   val trainingDataFile = processor.trainingDataFile
 
+  val lispBase = "src/main/lisp"
+
   // These are code files that are common to all models, and just specify the base lisp
   // environment.
-  val baseEnvFile = "src/main/lisp/environment.lisp"
-  val uschemaEnvFile = "src/main/lisp/uschema_environment.lisp"
+  val baseEnvFile = s"$lispBase/environment.lisp"
+  val uschemaEnvFile = s"$lispBase/uschema_environment.lisp"
 
   // These are code files, specifying the model we're using.
   val lispModelFiles = if (ensembledEvaluation) {
     if (modelType == "baseline") throw new IllegalStateException("You can't ensemble the baseline...")
-    Seq("src/main/lisp/model_baseline", s"src/main/lisp/model_${modelType}.lisp")
+    Seq(s"$lispBase/model_baseline", s"$lispBase/model_${modelType}.lisp")
   } else {
-    Seq(s"src/main/lisp/model_${modelType}.lisp")
+    Seq(s"$lispBase/model_${modelType}.lisp")
   }
   val evalLispFile = modelType match {
-    case "baseline" => "eval_baseline.lisp"
-    case _ => if (ensembledEvaluation) "eval_ensemble.lisp" else "eval_uschema.lisp"
+    case "baseline" => s"$lispBase/eval_baseline.lisp"
+    case _ => if (ensembledEvaluation) s"$lispBase/eval_ensemble.lisp" else s"$lispBase/eval_uschema.lisp"
   }
 
   val handwrittenLispFiles = Seq(baseEnvFile, uschemaEnvFile) ++ lispModelFiles ++ Seq(evalLispFile)
