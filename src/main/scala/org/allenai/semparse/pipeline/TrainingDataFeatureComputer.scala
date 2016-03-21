@@ -93,7 +93,7 @@ class TrainingDataFeatureComputer(
   val midFeatureFile = s"${outDir}/pre_filtered_mid_features.tsv"
   val midPairFeatureFile = s"${outDir}/pre_filtered_mid_pair_features.tsv"
 
-  override def paramFile = outDir + "tdfc_params.json"
+  override def paramFile = s"$outDir/tdfc_params.json"
   override def name = "Training data feature computer"
   override def inputs = Set(
     (midFile, Some(trainingDataProcessor)),
