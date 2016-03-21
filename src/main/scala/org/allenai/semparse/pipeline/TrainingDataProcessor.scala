@@ -158,7 +158,7 @@ class TrainingDataProcessor(
   val midWordFile = s"$outDir/training_mid_words.tsv"
   val midPairWordFile = s"$outDir/training_mid_pair_words.tsv"
 
-  override def paramFile = outDir + "tdp_params.json"
+  override def paramFile = s"$outDir/tdp_params.json"
   override def name = "Training data processor"
   override def inputs = Set((trainingDataFile, None))
   override def outputs = Set(

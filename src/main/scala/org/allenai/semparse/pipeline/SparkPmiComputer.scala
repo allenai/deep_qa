@@ -27,21 +27,27 @@ class SparkPmiComputer(
   )
   JsonHelper.ensureNoExtras(params, "pmi computer", validParams)
 
+  // Note that some of these parameters have an underscore, and the computePmi method below passes
+  // them on through as parameters.  This rather ugly design is because of serialization issues
+  // with Spark - before doing this, I would be "Task not serializable" errors.  If you know of a
+  // better way to get around this, please tell.  I tried making SparkPmiComputer serializable, but
+  // that didn't change anything.
+
   // If we've seen a MID too many times, it blows up the word-feature computation.  The US, God,
   // and TV all show up more than 12k times in the large dataset.  I think we can get a good enough
   // PMI computation without these really frequent MIDs.  These parameters throw out a few
   // very-expensive instances.
-  val maxWordCount = JsonHelper.extractWithDefault(params, "max word count", 1000)
-  val maxFeatureCount = JsonHelper.extractWithDefault(params, "max feature count", 50000)
+  val maxWordCount_ = JsonHelper.extractWithDefault(params, "max word count", 1000)
+  val maxFeatureCount_ = JsonHelper.extractWithDefault(params, "max feature count", 50000)
 
   // This parameter, on the other hand, filters out a large number of infrequently seen features.
   val minMidFeatureCount = JsonHelper.extractWithDefault(params, "min mid feature count", 2000)
   val minMidPairFeatureCount = JsonHelper.extractWithDefault(params, "min mid pair feature count", 100)
 
   // How many features should we keep per word?
-  val featuresPerWord = JsonHelper.extractWithDefault(params, "features per word", 100)
+  val featuresPerWord_ = JsonHelper.extractWithDefault(params, "features per word", 100)
 
-  val useSquaredPmi = JsonHelper.extractWithDefault(params, "use squared pmi", false)
+  val useSquaredPmi_ = JsonHelper.extractWithDefault(params, "use squared pmi", false)
 
   // You can run this on a cluster, if you want, but then you have to put all of your data on S3,
   // and specify in your experiment configuration where those files are, and get your AWS keys into
@@ -151,6 +157,10 @@ class SparkPmiComputer(
     computePmi(
       sc,
       "mid",
+      maxWordCount_,
+      maxFeatureCount_,
+      useSquaredPmi_,
+      featuresPerWord_,
       minMidFeatureCount,
       midMatrixFile,
       midWordFile,
@@ -160,6 +170,10 @@ class SparkPmiComputer(
     computePmi(
       sc,
       "mid_pair",
+      maxWordCount_,
+      maxFeatureCount_,
+      useSquaredPmi_,
+      featuresPerWord_,
       minMidPairFeatureCount,
       midPairMatrixFile,
       midPairWordFile,
@@ -171,6 +185,10 @@ class SparkPmiComputer(
   def computePmi(
     sc: SparkContext,
     midOrPair: String,
+    maxWordCount: Int,
+    maxFeatureCount: Int,
+    useSquaredPmi: Boolean,
+    featuresPerWord: Int,
     minFeatureCount: Int,
     matrixFile: String,
     wordFile: String,
