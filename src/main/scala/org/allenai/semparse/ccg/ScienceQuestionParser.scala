@@ -12,7 +12,6 @@ import edu.uw.easysrl.main.InputReader
 import edu.uw.easysrl.main.ParsePrinter
 import edu.uw.easysrl.semantics._
 import edu.uw.easysrl.semantics.Logic.LogicVisitor
-import edu.uw.easysrl.semantics.lexicon.CompositeLexicon
 import edu.uw.easysrl.syntax.grammar.Category
 import edu.uw.easysrl.syntax.model.CutoffsDictionary
 import edu.uw.easysrl.syntax.model.SRLFactoredModel.SRLFactoredModelFactory
@@ -76,9 +75,11 @@ class ScienceQuestionParser(params: JValue) {
     val labelClassifier = new File(pipelineDir, "labelClassifier")
     val classifier = Util.deserialize[LabelClassifier](labelClassifier)
 
+    val lexicalCategories = TaggerEmbeddings.loadCategories(new File(modelDir, "categories"))
+
     // ACK!  Did he really just save global state in this static Coindexation object?  Bleh...
     Coindexation.parseMarkedUpFile(new File(pipelineDir, "markedup"))
-    val modelFactory = new SupertagFactoredModelFactory(Tagger.make(pipelineDir, supertaggerBeam, 50, null), nBest > 1)
+    val modelFactory = new SupertagFactoredModelFactory(Tagger.make(pipelineDir, supertaggerBeam, 50, null), lexicalCategories, nBest > 1)
     val aStarParser = new ParserAStar(modelFactory, maxLength, nBest, rootCategories, pipelineDir, 100000)
 
     new PipelineSRLParser(aStarParser, classifier, posTagger)
@@ -100,10 +101,7 @@ class ScienceQuestionParser(params: JValue) {
     val aStarParser = new ParserAStar(modelFactory, maxLength, nBest, rootCategories, modelDir, 20000)
     new BackoffSRLParser(new JointSRLParser(aStarParser, posTagger), pipeline)
   }
-  lazy val lexicon = {
-    println("Loading lexicon")
-    if(lexiconFile.exists()) CompositeLexicon.makeDefault(lexiconFile) else CompositeLexicon.makeDefault()
-  }
+  lazy val lexicon = ScienceQuestionLexicon.getDefault(lexiconFile)
   lazy val parser = {
     println("Making final parser")
     new SemanticParser(backoffParser, lexicon)
@@ -223,11 +221,19 @@ object test_easysrl {
   def main(args: Array[String]) {
     import org.json4s.JNothing
     import org.json4s.JsonDSL._
-    val parser = new ScienceQuestionParser(("use question model" -> true))
+    val parser = new ScienceQuestionParser(("use question model" -> false))
     val questions = Seq(
-      "Which type of energy does a person use to pedal a bicycle?",
-      "Which object is the best conductor of electricty?",
-      "Which characteristic can a human offspring inherit?"
+      //"Which type of energy does a person use to pedal a bicycle?",
+      //"Which object is the best conductor of electricty?",
+      //"Which characteristic can a human offspring inherit?",
+      "Cells contain genetic material called DNA.",
+      "Most of Earth is covered by water.",
+      "Humans depend on plants for oxygen.",
+      "The seeds of an oak come from the fruit.",
+      "Which gas is given off by plants?",
+      "Matter that is vibrating is producing sound.",
+      "Which of these is an example of liquid water?",
+      "A human offspring can inherit blue eyes."
     )
     for (question <- questions) {
       val logic = parser.parseSentence(question)(0)
