@@ -19,6 +19,7 @@ object ScienceQuestionLexicon {
       new NounLexicon,
       new AdjectiveLexicon,
       new VerbLexicon,
+      new ModalLexicon,
       new CopulaLexicon,
       new NumbersLexicon,
       new DefaultLexicon
@@ -43,11 +44,11 @@ class CompositeLexicon(lexica: Seq[Lexicon]) extends Lexicon {
     }).filter(_ != null).headOption match {
       case None => null
       case Some(logic) => {
-        println("Composite matched something:")
+        println("\nComposite matched something:")
         println(s"word: $word")
         println(s"pos: $pos")
         println(s"category: $category")
-        println(s"logic: $logic")
+        println(s"logic: $logic\n")
         logic
       }
     }
@@ -85,6 +86,29 @@ class VerbLexicon extends Lexicon {
       } else {
         null
       }
+    } else {
+      null
+    }
+  }
+
+  override def isMultiWordExpression(node: SyntaxTreeNode) = {
+    // TODO(matt): I might want to change this...
+    false
+  }
+}
+
+class ModalLexicon extends Lexicon {
+  override def getEntry(
+    word: String,
+    pos: String,
+    category: Category,
+    coindexation: Coindexation,
+    parse: Optional[CCGandSRLparse],
+    wordIndex: Int
+  ) = {
+    if (pos == "MD") {
+      val variable = new Variable(SemanticType.E)
+      new LambdaExpression(variable, variable)
     } else {
       null
     }
@@ -151,7 +175,8 @@ class DeterminerLexicon extends Lexicon {
     wordIndex: Int
   ) = {
     if (category == Category.valueOf("NP/N") || category == Category.DETERMINER) {
-      LogicParser.fromString("#x.x", category)
+      val variable = new Variable(SemanticType.E)
+      new LambdaExpression(variable, variable)
     } else {
       null
     }

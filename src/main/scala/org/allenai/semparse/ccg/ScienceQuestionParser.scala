@@ -226,14 +226,14 @@ object test_easysrl {
       //"Which type of energy does a person use to pedal a bicycle?",
       //"Which object is the best conductor of electricty?",
       //"Which characteristic can a human offspring inherit?",
-      "Cells contain genetic material called DNA.",
-      "Most of Earth is covered by water.",
-      "Humans depend on plants for oxygen.",
-      "The seeds of an oak come from the fruit.",
+      "Cells contain genetic material called DNA",
+      "Most of Earth is covered by water",
+      "Humans depend on plants for oxygen",
+      "The seeds of an oak come from the fruit",
       "Which gas is given off by plants?",
-      "Matter that is vibrating is producing sound.",
+      "Matter that is vibrating is producing sound",
       "Which of these is an example of liquid water?",
-      "A human offspring can inherit blue eyes."
+      "A human offspring can inherit blue eyes"
     )
     for (question <- questions) {
       val logic = parser.parseSentence(question)(0)

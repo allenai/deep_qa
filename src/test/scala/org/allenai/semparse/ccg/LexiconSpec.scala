@@ -95,7 +95,7 @@ class ScienceQuestionLexiconSpec extends FlatSpecLike with Matchers {
             null,
             null),
           null,
-          new UnaryRule(0, "N_1", "NP_1", LogicParser.fromString("#p.sk(#x.p(x))", Category.N)),
+          new UnaryRule(0, "N_1", "NP_1", LogicParser.fromString("#x.x", Category.N)),
           null),
         RuleType.FA,
         true,
@@ -114,6 +114,9 @@ class ScienceQuestionLexiconSpec extends FlatSpecLike with Matchers {
     val ccgAndSrl = new CCGandSRLparse(parse, new java.util.ArrayList(), null)
     val withSemantics = ccgAndSrl.addSemantics(lexicon)
     // #e.(inherit(e)&ARG0(sk(#x.(offspring(x)&human(x))),e)&ARG1(sk(#y.(eye(y)&blue(y))),e))
-    println(withSemantics.getCcgParse.getSemantics.get)
+    val logic = withSemantics.getCcgParse.getSemantics.get
+    println(logic)
+    val v = new DebugPrintVisitor()
+    logic.accept(v)
   }
 }
