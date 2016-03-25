@@ -13,11 +13,11 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
         Dependency("ROOT", 0, "eat", 2, "root")
       ),
       Seq(
-        Token("People", "NNS", "people"),
-        Token("eat", "VBP", "eat"),
-        Token("good", "JJ", "good"),
-        Token("food", "NN", "food"),
-        Token(".", ".", ".")
+        Token("People", "NNS", "people", 1),
+        Token("eat", "VBP", "eat", 2),
+        Token("good", "JJ", "good", 3),
+        Token("food", "NN", "food", 4),
+        Token(".", ".", ".", 5)
       )
     ),
     "Mary went to the store." -> (
@@ -28,12 +28,12 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
         Dependency("ROOT", 0, "went", 2, "root")
       ),
       Seq(
-        Token("Mary", "NNP", "Mary"),
-        Token("went", "VBD", "go"),
-        Token("to", "TO", "to"),
-        Token("the", "DT", "the"),
-        Token("store", "NN", "store"),
-        Token(".", ".", ".")
+        Token("Mary", "NNP", "Mary", 1),
+        Token("went", "VBD", "go", 2),
+        Token("to", "TO", "to", 3),
+        Token("the", "DT", "the", 4),
+        Token("store", "NN", "store", 5),
+        Token(".", ".", ".", 6)
       )
     )
   )
@@ -73,9 +73,9 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
       val tokens = sentenceParses(sentence)._2
     }
     parse.dependencyTree should be(
-      DependencyTree(Token("eat", "VBP", "eat"), Seq(
-        (DependencyTree(Token("People", "NNS", "people"), Seq()), "nsubj"),
-        (DependencyTree(Token("food", "NN", "food"), Seq(
-          (DependencyTree(Token("good", "JJ", "good"), Seq()), "amod"))), "dobj"))))
+      DependencyTree(Token("eat", "VBP", "eat", 2), Seq(
+        (DependencyTree(Token("People", "NNS", "people", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("food", "NN", "food", 4), Seq(
+          (DependencyTree(Token("good", "JJ", "good", 3), Seq()), "amod"))), "dobj"))))
   }
 }

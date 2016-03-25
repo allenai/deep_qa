@@ -8,14 +8,14 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
   // code formatting.
   val sentenceTrees: Map[String, DependencyTree] = Map(
     "Cells contain genetic material called DNA." ->
-      DependencyTree(Token("contain", "VBP", "contain"), Seq(
-        (DependencyTree(Token("Cells", "NNS", "cell"), Seq()), "nsubj"),
+      DependencyTree(Token("contain", "VBP", "contain", 2), Seq(
+        (DependencyTree(Token("Cells", "NNS", "cell", 1), Seq()), "nsubj"),
         (
-          DependencyTree(Token("material", "NN", "material"), Seq(
-            (DependencyTree(Token("genetic", "JJ", "genetic"), Seq()), "amod"),
+          DependencyTree(Token("material", "NN", "material", 4), Seq(
+            (DependencyTree(Token("genetic", "JJ", "genetic", 3), Seq()), "amod"),
             (
-              DependencyTree(Token("called", "VBN", "call"), Seq(
-                (DependencyTree(Token("DNA", "NN", "dna"), Seq()), "dobj")
+              DependencyTree(Token("called", "VBN", "call", 5), Seq(
+                (DependencyTree(Token("DNA", "NN", "dna", 6), Seq()), "dobj")
               )),
               "vmod"
             )
@@ -24,42 +24,42 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
         )
       )),
     "Most of Earth is covered by water." ->
-      DependencyTree(Token("covered", "VBN", "cover"), Seq(
+      DependencyTree(Token("covered", "VBN", "cover", 5), Seq(
         (
-          DependencyTree(Token("Most", "JJS", "most"), Seq(
-            (DependencyTree(Token("Earth", "NNP", "Earth"), Seq()), "prep_of")
+          DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+            (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "prep_of")
           )),
           "nsubjpass"
         ),
-        (DependencyTree(Token("is", "VBZ", "be"), Seq()), "auxpass"),
-        (DependencyTree(Token("water", "NN", "water"), Seq()), "agent")
+        (DependencyTree(Token("is", "VBZ", "be", 4), Seq()), "auxpass"),
+        (DependencyTree(Token("water", "NN", "water", 7), Seq()), "agent")
       )),
     "Which gas is given off by plants?" ->
-      DependencyTree(Token("given", "VBN", "give"), Seq(
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
         (
-          DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("Which", "WDT", "which"), Seq()), "det")
+          DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det")
           )),
           "nsubjpass"
         ),
-        (DependencyTree(Token("is", "VBZ", "be"), Seq()), "auxpass"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "agent")
+        (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent")
       )),
     "Which of these is an example of liquid water?" ->
-      DependencyTree(Token("is", "VBZ", "be"), Seq(
+      DependencyTree(Token("is", "VBZ", "be", 4), Seq(
         (
-          DependencyTree(Token("Which", "WDT", "which"), Seq(
-            (DependencyTree(Token("these", "DT", "these"), Seq()), "prep_of")
+          DependencyTree(Token("Which", "WDT", "which", 1), Seq(
+            (DependencyTree(Token("these", "DT", "these", 3), Seq()), "prep_of")
           )),
           "dep"
         ),
         (
-          DependencyTree(Token("example", "NN", "example"), Seq(
-            (DependencyTree(Token("an", "DT", "a"), Seq()), "det"),
+          DependencyTree(Token("example", "NN", "example", 6), Seq(
+            (DependencyTree(Token("an", "DT", "a", 5), Seq()), "det"),
             (
-              DependencyTree(Token("water", "NN", "water"), Seq(
-                (DependencyTree(Token("liquid", "JJ", "liquid"), Seq()), "amod")
+              DependencyTree(Token("water", "NN", "water", 9), Seq(
+                (DependencyTree(Token("liquid", "JJ", "liquid", 8), Seq()), "amod")
               )),
               "prep_of"
             )
@@ -71,89 +71,89 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
 
   "replaceChild" should "leave the rest of the tree intact, and replace one child" in {
     val tree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "nsubj"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("Which", "WDT", "which"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "nsubj"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "dobj")))
 
     val childLabel = "prt"
 
     val newChild =
-      DependencyTree(Token("Most", "JJS", "most"), Seq(
-        (DependencyTree(Token("Earth", "NNP", "Earth"), Seq()), "prep_of")))
+      DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+        (DependencyTree(Token("Earth", "NNP", "Earth", 2), Seq()), "prep_of")))
 
     val newLabel = "new label"
 
     val expectedTree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "nsubj"),
-        (DependencyTree(Token("Most", "JJS", "most"), Seq(
-          (DependencyTree(Token("Earth", "NNP", "Earth"), Seq()), "prep_of"))), newLabel),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("Which", "WDT", "which"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "nsubj"),
+        (DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+          (DependencyTree(Token("Earth", "NNP", "Earth", 2), Seq()), "prep_of"))), newLabel),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "dobj")))
 
     transformers.replaceChild(tree, childLabel, newChild, newLabel) should be(expectedTree)
   }
 
   "replaceTree" should "replace whole trees" in {
     val tree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("replace", "VB", "replace"), Seq()), "nsubj"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("replace", "VB", "replace"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("replace", "VB", "replace", 0), Seq()), "nsubj"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("replace", "VB", "replace", 0), Seq()), "det"))), "dobj")))
 
-    val toReplace = DependencyTree(Token("replace", "VB", "replace"), Seq())
+    val toReplace = DependencyTree(Token("replace", "VB", "replace", 0), Seq())
     val replaceWith =
-      DependencyTree(Token("replaced", "VBD", "replaced"), Seq(
-          (DependencyTree(Token("ha!", "!!", "ha!"), Seq()), "funny")))
+      DependencyTree(Token("replaced", "VBD", "replaced", 0), Seq(
+          (DependencyTree(Token("ha!", "!!", "ha!", 0), Seq()), "funny")))
 
     val expectedTree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("replaced", "VBD", "replaced"), Seq(
-            (DependencyTree(Token("ha!", "!!", "ha!"), Seq()), "funny"))), "nsubj"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("replaced", "VBD", "replaced"), Seq(
-                (DependencyTree(Token("ha!", "!!", "ha!"), Seq()), "funny"))), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("replaced", "VBD", "replaced", 0), Seq(
+            (DependencyTree(Token("ha!", "!!", "ha!", 0), Seq()), "funny"))), "nsubj"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("replaced", "VBD", "replaced", 0), Seq(
+                (DependencyTree(Token("ha!", "!!", "ha!", 0), Seq()), "funny"))), "det"))), "dobj")))
 
     transformers.replaceTree(tree, toReplace, replaceWith) should be(expectedTree)
   }
 
   "removeChild" should "leave the rest of the tree intact, and remove one child" in {
     val tree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "nsubj"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("Which", "WDT", "which"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "nsubj"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "dobj")))
 
     val childLabel = "prt"
 
     val expectedTree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "nsubj"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("Which", "WDT", "which"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "nsubj"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "dobj")))
 
     transformers.removeChild(tree, childLabel) should be(expectedTree)
   }
 
   "removeTree" should "find matching trees, and remove them" in {
     val tree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("remove", "VB", "remove"), Seq()), "nsubj"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("remove", "VB", "remove"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("remove", "VB", "remove", 0), Seq()), "nsubj"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("remove", "VB", "remove", 0), Seq()), "det"))), "dobj")))
 
-    val toRemove = DependencyTree(Token("remove", "VB", "remove"), Seq())
+    val toRemove = DependencyTree(Token("remove", "VB", "remove", 0), Seq())
 
     val expectedTree =
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq()), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq()), "dobj")))
 
     transformers.removeTree(tree, toRemove) should be(expectedTree)
   }
@@ -168,18 +168,18 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
   "UndoPassivization" should "switch nsubjpass to dobj, and agent to nsubj" in {
     val tree1 = sentenceTrees("Most of Earth is covered by water.")
     transformers.UndoPassivization.transform(tree1) should be(
-      DependencyTree(Token("covered", "VBN", "cover"), Seq(
-        (DependencyTree(Token("water", "NN", "water"), Seq()), "nsubj"),
-        (DependencyTree(Token("Most", "JJS", "most"), Seq(
-            (DependencyTree(Token("Earth", "NNP", "Earth"), Seq()), "prep_of"))), "dobj")))
+      DependencyTree(Token("covered", "VBN", "cover", 5), Seq(
+        (DependencyTree(Token("water", "NN", "water", 7), Seq()), "nsubj"),
+        (DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+            (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "prep_of"))), "dobj")))
     )
     val tree2 = sentenceTrees("Which gas is given off by plants?")
     transformers.UndoPassivization.transform(tree2) should be(
-      DependencyTree(Token("given", "VBN", "give"), Seq(
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "nsubj"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("gas", "NN", "gas"), Seq(
-            (DependencyTree(Token("Which", "WDT", "which"), Seq()), "det"))), "dobj")))
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "nsubj"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "dobj")))
     )
   }
 
@@ -189,29 +189,29 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
   }
 
   "ReplaceWhPhrase" should "find the wh-phrase, then replace it with a given tree" in {
-    val answerTree = DependencyTree(Token("answer", "NN", "answer"), Seq())
+    val answerTree = DependencyTree(Token("answer", "NN", "answer", 0), Seq())
     val tree1 = sentenceTrees("Which gas is given off by plants?")
     new transformers.ReplaceWhPhrase(answerTree).transform(tree1) should be(
-      DependencyTree(Token("given", "VBN", "give"), Seq(
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
         (answerTree, "nsubjpass"),
-        (DependencyTree(Token("is", "VBZ", "be"), Seq()), "auxpass"),
-        (DependencyTree(Token("off", "RP", "off"), Seq()), "prt"),
-        (DependencyTree(Token("plants", "NNS", "plant"), Seq()), "agent")
+        (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent")
       ))
     )
     val tree2 = sentenceTrees("Which of these is an example of liquid water?")
     new transformers.ReplaceWhPhrase(answerTree).transform(tree2) should be(
-      DependencyTree(Token("is", "VBZ", "be"), Seq(
+      DependencyTree(Token("is", "VBZ", "be", 4), Seq(
         (answerTree, "dep"),
-        (DependencyTree(Token("example", "NN", "example"), Seq(
-          (DependencyTree(Token("an", "DT", "a"), Seq()), "det"),
-          (DependencyTree(Token("water", "NN", "water"), Seq(
-            (DependencyTree(Token("liquid", "JJ", "liquid"), Seq()), "amod"))), "prep_of"))), "nsubj")))
+        (DependencyTree(Token("example", "NN", "example", 6), Seq(
+          (DependencyTree(Token("an", "DT", "a", 5), Seq()), "det"),
+          (DependencyTree(Token("water", "NN", "water", 9), Seq(
+            (DependencyTree(Token("liquid", "JJ", "liquid", 8), Seq()), "amod"))), "prep_of"))), "nsubj")))
     )
   }
 
   it should "do nothing on a tree with no wh-phrase" in {
-    val answerTree = DependencyTree(Token("answer", "NN", "answer"), Seq())
+    val answerTree = DependencyTree(Token("answer", "NN", "answer", 0), Seq())
     val tree = sentenceTrees("Most of Earth is covered by water.")
     new transformers.ReplaceWhPhrase(answerTree).transform(tree) should be(tree)
   }

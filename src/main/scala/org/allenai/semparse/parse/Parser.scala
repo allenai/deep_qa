@@ -40,16 +40,17 @@ trait ParsedSentence {
       val childNode = getNodeFromIndex(child.depIndex, dependencyMap)
       (childNode, child.label)
     })
-    val token = if (index == 0) Token("ROOT", "ROOT", "ROOT") else tokens(index-1)
+    val token = if (index == 0) Token("ROOT", "ROOT", "ROOT", 0) else tokens(index-1)
     DependencyTree(token, children)
   }
 }
 
-case class Token(word: String, posTag: String, lemma: String) {
+case class Token(word: String, posTag: String, lemma: String, index: Int) {
   override def toString() = s"$word ($lemma): $posTag"
 }
 case class Dependency(head: String, headIndex: Int, dependent: String, depIndex: Int, label: String)
 case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)]) {
+  def isNp(): Boolean = token.posTag.startsWith("NN")
   def print() {
     _print(1, "ROOT")
   }
@@ -96,7 +97,7 @@ class StanfordParsedSentence(sentence: CoreMap) extends ParsedSentence {
       val posTag = token.get(classOf[CoreAnnotations.PartOfSpeechAnnotation])
       val word = token.get(classOf[CoreAnnotations.TextAnnotation])
       val lemma = token.get(classOf[CoreAnnotations.LemmaAnnotation])
-      Token(word, posTag, lemma)
+      Token(word, posTag, lemma, token.index)
     }).toSeq
   }
 }
