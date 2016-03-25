@@ -24,8 +24,8 @@ libraryDependencies ++= Seq(
   "com.jayantkrish.jklol" % "jklol" % "1.1",
   "edu.cmu.ml.rtw" %%  "pra" % "3.3",
   "edu.cmu.ml.rtw" %%  "matt-util" % "2.1",
-  "edu.stanford.nlp" %  "stanford-corenlp" % "3.6.0",
-  "edu.stanford.nlp" %  "stanford-corenlp" % "3.6.0" classifier "models",
+  "edu.stanford.nlp" %  "stanford-corenlp" % "3.4.1",
+  "edu.stanford.nlp" %  "stanford-corenlp" % "3.4.1" classifier "models",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 )
 

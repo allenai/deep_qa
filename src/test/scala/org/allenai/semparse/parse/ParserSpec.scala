@@ -37,4 +37,44 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
       Dependency("ROOT", 0, "went", 2, "root")))
 
   }
+
+  "dependencyTree" should "correctly convert dependencies to graphs" in {
+    val parse = new ParsedSentence {
+      val dependencies = Seq(
+        Dependency("eat", 2, "People", 1, "nsubj"),
+        Dependency("eat", 2, "food", 4, "dobj"),
+        Dependency("food", 4, "good", 3, "amod"),
+        Dependency("ROOT", 0, "eat", 2, "root")
+      )
+      val posTags = Seq(
+        PartOfSpeech("People", "NNS"),
+        PartOfSpeech("eat", "VBP"),
+        PartOfSpeech("good", "JJ"),
+        PartOfSpeech("food", "NN"),
+        PartOfSpeech(".", ".")
+      )
+    }
+    parse.dependencyTree should be(
+      DependencyTree("eat", "VBP", Seq(
+        (DependencyTree("People", "NNS", Seq()), "nsubj"),
+        (DependencyTree("food", "NN", Seq(
+          (DependencyTree("good", "JJ", Seq()), "amod"))), "dobj"))))
+  }
+
+  "just playing" should "give parses for these sentences" in {
+    val sentences = Seq(
+      "Cells contain genetic material called DNA.",
+      "Most of Earth is covered by water.",
+      "Humans depend on plants for oxygen.",
+      "The seeds of an oak come from the fruit.",
+      "Which gas is given off by plants?",
+      "Matter that is vibrating is producing sound.",
+      "Which of these is an example of liquid water?"
+    )
+    for (sentence <- sentences) {
+      println("")
+      parser.parseSentence(sentence).dependencyTree.print
+      println("")
+    }
+  }
 }

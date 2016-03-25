@@ -28,12 +28,42 @@ trait Parser {
 trait ParsedSentence {
   def dependencies: Seq[Dependency]
   def posTags: Seq[PartOfSpeech]
+  lazy val dependencyTree: DependencyTree = {
+    val dependencyMap = dependencies.map(d => (d.headIndex, d)).groupBy(_._1).mapValues(_.map(_._2).sortBy(_.depIndex))
+    val root = getNodeFromIndex(0, dependencyMap)
+    root.children(0)._1
+  }
+
+  private def getNodeFromIndex(index: Int, dependencyMap: Map[Int, Seq[Dependency]]): DependencyTree = {
+    val childDependencies = dependencyMap.getOrElse(index, Seq())
+    val children = childDependencies.map(child => {
+      val childNode = getNodeFromIndex(child.depIndex, dependencyMap)
+      (childNode, child.label)
+    })
+    val (word, posTag) = if (index == 0) ("ROOT", "ROOT") else (posTags(index-1).word, posTags(index-1).posTag)
+    DependencyTree(word, posTag, children)
+  }
 }
 
 case class PartOfSpeech(word: String, posTag: String)
 case class Dependency(head: String, headIndex: Int, dependent: String, depIndex: Int, label: String)
+case class DependencyTree(word: String, posTag: String, children: Seq[(DependencyTree, String)]) {
+  def print() {
+    _print(1, "ROOT")
+  }
 
-class StanfordParser(memoize: Boolean = true) extends Parser {
+  private def _print(level: Int, depLabel: String) {
+    for (i <- 1 until level) {
+      System.out.print("   ")
+    }
+    println(s"($depLabel) $word: $posTag")
+    for ((child, label) <- children) {
+      child._print(level + 1, label)
+    }
+  }
+}
+
+class StanfordParser extends Parser {
   val props = new Properties()
   props.put("annotators","tokenize, ssplit, pos, lemma, parse")
   val pipeline = new StanfordCoreNLP(props)
@@ -41,18 +71,11 @@ class StanfordParser(memoize: Boolean = true) extends Parser {
   val memoized = new mutable.HashMap[String, StanfordParsedSentence]
 
   override def parseSentence(sentence: String): ParsedSentence = {
-    if (memoize && memoized.contains(sentence)) {
-      memoized(sentence)
-    } else {
-      val annotation = new Annotation(sentence)
-      pipeline.annotate(annotation)
-      val parsed = new StanfordParsedSentence(
-        annotation.get(classOf[CoreAnnotations.SentencesAnnotation]).get(0))
-      if (memoize) {
-        memoized.synchronized { memoized.update(sentence, parsed) }
-      }
-      parsed
-    }
+    val annotation = new Annotation(sentence)
+    pipeline.annotate(annotation)
+    val parsed = new StanfordParsedSentence(
+      annotation.get(classOf[CoreAnnotations.SentencesAnnotation]).get(0))
+    parsed
   }
 }
 
@@ -60,8 +83,8 @@ class StanfordParsedSentence(sentence: CoreMap) extends ParsedSentence {
   override lazy val dependencies = {
     val deps = sentence.get(classOf[CollapsedCCProcessedDependenciesAnnotation]).typedDependencies
     deps.asScala.map(dependency => {
-      Dependency(dependency.gov.backingLabel.value, dependency.gov.index,
-        dependency.dep.backingLabel.value, dependency.dep.index, dependency.reln.toString)
+      Dependency(dependency.gov.label.value, dependency.gov.index,
+        dependency.dep.label.value, dependency.dep.index, dependency.reln.toString)
     }).toSeq
   }
 
