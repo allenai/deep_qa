@@ -183,6 +183,11 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     )
   }
 
+  it should "leave trees alone when there is no passive" in {
+    val tree = sentenceTrees("Which of these is an example of liquid water?")
+    transformers.UndoPassivization.transform(tree) should be(tree)
+  }
+
   "ReplaceWhPhrase" should "find the wh-phrase, then replace it with a given tree" in {
     val answerTree = DependencyTree(Token("answer", "NN", "answer"), Seq())
     val tree1 = sentenceTrees("Which gas is given off by plants?")
