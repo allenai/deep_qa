@@ -27,7 +27,7 @@ trait Parser {
 // code.
 trait ParsedSentence {
   def dependencies: Seq[Dependency]
-  def posTags: Seq[PartOfSpeech]
+  def tokens: Seq[Token]
   lazy val dependencyTree: DependencyTree = {
     val dependencyMap = dependencies.map(d => (d.headIndex, d)).groupBy(_._1).mapValues(_.map(_._2).sortBy(_.depIndex))
     val root = getNodeFromIndex(0, dependencyMap)
@@ -40,14 +40,16 @@ trait ParsedSentence {
       val childNode = getNodeFromIndex(child.depIndex, dependencyMap)
       (childNode, child.label)
     })
-    val (word, posTag) = if (index == 0) ("ROOT", "ROOT") else (posTags(index-1).word, posTags(index-1).posTag)
-    DependencyTree(word, posTag, children)
+    val token = if (index == 0) Token("ROOT", "ROOT", "ROOT") else tokens(index-1)
+    DependencyTree(token, children)
   }
 }
 
-case class PartOfSpeech(word: String, posTag: String)
+case class Token(word: String, posTag: String, lemma: String) {
+  override def toString() = s"$word ($lemma): $posTag"
+}
 case class Dependency(head: String, headIndex: Int, dependent: String, depIndex: Int, label: String)
-case class DependencyTree(word: String, posTag: String, children: Seq[(DependencyTree, String)]) {
+case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)]) {
   def print() {
     _print(1, "ROOT")
   }
@@ -56,7 +58,7 @@ case class DependencyTree(word: String, posTag: String, children: Seq[(Dependenc
     for (i <- 1 until level) {
       System.out.print("   ")
     }
-    println(s"($depLabel) $word: $posTag")
+    println(s"($depLabel) $token")
     for ((child, label) <- children) {
       child._print(level + 1, label)
     }
@@ -88,12 +90,13 @@ class StanfordParsedSentence(sentence: CoreMap) extends ParsedSentence {
     }).toSeq
   }
 
-  override lazy val posTags = {
-    val tokens = sentence.get(classOf[CoreAnnotations.TokensAnnotation])
-    tokens.asScala.map(token => {
+  override lazy val tokens = {
+    val _tokens = sentence.get(classOf[CoreAnnotations.TokensAnnotation])
+    _tokens.asScala.map(token => {
       val posTag = token.get(classOf[CoreAnnotations.PartOfSpeechAnnotation])
       val word = token.get(classOf[CoreAnnotations.TextAnnotation])
-      PartOfSpeech(word, posTag)
+      val lemma = token.get(classOf[CoreAnnotations.LemmaAnnotation])
+      Token(word, posTag, lemma)
     }).toSeq
   }
 }
