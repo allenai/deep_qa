@@ -19,6 +19,10 @@ object transformers {
   /**
    * Replaces the _first_ occurrence of a child with label childLabel with newChild.  This is NOT
    * recursive, and will throw an error if the given child label is not found.
+   *
+   * TODO(matt): I may need to change token indices with this, too, as getting the yield of a
+   * dependency tree sorts by token index.  So far I only call yield on NPs, which don't get
+   * modified with these methods, so we should be ok.  But this could be an issue later.
    */
   def replaceChild(
     tree: DependencyTree,

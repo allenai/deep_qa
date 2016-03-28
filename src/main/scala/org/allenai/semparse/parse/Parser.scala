@@ -15,7 +15,6 @@ import java.io.StringReader
 import java.util.Properties
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 // A Parser takes sentence strings and returns parsed sentence strings.  It's just a thin
 // abstraction layer over whatever parser you feel like using.
@@ -45,33 +44,10 @@ trait ParsedSentence {
   }
 }
 
-case class Token(word: String, posTag: String, lemma: String, index: Int) {
-  override def toString() = s"$word ($lemma): $posTag"
-}
-case class Dependency(head: String, headIndex: Int, dependent: String, depIndex: Int, label: String)
-case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)]) {
-  def isNp(): Boolean = token.posTag.startsWith("NN")
-  def print() {
-    _print(1, "ROOT")
-  }
-
-  private def _print(level: Int, depLabel: String) {
-    for (i <- 1 until level) {
-      System.out.print("   ")
-    }
-    println(s"($depLabel) $token")
-    for ((child, label) <- children) {
-      child._print(level + 1, label)
-    }
-  }
-}
-
 class StanfordParser extends Parser {
   val props = new Properties()
   props.put("annotators","tokenize, ssplit, pos, lemma, parse")
   val pipeline = new StanfordCoreNLP(props)
-
-  val memoized = new mutable.HashMap[String, StanfordParsedSentence]
 
   override def parseSentence(sentence: String): ParsedSentence = {
     val annotation = new Annotation(sentence)
@@ -101,4 +77,3 @@ class StanfordParsedSentence(sentence: CoreMap) extends ParsedSentence {
     }).toSeq
   }
 }
-
