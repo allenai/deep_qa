@@ -87,6 +87,19 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
           )),
           "prep_from"
         )
+      )),
+    "Most erosion at a beach is caused by waves." ->
+      DependencyTree(Token("caused", "VBN", "cause", 7), Seq(
+        (
+          DependencyTree(Token("erosion", "NN", "erosion", 2), Seq(
+            (DependencyTree(Token("Most", "JJS", "most", 1), Seq()), "amod"),
+            (DependencyTree(Token("beach", "NN", "beach", 5), Seq(
+              (DependencyTree(Token("a", "DT", "a", 4), Seq()), "det"))), "prep_at")
+          )),
+          "nsubjpass"
+        ),
+        (DependencyTree(Token("is", "VBZ", "be", 6), Seq()), "auxpass"),
+        (DependencyTree(Token("waves", "NNS", "wave", 9), Seq()), "agent")
       ))
   )
 
@@ -262,5 +275,27 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
         (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
         (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent")
       )))
+  }
+
+  "RemoveSuperlatives" should "remove \"most\" when it's used as an adjective" in {
+    val tree = sentenceTrees("Most erosion at a beach is caused by waves.")
+    transformers.RemoveSuperlatives.transform(tree) should be(
+      DependencyTree(Token("caused", "VBN", "cause", 7), Seq(
+        (
+          DependencyTree(Token("erosion", "NN", "erosion", 2), Seq(
+            (DependencyTree(Token("beach", "NN", "beach", 5), Seq(
+              (DependencyTree(Token("a", "DT", "a", 4), Seq()), "det"))), "prep_at")
+          )),
+          "nsubjpass"
+        ),
+        (DependencyTree(Token("is", "VBZ", "be", 6), Seq()), "auxpass"),
+        (DependencyTree(Token("waves", "NNS", "wave", 9), Seq()), "agent")
+      ))
+    )
+  }
+
+  it should "keep \"most\" when it's not used as an adjective" in {
+    val tree = sentenceTrees("Most of Earth is covered by water.")
+    transformers.RemoveSuperlatives.transform(tree) should be(tree)
   }
 }

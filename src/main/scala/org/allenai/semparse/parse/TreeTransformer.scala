@@ -188,11 +188,33 @@ object transformers {
       tree.getChildWithLabel("prt") match {
         case None => transformChildren(tree)
         case Some(child) => {
-          val newWord = tree.token.word + "_" + child.token.word
-          val newLemma = tree.token.lemma + "_" + child.token.lemma
-          val newToken = Token(newWord, tree.token.posTag, newLemma, tree.token.index)
+          val newToken = tree.token.combineWith(child.token)
           val newTree = DependencyTree(newToken, tree.children.filterNot(_._2 == "prt"))
           transformChildren(newTree)
+        }
+      }
+    }
+  }
+
+  /**
+   * Removes a few words that are particular to our science questions.  A question will often say
+   * something like, "which of the following is the best conductor of electricity?", with answer
+   * options "iron rod", "plastic spoon", and so on.  What we really want to score is "An iron rod
+   * is a conductor of electricity" vs "A plastic spoon is a conductor of electricity" - the
+   * superlative "best" is captured implicitly in our ranking, and so we don't need it to be part
+   * of the logical form that we score.  So we're going to remove a few specific words that capture
+   * this notion.
+   */
+  object RemoveSuperlatives extends BaseTransformer {
+    def isMatchingSuperlative(tree: DependencyTree): Boolean = {
+      tree.token.lemma == "most" && tree.children.size == 0
+    }
+
+    override def transform(tree: DependencyTree): DependencyTree = {
+      tree.children.find(c => isMatchingSuperlative(c._1) && c._2 == "amod") match {
+        case None => transformChildren(tree)
+        case Some((child, label)) => {
+          transformChildren(removeTree(tree, child))
         }
       }
     }

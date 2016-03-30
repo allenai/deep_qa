@@ -4,6 +4,18 @@ import scala.collection.mutable
 
 case class Token(word: String, posTag: String, lemma: String, index: Int) {
   override def toString() = s"$word ($lemma): $posTag"
+
+  def addPreposition(prep: String): Token = {
+    val newWord = word + "_" + prep
+    val newLemma = lemma + "_" + prep
+    Token(newWord, posTag, newLemma, index)
+  }
+
+  def combineWith(other: Token): Token = {
+    val newWord = word + "_" + other.word
+    val newLemma = lemma + "_" + other.lemma
+    Token(newWord, posTag, newLemma, index)
+  }
 }
 case class Dependency(head: String, headIndex: Int, dependent: String, depIndex: Int, label: String)
 case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)]) {

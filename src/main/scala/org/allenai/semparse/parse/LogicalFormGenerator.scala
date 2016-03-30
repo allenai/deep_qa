@@ -10,7 +10,8 @@ object LogicalFormGenerator {
 
   def defaultTransformations(tree: DependencyTree): DependencyTree = {
     val withoutDeterminers = transformers.RemoveDeterminers.transform(tree)
-    val passiveUndone = transformers.UndoPassivization.transform(withoutDeterminers)
+    val withoutSuperlatives = transformers.RemoveSuperlatives.transform(withoutDeterminers)
+    val passiveUndone = transformers.UndoPassivization.transform(withoutSuperlatives)
     val particlesCombined = transformers.CombineParticles.transform(passiveUndone)
     particlesCombined
   }
@@ -25,7 +26,7 @@ object LogicalFormGenerator {
 
   def getLogicForOther(tree: DependencyTree): Set[Predicate] = {
     val adjectivePredicates = tree.children.filter(_._2 == "amod").map(_._1).map(child => {
-      Predicate(child.token.lemma, Seq(tree.token.word))
+      Predicate(child.token.lemma, Seq(tree.token.lemma))
     }).toSet
     val relativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
@@ -44,7 +45,7 @@ object LogicalFormGenerator {
       val label = child._2
       val prep = label.replace("prep_", "")
       for (simplifiedTree <- childTree.simplifications;
-           arg = simplifiedTree._yield) yield Predicate(prep, Seq(tree.token.word, arg))
+           arg = simplifiedTree.lemmaYield) yield Predicate(prep, Seq(tree.token.lemma, arg))
     })
     adjectivePredicates ++ relativeClausePredicates ++ prepositionPredicates
   }
@@ -58,23 +59,42 @@ object LogicalFormGenerator {
         throw new RuntimeException(s"One argument verb with no subject: ${arguments(0)}")
       }
       val subject = arguments(0)._1
-      subject.simplifications.map(s => Predicate(verbLemma, Seq(s._yield)))
+      subject.simplifications.map(s => Predicate(verbLemma, Seq(s.lemmaYield)))
     } else if (arguments.size == 2) {
       if (arguments(0)._2 == "nsubj" && arguments(1)._2 == "dobj") {
         getLogicForTransitiveVerb(tree, arguments)
       } else if (arguments(0)._2 == "nsubj" && arguments(1)._2.startsWith("prep_")) {
         val prep = arguments(1)._2.replace("prep_", "")
-        val newWord = tree.token.word + "_" + prep
-        val newLemma = tree.token.lemma + "_" + prep
-        val newToken = Token(newWord, tree.token.posTag, newLemma, tree.token.index)
+        val newToken = tree.token.addPreposition(prep)
         getLogicForTransitiveVerb(DependencyTree(newToken, tree.children), arguments)
       } else {
         tree.print()
         throw new RuntimeException("unhandled 2-argument verb case")
       }
     } else {
-      tree.print()
-      throw new RuntimeException("verbs with more than two arguments not yet handled")
+      // We have more than two arguments, so we'll handle this by taking all pairs of arguments.
+      // The arguments have already been sorted, so the subject is first, then the object (if any),
+      // then any prepositional arguments.
+      val logic = for (i <- 0 until arguments.size;
+                       j <- (i + 1) until arguments.size) yield {
+        val arg1 = arguments(i)
+        val arg2 = arguments(j)
+        val tokenWithArg1Prep = if (arg1._2.startsWith("prep_")) {
+          val prep = arg1._2.replace("prep_", "")
+          tree.token.addPreposition(prep)
+        } else {
+          tree.token
+        }
+        val tokenWithArg2Prep = if (arg2._2.startsWith("prep_")) {
+          val prep = arg2._2.replace("prep_", "")
+          tokenWithArg1Prep.addPreposition(prep)
+        } else {
+          tokenWithArg1Prep
+        }
+        val newTree = DependencyTree(tokenWithArg2Prep, tree.children)
+        getLogicForTransitiveVerb(newTree, Seq(arg1, arg2))
+      }
+      logic.flatten.toSet
     }
   }
 
@@ -85,16 +105,25 @@ object LogicalFormGenerator {
     val lemma = tree.token.lemma
     val logic =
       for (subjTree <- arguments(0)._1.simplifications;
-           subj = subjTree._yield;
+           subj = subjTree.lemmaYield;
            objTree <- arguments(1)._1.simplifications;
-           obj = objTree._yield) yield Predicate(lemma, Seq(subj, obj))
+           obj = objTree.lemmaYield) yield Predicate(lemma, Seq(subj, obj))
     logic.toSet
   }
 
   def getVerbArguments(tree: DependencyTree) = {
-    tree.children.filter(c => {
+    val arguments = tree.children.filter(c => {
       val label = c._2
       label == "nsubj" || label == "dobj" || label.startsWith("prep")
+    })
+    arguments.sortBy(arg => {
+      val label = arg._2
+      val sortIndex = label match {
+        case "nsubj" => 1
+        case "dobj" => 2
+        case _ => 3
+      }
+      (sortIndex, label)
     })
   }
 
