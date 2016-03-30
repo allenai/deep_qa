@@ -103,4 +103,12 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("rock", Seq("erosion"))
     )
   }
+
+  it should "work for \"Roots can slow down erosion.\"" in {
+    val parse = parser.parseSentence("Roots can slow down erosion.")
+    parse.dependencyTree.print()
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree) should contain theSameElementsAs Set(
+      Predicate("slow_down", Seq("root", "erosion"))
+    )
+  }
 }
