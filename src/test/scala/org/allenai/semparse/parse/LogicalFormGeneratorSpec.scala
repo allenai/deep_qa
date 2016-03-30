@@ -75,8 +75,27 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   }
 
   it should "work for \"Water causes the most soil and rock erosion.\"" in {
+    // Once again, the Stanford parser is wrong here...
     val parse = parser.parseSentence("Water causes the most soil and rock erosion.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree) should contain theSameElementsAs Set(
+      Predicate("cause", Seq("water", "soil")),
+      Predicate("cause", Seq("water", "rock erosion")),
+      Predicate("cause", Seq("water", "erosion")),
+      Predicate("rock", Seq("erosion"))
+    )
+  }
+
+  it should "work for \"Water causes the most soil and rock erosion.\" (with a correct parse)" in {
+    val tree =
+      DependencyTree(Token("causes", "VBZ", "cause", 2), Seq(
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 8), Seq(
+          (DependencyTree(Token("the", "DT", "the", 3), Seq()), "det"),
+          (DependencyTree(Token("most", "JJS", "most", 4), Seq()), "amod"),
+          (DependencyTree(Token("soil", "NN", "soil", 5), Seq(
+            (DependencyTree(Token("rock", "NN", "rock", 7), Seq()), "conj_and"))), "nn"),
+          (DependencyTree(Token("rock", "NN", "rock", 7), Seq()), "nn"))), "dobj")))
+    LogicalFormGenerator.getLogicalForm(tree) should contain theSameElementsAs Set(
       Predicate("cause", Seq("water", "soil erosion")),
       Predicate("cause", Seq("water", "rock erosion")),
       Predicate("cause", Seq("water", "erosion")),

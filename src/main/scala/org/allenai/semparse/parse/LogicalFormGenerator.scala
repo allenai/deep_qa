@@ -4,8 +4,11 @@ case class Predicate(predicate: String, arguments: Seq[String])
 
 object LogicalFormGenerator {
   def getLogicalForm(tree: DependencyTree): Set[Predicate] = {
-    val transformedTree = defaultTransformations(tree)
-    _getLogicForNode(transformedTree) ++ transformedTree.children.map(_._1).flatMap(_getLogicForNode)
+    val splitTrees = transformers.SplitConjunctions.transform(tree)
+    val transformedTrees = splitTrees.map(defaultTransformations)
+    transformedTrees.flatMap(t => {
+      _getLogicForNode(t) ++ t.children.map(_._1).flatMap(_getLogicForNode)
+    })
   }
 
   def defaultTransformations(tree: DependencyTree): DependencyTree = {
@@ -25,7 +28,7 @@ object LogicalFormGenerator {
   }
 
   def getLogicForOther(tree: DependencyTree): Set[Predicate] = {
-    val adjectivePredicates = tree.children.filter(_._2 == "amod").map(_._1).map(child => {
+    val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
       Predicate(child.token.lemma, Seq(tree.token.lemma))
     }).toSet
     val relativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
