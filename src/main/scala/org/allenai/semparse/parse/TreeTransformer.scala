@@ -91,10 +91,7 @@ object transformers {
   /**
    * Traverses the tree to find matching subtrees, and removes them.
    */
-  def removeTree(
-    tree: DependencyTree,
-    treeToRemove: DependencyTree
-  ): DependencyTree = {
+  def removeTree(tree: DependencyTree, treeToRemove: DependencyTree): DependencyTree = {
     DependencyTree(tree.token, tree.children.flatMap(childWithLabel => {
       val label = childWithLabel._2
       val child = childWithLabel._1
@@ -104,6 +101,13 @@ object transformers {
         Seq((removeTree(child, treeToRemove), label))
       }
     }))
+  }
+
+  /**
+   * Adds a child node with the given label to the end of the tree's children list.
+   */
+  def addChild(tree: DependencyTree, child: DependencyTree, label: String): DependencyTree = {
+    DependencyTree(tree.token, tree.children ++ Seq((child, label)))
   }
 
   /**
@@ -160,6 +164,35 @@ object transformers {
           transformChildren(transformed)
         } else {
           transformChildren(tree)
+        }
+      }
+    }
+  }
+
+  object RemoveDeterminers extends BaseTransformer {
+    override def transform(tree: DependencyTree): DependencyTree = {
+      DependencyTree(tree.token, tree.children.flatMap(childWithLabel => {
+        val label = childWithLabel._2
+        val child = childWithLabel._1
+        if (label == "det" && child.isDeterminer && child.children.size == 0) {
+          Seq()
+        } else {
+          Seq((transform(child), label))
+        }
+      }))
+    }
+  }
+
+  object CombineParticles extends BaseTransformer {
+    override def transform(tree: DependencyTree): DependencyTree = {
+      tree.getChildWithLabel("prt") match {
+        case None => transformChildren(tree)
+        case Some(child) => {
+          val newWord = tree.token.word + "_" + child.token.word
+          val newLemma = tree.token.lemma + "_" + child.token.lemma
+          val newToken = Token(newWord, tree.token.posTag, newLemma, tree.token.index)
+          val newTree = DependencyTree(newToken, tree.children.filterNot(_._2 == "prt"))
+          transformChildren(newTree)
         }
       }
     }

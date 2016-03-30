@@ -9,10 +9,35 @@ case class Dependency(head: String, headIndex: Int, dependent: String, depIndex:
 case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)]) {
   def isNp(): Boolean = token.posTag.startsWith("NN")
   def isVerb(): Boolean = token.posTag.startsWith("VB")
+  def isAdj(): Boolean = token.posTag.startsWith("JJ")
+  def isDeterminer(): Boolean = token.posTag.contains("DT")
 
   lazy val childLabels = children.map(_._2).toSet
 
-  lazy val _yield: String = tokens.sortBy(_.index).map(_.word).mkString(" ")
+  // This adds back in tokens for prepositions, which were stripped when using collapsed
+  // dependencies.
+  lazy val tokensInYield: Seq[Token] = {
+    val trees = (children ++ Seq((this, "self"))).sortBy(_._1.token.index)
+    trees.flatMap(tree => {
+      tree match {
+        case t if t._1 == this => Seq(token)
+        case (child, label) => {
+          if (label.startsWith("prep_")) {
+            val prep = label.replace("prep_", "")
+            val prepToken = Token(prep, "IN", prep, child.token.index - 1)
+            Seq(prepToken) ++ child.tokensInYield
+          } else {
+            child.tokensInYield
+          }
+        }
+      }
+    })
+  }
+
+  // The initial underscore is because "yield" is a reserved word in scala.
+  lazy val _yield: String = tokensInYield.map(_.word).mkString(" ")
+
+  lazy val lemmaYield: String = tokensInYield.map(_.lemma).mkString(" ")
 
   lazy val tokens: Seq[Token] = Seq(token) ++ children.flatMap(_._1.tokens)
 
@@ -24,6 +49,15 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
       currentTree = transformers.removeTree(currentTree, child._1)
       currentTree
     })
+  }
+
+  def getChildWithLabel(label: String): Option[DependencyTree] = {
+    val childrenWithLabel = children.filter(_._2 == label)
+    if (childrenWithLabel.size == 1) {
+      Some(childrenWithLabel.head._1)
+    } else {
+      None
+    }
   }
 
   // Anything not shown here will get removed first, then the things at the beginning of this list.

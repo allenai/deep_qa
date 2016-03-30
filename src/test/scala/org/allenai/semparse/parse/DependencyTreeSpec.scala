@@ -15,11 +15,30 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
       (DependencyTree(Token("called", "VBN", "call", 5), Seq(
         (DependencyTree(Token("DNA", "NN", "dna", 6), Seq()), "dobj"))), "vmod")))
 
+  val np2 =
+    DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+      (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "prep_of")))
+
   "_yield" should "return all of the tokens in a subtree, sorted by index" in {
     tree._yield should be("People eat good food")
     tree.children(0)._1._yield should be("People")
     tree.children(1)._1._yield should be("good food")
     tree.children(1)._1.children(0)._1._yield should be("good")
+  }
+
+  it should "add back in prepositions" in {
+    np2._yield should be("Most of Earth")
+  }
+
+  "lemmaYield" should "return the lemmas of all of the tokens in a subtree, sorted by index" in {
+    tree.lemmaYield should be("people eat good food")
+    tree.children(0)._1.lemmaYield should be("people")
+    tree.children(1)._1.lemmaYield should be("good food")
+    tree.children(1)._1.children(0)._1.lemmaYield should be("good")
+  }
+
+  it should "add back in prepositions" in {
+    np2.lemmaYield should be("most of Earth")
   }
 
   "simplifications" should "simplify a verb" in {

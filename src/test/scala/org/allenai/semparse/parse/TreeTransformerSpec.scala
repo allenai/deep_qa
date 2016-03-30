@@ -66,6 +66,27 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
           )),
           "nsubj"
         )
+      )),
+    "The seeds of an oak come from the fruit." ->
+      DependencyTree(Token("come", "VBN", "come", 6), Seq(
+        (
+          DependencyTree(Token("seeds", "NNS", "seed", 2), Seq(
+            (DependencyTree(Token("The", "DT", "the", 1), Seq()), "det"),
+            (
+              DependencyTree(Token("oak", "NN", "oak", 5), Seq(
+                (DependencyTree(Token("an", "DT", "a", 4), Seq()), "det")
+              )),
+              "prep_of"
+            )
+          )),
+          "nsubj"
+        ),
+        (
+          DependencyTree(Token("fruit", "NN", "fruit", 9), Seq(
+            (DependencyTree(Token("the", "DT", "the", 8), Seq()), "det")
+          )),
+          "prep_from"
+        )
       ))
   )
 
@@ -214,5 +235,32 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     val answerTree = DependencyTree(Token("answer", "NN", "answer", 0), Seq())
     val tree = sentenceTrees("Most of Earth is covered by water.")
     new transformers.ReplaceWhPhrase(answerTree).transform(tree) should be(tree)
+  }
+
+  "RemoveDeterminers" should "remove determiners from the tree" in {
+    val tree1 = sentenceTrees("Which gas is given off by plants?")
+    transformers.RemoveDeterminers.transform(tree1) should be(
+      DependencyTree(Token("given", "VBN", "give", 4), Seq(
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq()), "nsubjpass"),
+        (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
+        (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent"))))
+    val tree2 = sentenceTrees("The seeds of an oak come from the fruit.")
+    transformers.RemoveDeterminers.transform(tree2) should be(
+      DependencyTree(Token("come", "VBN", "come", 6), Seq(
+        (DependencyTree(Token("seeds", "NNS", "seed", 2), Seq(
+          (DependencyTree(Token("oak", "NN", "oak", 5), Seq()), "prep_of"))), "nsubj"),
+        (DependencyTree(Token("fruit", "NN", "fruit", 9), Seq()), "prep_from"))))
+  }
+
+  "CombineParticles" should "put particles into verb lemmas" in {
+    val tree = sentenceTrees("Which gas is given off by plants?")
+    transformers.CombineParticles.transform(tree) should be(
+      DependencyTree(Token("given_off", "VBN", "give_off", 4), Seq(
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+          (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "nsubjpass"),
+        (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent")
+      )))
   }
 }
