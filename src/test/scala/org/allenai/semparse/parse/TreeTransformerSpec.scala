@@ -100,7 +100,21 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
         ),
         (DependencyTree(Token("is", "VBZ", "be", 6), Seq()), "auxpass"),
         (DependencyTree(Token("waves", "NNS", "wave", 9), Seq()), "agent")
+      )),
+    "Water, wind and animals cause erosion." ->
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (
+          DependencyTree(Token("Water", "NN", "water", 1), Seq(
+            (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "conj_and"),
+            (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "conj_and")
+          )),
+          "nsubj"
+        ),
+        (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
+        (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")
       ))
+
   )
 
   "replaceChild" should "leave the rest of the tree intact, and replace one child" in {
@@ -297,5 +311,48 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
   it should "keep \"most\" when it's not used as an adjective" in {
     val tree = sentenceTrees("Most of Earth is covered by water.")
     transformers.RemoveSuperlatives.transform(tree) should be(tree)
+  }
+
+  "SplitConjunctions" should "return two trees when the subject has a conjunction" in {
+    val tree = sentenceTrees("Water, wind and animals cause erosion.")
+    transformers.SplitConjunctions.transform(tree) should be(Set(
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")
+      )),
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")
+      )),
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")
+      ))
+    ))
+  }
+
+  it should "work with multiple conjunctions" in {
+    val tree =
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq(
+          (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "conj_and"))), "nsubj"),
+        (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq(
+          (DependencyTree(Token("decay", "NN", "decay", 9), Seq()), "conj_and"))), "dobj"),
+        (DependencyTree(Token("decay", "NN", "decay", 9), Seq()), "dobj")))
+    transformers.SplitConjunctions.transform(tree) should be(Set(
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj"))),
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj"))),
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("decay", "NN", "decay", 9), Seq()), "dobj"))),
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
+        (DependencyTree(Token("decay", "NN", "decay", 9), Seq()), "dobj")))
+    ))
   }
 }

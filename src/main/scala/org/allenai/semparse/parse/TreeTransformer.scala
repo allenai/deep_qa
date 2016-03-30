@@ -228,4 +228,58 @@ object transformers {
       }
     }
   }
+
+  object SplitConjunctions {
+    def findConjunctions(tree: DependencyTree): Set[(DependencyTree, DependencyTree)] = {
+      val children = tree.children.toSet
+      children.flatMap(childWithLabel => {
+        val child = childWithLabel._1
+        val label = childWithLabel._2
+        if (label == "conj_and") {
+          Set((tree, child)) ++ findConjunctions(child)
+        } else {
+          findConjunctions(child)
+        }
+      })
+    }
+
+    def transform(tree: DependencyTree): Set[DependencyTree] = {
+      // Basic outline here:
+      // 1. find all conjunctions, paired with the parent node
+      // 2. group by the parent node, in case there is more than one conjunction in the sentence
+      // 3. for the first conjunction:
+      //   4. remove all conjunction trees, forming a tree with just one of the conjoined nodes
+      //   5. for each conjunction tree, remove the parent, and replace it with the conjunction tree
+      //   6. for each of these constructed trees, recurse
+
+      // Step 1
+      val conjunctionTrees = findConjunctions(tree)
+
+      // Step 2
+      conjunctionTrees.groupBy(_._1).headOption match {
+        case None => Set(tree)
+        // Step 3
+        case Some((parent, childrenWithParent)) => {
+          val children = childrenWithParent.map(_._2)
+
+          // Step 4
+          var justFirstConjunction = tree
+          var justParent = parent
+          for (child <- children) {
+            justFirstConjunction = removeTree(justFirstConjunction, child)
+            justParent = removeTree(justParent, child)
+          }
+
+          // Step 5
+          val otherConjunctions = children.map(child => {
+            replaceTree(justFirstConjunction, justParent, child)
+          })
+
+          // Step 6
+          val separatedTrees = Set(justFirstConjunction) ++ otherConjunctions
+          separatedTrees.flatMap(transform)
+        }
+      }
+    }
+  }
 }

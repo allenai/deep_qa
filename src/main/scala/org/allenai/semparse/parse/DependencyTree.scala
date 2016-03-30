@@ -3,7 +3,7 @@ package org.allenai.semparse.parse
 import scala.collection.mutable
 
 case class Token(word: String, posTag: String, lemma: String, index: Int) {
-  override def toString() = s"$word ($lemma): $posTag"
+  override def toString() = s"$word ($lemma): $posTag, $index"
 
   def addPreposition(prep: String): Token = {
     val newWord = word + "_" + prep
