@@ -1,5 +1,6 @@
+## Old instructions for reproducing Jayant's TACL 2015 paper
 
-## Getting the data
+### Getting the data
 
 The data is not included in the git distribution because it's very
 large. To fetch the data and place it in the appropriate directory and
@@ -26,7 +27,7 @@ dataset. Each data directory contains three files:
 * `words.txt` -- defines the list of category and relation predicates
 * `lf.txt` -- training examples
 
-## Training
+### Training
 
 To train the matrix factorization models with the predicate ranking
 objective, run:
@@ -76,7 +77,7 @@ the denotation of the query. Note that the command line is not very
 usable. Other models can be run by changing the parameters in
 `run_model.sh`.
 
-## Evaluation
+### Evaluation
 
 After training the models as above, you can run the evaluation using:
 
