@@ -1,3 +1,16 @@
+# Open Vocabulary Semantic Parsing
+
+Typical semantic parsers map language onto a formal predicate space, such as Freebase.  Once the
+language has been converted into a formal query, the query is executed, and an answer is returned.
+That's all well and good, until the language you are trying to model has no analogue in your
+formal predicate space.
+
+In this code, we take an open-vocabulary approach to semantic parsing.  Instead of mapping language
+onto a formal predicate space, we do a purely syntactic mapping from language onto predicates
+derived from the language itself, then we _learn the meaning_ of those predicates.  In other words,
+where typical semantic parsers learn the _mapping_ from language onto predicates with a known
+meaning, we do a simple mapping onto predicates whose meaning is then _learned_.
+
 ## Old instructions for reproducing Jayant's TACL 2015 paper
 
 ### Getting the data
