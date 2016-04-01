@@ -18,13 +18,15 @@ class ScienceSentenceProcessor(
   override val name = "Science Sentence Processor"
 
   val validParams = Seq("min word count per sentence", "max word count per sentence",
-    "sentences per word file", "data directory", "output file")
+    "sentences per word file", "data directory", "output file", "output format")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataDir = JsonHelper.extractWithDefault(params, "data directory", "/home/mattg/data/petert_science_sentences")
   val outputFile = JsonHelper.extractWithDefault(params, "output file", "data/science_sentences.txt")
   val minWordCount = JsonHelper.extractWithDefault(params, "min word count per sentence", 4)
   val maxWordCount = JsonHelper.extractWithDefault(params, "max word count per sentence", 20)
+  val formatOptions = Seq("training data", "debug")
+  val outputFormat = JsonHelper.extractOptionWithDefault(params, "output format", formatOptions, "training data")
   val sentencesPerFile = (params \ "sentences per word file") match {
     case JNothing => None
     case JInt(num) => Some(num.toInt)
@@ -38,7 +40,7 @@ class ScienceSentenceProcessor(
   override def _runStep() {
     fileUtil.mkdirsForFile(outputFile)
     val parser = new StanfordParser
-    val files = Seq("photosynthesis.txt") // fileUtil.listDirectoryContents(dataDat)
+    val files = fileUtil.listDirectoryContents(dataDir)
     for (file <- files.par) {
       val keptSentences = fileUtil.getLineIterator(dataDir + "/" + file).flatMap(line => {
         val sentence = line.replace("<SENT>", "").replace("</SENT>", "")
@@ -71,12 +73,13 @@ class ScienceSentenceProcessor(
         }
         (sentence, logicalForm)
       })
-      val finalOutput = sentencesPerFile match {
-        case None => logicalForms.map(logicalFormToString)
-        case Some(num) => logicalForms.take(num).map(logicalFormToString)
+      val finalLogicalForms = sentencesPerFile match {
+        case None => logicalForms
+        case Some(num) => logicalForms.take(num)
       }
+      val outputStrings = finalLogicalForms.toSeq.par.flatMap(logicalFormToString).seq
       fileUtil synchronized {
-        fileUtil.writeLinesToFile(outputFile, finalOutput.toSeq, false) //true)
+        fileUtil.writeLinesToFile(outputFile, outputStrings, true)
       }
     }
   }
@@ -120,11 +123,41 @@ class ScienceSentenceProcessor(
     }
   }
 
-  def logicalFormToString(logicalForm: (String, Set[Predicate])): String = {
+  def logicalFormToString(logicalForm: (String, Set[Predicate])): Seq[String] = {
+    outputFormat match {
+      case "training data" => logicalFormToTrainingData(logicalForm)
+      case "debug" => sentenceAndLogicalFormAsString(logicalForm)
+      case _ => throw new IllegalStateException("Unrecognized output format")
+    }
+  }
+
+  def logicalFormToTrainingData(logicalForm: (String, Set[Predicate])): Seq[String] = {
+    val sentence = logicalForm._1
+    val predicates = logicalForm._2
+    val fullJson = "[" + predicates.map(predicate => {
+      val names = predicate.arguments.map("\"" + _ + "\"").mkString(",")
+      s"""["${predicate.predicate}",$names]"""
+    }).mkString(", ") + "]"
+    predicates.map(predicate => {
+      // I'm trying to stay as close to the previous training data format as possible.  But, the
+      // way the ids were formatted with Freebase data will not work for our noun phrases.  So, I'm
+      // going to leave the id column blank as a single that the name column should be used
+      // instead.
+      val ids = ""
+      val names = predicate.arguments.map("\"" + _ + "\"").mkString(" ")
+      val catWord = if (predicate.arguments.size == 1) predicate.predicate else ""
+      val relWord = if (predicate.arguments.size == 2) predicate.predicate else ""
+      val wordRelOrCat = if (predicate.arguments.size == 1) "word-cat" else "word-rel"
+      val lambdaExpression = s"""(($wordRelOrCat "${predicate.predicate}") $names)"""
+      val fields = Seq(ids, names, catWord, relWord, lambdaExpression, fullJson, sentence)
+      fields.mkString("\t")
+    }).toSeq
+  }
+
+  def sentenceAndLogicalFormAsString(logicalForm: (String, Set[Predicate])): Seq[String] = {
     val sentence = logicalForm._1
     val lf = logicalForm._2
     val lfString = lf.map(_.toString).mkString(" ")
-    s"${sentence} -> ${lfString}"
+    Seq(s"${sentence} -> ${lfString}")
   }
 }
-
