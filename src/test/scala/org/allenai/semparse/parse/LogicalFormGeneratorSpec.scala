@@ -4,7 +4,7 @@ import org.scalatest._
 
 class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   val parser = new StanfordParser
-  "getLogicalForm" should "work for \"Cells contain genetic material called DNA.\"" in {
+  "getLogicalForm" should "work for \"Cells contain genetic material called DNA.\" (simplifications)" in {
     val parse = parser.parseSentence("Cells contain genetic material called DNA.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("contain", Seq("cell", "genetic material call dna")),
@@ -16,7 +16,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Most of Earth is covered by water.\"" in {
+  it should "work for \"Most of Earth is covered by water.\" (passives, simplifications)" in {
     val parse = parser.parseSentence("Most of Earth is covered by water.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("cover", Seq("water", "most of earth")),
@@ -25,7 +25,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Humans depend on plants for oxygen.\"" in {
+  it should "work for \"Humans depend on plants for oxygen.\" (verbs with prepositions)" in {
     // Unfortunately, the Stanford parser gives an incorrect dependency parse for this sentence, so
     // the logical form is not as we would really want...
     val parse = parser.parseSentence("Humans depend on plants for oxygen.")
@@ -36,7 +36,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Humans depend on plants for oxygen.\" (with a correct parse)" in {
+  it should "work for \"Humans depend on plants for oxygen.\" (with a correct parse; verbs with two prepositions)" in {
     val tree =
       DependencyTree(Token("depend", "VBP", "depend", 2), Seq(
         (DependencyTree(Token("Humans", "NNS", "human", 1), Seq()), "nsubj"),
@@ -49,7 +49,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"The seeds of an oak come from the fruit.\"" in {
+  it should "work for \"The seeds of an oak come from the fruit.\" (dropping determiners)" in {
     val parse = parser.parseSentence("The seeds of an oak come from the fruit.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("come_from", Seq("seed of oak", "fruit")),
@@ -58,14 +58,14 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Which gas is given off by plants?\"" in {
+  it should "work for \"Which gas is given off by plants?\" (more dropping determiners)" in {
     val parse = parser.parseSentence("Which gas is given off by plants?")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("give_off", Seq("plant", "gas"))
     )
   }
 
-  it should "work for \"MOST erosion at a beach is caused by waves.\"" in {
+  it should "work for \"MOST erosion at a beach is caused by waves.\" (dropping superlatives)" in {
     val parse = parser.parseSentence("MOST erosion at a beach is caused by waves.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("cause", Seq("wave", "erosion at beach")),
@@ -74,7 +74,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Water causes the most soil and rock erosion.\"" in {
+  it should "work for \"Water causes the most soil and rock erosion.\" (conjunctions)" in {
     // Once again, the Stanford parser is wrong here...
     val parse = parser.parseSentence("Water causes the most soil and rock erosion.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
@@ -85,7 +85,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Water causes the most soil and rock erosion.\" (with a correct parse)" in {
+  it should "work for \"Water causes the most soil and rock erosion.\" (with a correct parse; conjunctions)" in {
     val tree =
       DependencyTree(Token("causes", "VBZ", "cause", 2), Seq(
         (DependencyTree(Token("Water", "NN", "water", 1), Seq()), "nsubj"),
@@ -104,7 +104,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Roots can slow down erosion.\"" in {
+  it should "work for \"Roots can slow down erosion.\" (dropping modals)" in {
     val parse = parser.parseSentence("Roots can slow down erosion.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("slow_down", Seq("root", "erosion"))
@@ -120,21 +120,21 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"an example is photosynthesis.\"" in {
+  it should "work for \"an example is photosynthesis.\" (copula)" in {
     val parse = parser.parseSentence("an example is photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("be", Seq("photosynthesis", "example"))
     )
   }
 
-  it should "work for \"Manganese is necessary for photosynthesis.\"" in {
+  it should "work for \"Manganese is necessary for photosynthesis.\" (X BE Y PREP Z)" in {
     val parse = parser.parseSentence("Manganese is necessary for photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("necessary_for", Seq("manganese", "photosynthesis"))
     )
   }
 
-  it should "work for \"Oxygen and energy are products of photosynthesis.\"" in {
+  it should "work for \"Oxygen and energy are products of photosynthesis.\" (conjunctions with X BE Y PREP Z)" in {
     val parse = parser.parseSentence("Oxygen and energy are products of photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("product_of", Seq("oxygen", "photosynthesis")),
@@ -142,22 +142,23 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"But, photosynthesis is older.\"" in {
+  it should "work for \"But, photosynthesis is older.\" (drop CCs)" in {
     val parse = parser.parseSentence("But, photosynthesis is older.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("be", Seq("older", "photosynthesis"))
     )
   }
 
-  it should "work for \"This process, photosynthesis, liberates oxygen.\"" in {
+  it should "work for \"This process, photosynthesis, liberates oxygen.\" (appositives)" in {
     val parse = parser.parseSentence("This process, photosynthesis, liberates oxygen.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("liberate", Seq("photosynthesis", "oxygen")),
-      Predicate("liberate", Seq("process", "oxygen"))
+      Predicate("liberate", Seq("process", "oxygen")),
+      Predicate("appos", Seq("photosynthesis", "process"))
     )
   }
 
-  it should "work for \"Plants generate oxygen during photosynthesis.\"" in {
+  it should "work for \"Plants generate oxygen during photosynthesis.\" (verb with subj, obj, and prep)" in {
     val parse = parser.parseSentence("Plants generate oxygen during photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("generate", Seq("plant", "oxygen")),
@@ -166,28 +167,29 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"An example would be photosynthesis.\"" in {
+  it should "work for \"An example would be photosynthesis.\" (copula with modal)" in {
     val parse = parser.parseSentence("An example would be photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("be", Seq("photosynthesis", "example"))
     )
   }
 
-  it should "work for \"Photosynthesis is impossible without light.\"" in {
+  it should "work for \"Photosynthesis is impossible without light.\" (X BE Y PREP Z)" in {
     val parse = parser.parseSentence("Photosynthesis is impossible without light.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("impossible_without", Seq("photosynthesis", "light"))
     )
   }
 
-  it should "work for \"Food originates with photosynthesis .\"" in {
+  it should "work for \"Food originates with photosynthesis .\" (lowercase NNPs)" in {
+    // Stanford says "Food" is an NNP in this sentence.
     val parse = parser.parseSentence("Food originates with photosynthesis .")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("originate_with", Seq("food", "photosynthesis"))
     )
   }
 
-  it should "work for \"There are two stages of photosynthesis.\"" in {
+  it should "work for \"There are two stages of photosynthesis.\" (existentials)" in {
     val parse = parser.parseSentence("There are two stages of photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("exists", Seq("two stage of photosynthesis")),
@@ -198,7 +200,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Photosynthesis gives a plant energy.\"" in {
+  it should "work for \"Photosynthesis gives a plant energy.\" (verb with subj, obj, and obj2)" in {
     val parse = parser.parseSentence("Photosynthesis gives a plant energy.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("give", Seq("photosynthesis", "energy")),
@@ -207,7 +209,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Diuron works by inhibiting photosynthesis.\"" in {
+  it should "work for \"Diuron works by inhibiting photosynthesis.\" (dependent clause with preposition)" in {
     val parse = parser.parseSentence("Diuron works by inhibiting photosynthesis.")
     parse.dependencyTree.get.print()
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
@@ -215,7 +217,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Diuron works to inhibit photosynthesis.\"" in {
+  it should "work for \"Diuron works to inhibit photosynthesis.\" (controlled subject)" in {
     val parse = parser.parseSentence("Diuron works to inhibit photosynthesis.")
     parse.dependencyTree.get.print()
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
@@ -223,7 +225,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
-  it should "work for \"Sue asked Bill to stop.\"" in {
+  it should "work for \"Sue asked Bill to stop.\" (controlled object)" in {
     val parse = parser.parseSentence("Sue asked Bill to stop.")
     parse.dependencyTree.get.print()
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
