@@ -3,7 +3,7 @@ package org.allenai.semparse.pipeline
 import org.json4s._
 import org.json4s.JsonDSL._
 
-object Experiments {
+object Acl2016Experiments {
 
   // *********************************
   // STEP 1: TRAINING DATA PROCESSING

@@ -72,10 +72,30 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
       val dependencies = sentenceParses(sentence)._1.toSeq
       val tokens = sentenceParses(sentence)._2
     }
-    parse.dependencyTree should be(
+    parse.dependencyTree.get should be(
       DependencyTree(Token("eat", "VBP", "eat", 2), Seq(
         (DependencyTree(Token("People", "NNS", "people", 1), Seq()), "nsubj"),
         (DependencyTree(Token("food", "NN", "food", 4), Seq(
           (DependencyTree(Token("good", "JJ", "good", 3), Seq()), "amod"))), "dobj"))))
+  }
+
+  it should "return None if the root has no children" in {
+    val parse = new ParsedSentence {
+      val dependencies = Seq()
+      val tokens = Seq(Token("Eat", "VBD", "eat", 1))
+    }
+    parse.dependencyTree should be(None)
+  }
+
+  it should "return None if there are cycles" in {
+    val parse = new ParsedSentence {
+      val dependencies = Seq(
+        Dependency("ROOT", 0, "Eat", 1, "root"),
+        Dependency("Food", 2, "Eat", 1, "crazy-dep"),
+        Dependency("Eat", 1, "Food", 2, "crazy-dep")
+      )
+      val tokens = Seq(Token("Eat", "VBD", "eat", 1), Token("Food", "NN", "food", 2))
+    }
+    parse.dependencyTree should be(None)
   }
 }

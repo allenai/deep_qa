@@ -282,4 +282,84 @@ object transformers {
       }
     }
   }
+
+  // This is very similar to SplitConjunctions, but the tree created by the Stanford parser is
+  // slightly different, so there are a few minor changes here.
+  // TODO(matt): actually, I only needed to change the findConjunctions method, and everything else
+  // was the same.  I should make these two transformers share code.
+  object SplitAppositives {
+    def findAppositives(tree: DependencyTree): Set[(DependencyTree, DependencyTree)] = {
+      val children = tree.children.toSet
+      children.flatMap(childWithLabel => {
+        val child = childWithLabel._1
+        val label = childWithLabel._2
+        if (label == "appos") {
+          Set((tree, child)) ++ findAppositives(child)
+        } else {
+          findAppositives(child)
+        }
+      })
+    }
+
+    def transform(tree: DependencyTree): Set[DependencyTree] = {
+      // Basic outline here:
+      // 1. find all appositives, paired with the parent node
+      // 2. group by the parent node, in case there is more than one appositives in the sentence
+      // 3. for the first appositives:
+      //   4. remove all appositives trees, forming a tree with just the head NP
+      //   5. for each appositive tree, remove the parent, and replace it with the conjunction tree
+      //   6. for each of these constructed trees, recurse
+
+      // Step 1
+      val apposTrees = findAppositives(tree)
+
+      // Step 2
+      apposTrees.groupBy(_._1).headOption match {
+        case None => Set(tree)
+        // Step 3
+        case Some((parent, childrenWithParent)) => {
+          val children = childrenWithParent.map(_._2)
+
+          // Step 4
+          var justFirstAppositive = tree
+          var justParent = parent
+          for (child <- children) {
+            justFirstAppositive = removeTree(justFirstAppositive, child)
+            justParent = removeTree(justParent, child)
+          }
+
+          // Step 5
+          val otherAppositives = children.map(child => {
+            replaceTree(justFirstAppositive, justParent, child)
+          })
+
+          // Step 6
+          val separatedTrees = Set(justFirstAppositive) ++ otherAppositives
+          separatedTrees.flatMap(transform)
+        }
+      }
+    }
+  }
+
+  object RemoveBareCCs extends BaseTransformer {
+    override def transform(tree: DependencyTree): DependencyTree = {
+      tree.children.find(c => c._2 == "cc" && c._1.token.posTag == "CC" && c._1.children.size == 0) match {
+        case None => transformChildren(tree)
+        case Some((child, label)) => {
+          transformChildren(removeTree(tree, child))
+        }
+      }
+    }
+  }
+
+  object RemoveAuxiliaries extends BaseTransformer {
+    override def transform(tree: DependencyTree): DependencyTree = {
+      tree.children.find(c => c._2 == "aux" && c._1.token.posTag == "MD" && c._1.children.size == 0) match {
+        case None => transformChildren(tree)
+        case Some((child, label)) => {
+          transformChildren(removeTree(tree, child))
+        }
+      }
+    }
+  }
 }

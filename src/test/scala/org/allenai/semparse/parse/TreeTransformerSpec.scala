@@ -113,6 +113,13 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
         (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
         (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "nsubj"),
         (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")
+      )),
+    "This process, photosynthesis, liberates oxygen." ->
+      DependencyTree(Token("liberates", "VBZ", "liberate", 6), Seq(
+        (DependencyTree(Token("process", "NN", "process", 2), Seq(
+          (DependencyTree(Token("This", "DT", "this", 1), Seq()), "det"),
+          (DependencyTree(Token("photosynthesis", "NN", "photosynthesis", 4), Seq()), "appos"))), "nsubj"),
+        (DependencyTree(Token("oxygen", "NN", "oxygen", 7), Seq()), "dobj")
       ))
 
   )
@@ -353,6 +360,19 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
       DependencyTree(Token("cause", "VB", "cause", 6), Seq(
         (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
         (DependencyTree(Token("decay", "NN", "decay", 9), Seq()), "dobj")))
+    ))
+  }
+
+  "SplitAppositives" should "return two trees when there is an appositive" in {
+    val tree = sentenceTrees("This process, photosynthesis, liberates oxygen.")
+    transformers.SplitAppositives.transform(tree) should be(Set(
+      DependencyTree(Token("liberates", "VBZ", "liberate", 6), Seq(
+        (DependencyTree(Token("photosynthesis", "NN", "photosynthesis", 4), Seq()), "nsubj"),
+        (DependencyTree(Token("oxygen", "NN", "oxygen", 7), Seq()), "dobj"))),
+      DependencyTree(Token("liberates", "VBZ", "liberate", 6), Seq(
+        (DependencyTree(Token("process", "NN", "process", 2), Seq(
+          (DependencyTree(Token("This", "DT", "this", 1), Seq()), "det"))), "nsubj"),
+        (DependencyTree(Token("oxygen", "NN", "oxygen", 7), Seq()), "dobj")))
     ))
   }
 }

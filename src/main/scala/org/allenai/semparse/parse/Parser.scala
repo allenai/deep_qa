@@ -27,10 +27,28 @@ trait Parser {
 trait ParsedSentence {
   def dependencies: Seq[Dependency]
   def tokens: Seq[Token]
-  lazy val dependencyTree: DependencyTree = {
-    val dependencyMap = dependencies.map(d => (d.headIndex, d)).groupBy(_._1).mapValues(_.map(_._2).sortBy(_.depIndex))
-    val root = getNodeFromIndex(0, dependencyMap)
-    root.children(0)._1
+
+  lazy private val dependencyMap =
+    dependencies.map(d => (d.headIndex, d)).groupBy(_._1).mapValues(_.map(_._2).sortBy(_.depIndex))
+
+  lazy private val hasCycles = dependencyMap.exists(entry => {
+    val index = entry._1
+    val deps = entry._2
+    val depIndices = deps.map(_.depIndex)
+    depIndices.exists(depIndex => dependencyMap.getOrElse(depIndex, Seq()).exists(_.depIndex == index))
+  })
+
+  lazy val dependencyTree: Option[DependencyTree] = {
+    if (hasCycles) {
+      None
+    } else {
+      val root = getNodeFromIndex(0, dependencyMap)
+      if (root.children.size == 0) {
+        None
+      } else {
+        Some(root.children(0)._1)
+      }
+    }
   }
 
   private def getNodeFromIndex(index: Int, dependencyMap: Map[Int, Seq[Dependency]]): DependencyTree = {
@@ -73,7 +91,7 @@ class StanfordParsedSentence(sentence: CoreMap) extends ParsedSentence {
       val posTag = token.get(classOf[CoreAnnotations.PartOfSpeechAnnotation])
       val word = token.get(classOf[CoreAnnotations.TextAnnotation])
       val lemma = token.get(classOf[CoreAnnotations.LemmaAnnotation])
-      Token(word, posTag, lemma, token.index)
+      Token(word, posTag, lemma.toLowerCase, token.index)
     }).toSeq
   }
 }
