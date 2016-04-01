@@ -8,6 +8,10 @@ case class Predicate(predicate: String, arguments: Seq[String]) {
 }
 
 object LogicalFormGenerator {
+
+  // TODO(matt): At some point I'm going to have to make this return a Logic argument, instead of
+  // just a set of Predicates, so that I can handle negation, and disjunction, and other things.
+  // But this is good enough for now.
   def getLogicalForm(tree: DependencyTree): Set[Predicate] = {
     val splitTrees = transformers.SplitConjunctions.transform(tree).flatMap(t => {
       transformers.SplitAppositives.transform(t)
