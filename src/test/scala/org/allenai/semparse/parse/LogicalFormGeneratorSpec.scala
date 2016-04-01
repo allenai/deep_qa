@@ -154,7 +154,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("liberate", Seq("photosynthesis", "oxygen")),
       Predicate("liberate", Seq("process", "oxygen")),
-      Predicate("appos", Seq("photosynthesis", "process"))
+      Predicate("appos", Seq("process", "photosynthesis"))
     )
   }
 
@@ -211,25 +211,22 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
 
   it should "work for \"Diuron works by inhibiting photosynthesis.\" (dependent clause with preposition)" in {
     val parse = parser.parseSentence("Diuron works by inhibiting photosynthesis.")
-    parse.dependencyTree.get.print()
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
-      Predicate("work_C_inhibit", Seq("Diuron", "photosynthesis"))
+      Predicate("work_by_inhibit", Seq("diuron", "photosynthesis"))
     )
   }
 
   it should "work for \"Diuron works to inhibit photosynthesis.\" (controlled subject)" in {
     val parse = parser.parseSentence("Diuron works to inhibit photosynthesis.")
-    parse.dependencyTree.get.print()
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
-      Predicate("work_C_inhibit", Seq("Diuron", "photosynthesis"))
+      Predicate("work_Csubj_inhibit", Seq("diuron", "photosynthesis"))
     )
   }
 
   it should "work for \"Sue asked Bill to stop.\" (controlled object)" in {
     val parse = parser.parseSentence("Sue asked Bill to stop.")
-    parse.dependencyTree.get.print()
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
-      Predicate("ask_C_stop", Seq("Sue", "Bill"))
+      Predicate("ask_Cobj_stop", Seq("sue", "bill"))
     )
   }
 }

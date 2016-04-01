@@ -220,6 +220,8 @@ object transformers {
     }
   }
 
+  // TODO(matt): I might want to have this return two trees in some cases, for things like "which
+  // characteristic is ..." - include an "appos" or "be" tree, along with the replaced tree.
   class ReplaceWhPhrase(replaceWith: DependencyTree) extends BaseTransformer {
     override def transform(tree: DependencyTree) = {
       findWhPhrase(tree) match {
@@ -287,6 +289,8 @@ object transformers {
   // slightly different, so there are a few minor changes here.
   // TODO(matt): actually, I only needed to change the findConjunctions method, and everything else
   // was the same.  I should make these two transformers share code.
+  // Actually, I added a new tree also for each appositive, just containing the appositive
+  // relationship, so that it would get extracted correctly in the logical form.
   object SplitAppositives {
     def findAppositives(tree: DependencyTree): Set[(DependencyTree, DependencyTree)] = {
       val children = tree.children.toSet
@@ -309,6 +313,7 @@ object transformers {
       //   4. remove all appositives trees, forming a tree with just the head NP
       //   5. for each appositive tree, remove the parent, and replace it with the conjunction tree
       //   6. for each of these constructed trees, recurse
+      // 7. add a tree containing the appositive relationship
 
       // Step 1
       val apposTrees = findAppositives(tree)
@@ -335,7 +340,13 @@ object transformers {
 
           // Step 6
           val separatedTrees = Set(justFirstAppositive) ++ otherAppositives
-          separatedTrees.flatMap(transform)
+
+          // Step 7
+          val appositiveTrees = children.map(child => {
+            DependencyTree(Token("appos", "VB", "appos", 0), Seq(
+              (justParent, "nsubj"), (child, "dobj")))
+          })
+          separatedTrees.flatMap(transform) ++ appositiveTrees
         }
       }
     }
