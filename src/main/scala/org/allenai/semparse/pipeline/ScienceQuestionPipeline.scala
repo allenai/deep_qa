@@ -4,7 +4,7 @@ import org.json4s._
 import org.json4s.JsonDSL._
 
 object ScienceQuestionPipeline {
-  val params: JValue = ("sentences per word file" -> 100)
+  val params: JValue = ("max word count per sentence" -> 10) ~ ("output format" -> "debug")
 
   def main(args: Array[String]) {
     new ScienceSentenceProcessor(params).runPipeline()

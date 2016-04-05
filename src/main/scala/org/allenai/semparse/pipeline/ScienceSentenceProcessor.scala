@@ -6,6 +6,9 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+
 import org.allenai.semparse.parse.DependencyTree
 import org.allenai.semparse.parse.LogicalFormGenerator
 import org.allenai.semparse.parse.Predicate
@@ -18,7 +21,7 @@ class ScienceSentenceProcessor(
   override val name = "Science Sentence Processor"
 
   val validParams = Seq("min word count per sentence", "max word count per sentence",
-    "sentences per word file", "data directory", "output file", "output format")
+    "data directory", "output file", "output format")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataDir = JsonHelper.extractWithDefault(params, "data directory", "/home/mattg/data/petert_science_sentences")
@@ -27,69 +30,80 @@ class ScienceSentenceProcessor(
   val maxWordCount = JsonHelper.extractWithDefault(params, "max word count per sentence", 20)
   val formatOptions = Seq("training data", "debug")
   val outputFormat = JsonHelper.extractOptionWithDefault(params, "output format", formatOptions, "training data")
-  val sentencesPerFile = (params \ "sentences per word file") match {
-    case JNothing => None
-    case JInt(num) => Some(num.toInt)
-    case _ => throw new IllegalStateException("'sentences per word file' must be an integer")
-  }
+
+  val numPartitions = 1
 
   override val inputs: Set[(String, Option[Step])] = Set((dataDir, None))
   override val outputs = Set(outputFile)
   override val paramFile = outputs.head.replace(".txt", "_params.json")
 
   override def _runStep() {
-    fileUtil.mkdirsForFile(outputFile)
-    val parser = new StanfordParser
-    val files = fileUtil.listDirectoryContents(dataDir)
-    for (file <- files.par) {
-      val keptSentences = fileUtil.getLineIterator(dataDir + "/" + file).flatMap(line => {
-        val sentence = line.replace("<SENT>", "").replace("</SENT>", "")
-        if (shouldKeepSentence(sentence)) {
-          Seq(sentence)
-        } else {
-          Seq()
-        }
-      }).toSet[String].toSeq.sortBy(_.split(" ").length)
-      val keptTrees = keptSentences.toIterator.flatMap(sentence => {
-        val parse = parser.parseSentence(sentence)
-        parse.dependencyTree match {
-          case None => Seq()
-          case Some(tree) => {
-            if (shouldKeepTree(tree)) {
-              Seq((sentence, tree))
-            } else {
-              None
-            }
-          }
-        }
-      })
-      val logicalForms = keptTrees.map(sentenceAndTree => {
-        val sentence = sentenceAndTree._1
-        val tree = sentenceAndTree._2
-        val logicalForm = try {
-          LogicalFormGenerator.getLogicalForm(tree)
-        } catch {
-          case e: Throwable => { println(sentence); tree.print(); throw e }
-        }
-        (sentence, logicalForm)
-      })
-      val finalLogicalForms = sentencesPerFile match {
-        case None => logicalForms
-        case Some(num) => logicalForms.take(num)
-      }
-      val outputStrings = finalLogicalForms.toSeq.par.flatMap(logicalFormToString).seq
-      fileUtil synchronized {
-        fileUtil.writeLinesToFile(outputFile, outputStrings, true)
-      }
-    }
+    val conf = new SparkConf().setAppName(s"Compute PMI")
+      .set("spark.driver.maxResultSize", "0")
+      .set("spark.network.timeout", "1000000")
+      .set("spark.akka.frameSize", "1028")
+      .setMaster("local[*]")
+
+    val sc = new SparkContext(conf)
+
+    parseSentences(
+      sc,
+      outputFile,
+      dataDir,
+      minWordCount,
+      maxWordCount,
+      outputFormat
+    )
   }
 
-  def shouldKeepSentence(sentence: String): Boolean = {
+  def parseSentences(
+    sc: SparkContext,
+    outputFile: String,
+    dataDir: String,
+    minWordCount: Int,
+    maxWordCount: Int,
+    outputFormat: String
+  ) {
+    fileUtil.mkdirsForFile(outputFile)
+    val sentences = sc.textFile(dataDir, numPartitions).flatMap(line => {
+      val sentence = line.replace("<SENT>", "").replace("</SENT>", "")
+      if (Helper.shouldKeepSentence(sentence, minWordCount, maxWordCount)) {
+        Seq(sentence)
+      } else {
+        Seq()
+      }
+    }).distinct()
+    val trees = sentences.flatMap(Helper.parseSentence)
+    val logicalForms = trees.map(sentenceAndTree => {
+      val sentence = sentenceAndTree._1
+      val tree = sentenceAndTree._2
+      val logicalForm = try {
+        LogicalFormGenerator.getLogicalForm(tree)
+      } catch {
+        case e: Throwable => { println(sentence); tree.print(); throw e }
+      }
+      (sentence, logicalForm)
+    })
+    val outputStrings = logicalForms.flatMap(Helper.logicalFormToString(outputFormat))
+
+    val finalOutput = outputStrings.collect()
+    fileUtil.writeLinesToFile(outputFile, finalOutput)
+  }
+}
+
+// This semi-ugliness is so that the spark functions are serializable.
+object Helper {
+  val parser = new StanfordParser
+  def shouldKeepSentence(sentence: String, minWordCount: Int, maxWordCount: Int): Boolean = {
     val wordCount = sentence.split(" ").length
     if (wordCount < minWordCount) return false
     if (wordCount > maxWordCount) return false
     if (sentence.endsWith("?") || sentence.endsWith("!")) return false
-    if (sentence.contains("(") || sentence.contains(")") || sentence.contains(":")) return false
+    if (sentence.contains(":") || sentence.contains(";") || sentence.contains("&")) return false
+    if (sentence.contains("_")) return false
+    if (sentence.contains("(") || sentence.contains(")")) return false
+    if (sentence.contains("{") || sentence.contains("}")) return false
+    if (sentence.contains("[") || sentence.contains("]")) return false
     if (sentence.contains(">") || sentence.contains("<") || sentence.contains("-")) return false
     if (sentence.contains("\"") || sentence.contains("'")) return false
     if (sentence.contains("&gt;") || sentence.contains("&lt;") || sentence.contains("&quot;")) return false
@@ -110,6 +124,20 @@ class ScienceSentenceProcessor(
     return false
   }
 
+  def parseSentence(sentence: String) = {
+    val parse = parser.parseSentence(sentence)
+    parse.dependencyTree match {
+      case None => Seq()
+      case Some(tree) => {
+        if (Helper.shouldKeepTree(tree)) {
+          Seq((sentence, tree))
+        } else {
+          Seq()
+        }
+      }
+    }
+  }
+
   def shouldKeepTree(tree: DependencyTree): Boolean = {
     if (tree.token.posTag.startsWith("V")) {
       tree.getChildWithLabel("nsubj") match {
@@ -123,7 +151,11 @@ class ScienceSentenceProcessor(
     }
   }
 
-  def logicalFormToString(logicalForm: (String, Set[Predicate])): Seq[String] = {
+  def logicalFormToString(
+    outputFormat: String
+  )(
+    logicalForm: (String, Set[Predicate])
+  ): Seq[String] = {
     outputFormat match {
       case "training data" => logicalFormToTrainingData(logicalForm)
       case "debug" => sentenceAndLogicalFormAsString(logicalForm)
