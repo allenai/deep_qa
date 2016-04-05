@@ -64,7 +64,7 @@ object LogicalFormGenerator {
     val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
       Predicate(child.token.lemma, Seq(tree.token.lemma))
     }).toSet
-    val relativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
+    val reducedRelativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
       child.getChildWithLabel("dobj") match {
         case None => Set[Predicate]()
@@ -76,6 +76,12 @@ object LogicalFormGenerator {
         }
       }
     })
+    val relativeClausePredicates = tree.children.filter(_._2 == "rcmod").map(_._1).flatMap(child => {
+      val npWithoutRelative = transformers.removeTree(tree, child)
+      val relativizer = child.children.filter(_._1.token.posTag == "WDT").head._1
+      val relativeClause = transformers.replaceTree(child, relativizer, npWithoutRelative)
+      getLogicForVerb(relativeClause)
+    })
     val prepositionPredicates = tree.children.filter(_._2.startsWith("prep_")).flatMap(child => {
       val childTree = child._1
       val label = child._2
@@ -86,7 +92,7 @@ object LogicalFormGenerator {
            subj = simplifiedTree.lemmaYield;
            arg = simplifiedChild.lemmaYield) yield Predicate(prep, Seq(subj, arg))
     })
-    adjectivePredicates ++ relativeClausePredicates ++ prepositionPredicates
+    adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
   }
 
   def getLogicForCopula(tree: DependencyTree): Set[Predicate] = {
@@ -180,6 +186,7 @@ object LogicalFormGenerator {
   }
 
   def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Set[Predicate] = {
+    if (arguments.exists(_._1.isWhPhrase)) return Set()
     val logic =
       for (subjTree <- arguments(0)._1.simplifications;
            subj = subjTree.lemmaYield;

@@ -23,6 +23,8 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
   def isVerb(): Boolean = token.posTag.startsWith("VB")
   def isAdj(): Boolean = token.posTag.startsWith("JJ")
   def isDeterminer(): Boolean = token.posTag.contains("DT")
+  def isWhPhrase(): Boolean = token.posTag == "WDT"
+  def containsWhPhrase(): Boolean = isWhPhrase || children.exists(_._1.containsWhPhrase)
 
   lazy val childLabels = children.map(_._2).toSet
 
@@ -73,7 +75,7 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
   }
 
   // Anything not shown here will get removed first, then the things at the beginning of this list.
-  val simplificationOrder = Seq("prep", "amod")
+  val simplificationOrder = Seq("prep", "nn", "amod")
   def simplificationSortingKey(child: (DependencyTree, String)) = {
     val label = if (child._2.startsWith("prep")) "prep" else child._2
     val labelIndex = simplificationOrder.indexOf(label)

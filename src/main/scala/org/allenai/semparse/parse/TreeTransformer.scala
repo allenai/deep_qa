@@ -140,7 +140,7 @@ object transformers {
   }
 
   def isWhWord(token: Token): Boolean = {
-    token.lemma == "which" || token.lemma == "what"
+    token.posTag == "WDT"
   }
 
   object UndoPassivization extends BaseTransformer {

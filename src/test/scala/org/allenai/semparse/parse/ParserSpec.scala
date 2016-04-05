@@ -28,7 +28,7 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
         Dependency("ROOT", 0, "went", 2, "root")
       ),
       Seq(
-        Token("Mary", "NNP", "Mary", 1),
+        Token("Mary", "NNP", "mary", 1),
         Token("went", "VBD", "go", 2),
         Token("to", "TO", "to", 3),
         Token("the", "DT", "the", 4),
@@ -53,7 +53,7 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
     parse.tokens should be(expectedTokens)
   }
 
-  it should "give collapsed dependencies" in {
+  it should "give collapsed dependencies and lowercase lemmas" in {
     val sentence = "Mary went to the store."
     val parse = parser.parseSentence(sentence)
     val expectedDependencies = sentenceParses(sentence)._1

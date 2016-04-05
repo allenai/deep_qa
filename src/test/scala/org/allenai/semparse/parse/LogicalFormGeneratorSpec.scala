@@ -244,7 +244,9 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("exists", Seq("many ant that eat food")),
       Predicate("exists", Seq("many ant")),
+      Predicate("many", Seq("ant")),
       Predicate("exists", Seq("ant")),
+      Predicate("eat", Seq("many ant", "food")),
       Predicate("eat", Seq("ant", "food"))
     )
   }
@@ -257,7 +259,11 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("sustain", Seq("growth", "animal life")),
       Predicate("sustain", Seq("plant growth in turn", "life")),
       Predicate("sustain", Seq("plant growth", "life")),
-      Predicate("sustain", Seq("growth", "life"))
+      Predicate("sustain", Seq("growth", "life")),
+      Predicate("in", Seq("plant growth", "turn")),
+      Predicate("in", Seq("growth", "turn")),
+      Predicate("plant", Seq("growth")),
+      Predicate("animal", Seq("life"))
     )
   }
 
