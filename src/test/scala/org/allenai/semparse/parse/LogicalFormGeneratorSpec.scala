@@ -229,4 +229,36 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("ask_Cobj_stop", Seq("sue", "bill"))
     )
   }
+
+  it should "work for \"The plant produces clusters which contain sperm.\" (relative clause with which)" in {
+    val parse = parser.parseSentence("The plant produces clusters which contain sperm.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("produce", Seq("plant", "cluster which contain sperm")),
+      Predicate("produce", Seq("plant", "cluster")),
+      Predicate("contain", Seq("cluster", "sperm"))
+    )
+  }
+
+  it should "work for \"There are many ants that eat food.\" (relative clause with that)" in {
+    val parse = parser.parseSentence("There are many ants that eat food.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("exists", Seq("many ant that eat food")),
+      Predicate("exists", Seq("many ant")),
+      Predicate("exists", Seq("ant")),
+      Predicate("eat", Seq("ant", "food"))
+    )
+  }
+
+  it should "work for \"Plant growth in turn sustains animal life.\" (simplification order)" in {
+    val parse = parser.parseSentence("Plant growth in turn sustains animal life.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("sustain", Seq("plant growth in turn", "animal life")),
+      Predicate("sustain", Seq("plant growth", "animal life")),
+      Predicate("sustain", Seq("growth", "animal life")),
+      Predicate("sustain", Seq("plant growth in turn", "life")),
+      Predicate("sustain", Seq("plant growth", "life")),
+      Predicate("sustain", Seq("growth", "life"))
+    )
+  }
+
 }
