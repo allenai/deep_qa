@@ -66,6 +66,15 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
     parse.tokens should be(expectedTokens)
   }
 
+  "splitSentences" should "return substrings of the original input" in {
+    val doc = "This is a test document. It has “funny characters” [and brackets]. Or does it?"
+    parser.splitSentences(doc) should be(Seq(
+      "This is a test document.",
+      "It has “funny characters” [and brackets].",
+      "Or does it?"
+    ))
+  }
+
   "dependencyTree" should "correctly convert dependencies to graphs" in {
     val sentence = "People eat good food."
     val parse = new ParsedSentence {

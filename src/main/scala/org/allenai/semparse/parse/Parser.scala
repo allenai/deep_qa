@@ -16,10 +16,12 @@ import java.util.Properties
 
 import scala.collection.JavaConverters._
 
-// A Parser takes sentence strings and returns parsed sentence strings.  It's just a thin
-// abstraction layer over whatever parser you feel like using.
+// A Parser takes sentence strings and returns parsed sentence strings.  It also can take a
+// collection of sentences and split them.  It's just a thin abstraction layer over whatever parser
+// you feel like using.
 trait Parser {
   def parseSentence(sentence: String): ParsedSentence
+  def splitSentences(document: String): Seq[String]
 }
 
 // Some really simple representations, containing only what I need them to for the rest of this
@@ -63,9 +65,12 @@ trait ParsedSentence {
 }
 
 class StanfordParser extends Parser {
-  val props = new Properties()
-  props.put("annotators","tokenize, ssplit, pos, lemma, parse")
-  val pipeline = new StanfordCoreNLP(props)
+  val sentenceParserProps = new Properties()
+  sentenceParserProps.put("annotators", "tokenize, ssplit, pos, lemma, parse")
+  lazy val pipeline = new StanfordCoreNLP(sentenceParserProps)
+  val sentenceSplitterProps = new Properties()
+  sentenceSplitterProps.put("annotators", "tokenize, ssplit")
+  lazy val sentenceSplitterPipeline = new StanfordCoreNLP(sentenceSplitterProps)
 
   override def parseSentence(sentence: String): ParsedSentence = {
     val annotation = new Annotation(sentence)
@@ -73,6 +78,18 @@ class StanfordParser extends Parser {
     val parsed = new StanfordParsedSentence(
       annotation.get(classOf[CoreAnnotations.SentencesAnnotation]).get(0))
     parsed
+  }
+
+  override def splitSentences(document: String): Seq[String] = {
+    val annotation = new Annotation(document)
+    sentenceSplitterPipeline.annotate(annotation)
+    val sentences = annotation.get(classOf[CoreAnnotations.SentencesAnnotation]).asScala
+    sentences.map(sentence => {
+      val tokens = sentence.get(classOf[CoreAnnotations.TokensAnnotation]).asScala
+      val start = tokens.head.beginPosition
+      val end = tokens.last.endPosition
+      document.substring(start, end).trim
+    })
   }
 }
 
