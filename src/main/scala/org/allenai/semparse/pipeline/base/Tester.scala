@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline
+package org.allenai.semparse.pipeline.base
 
 import java.io.FileWriter
 import java.io.File

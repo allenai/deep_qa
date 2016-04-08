@@ -66,6 +66,10 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
     parse.tokens should be(expectedTokens)
   }
 
+  it should "print my tree" in {
+    parser.parseSentence("How many times does Earth rotate on its axis in one day?").dependencyTree.get.print()
+  }
+
   "splitSentences" should "return substrings of the original input" in {
     val doc = "This is a test document. It has “funny characters” [and brackets]. Or does it?"
     parser.splitSentences(doc) should be(Seq(

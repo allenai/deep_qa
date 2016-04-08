@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline
+package org.allenai.semparse.pipeline.science_data
 
 import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
@@ -25,7 +25,7 @@ class ScienceSentenceProcessor(
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataDir = JsonHelper.extractWithDefault(params, "data directory", "/home/mattg/data/petert_science_sentences")
-  val outputFile = JsonHelper.extractWithDefault(params, "output file", "data/science_sentences.txt")
+  val outputFile = JsonHelper.extractWithDefault(params, "output file", "data/science_sentences_training_data.txt")
   val minWordCount = JsonHelper.extractWithDefault(params, "min word count per sentence", 4)
   val maxWordCount = JsonHelper.extractWithDefault(params, "max word count per sentence", 20)
   val formatOptions = Seq("training data", "debug")

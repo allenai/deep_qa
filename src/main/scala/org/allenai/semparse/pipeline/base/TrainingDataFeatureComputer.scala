@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline
+package org.allenai.semparse.pipeline.base
 
 import edu.cmu.ml.rtw.pra.experiments.Outputter
 import edu.cmu.ml.rtw.pra.experiments.RelationMetadata

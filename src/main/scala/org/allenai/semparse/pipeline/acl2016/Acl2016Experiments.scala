@@ -1,7 +1,9 @@
-package org.allenai.semparse.pipeline
+package org.allenai.semparse.pipeline.acl2016
 
 import org.json4s._
 import org.json4s.JsonDSL._
+
+import org.allenai.semparse.pipeline.base._
 
 object Acl2016Experiments {
 

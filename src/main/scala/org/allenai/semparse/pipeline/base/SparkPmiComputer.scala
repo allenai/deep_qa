@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline
+package org.allenai.semparse.pipeline.base
 
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
