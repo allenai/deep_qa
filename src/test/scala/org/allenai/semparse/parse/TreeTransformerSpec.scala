@@ -120,6 +120,16 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
           (DependencyTree(Token("This", "DT", "this", 1), Seq()), "det"),
           (DependencyTree(Token("photosynthesis", "NN", "photosynthesis", 4), Seq()), "appos"))), "nsubj"),
         (DependencyTree(Token("oxygen", "NN", "oxygen", 7), Seq()), "dobj")
+      )),
+    "What is the male part of a flower called?" ->
+      DependencyTree(Token("called", "VBN", "call", 9), Seq(
+        (DependencyTree(Token("What", "WP", "what", 1), Seq()), "dobj"),
+        (DependencyTree(Token("is", "VBZ", "be", 2), Seq()), "auxpass"),
+        (DependencyTree(Token("part", "NN", "part", 5), Seq(
+          (DependencyTree(Token("the", "DT", "the", 3), Seq()), "det"),
+          (DependencyTree(Token("male", "JJ", "male", 4), Seq()), "amod"),
+          (DependencyTree(Token("flower", "NN", "flower", 8), Seq(
+            (DependencyTree(Token("a", "DT", "a", 7), Seq()), "det"))), "prep_of"))), "nsubjpass")
       ))
 
   )
@@ -218,6 +228,8 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.findWhPhrase(tree1) should be(Some(tree1.children(0)._1))
     val tree2 = sentenceTrees("Which of these is an example of liquid water?")
     transformers.findWhPhrase(tree2) should be(Some(tree2.children(0)._1))
+    val tree3 = sentenceTrees("What is the male part of a flower called?")
+    transformers.findWhPhrase(tree3) should be(Some(tree3.children(0)._1))
   }
 
   "UndoPassivization" should "switch nsubjpass to dobj, and agent to nsubj" in {

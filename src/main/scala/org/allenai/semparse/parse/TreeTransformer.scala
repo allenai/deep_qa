@@ -117,12 +117,12 @@ object transformers {
    * "Which of NP VP", where "which" is the (still determiner) head of the NP.
    */
   def findWhPhrase(tree: DependencyTree): Option[DependencyTree] = {
-    if (isWhWord(tree.token)) {
+    if (tree.isWhPhrase) {
       // We'll check this as a base case; we'll have already caught cases like "which gas", where
       // "gas" is the head, higher up in the tree.
       Some(tree)
     } else {
-      val hasWhChild = tree.children.exists(c => isWhWord(c._1.token) && c._1.children.size == 0)
+      val hasWhChild = tree.children.exists(c => c._2 == "det" && c._1.isWhPhrase && c._1.children.size == 0)
       if (hasWhChild) {
         Some(tree)
       } else {
@@ -137,10 +137,6 @@ object transformers {
         }
       }
     }
-  }
-
-  def isWhWord(token: Token): Boolean = {
-    token.posTag == "WDT"
   }
 
   object UndoPassivization extends BaseTransformer {

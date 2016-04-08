@@ -23,7 +23,7 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
   def isVerb(): Boolean = token.posTag.startsWith("VB")
   def isAdj(): Boolean = token.posTag.startsWith("JJ")
   def isDeterminer(): Boolean = token.posTag.contains("DT")
-  def isWhPhrase(): Boolean = token.posTag == "WDT"
+  def isWhPhrase(): Boolean = token.posTag == "WDT" || token.posTag == "WP"
   def containsWhPhrase(): Boolean = isWhPhrase || children.exists(_._1.containsWhPhrase)
 
   lazy val childLabels = children.map(_._2).toSet
