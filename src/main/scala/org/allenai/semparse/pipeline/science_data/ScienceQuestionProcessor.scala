@@ -20,13 +20,15 @@ class ScienceQuestionProcessor(
   params: JValue,
   fileUtil: FileUtil = new FileUtil
 ) extends Step(Some(params), fileUtil) {
+  implicit val formats = DefaultFormats
   override val name = "Science Question Processor"
 
   val validParams = Seq("question file", "output file")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val questionFile = JsonHelper.extractWithDefault(params, "question file", "data/science_questions.tsv")
-  val outputFile = JsonHelper.extractWithDefault(params, "output file", "data/processed_science_questions.tsv")
+  val questionFile = (params \ "question file").extract[String]
+  val dataName = (params \ "data name").extract[String]
+  val outputFile = s"data/science/$dataName/processed_questions.txt"
 
   override val inputs: Set[(String, Option[Step])] = Set((questionFile, None))
   override val outputs = Set(outputFile)

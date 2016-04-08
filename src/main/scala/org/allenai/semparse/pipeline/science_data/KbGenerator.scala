@@ -18,14 +18,16 @@ class KbGenerator(
 ) extends Step(Some(params), fileUtil) {
   override val name = "KB Generator"
 
-  val validParams = Seq("min np count", "min relation count", "sentences", "output file")
+  val validParams = Seq("min np count", "min relation count", "sentences")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val sentenceProcessor = new ScienceSentenceProcessor(params \ "sentences")
+  val minNpCount = JsonHelper.extractWithDefault(params, "min np count", 25)
+  val minRelationCount = JsonHelper.extractWithDefault(params, "min relation count", 100)
+
+  val dataName = sentenceProcessor.dataName
   val trainingDataFile = sentenceProcessor.outputFile
-  val tripleFile = JsonHelper.extractWithDefault(params, "output file", "data/science_triples.tsv")
-  val minNpCount = JsonHelper.extractWithDefault(params, "min np count", 50)
-  val minRelationCount = JsonHelper.extractWithDefault(params, "min relation count", 500)
+  val tripleFile = s"data/science/$dataName/kb_triples.tsv"
 
   override val inputs: Set[(String, Option[Step])] = Set(
     (trainingDataFile, Some(sentenceProcessor))
@@ -72,7 +74,7 @@ class KbGenerator(
           relationCounts(triple._2) > minRelationCount
       }
     })
-    val outputLines = keptTriples.map(t => s"${t._1}\t${t._3}\t${t._2}").seq
+    val outputLines = keptTriples.map(t => s"${t._1}\t${t._3}\t${t._2}").seq.toSeq.sorted
     fileUtil.writeLinesToFile(tripleFile, outputLines)
   }
 }

@@ -18,18 +18,23 @@ class ScienceSentenceProcessor(
   params: JValue,
   fileUtil: FileUtil = new FileUtil
 ) extends Step(Some(params), fileUtil) {
+  implicit val formats = DefaultFormats
   override val name = "Science Sentence Processor"
 
   val validParams = Seq("min word count per sentence", "max word count per sentence",
-    "data directory", "output file", "output format")
+    "data directory", "data name", "output format")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val dataDir = JsonHelper.extractWithDefault(params, "data directory", "/home/mattg/data/petert_science_sentences")
-  val outputFile = JsonHelper.extractWithDefault(params, "output file", "data/science_sentences_training_data.txt")
+  val dataName = (params \ "data name").extract[String]
+  val dataDir = (params \ "data directory").extract[String]
   val minWordCount = JsonHelper.extractWithDefault(params, "min word count per sentence", 4)
   val maxWordCount = JsonHelper.extractWithDefault(params, "max word count per sentence", 20)
   val formatOptions = Seq("training data", "debug")
   val outputFormat = JsonHelper.extractOptionWithDefault(params, "output format", formatOptions, "training data")
+  val outputFile = outputFormat match {
+    case "training data" => s"data/science/$dataName/training_data.tsv"
+    case "debug" => s"data/science/$dataName/sentence_lfs.txt"
+  }
 
   val numPartitions = 1
 
