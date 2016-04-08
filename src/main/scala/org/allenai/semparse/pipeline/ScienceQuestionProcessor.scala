@@ -10,6 +10,8 @@ import org.allenai.semparse.parse.DependencyTree
 import org.allenai.semparse.parse.LogicalFormGenerator
 import org.allenai.semparse.parse.Predicate
 import org.allenai.semparse.parse.StanfordParser
+import org.allenai.semparse.parse.Token
+import org.allenai.semparse.parse.transformers
 
 case class Answer(text: String, isCorrect: Boolean)
 case class ScienceQuestion(sentences: Seq[String], answers: Seq[Answer])
@@ -35,6 +37,15 @@ class ScienceQuestionProcessor(
   override def _runStep() {
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
     val questions = rawQuestions.map(parseQuestionLine)
+    val filledInAnswers = questions.map(fillInAnswerOptions)
+    val outputLines = filledInAnswers.seq.flatMap(filledInAnswer => {
+      Seq(filledInAnswer._1) ++ filledInAnswer._2.map(answerSentence => {
+        val (text, correct) = answerSentence
+        val correctString = if (correct) "1" else "0"
+        s"$text\t$correctString"
+      })
+    })
+    fileUtil.writeLinesToFile(outputFile, outputLines)
   }
 
   /**
@@ -55,5 +66,37 @@ class ScienceQuestionProcessor(
       Answer(text, isCorrect)
     }).toSeq
     ScienceQuestion(sentences, answers)
+  }
+
+  /**
+   * Takes a question, finds the place where the answer option goes, and fills in that place with
+   * all of the answer options.  The return value is (original question text, Seq(question with
+   * answer filled in)).
+   *
+   * Currently, this just takes the _last sentence_ and tries to fill in the blank (or replace the
+   * wh-phrase).  This will have to change once my model can incorporate the whole question text.
+   */
+  def fillInAnswerOptions(question: ScienceQuestion): (String, Seq[(String, Boolean)]) = {
+    val questionText = question.sentences.mkString(" ")
+    val lastSentence = question.sentences.last
+    val sentenceWithBlank = if (lastSentence.contains("___")) lastSentence else {
+      val parse = parser.parseSentence(lastSentence)
+      parse.dependencyTree match {
+        case None => throw new RuntimeException(s"couldn't parse question: $question")
+        case Some(tree) => {
+          val whPhrase = transformers.findWhPhrase(tree)
+          whPhrase match {
+            case None => throw new RuntimeException(s"question didn't have blank or wh-phrase: $question")
+            case Some(whTree) => {
+              val index = whTree.tokens.map(_.index).min
+              val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
+              transformers.replaceTree(tree, whTree, newTree)._yield + "."
+            }
+          }
+        }
+      }
+    }
+    val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text), a.isCorrect))
+    (questionText, answerSentences)
   }
 }
