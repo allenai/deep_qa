@@ -13,15 +13,16 @@ import org.json4s.native.JsonMethods.parse
 
 class Evaluator(
   methods: Seq[(String, JValue)],
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(None, fileUtil) {
   implicit val formats = DefaultFormats
 
   val testers = methods.map(method => new Tester(method._2, fileUtil))
 
-  override def name = "Evaluator"
+  override val name = "Evaluator"
   override def inputs = testers.map(t => (t.outputFile, Some(t))).toSet
   override def outputs = Set()
+  override val inProgressFile = "results/in_progress"
 
   val cacheFile = "results/cached_results.tsv"
 

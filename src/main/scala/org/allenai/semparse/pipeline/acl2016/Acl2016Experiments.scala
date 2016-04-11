@@ -5,7 +5,11 @@ import org.json4s.JsonDSL._
 
 import org.allenai.semparse.pipeline.base._
 
+import com.mattg.util.FileUtil
+
 object Acl2016Experiments {
+
+  val fileUtil = new FileUtil
 
   // *********************************
   // STEP 1: TRAINING DATA PROCESSING
@@ -184,7 +188,7 @@ object Acl2016Experiments {
       ("distributional-tacl2015-test", oldLfDistributionalModelTaclTestSetParams),
       ("combined-tacl2015-test", oldLfCombinedModelTaclTestSetParams)
     )
-    new Evaluator(methods).runPipeline()
+    new Evaluator(methods, fileUtil).runPipeline()
   }
 
   def runDevSet() {
@@ -193,7 +197,7 @@ object Acl2016Experiments {
       ("distributional-acl2016-dev", newLfDistributionalModelDevSetParams),
       ("combined-acl2016-dev", newLfCombinedModelDevSetParams)
     )
-    new Evaluator(methods).runPipeline()
+    new Evaluator(methods, fileUtil).runPipeline()
   }
 
   def runFinalTestSet() {
@@ -202,7 +206,7 @@ object Acl2016Experiments {
       ("distributional-acl2016", newLfDistributionalModelFinalTestParams),
       ("combined-acl2016", newLfCombinedModelFinalTestParams)
     )
-    new Evaluator(methods).runPipeline()
+    new Evaluator(methods, fileUtil).runPipeline()
   }
 
   def runFinalTestSetOnSampleData() {
@@ -211,6 +215,6 @@ object Acl2016Experiments {
       ("distributional-acl2016-sample", newLfSampleDistributionalModelFinalTestParams),
       ("combined-acl2016-sample", newLfSampleCombinedModelFinalTestParams)
     )
-    new Evaluator(methods).runPipeline()
+    new Evaluator(methods, fileUtil).runPipeline()
   }
 }

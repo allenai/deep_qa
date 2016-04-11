@@ -12,7 +12,7 @@ import org.json4s._
 
 class Trainer(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
@@ -69,14 +69,15 @@ class Trainer(
   // The path to the model file already encodes all of our parameters, really, but this will also
   // check that our data parameters haven't changed (i.e., using a different subset of the data,
   // but calling it by the same name).
-  override def paramFile = serializedModelFile.replace("model.ser", "params.json")
-  override def name = "Model trainer"
-  override def inputs =
+  override val paramFile = serializedModelFile.replace("model.ser", "params.json")
+  override val inProgressFile = serializedModelFile.replace("model.ser", "in_progress")
+  override val name = "Model trainer"
+  override val inputs =
     handwrittenLispFiles.map((_, None)).toSet ++
     Set((sfeSpecFile, None)) ++
     dataFiles.map((_, Some(processor))).toSet ++
     featureFiles.map((_, Some(pmiComputer))).toSet
-  override def outputs = Set(
+  override val outputs = Set(
     serializedModelFile
   )
 

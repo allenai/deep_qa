@@ -18,12 +18,12 @@ case class ScienceQuestion(sentences: Seq[String], answers: Seq[Answer])
 
 class ScienceQuestionProcessor(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
   override val name = "Science Question Processor"
 
-  val validParams = Seq("question file", "output file")
+  val validParams = Seq("question file", "data name")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val questionFile = (params \ "question file").extract[String]
@@ -33,6 +33,7 @@ class ScienceQuestionProcessor(
   override val inputs: Set[(String, Option[Step])] = Set((questionFile, None))
   override val outputs = Set(outputFile)
   override val paramFile = outputFile.replace(".txt", "_params.json")
+  override val inProgressFile = outputFile.replace(".txt", "_in_progress")
 
   val parser = new StanfordParser
 

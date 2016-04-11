@@ -11,7 +11,7 @@ import org.json4s._
 
 class SparkPmiComputer(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
@@ -114,15 +114,16 @@ class SparkPmiComputer(
     (params \ "filtered mid pair feature file").extract[String]  // some S3 URI
   }
 
-  override def paramFile = s"$outDir/pmi_params.json"
-  override def name = "Spark PMI computer"
-  override def inputs = Set(
+  override val paramFile = s"$outDir/pmi_params.json"
+  override val inProgressFile = s"$outDir/pmi_in_progress"
+  override val name = "Spark PMI computer"
+  override val inputs = Set(
     (midMatrixFile, if (runningLocally) Some(featureComputer) else None),
     (midPairMatrixFile, if (runningLocally) Some(featureComputer) else None),
     (midWordFile, if (runningLocally) Some(processor) else None),
     (midPairWordFile, if (runningLocally) Some(processor) else None)
   )
-  override def outputs = Set(
+  override val outputs = Set(
     catWordFeatureFile,
     relWordFeatureFile,
     filteredMidFeatureFile,

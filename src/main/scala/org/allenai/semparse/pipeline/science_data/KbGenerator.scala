@@ -14,26 +14,27 @@ import collection.mutable
  */
 class KbGenerator(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   override val name = "KB Generator"
 
   val validParams = Seq("min np count", "min relation count", "sentences")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val sentenceProcessor = new ScienceSentenceProcessor(params \ "sentences")
+  val sentenceProcessor = new ScienceSentenceProcessor(params \ "sentences", fileUtil)
   val minNpCount = JsonHelper.extractWithDefault(params, "min np count", 25)
   val minRelationCount = JsonHelper.extractWithDefault(params, "min relation count", 100)
 
   val dataName = sentenceProcessor.dataName
   val trainingDataFile = sentenceProcessor.outputFile
-  val tripleFile = s"data/science/$dataName/kb_triples.tsv"
+  val tripleFile = s"data/science/$dataName/triples.tsv"
 
-  override val inputs: Set[(String, Option[Step])] = Set(
+  override def inputs = Set(
     (trainingDataFile, Some(sentenceProcessor))
   )
   override val outputs = Set(tripleFile)
   override val paramFile = tripleFile.replace(".tsv", "_params.json")
+  override val inProgressFile = tripleFile.replace(".tsv", "_in_progress")
 
   override def _runStep() {
     val npCounts = new mutable.HashMap[String, Int].withDefaultValue(0)

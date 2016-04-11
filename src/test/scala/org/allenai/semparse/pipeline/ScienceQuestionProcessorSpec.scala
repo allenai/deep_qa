@@ -3,9 +3,13 @@ package org.allenai.semparse.pipeline.science_data
 import org.scalatest._
 
 import org.json4s._
+import org.json4s.JsonDSL._
+
+import com.mattg.util.FileUtil
 
 class ScienceQuestionProcessorSpec extends FlatSpecLike with Matchers {
-  val processor = new ScienceQuestionProcessor(JNothing)
+  val params: JValue = ("question file" -> "/dev/null") ~ ("data name" -> "test data")
+  val processor = new ScienceQuestionProcessor(params, new FileUtil)
   val questionLine = "B\tSentence 1. Sentence 2 ___. (A) answer 1 (B) answer 2 (C) answer 3 (D) answer 4"
   val question = ScienceQuestion(
     Seq("Sentence 1.", "Sentence 2 ___."),

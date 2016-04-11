@@ -16,7 +16,7 @@ import org.allenai.semparse.parse.StanfordParser
 
 class ScienceSentenceProcessor(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
   override val name = "Science Sentence Processor"
@@ -41,6 +41,7 @@ class ScienceSentenceProcessor(
   override val inputs: Set[(String, Option[Step])] = Set((dataDir, None))
   override val outputs = Set(outputFile)
   override val paramFile = outputs.head.replace(".txt", "_params.json")
+  override val inProgressFile = outputs.head.replace(".txt", "_in_progress")
 
   override def _runStep() {
     val conf = new SparkConf().setAppName(s"Compute PMI")

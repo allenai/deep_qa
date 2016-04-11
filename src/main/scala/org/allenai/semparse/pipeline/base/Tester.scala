@@ -19,7 +19,7 @@ import org.json4s.native.JsonMethods.parse
 // This class performs inference over a test set for a particular experiment configuration.
 class Tester(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
@@ -98,14 +98,15 @@ class Tester(
   }
 
   // At this point we're finally ready to override the Step methods.
-  override def paramFile = outputFile.replace("output.txt", "params.json")
-  override def name = "Model tester"
-  override def inputs =
+  override val paramFile = outputFile.replace("output.txt", "params.json")
+  override val inProgressFile = outputFile.replace("output.txt", "in_progress")
+  override val name = "Model tester"
+  override val inputs =
     handwrittenLispFiles.map((_, None)).toSet ++
     Set((sfeSpecFile, None), (trainingDataFile, None), (queryFile, None)) ++
     dataFiles.map((_, Some(processor))).toSet ++
     Set((serializedModelFile, Some(trainer)))
-  override def outputs = Set(
+  override val outputs = Set(
     outputFile
   )
 

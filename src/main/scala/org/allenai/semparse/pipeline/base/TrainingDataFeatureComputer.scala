@@ -25,7 +25,7 @@ import scala.collection.mutable
 // SfeFeatureComputer.
 class PreFilteredFeatureComputer(
   specFile: String,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) {
   implicit val formats = DefaultFormats
   val params = new SpecFileReader("/dev/null").readSpecFile(specFile)
@@ -93,13 +93,14 @@ class TrainingDataFeatureComputer(
   val midFeatureFile = s"${outDir}/pre_filtered_mid_features.tsv"
   val midPairFeatureFile = s"${outDir}/pre_filtered_mid_pair_features.tsv"
 
-  override def paramFile = s"$outDir/tdfc_params.json"
-  override def name = "Training data feature computer"
+  override val paramFile = s"$outDir/tdfc_params.json"
+  override val inProgressFile = s"$outDir/tdfc_in_progress"
+  override val name = "Training data feature computer"
   override def inputs = Set(
     (midFile, Some(trainingDataProcessor)),
     (midPairFile, Some(trainingDataProcessor))
   )
-  override def outputs = Set(midFeatureFile, midPairFeatureFile)
+  override val outputs = Set(midFeatureFile, midPairFeatureFile)
 
   override def _runStep() {
     processInMemory()

@@ -132,7 +132,7 @@ class TrainingData(
 
 class TrainingDataProcessor(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
@@ -158,10 +158,11 @@ class TrainingDataProcessor(
   val midWordFile = s"$outDir/training_mid_words.tsv"
   val midPairWordFile = s"$outDir/training_mid_pair_words.tsv"
 
-  override def paramFile = s"$outDir/tdp_params.json"
-  override def name = "Training data processor"
+  override val paramFile = s"$outDir/tdp_params.json"
+  override val inProgressFile = s"$outDir/tdp_in_progress"
+  override val name = "Training data processor"
   override def inputs = Set((trainingDataFile, None))
-  override def outputs = Set(
+  override val outputs = Set(
     wordFile,
     entityFile,
     jointEntityFile,

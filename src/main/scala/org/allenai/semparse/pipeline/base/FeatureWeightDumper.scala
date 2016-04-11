@@ -18,7 +18,7 @@ import org.json4s._
 
 class FeatureWeightDumper(
   params: JValue,
-  fileUtil: FileUtil = new FileUtil
+  fileUtil: FileUtil
 ) extends Step(None, fileUtil) {
 
   val trainer = new Trainer(params, fileUtil)
@@ -30,7 +30,8 @@ class FeatureWeightDumper(
   val relWordFile = modelFile.replace("model.ser", "rel_word_feature_weights.txt")
 
   override def inputs = Set((wordFile, None), (modelFile, Some(trainer)))
-  override def outputs = Set(catWordFile, relWordFile)
+  override val outputs = Set(catWordFile, relWordFile)
+  override val inProgressFile = modelFile.replace("model.ser", "dumper_in_progress")
 
   val catWordParamIndex = trainer.modelType match {
     case "formal" => 0
