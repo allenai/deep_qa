@@ -127,7 +127,7 @@ class TrainingDataFeatureComputer(
       println("Computing MID pair features")
       val midPairFeatures = fileUtil.parMapLinesFromFile(midPairFile, (line: String) => {
         val midPair = line
-        val midPairFields = midPair.split(" ")
+        val midPairFields = midPair.split("__##__")
         val mid1 = midPairFields(0)
         val mid2 = midPairFields(1)
         val features = computer.computeMidPairFeatures(mid1, mid2)
@@ -161,7 +161,7 @@ class TrainingDataFeatureComputer(
     fileUtil.parProcessFileInChunks(midPairFile, (lines: Seq[String]) => {
       val midPairFeatures = lines.map(line => {
         val midPair = line
-        val midPairFields = midPair.split(" ")
+        val midPairFields = midPair.split("__##__")
         val mid1 = midPairFields(0)
         val mid2 = midPairFields(1)
         val features = computer.computeMidPairFeatures(mid1, mid2)

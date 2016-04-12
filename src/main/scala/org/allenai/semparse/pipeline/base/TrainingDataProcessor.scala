@@ -11,6 +11,11 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods.parse
 
+// TODO(matt): I don't much care for this import...  The alternative, I think, is to have some kind
+// of registry for Steps, where you can specify which types are available for a Step's
+// dependencies.
+import org.allenai.semparse.pipeline.science_data.ScienceSentenceProcessor
+
 // I was was tired of having such a nasty pipeline of so many different scripts to run to get this
 // working.  So, I moved Jayant's data processing script from python to scala.  I didn't change
 // very much of the code, other than encapsulate the global state into these count objects seen at
@@ -136,10 +141,31 @@ class TrainingDataProcessor(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
-  val validParams = Seq("training data file", "data name", "word count threshold", "lines to use")
+  val validParams = Seq(
+    "training data file",
+    "training data creator",
+    "data name",
+    "word count threshold",
+    "lines to use"
+  )
   JsonHelper.ensureNoExtras(params, "trainer", validParams)
 
-  val trainingDataFile = (params \ "training data file").extract[String]
+  val trainingDataCreator: Option[Step] = (params \ "training data creator") match {
+    case JNothing => None
+    case jval => {
+      (jval \ "type") match {
+        case JString("science sentence processor") => {
+          Some(new ScienceSentenceProcessor(jval.removeField(_._1 == "type"), fileUtil))
+        }
+        case _ => throw new IllegalStateException("unrecognized training data creator")
+      }
+    }
+  }
+  val trainingDataFile = trainingDataCreator match {
+    case None => (params \ "training data file").extract[String]
+    case Some(creator) => creator.outputs.head
+  }
+
   val dataName = (params \ "data name").extract[String]
   val wordCountThreshold = (params \ "word count threshold").extract[Int]
   val linesToUse: Option[Int] = (params \ "lines to use") match {
@@ -161,7 +187,7 @@ class TrainingDataProcessor(
   override val paramFile = s"$outDir/tdp_params.json"
   override val inProgressFile = s"$outDir/tdp_in_progress"
   override val name = "Training data processor"
-  override def inputs = Set((trainingDataFile, None))
+  override def inputs = Set((trainingDataFile, trainingDataCreator))
   override val outputs = Set(
     wordFile,
     entityFile,
@@ -174,7 +200,7 @@ class TrainingDataProcessor(
     midPairWordFile
   )
 
-  val midRegex = "\"/m/[^\"]*\"".r
+  val entityRegex = "\"([^\"]*)\"".r
   val catWordRegex = "word-cat \"([^\"]*)\"".r
   val relWordRegex = "word-rel \"([^\"]*)\"".r
   fileUtil.mkdirs(outDir)
@@ -262,7 +288,20 @@ class TrainingDataProcessor(
     val trainingData = new TrainingDataBuilder
     for (line <- getTrainingFileIterator) {
       val fields = line.split("\t")
-      val mids = fields(0).split(" ")
+      val mids = if (fields(0).isEmpty) {
+        val names = fields(1).split("\" \"")
+        if (names.length == 1) {
+          val mid = names(0).drop(1).dropRight(1)
+          Array(mid)
+        } else {
+          val newNames = new Array[String](2)
+          newNames(0) = names(0).drop(1)
+          newNames(1) = names(1).dropRight(1)
+          newNames
+        }
+      } else {
+        fields(0).split(" ")
+      }
       val catWords = getWordsFromField(fields(2))
       val relWords = getWordsFromField(fields(3))
       val counts = catWords.map(w => wordCounts.getCatWordCount(w)) ++ relWords.map(w => wordCounts.getRelWordCount(w))
@@ -407,7 +446,8 @@ class TrainingDataProcessor(
 
     writer.write("(define training-inputs (array \n")
     for ((logicalForm, json) <- trainingData.getLogicalForms) {
-      val entityNames = midRegex.findAllIn(logicalForm).toSeq
+      val entityPart = logicalForm.substring(logicalForm.indexOf(")"))
+      val entityNames = entityRegex.findAllIn(entityPart).toSeq
       val entityNameSet = entityNames.toSet
       // If this is a rel word, and both arguments are the same entity, skip it.
       if (entityNames.size == entityNameSet.size) {
@@ -421,19 +461,25 @@ class TrainingDataProcessor(
           subbedLogicalForm = subbedLogicalForm.replace(mid, s"$varName $negVarName")
         }
 
-        val word = if (entityNames.size == 1) {
-          catWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
-        } else {
-          relWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
+        try {
+          val word = if (entityNames.size == 1) {
+            catWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
+          } else {
+            relWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
+          }
+          writer.write("(list (quote (lambda ( ")
+          writer.write(varNames.mkString(" "))
+          writer.write(" ) ")
+          writer.write(subbedLogicalForm)
+          writer.write(" )) (list ")
+          writer.write(entityNames.mkString(" "))
+          writer.write(" ) ")
+          writer.write("\"" + word + "\" )\n")
+        } catch {
+          case e: NoSuchElementException => {
+            System.err.println(s"Error processing logical form: $logicalForm, $entityNameSet")
+          }
         }
-        writer.write("(list (quote (lambda ( ")
-        writer.write(varNames.mkString(" "))
-        writer.write(" ) ")
-        writer.write(subbedLogicalForm)
-        writer.write(" )) (list ")
-        writer.write(entityNames.mkString(" "))
-        writer.write(" ) ")
-        writer.write("\"" + word + "\" )\n")
       }
     }
     writer.write("))\n")
@@ -451,7 +497,8 @@ class TrainingDataProcessor(
       val midPairs = relations.map(s => ("\"" + s(1) + "\"", "\"" + s(2) + "\""))
       val arg1s = midPairs.groupBy(_._1).mapValues(_.map(_._2))
       val arg2s = midPairs.groupBy(_._2).mapValues(_.map(_._1))
-      val entityNames = midRegex.findAllIn(logicalForm).toSeq
+      val entityPart = logicalForm.substring(logicalForm.indexOf(")"))
+      val entityNames = entityRegex.findAllIn(entityPart).toSeq
       val entityNameSet = entityNames.toSet
       // If this is a rel word, and both arguments are the same entity, skip it.
       if (entityNames.size == entityNameSet.size) {
@@ -489,7 +536,7 @@ class TrainingDataProcessor(
   }
 
   def outputMidPairList(trainingData: TrainingData) {
-    val midPairs = trainingData.getEntityPairs().toSeq.sorted.map(x => x._1 + " " + x._2)
+    val midPairs = trainingData.getEntityPairs().toSeq.sorted.map(x => x._1 + "__##__" + x._2)
     fileUtil.writeLinesToFile(midPairFile, midPairs)
   }
 
@@ -504,7 +551,7 @@ class TrainingDataProcessor(
   def outputMidPairWordsFile(trainingData: TrainingData) {
     val midPairs = trainingData.getEntityPairs().toSeq.sorted
     val midPairWords = midPairs.map(m => (m, trainingData.getMidPairWords(m))).map(entry => {
-      entry._1._1 + " " + entry._1._2 + "\t" + entry._2.mkString("\t")
+      entry._1._1 + "__##__" + entry._1._2 + "\t" + entry._2.mkString("\t")
     })
     fileUtil.writeLinesToFile(midPairWordFile, midPairWords)
   }

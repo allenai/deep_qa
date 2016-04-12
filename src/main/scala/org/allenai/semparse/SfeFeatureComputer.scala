@@ -63,7 +63,7 @@ class SfeFeatureComputer(specFile: String, dataName: String, fileUtil: FileUtil 
   val defaultWordFeatures = Seq("bias")
 
   // This has to match the separator used in the midPairFeatureFile, or the cache will not work.
-  val entitySeparator = " "
+  val entitySeparator = "__##__"
 
   def getFeaturesForCatWord(word: String): Seq[String] =
     catWordFeatureMap.getFeatures(word, defaultWordFeatures)
