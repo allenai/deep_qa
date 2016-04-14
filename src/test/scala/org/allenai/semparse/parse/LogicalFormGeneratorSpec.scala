@@ -267,4 +267,13 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     )
   }
 
+  it should "work for \"A spam from LOGIC@imneverwrong.com, a particularly blatant crank.\" (weird error)" in {
+    val parse = parser.parseSentence("A spam from LOGIC@imneverwrong.com, a particularly blatant crank.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("from", Seq("spam", "logic@imneverwrong.com, particularly blatant")),
+      Predicate("from", Seq("spam", "logic@imneverwrong.com,")),
+      Predicate("blatant", Seq("logic@imneverwrong.com,"))
+    )
+  }
+
 }

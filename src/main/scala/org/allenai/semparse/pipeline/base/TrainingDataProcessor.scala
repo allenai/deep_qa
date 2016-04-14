@@ -206,21 +206,34 @@ class TrainingDataProcessor(
   fileUtil.mkdirs(outDir)
 
   override def _runStep() {
+    // TODO(matt): this is slow on large files, as all processing is sequential.  Is there some way
+    // to parallelize this?
+    println("Doing initial pass over the training data to get word counts")
     val wordCounts = getWordCountsFromTrainingFile()
+    println("Reading the training data into memory")
     val trainingData = readTrainingData(wordCounts)
 
     // These five lisp files are all used as input to various parts of the semantic parsing code.
+    println("Outputting word.lisp")
     outputWordFile(trainingData, wordCounts)
+    println("Outputting entities.lisp")
     outputEntityFile(trainingData)
+    println("Outputting joint_entities.lisp")
     val queryIndex = outputJointEntityFile(trainingData)
+    println("Outputting predicate_ranking_lf.lisp")
     outputPredicateRankingLogicalForms(trainingData)
+    println("Outputting query_ranking_lf.lisp")
     outputQueryRankingLogicalForms(trainingData, queryIndex)
 
     // And these tsv files are used by the PMI pipeline, and to precompute features for MIDs and
     // MID pairs in the training data.
+    println("Outputting training-mid-words.tsv")
     outputMidWordsFile(trainingData)
+    println("Outputting training-mid-pair-words.tsv")
     outputMidPairWordsFile(trainingData)
+    println("Outputting training-mids.tsv")
     outputMidList(trainingData)
+    println("Outputting training-mid-pairs.tsv")
     outputMidPairList(trainingData)
   }
 
@@ -440,6 +453,16 @@ class TrainingDataProcessor(
     queryIndex.toMap
   }
 
+  def replaceLast(string: String, toReplace: String, replaceWith: String): String = {
+    val lastIndex = string.lastIndexOf(toReplace)
+    if (lastIndex < 0) {
+      string
+    } else {
+      val tail = string.substring(lastIndex).replace(toReplace, replaceWith)
+      string.substring(0, lastIndex) + tail
+    }
+  }
+
   def outputPredicateRankingLogicalForms(trainingData: TrainingData) {
     val writer = fileUtil.getFileWriter(predicateRankingLfFile)
     val entities = trainingData.getEntities
@@ -458,28 +481,22 @@ class TrainingDataProcessor(
           val negVarName = s"neg-var$index"
           varNames += varName
           varNames += negVarName
-          subbedLogicalForm = subbedLogicalForm.replace(mid, s"$varName $negVarName")
+          subbedLogicalForm = replaceLast(subbedLogicalForm, mid, s"$varName $negVarName")
         }
 
-        try {
-          val word = if (entityNames.size == 1) {
-            catWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
-          } else {
-            relWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
-          }
-          writer.write("(list (quote (lambda ( ")
-          writer.write(varNames.mkString(" "))
-          writer.write(" ) ")
-          writer.write(subbedLogicalForm)
-          writer.write(" )) (list ")
-          writer.write(entityNames.mkString(" "))
-          writer.write(" ) ")
-          writer.write("\"" + word + "\" )\n")
-        } catch {
-          case e: NoSuchElementException => {
-            System.err.println(s"Error processing logical form: $logicalForm, $entityNameSet")
-          }
+        val word = if (entityNames.size == 1) {
+          catWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
+        } else {
+          relWordRegex.findFirstMatchIn(subbedLogicalForm).get.group(1)
         }
+        writer.write("(list (quote (lambda ( ")
+        writer.write(varNames.mkString(" "))
+        writer.write(" ) ")
+        writer.write(subbedLogicalForm)
+        writer.write(" )) (list ")
+        writer.write(entityNames.mkString(" "))
+        writer.write(" ) ")
+        writer.write("\"" + word + "\" )\n")
       }
     }
     writer.write("))\n")
@@ -499,30 +516,35 @@ class TrainingDataProcessor(
       val arg2s = midPairs.groupBy(_._2).mapValues(_.map(_._1))
       val entityPart = logicalForm.substring(logicalForm.indexOf(")"))
       val entityNames = entityRegex.findAllIn(entityPart).toSeq
-      val entityNameSet = entityNames.toSet
-      // If this is a rel word, and both arguments are the same entity, skip it.
-      if (entityNames.size == entityNameSet.size) {
-        for (entityName <- entityNames.sorted) {
-          val varName = "var"
-          val negVarName = "neg-var"
-          var subbedLogicalForm = logicalForm.replace(entityName, s"$varName $negVarName")
+      if (entityNames.size > 2) {
+        System.err.println(s"Bad logical form: $logicalForm, $json")
+      } else {
+        val entityNameSet = entityNames.toSet
+        // If this is a rel word, and both arguments are the same entity, skip it.
+        if (entityNames.size == entityNameSet.size) {
+          for (entityName <- entityNames.sorted) {
+            val varName = "var"
+            val negVarName = "neg-var"
+            var subbedLogicalForm = replaceLast(logicalForm, entityName, s"$varName $negVarName")
 
-          for (otherEntity <- entityNames) {
-            subbedLogicalForm = subbedLogicalForm.replace(otherEntity, s"$otherEntity $otherEntity")
+            for (otherEntity <- entityNames) {
+              subbedLogicalForm = subbedLogicalForm.replace(otherEntity, s"$otherEntity $otherEntity")
+              subbedLogicalForm = replaceLast(subbedLogicalForm, otherEntity, s"$varName $negVarName")
+            }
+
+            val arg1Str = "(list " + arg2s.getOrElse(entityName, Set()).toSeq.sorted.mkString(" ") + ")"
+            val arg2Str = "(list " + arg1s.getOrElse(entityName, Set()).toSeq.sorted.mkString(" ") + ")"
+
+            val query = jsonToQuerySeq(json, entityName.replace("\"", ""))
+            val index = queryIndex(query)
+
+            writer.write("(list (quote (lambda (var neg-var) ")
+            writer.write(subbedLogicalForm)
+            writer.write(" )) (list ")
+            writer.write(entityName)
+            writer.write(" ) ")
+            writer.write(arg1Str + "   " + arg2Str + "   " + index + " )\n")
           }
-
-          val arg1Str = "(list " + arg2s.getOrElse(entityName, Set()).toSeq.sorted.mkString(" ") + ")"
-          val arg2Str = "(list " + arg1s.getOrElse(entityName, Set()).toSeq.sorted.mkString(" ") + ")"
-
-          val query = jsonToQuerySeq(json, entityName.replace("\"", ""))
-          val index = queryIndex(query)
-
-          writer.write("(list (quote (lambda (var neg-var) ")
-          writer.write(subbedLogicalForm)
-          writer.write(" )) (list ")
-          writer.write(entityName)
-          writer.write(" ) ")
-          writer.write(arg1Str + "   " + arg2Str + "   " + index + " )\n")
         }
       }
     }

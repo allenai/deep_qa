@@ -20,6 +20,8 @@ object ScienceQuestionPipeline {
   val kbGeneratorParams: JValue = ("sentences" -> sentenceProcessorParams)
 
   val kbGraphCreatorParams: JValue = ("graph name" -> "petert") ~ ("corpus triples" -> kbGeneratorParams)
+  val kbGraphCreatorType: JValue = ("type" -> "kb graph creator")
+  val kbGraphCreatorParamsWithType: JValue = kbGraphCreatorParams merge kbGraphCreatorType
 
   val questionProcesserParams: JValue =
     ("question file" -> "data/monarch_questions/raw_questions.tsv") ~
@@ -34,7 +36,8 @@ object ScienceQuestionPipeline {
 
   val trainingDataFeatureParams: JValue =
     ("training data" -> trainingDataParams) ~
-    ("sfe spec file" -> SFE_SPEC_FILE)
+    ("sfe spec file" -> SFE_SPEC_FILE) ~
+    ("graph creator" -> kbGraphCreatorParamsWithType)
 
   val trainingDataPmiParams: JValue =
     ("training data features" -> trainingDataFeatureParams)

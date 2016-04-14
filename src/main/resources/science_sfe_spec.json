@@ -1,10 +1,10 @@
 {
-  "graph": "/home/mattg/clone/semparse/data/science/graphs/petert/",
+  "graph": "data/science/graphs/petert/",
   "node features": {
     "type": "subgraphs",
     "path finder": {
       "type": "BfsPathFinder",
-      "number of steps": 2
+      "number of steps": 1
     },
     "feature extractors": [
       "PathAndEndNodeFeatureExtractor",
@@ -16,7 +16,7 @@
     "type": "subgraphs",
     "path finder": {
       "type": "BfsPathFinder",
-      "number of steps": 2
+      "number of steps": 1
     },
     "feature extractors": [
       "ConnectedAtOneFeatureExtractor",

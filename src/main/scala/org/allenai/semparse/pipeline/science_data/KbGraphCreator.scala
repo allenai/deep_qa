@@ -31,7 +31,7 @@ class KbGraphCreator(
 
   val graphCreatorParams: JValue =
     ("name" -> graphName) ~
-    ("relation sets" -> List(("is kb" -> false) ~ ("relation file" -> kbGenerator.tripleFile)))
+    ("relation sets" -> List(("is kb" -> true) ~ ("relation file" -> kbGenerator.tripleFile)))
 
   val graphCreatorInputs: Set[(String, Option[Step])] = Set((kbGenerator.tripleFile, Some(kbGenerator)))
 
@@ -39,6 +39,7 @@ class KbGraphCreator(
     override val inputs = graphCreatorInputs
   }
 
+  val graphDir = graphCreator.outdir
   override val inputs: Set[(String, Option[Step])] = Set((s"$baseGraphDir/$graphName/edges.dat", Some(graphCreator)))
   override val outputs = graphCreator.outputs
   override val inProgressFile = s"$baseGraphDir/$graphName/kb_graph_creator_in_progress"

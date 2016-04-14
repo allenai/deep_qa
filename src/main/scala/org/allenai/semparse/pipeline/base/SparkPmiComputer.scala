@@ -47,7 +47,7 @@ class SparkPmiComputer(
   // How many features should we keep per word?
   val featuresPerWord_ = JsonHelper.extractWithDefault(params, "features per word", 100)
 
-  val useSquaredPmi_ = JsonHelper.extractWithDefault(params, "use squared pmi", false)
+  val useSquaredPmi_ = JsonHelper.extractWithDefault(params, "use squared pmi", true)
 
   // You can run this on a cluster, if you want, but then you have to put all of your data on S3,
   // and specify in your experiment configuration where those files are, and get your AWS keys into
