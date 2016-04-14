@@ -135,11 +135,29 @@ object LogicalFormGenerator {
   }
 
   def getLogicForControllingVerb(tree: DependencyTree): Set[Predicate] = {
-    val rootArguments = getVerbArguments(tree)
+    // Control verbs are the only place we're going to try to handle passives without agents.
+    // Passives _with_ agents are handled in the tree transformations, and most other constructions
+    // with "is" or "are" are handled by getLogicForCopula.  Except, in some control sentences, we
+    // actually have two arguments, and one of them is technically the subject of a passive.  We
+    // change that passive into the upper argument of a control verb here.
+    val rootArguments = getVerbArguments(tree).map(arg => {
+      if (arg._2 == "dobj") {
+        (arg._1, "upper_dobj")
+      } else {
+        arg
+      }
+    }) ++ getPassiveSubject(tree).map(arg => (arg._1, "upper_dobj"))
+
     // TODO(matt): I should probably handle this as a map, instead of a find, in case we have
     // both...  I'll worry about that when I see it in a sentence, though.
     val controlledVerb = tree.children.find(c => c._2 == "xcomp" || c._2.startsWith("prepc_")).head
-    val controlledArguments = getVerbArguments(controlledVerb._1)
+    val controlledArguments = getVerbArguments(controlledVerb._1).map(arg => {
+      if (arg._2 == "dobj" && controlledVerb._2 == "xcomp") {
+        (arg._1, "lower_dobj")
+      } else {
+        arg
+      }
+    })
     val arguments = (rootArguments ++ controlledArguments).sortBy(argumentSortKey)
     val combiner = if (controlledVerb._2 == "xcomp") {
       tree.getChildWithLabel("csubj") match {
@@ -165,7 +183,7 @@ object LogicalFormGenerator {
       val tokenWithArg1Prep = if (arg1._2.startsWith("prep_")) {
         val prep = arg1._2.replace("prep_", "")
         token.addPreposition(prep)
-      } else if (arg1._2 == "dobj") {
+      } else if (arg1._2.endsWith("dobj")) {
         token.addPreposition("obj")
       } else if (arg1._2 == "iobj") {
         token.addPreposition("obj2")
@@ -175,6 +193,8 @@ object LogicalFormGenerator {
       val tokenWithArg2Prep = if (arg2._2.startsWith("prep_")) {
         val prep = arg2._2.replace("prep_", "")
         tokenWithArg1Prep.addPreposition(prep)
+      } else if (arg2._2 == "lower_dobj") {
+        tokenWithArg1Prep.addPreposition("obj")
       } else if (arg2._2 == "iobj") {
         tokenWithArg1Prep.addPreposition("obj2")
       } else {
@@ -201,8 +221,10 @@ object LogicalFormGenerator {
       case "nsubj" => 1
       case "csubj" => 2
       case "dobj" => 3
-      case "iobj" => 4
-      case _ => 5
+      case "upper_dobj" => 4
+      case "lower_dobj" => 5
+      case "iobj" => 6
+      case _ => 7
     }
     (sortIndex, label)
   }
@@ -213,6 +235,10 @@ object LogicalFormGenerator {
       label.endsWith("subj") || label == "dobj" || label == "iobj" || label.startsWith("prep_")
     })
     arguments.sortBy(argumentSortKey)
+  }
+
+  def getPassiveSubject(tree: DependencyTree) = {
+    tree.children.filter(_._2 == "nsubjpass")
   }
 
 }
