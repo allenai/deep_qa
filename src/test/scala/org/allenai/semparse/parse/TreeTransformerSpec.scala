@@ -134,6 +134,17 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
 
   )
 
+  "getParent" should "return the correct parent tree" in {
+    val tree = sentenceTrees("This process, photosynthesis, liberates oxygen.")
+    val childTree =
+      DependencyTree(Token("photosynthesis", "NN", "photosynthesis", 4), Seq())
+    val parentTree =
+      DependencyTree(Token("process", "NN", "process", 2), Seq(
+        (DependencyTree(Token("This", "DT", "this", 1), Seq()), "det"),
+        (DependencyTree(Token("photosynthesis", "NN", "photosynthesis", 4), Seq()), "appos")))
+    transformers.getParent(tree, childTree) should be(Some(parentTree))
+  }
+
   "replaceChild" should "leave the rest of the tree intact, and replace one child" in {
     val tree =
       DependencyTree(Token("given", "VBN", "give", 4), Seq(
@@ -230,6 +241,22 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.findWhPhrase(tree2) should be(Some(tree2.children(0)._1))
     val tree3 = sentenceTrees("What is the male part of a flower called?")
     transformers.findWhPhrase(tree3) should be(Some(tree3.children(0)._1))
+  }
+
+  "UndoWhMovement" should "undo wh-movement" in {
+    val tree = sentenceTrees("What is the male part of a flower called?")
+    val expecedTree =
+      DependencyTree(Token("called", "VBN", "call", 8), Seq(
+        (DependencyTree(Token("part", "NN", "part", 3), Seq(
+          (DependencyTree(Token("the", "DT", "the", 1), Seq()), "det"),
+          (DependencyTree(Token("male", "JJ", "male", 2), Seq()), "amod"),
+          (DependencyTree(Token("flower", "NN", "flower", 6), Seq(
+            (DependencyTree(Token("a", "DT", "a", 5), Seq()), "det"))), "prep_of"))), "nsubjpass"),
+        (DependencyTree(Token("is", "VBZ", "be", 7), Seq()), "auxpass"),
+        (DependencyTree(Token("What", "WP", "what", 10), Seq()), "dobj")
+      ))
+
+    transformers.UndoWhMovement.transform(tree) should be(expecedTree)
   }
 
   "UndoPassivization" should "switch nsubjpass to dobj, and agent to nsubj" in {

@@ -89,6 +89,19 @@ object transformers {
   }
 
   /**
+   * Assuming subtree is part of tree, find the parent of subtree in tree.  Returns None if the
+   * subtree is not present or if it is the root.
+   */
+  def getParent(tree: DependencyTree, subtree: DependencyTree): Option[DependencyTree] = {
+    tree.children.find(_._1 == subtree) match {
+      case Some(child) => Some(tree)
+      case None => {
+        tree.children.map(c => getParent(c._1, subtree)).flatten.headOption
+      }
+    }
+  }
+
+  /**
    * Traverses the tree to find matching subtrees, and removes them.
    */
   def removeTree(tree: DependencyTree, treeToRemove: DependencyTree): DependencyTree = {
@@ -223,6 +236,18 @@ object transformers {
       findWhPhrase(tree) match {
         case None => tree
         case Some(whTree) => replaceTree(tree, whTree, replaceWith)
+      }
+    }
+  }
+
+  object UndoWhMovement extends BaseTransformer {
+    def transform(tree: DependencyTree): DependencyTree = {
+      findWhPhrase(tree) match {
+        case None => tree
+        case Some(whTree) => {
+          whTree.print()
+          tree
+        }
       }
     }
   }

@@ -48,8 +48,7 @@ object ScienceQuestionPipeline {
     ("feature computer" -> trainingDataPmiParams)
 
   def main(args: Array[String]) {
-    //new TrainingDataProcessor(trainingDataParams, fileUtil).runPipeline()
-    new Trainer(modelParams, fileUtil).runPipeline()
-    //new ScienceQuestionProcessor(questionProcesserParams, fileUtil).runPipeline()
+    //new Trainer(modelParams, fileUtil).runPipeline()
+    new ScienceQuestionProcessor(questionProcesserParams, fileUtil).runPipeline()
   }
 }

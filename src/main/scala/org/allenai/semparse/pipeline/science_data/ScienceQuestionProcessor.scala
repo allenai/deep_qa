@@ -109,7 +109,7 @@ class ScienceQuestionProcessor(
     } else {
       val parse = parser.parseSentence(lastSentence)
       parse.dependencyTree match {
-        case None => throw new RuntimeException(s"couldn't parse question: $question")
+        case None => { System.err.println(s"couldn't parse question: $question"); return None }
         case Some(tree) => {
           val whPhrase = try {
             transformers.findWhPhrase(tree)
@@ -134,6 +134,10 @@ class ScienceQuestionProcessor(
       }
     }
     val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text), a.isCorrect))
-    Some((questionText, answerSentences))
+    Some((questionText, answerSentences.map(makeAnswerUpperCase)))
+  }
+
+  def makeAnswerUpperCase(answer: (String, Boolean)): (String, Boolean) = {
+    (answer._1.capitalize, answer._2)
   }
 }
