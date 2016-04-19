@@ -527,9 +527,8 @@ class TrainingDataProcessor(
             val negVarName = "neg-var"
             var subbedLogicalForm = replaceLast(logicalForm, entityName, s"$varName $negVarName")
 
-            for (otherEntity <- entityNames) {
-              subbedLogicalForm = subbedLogicalForm.replace(otherEntity, s"$otherEntity $otherEntity")
-              subbedLogicalForm = replaceLast(subbedLogicalForm, otherEntity, s"$varName $negVarName")
+            for (otherEntity <- (entityNameSet - entityName)) {
+              subbedLogicalForm = replaceLast(subbedLogicalForm, otherEntity, s"$otherEntity $otherEntity")
             }
 
             val arg1Str = "(list " + arg2s.getOrElse(entityName, Set()).toSeq.sorted.mkString(" ") + ")"

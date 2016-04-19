@@ -100,19 +100,15 @@ class ScienceSentenceProcessor(
 // This semi-ugliness is so that the spark functions are serializable.
 object Helper {
   val parser = new StanfordParser
+
+  val badChars = Seq("?", "!", ":", ";", "&", "_", "-", "\\", "(", ")", "{", "}", "[", "]", "<", ">", "\"", "'")
   def shouldKeepSentence(sentence: String, minWordCount: Int, maxWordCount: Int): Boolean = {
     val wordCount = sentence.split(" ").length
     if (wordCount < minWordCount) return false
     if (wordCount > maxWordCount) return false
-    if (sentence.endsWith("?") || sentence.endsWith("!")) return false
-    if (sentence.contains(":") || sentence.contains(";") || sentence.contains("&")) return false
-    if (sentence.contains("_")) return false
-    if (sentence.contains("(") || sentence.contains(")")) return false
-    if (sentence.contains("{") || sentence.contains("}")) return false
-    if (sentence.contains("[") || sentence.contains("]")) return false
-    if (sentence.contains(">") || sentence.contains("<") || sentence.contains("-")) return false
-    if (sentence.contains("\"") || sentence.contains("'")) return false
-    if (sentence.contains("&gt;") || sentence.contains("&lt;") || sentence.contains("&quot;")) return false
+    for (char <- badChars) {
+      if (sentence.contains(char)) return false
+    }
     if (hasPronoun(sentence)) return false
     return true
   }

@@ -30,6 +30,7 @@ object ScienceQuestionPipeline {
   val trainingDataParams: JValue =
     ("training data creator" -> sentenceProcessorParamsWithType) ~
     ("data name" -> "science/petert_sentences") ~
+    ("lines to use" -> 700000) ~
     ("word count threshold" -> 5)
 
   val SFE_SPEC_FILE = "src/main/resources/science_sfe_spec.json"

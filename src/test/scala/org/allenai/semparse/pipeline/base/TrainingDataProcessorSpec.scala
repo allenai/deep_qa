@@ -25,6 +25,17 @@ class TrainingDataProcessorSpec extends FlatSpecLike with Matchers {
 ))
 """
 
+  val expectedClueWebQueryLfOutput =
+    """(define training-inputs (array 
+(list (quote (lambda (var neg-var) ((word-rel "discovered_by") var neg-var "/m/03z3fl" "/m/03z3fl") )) (list "/m/01cb_k" ) (list )   (list "/m/03z3fl")   3 )
+(list (quote (lambda (var neg-var) ((word-rel "discovered_by") "/m/01cb_k" "/m/01cb_k" var neg-var) )) (list "/m/03z3fl" ) (list "/m/01cb_k")   (list )   4 )
+(list (quote (lambda (var neg-var) ((word-cat "450") var neg-var) )) (list "/m/052mx" ) (list )   (list )   0 )
+(list (quote (lambda (var neg-var) ((word-cat "town") var neg-var) )) (list "/m/052mx" ) (list )   (list )   0 )
+(list (quote (lambda (var neg-var) ((word-rel "N/N") "/m/0478h" "/m/0478h" var neg-var) )) (list "/m/01dvt" ) (list "/m/0478h")   (list )   2 )
+(list (quote (lambda (var neg-var) ((word-rel "N/N") var neg-var "/m/01dvt" "/m/01dvt") )) (list "/m/0478h" ) (list )   (list "/m/01dvt")   1 )
+))
+"""
+
   val scienceDataFilename = "/science_data_file"
   val scienceDataFileContents =
 """	"spring" "wildflower"		beautiful_with	((word-rel "beautiful_with") "spring" "wildflower")	[["beautiful_with","spring","wildflower in bloom"], ["beautiful_with","spring","wildflower"], ["in","wildflower","bloom"]]	Spring is especially beautiful with the wildflowers in bloom.
@@ -41,6 +52,20 @@ class TrainingDataProcessorSpec extends FlatSpecLike with Matchers {
 (list (quote (lambda ( var0 neg-var0 ) ((word-cat "remediation") var0 neg-var0) )) (list "strategy" ) "remediation" )
 (list (quote (lambda ( var0 neg-var0 var1 neg-var1 ) ((word-rel "lab_for") var0 neg-var0 var1 neg-var1) )) (list "galaxy cluster" "cosmology" ) "lab_for" )
 (list (quote (lambda ( var0 neg-var0 var1 neg-var1 ) ((word-rel "form") var0 neg-var0 var1 neg-var1) )) (list "mold" "form" ) "form" )
+))
+"""
+
+  val expectedScienceQueryLfOutput =
+    """(define training-inputs (array 
+(list (quote (lambda (var neg-var) ((word-rel "beautiful_with") var neg-var "wildflower" "wildflower") )) (list "spring" ) (list )   (list "wildflower")   2 )
+(list (quote (lambda (var neg-var) ((word-rel "beautiful_with") "spring" "spring" var neg-var) )) (list "wildflower" ) (list "spring")   (list )   3 )
+(list (quote (lambda (var neg-var) ((word-rel "contain") var neg-var "yolk" "yolk") )) (list "ovum" ) (list )   (list "yolk")   1 )
+(list (quote (lambda (var neg-var) ((word-rel "contain") "ovum" "ovum" var neg-var) )) (list "yolk" ) (list "ovum")   (list )   5 )
+(list (quote (lambda (var neg-var) ((word-cat "remediation") var neg-var) )) (list "strategy" ) (list )   (list )   0 )
+(list (quote (lambda (var neg-var) ((word-rel "lab_for") "galaxy cluster" "galaxy cluster" var neg-var) )) (list "cosmology" ) (list "galaxy cluster")   (list )   8 )
+(list (quote (lambda (var neg-var) ((word-rel "lab_for") var neg-var "cosmology" "cosmology") )) (list "galaxy cluster" ) (list )   (list "cosmology")   7 )
+(list (quote (lambda (var neg-var) ((word-rel "form") "mold" "mold" var neg-var) )) (list "form" ) (list "mold")   (list )   4 )
+(list (quote (lambda (var neg-var) ((word-rel "form") var neg-var "form" "form") )) (list "mold" ) (list )   (list "form")   6 )
 ))
 """
 
@@ -76,6 +101,32 @@ class TrainingDataProcessorSpec extends FlatSpecLike with Matchers {
     val wordCounts = processor.getWordCountsFromTrainingFile()
     val trainingData = processor.readTrainingData(wordCounts)
     processor.outputPredicateRankingLogicalForms(trainingData)
+    fileUtil.expectFilesWritten()
+  }
+
+  "outputQueryRankingLogicalForms" should "give the correct output on clueweb input" in {
+    val extraParams: JValue = ("training data file" -> clueWebDataFilename)
+    val params = baseParams merge extraParams
+    val fileUtil = getFileUtil()
+    val processor = new TrainingDataProcessor(params, fileUtil)
+    fileUtil.addExpectedFileWritten(processor.queryRankingLfFile, expectedClueWebQueryLfOutput)
+    val wordCounts = processor.getWordCountsFromTrainingFile()
+    val trainingData = processor.readTrainingData(wordCounts)
+    val queryIndex = processor.outputJointEntityFile(trainingData)
+    processor.outputQueryRankingLogicalForms(trainingData, queryIndex)
+    fileUtil.expectFilesWritten()
+  }
+
+  it should "give the correct output on sciece input" in {
+    val extraParams: JValue = ("training data file" -> scienceDataFilename)
+    val params = baseParams merge extraParams
+    val fileUtil = getFileUtil()
+    val processor = new TrainingDataProcessor(params, fileUtil)
+    fileUtil.addExpectedFileWritten(processor.queryRankingLfFile, expectedScienceQueryLfOutput)
+    val wordCounts = processor.getWordCountsFromTrainingFile()
+    val trainingData = processor.readTrainingData(wordCounts)
+    val queryIndex = processor.outputJointEntityFile(trainingData)
+    processor.outputQueryRankingLogicalForms(trainingData, queryIndex)
     fileUtil.expectFilesWritten()
   }
 }
