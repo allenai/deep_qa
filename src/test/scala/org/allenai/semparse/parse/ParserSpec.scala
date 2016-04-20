@@ -67,7 +67,7 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
   }
 
   it should "print my tree" in {
-    parser.parseSentence("How many times does Earth rotate on its axis in one day?").dependencyTree.get.print()
+    parser.parseSentence("Where does most of earth's water reside?").dependencyTree.get.print()
   }
 
   "splitSentences" should "return substrings of the original input" in {

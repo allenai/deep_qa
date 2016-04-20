@@ -124,6 +124,38 @@ object transformers {
   }
 
   /**
+   *  This method looks for children of the given types, and swaps them if found.  In addition, it
+   *  updates the indices of the tokens for all affected nodes.
+   */
+  def swapChildrenOrder(
+    tree: DependencyTree,
+    firstChildLabel: String,
+    secondChildLabel: String
+  ): DependencyTree = {
+    val firstChild = tree.getChildWithLabel(firstChildLabel) match {
+      case None => return tree
+      case Some(c) => (c, firstChildLabel)
+    }
+    val secondChild = tree.getChildWithLabel(secondChildLabel) match {
+      case None => return tree
+      case Some(c) => (c, secondChildLabel)
+    }
+
+    val firstChildIndex = tree.children.indexOf(firstChild)
+    val secondChildIndex = tree.children.indexOf(secondChild)
+    if (firstChildIndex < secondChildIndex) return tree
+
+    // Ok, we found the right children, and they are out of order.  Now we swap them.
+    val childrenBefore = tree.children.take(secondChildIndex)
+    val childrenAfter = tree.children.drop(firstChildIndex + 1)
+    val childrenBetween = tree.children.drop(secondChildIndex + 1).take(firstChildIndex - secondChildIndex - 1)
+    val newChildren = childrenBefore ++ Seq(firstChild) ++ childrenBetween ++ Seq(secondChild) ++ childrenAfter
+
+    // TODO(matt): fix the indices here
+    DependencyTree(tree.token, newChildren)
+  }
+
+  /**
    * Finds the subtree that corresponds to a wh-phrase, which would be replaced if we were turning
    * a question into a declarative sentence.  We currently assume that all wh-phrases are of the
    * form "(Which|What) NP? VP", where "which" or "what" is the (determiner) child of the NP, or
