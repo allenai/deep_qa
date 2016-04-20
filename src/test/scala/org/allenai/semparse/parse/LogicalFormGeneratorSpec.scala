@@ -219,7 +219,23 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   it should "work for \"Diuron works to inhibit photosynthesis.\" (controlled subject)" in {
     val parse = parser.parseSentence("Diuron works to inhibit photosynthesis.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
-      Predicate("work_Csubj_inhibit", Seq("diuron", "photosynthesis"))
+      Predicate("work_Csubj_inhibit_obj", Seq("diuron", "photosynthesis"))
+    )
+  }
+
+  it should "work for \"Sam uses tools to measure things.\" (controlled subject with arguments)" in {
+    val parse = parser.parseSentence("Sam uses tools to measure things.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("use_Csubj_measure", Seq("sam", "tool")),
+      Predicate("use_Csubj_measure_obj", Seq("sam", "thing")),
+      Predicate("use_Csubj_measure_obj_obj", Seq("tool", "thing"))
+    )
+  }
+
+  it should "work for \"Tools are used to measure things.\" (passive controlled subject with arguments)" in {
+    val parse = parser.parseSentence("Tools are used to measure things.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("use_Csubj_measure_obj_obj", Seq("tool", "thing"))
     )
   }
 
@@ -227,6 +243,15 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val parse = parser.parseSentence("Sue asked Bill to stop.")
     LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
       Predicate("ask_Cobj_stop", Seq("sue", "bill"))
+    )
+  }
+
+  it should "work for \"Sue asked Bill to stop the car.\" (controlled object with arguments)" in {
+    val parse = parser.parseSentence("Sue asked Bill to stop the car.")
+    LogicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should contain theSameElementsAs Set(
+      Predicate("ask_Cobj_stop", Seq("sue", "bill")),
+      Predicate("ask_Cobj_stop_obj", Seq("sue", "car")),
+      Predicate("ask_Cobj_stop_obj_obj", Seq("bill", "car"))
     )
   }
 
