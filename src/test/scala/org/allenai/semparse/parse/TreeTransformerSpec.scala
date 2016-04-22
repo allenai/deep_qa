@@ -234,7 +234,7 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.removeTree(tree, toRemove) should be(expectedTree)
   }
 
-  "swapChildrenOrder" should "fix token indices and swap children order" in {
+  "swapChildrenOrder" should "fix token indices and swap children order in a simple example" in {
     val tree =
       DependencyTree(Token("called", "VBN", "call", 5), Seq(
         (DependencyTree(Token("What", "WP", "what", 1), Seq()), "dobj"),
@@ -252,6 +252,21 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.swapChildrenOrder(tree, "nsubjpass", "auxpass") should be(expectedTree)
   }
 
+  it should "work on a more complicated example, too" in {
+    val tree = sentenceTrees("What is the male part of a flower called?")
+    val expectedTree =
+      DependencyTree(Token("called", "VBN", "call", 9), Seq(
+        (DependencyTree(Token("part", "NN", "part", 3), Seq(
+          (DependencyTree(Token("the", "DT", "the", 1), Seq()), "det"),
+          (DependencyTree(Token("male", "JJ", "male", 2), Seq()), "amod"),
+          (DependencyTree(Token("flower", "NN", "flower", 6), Seq(
+            (DependencyTree(Token("a", "DT", "a", 5), Seq()), "det"))), "prep_of"))), "nsubjpass"),
+        (DependencyTree(Token("is", "VBZ", "be", 7), Seq()), "auxpass"),
+        (DependencyTree(Token("What", "WP", "what", 8), Seq()), "dobj")
+      ))
+    transformers.swapChildrenOrder(tree, "nsubjpass", "dobj") should be(expectedTree)
+  }
+
   it should "do nothing if the children aren't found" in {
     val tree = sentenceTrees("What is the male part of a flower called?")
     transformers.swapChildrenOrder(tree, "fake", "dobj") should be(tree)
@@ -261,6 +276,31 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
   it should "do nothing if the children are in the correct order" in {
     val tree = sentenceTrees("What is the male part of a flower called?")
     transformers.swapChildrenOrder(tree, "dobj", "auxpass") should be(tree)
+  }
+
+  "moveHeadToLeftOfChild" should "correctly update token indices in the tree" in {
+    val tree = sentenceTrees("What is the male part of a flower called?")
+    val expectedTree =
+      DependencyTree(Token("called", "VBN", "call", 1), Seq(
+        (DependencyTree(Token("What", "WP", "what", 2), Seq()), "dobj"),
+        (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
+        (DependencyTree(Token("part", "NN", "part", 6), Seq(
+          (DependencyTree(Token("the", "DT", "the", 4), Seq()), "det"),
+          (DependencyTree(Token("male", "JJ", "male", 5), Seq()), "amod"),
+          (DependencyTree(Token("flower", "NN", "flower", 9), Seq(
+            (DependencyTree(Token("a", "DT", "a", 8), Seq()), "det"))), "prep_of"))), "nsubjpass")
+      ))
+    transformers.moveHeadToLeftOfChild(tree, "dobj") should be(expectedTree)
+  }
+
+  it should "do nothing if the head is already on the left" in {
+    val tree = sentenceTrees("Which gas is given off by plants?")
+    transformers.moveHeadToLeftOfChild(tree, "agent") should be(tree)
+  }
+
+  it should "do nothing if the child isn't found" in {
+    val tree = sentenceTrees("Which gas is given off by plants?")
+    transformers.moveHeadToLeftOfChild(tree, "fake") should be(tree)
   }
 
   "findWhPhrase" should "find the correct wh-phrase" in {
@@ -282,9 +322,8 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
           (DependencyTree(Token("flower", "NN", "flower", 6), Seq(
             (DependencyTree(Token("a", "DT", "a", 5), Seq()), "det"))), "prep_of"))), "nsubjpass"),
         (DependencyTree(Token("is", "VBZ", "be", 7), Seq()), "auxpass"),
-        (DependencyTree(Token("What", "WP", "what", 10), Seq()), "dobj")
+        (DependencyTree(Token("What", "WP", "what", 9), Seq()), "dobj")
       ))
-
     transformers.UndoWhMovement.transform(tree) should be(expecedTree)
   }
 

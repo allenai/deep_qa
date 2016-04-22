@@ -16,6 +16,9 @@ case class Token(word: String, posTag: String, lemma: String, index: Int) {
     val newLemma = lemma + "_" + other.lemma
     Token(newWord, posTag, newLemma, index)
   }
+
+  def shiftIndexBy(amount: Int): Token = Token(word, posTag, lemma, index + amount)
+  def withNewIndex(newIndex: Int): Token = Token(word, posTag, lemma, newIndex)
 }
 case class Dependency(head: String, headIndex: Int, dependent: String, depIndex: Int, label: String)
 case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)]) {
@@ -25,6 +28,11 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
   def isDeterminer(): Boolean = token.posTag.contains("DT")
   def isWhPhrase(): Boolean = token.posTag == "WDT" || token.posTag == "WP"
   def containsWhPhrase(): Boolean = isWhPhrase || children.exists(_._1.containsWhPhrase)
+  def shiftIndicesBy(amount: Int): DependencyTree = {
+    DependencyTree(token.shiftIndexBy(amount), children.map(c => (c._1.shiftIndicesBy(amount), c._2)))
+  }
+  def numTokens() = tokensInYield.length
+  def tokenStartIndex() = tokensInYield.map(_.index).min
 
   lazy val childLabels = children.map(_._2).toSet
 

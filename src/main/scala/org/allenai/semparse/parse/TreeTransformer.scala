@@ -124,8 +124,14 @@ object transformers {
   }
 
   /**
-   *  This method looks for children of the given types, and swaps them if found.  In addition, it
-   *  updates the indices of the tokens for all affected nodes.
+   *  This method looks for children with the given labels, and checks to see if they are already
+   *  in the given order.  If both children exist, and they are in the wrong order, it swaps them
+   *  and updates their token indices (and the indices of all intermediate children).
+   *
+   *  Note that this method assumes the children are sorted according to token indices.  This is
+   *  true of a freshly-constructed tree, but it's not necessarily true of a tree that's been
+   *  through some transformations (e.g., the addChild(), replaceChild(), and replaceTree()
+   *  methods).
    */
   def swapChildrenOrder(
     tree: DependencyTree,
@@ -149,10 +155,56 @@ object transformers {
     val childrenBefore = tree.children.take(secondChildIndex)
     val childrenAfter = tree.children.drop(firstChildIndex + 1)
     val childrenBetween = tree.children.drop(secondChildIndex + 1).take(firstChildIndex - secondChildIndex - 1)
-    val newChildren = childrenBefore ++ Seq(firstChild) ++ childrenBetween ++ Seq(secondChild) ++ childrenAfter
 
-    // TODO(matt): fix the indices here
+    // And now we fix the indices.
+    val firstChildStartToken = firstChild._1.tokenStartIndex
+    val secondChildStartToken = secondChild._1.tokenStartIndex
+
+    val shiftDown = secondChildStartToken - firstChildStartToken
+    val newFirstChild = (firstChild._1.shiftIndicesBy(shiftDown), firstChild._2)
+
+    val shiftUp = firstChildStartToken - secondChildStartToken + firstChild._1.numTokens - 1
+    val newSecondChild = (secondChild._1.shiftIndicesBy(shiftUp), secondChild._2)
+
+    val shiftBetween = firstChild._1.numTokens - secondChild._1.numTokens
+    val newChildrenBetween = childrenBetween.map(c => (c._1.shiftIndicesBy(shiftBetween), c._2))
+
+    val newChildren = childrenBefore ++ Seq(newFirstChild) ++ newChildrenBetween ++ Seq(newSecondChild) ++ childrenAfter
+
     DependencyTree(tree.token, newChildren)
+  }
+
+  /**
+   * This method looks for a child with a given label, and checks to see if it is to the left of
+   * the head token (i.e., the child index is lower than the head index).  If it is, we update the
+   * indices of the head token and all other tokens in the tree between the head and the child, so
+   * that the head is immediately to the left of the given child.
+   *
+   *  Note that this method assumes the children are sorted according to token indices.  This is
+   *  true of a freshly-constructed tree, but it's not necessarily true of a tree that's been
+   *  through some transformations (e.g., the addChild(), replaceChild(), and replaceTree()
+   *  methods).
+   */
+  def moveHeadToLeftOfChild(tree: DependencyTree, childLabel: String): DependencyTree = {
+    val child = tree.getChildWithLabel(childLabel) match {
+      case None => return tree
+      case Some(c) => (c, childLabel)
+    }
+    val childStartToken = child._1.tokenStartIndex
+    val headToken = tree.token.index
+
+    if (headToken < childStartToken) return tree
+
+    // Ok, we found the child, and it's on the wrong side of the head.  We need to swap the indices
+    // of the head and the children inbetween the head and this child.
+    val childrenBefore = tree.children.filter(_._1.tokenStartIndex < childStartToken)
+    val childrenAfter = tree.children.filter(_._1.tokenStartIndex > headToken)
+    val childrenBetween = tree.children.filter(c => c._1.tokenStartIndex >= childStartToken && c._1.tokenStartIndex < headToken)
+
+    val newToken = tree.token.withNewIndex(childStartToken)
+    val newChildrenBetween = childrenBetween.map(c => (c._1.shiftIndicesBy(1), c._2))
+    val newChildren = childrenBefore ++ newChildrenBetween ++ childrenAfter
+    DependencyTree(newToken, newChildren)
   }
 
   /**
@@ -273,12 +325,46 @@ object transformers {
   }
 
   object UndoWhMovement extends BaseTransformer {
+    val order = Seq("nsubj", "nsubjpass", "aux", "auxpass", "head", "iobj", "dobj", "advmod")
+    def childSortKey(child: (DependencyTree, String)) = {
+      order.indexOf(child._2) match {
+        case -1 => order.size
+        case i => i
+      }
+    }
+
+    def childrenAreSorted(tree: DependencyTree): Boolean = {
+      val sorted = tree.children.sortBy(childSortKey)
+      tree.children == sorted
+    }
+
+    def findLabelsToSwap(tree: DependencyTree): Option[(String, String)] = {
+      for (i <- 0 until tree.children.size) {
+        val iSortOrder = childSortKey(tree.children(i))
+        for (j <- (i + 1) until tree.children.size) {
+          val jSortOrder = childSortKey(tree.children(j))
+          if (iSortOrder > jSortOrder) return Some((tree.children(j)._2, tree.children(i)._2))
+        }
+      }
+      return None
+    }
+
     def transform(tree: DependencyTree): DependencyTree = {
       findWhPhrase(tree) match {
         case None => tree
         case Some(whTree) => {
-          whTree.print()
-          tree
+          var currentTree = tree
+          while (!childrenAreSorted(currentTree)) {
+            val (firstLabel, secondLabel) = findLabelsToSwap(currentTree) match {
+              case None => throw new RuntimeException("not sure how this happened...")
+              case Some((f, s)) => (f, s)
+            }
+            currentTree = swapChildrenOrder(currentTree, firstLabel, secondLabel)
+          }
+          for (i <- ((order.indexOf("head") + 1) until order.size).reverse) {
+            currentTree = moveHeadToLeftOfChild(currentTree, order(i))
+          }
+          currentTree
         }
       }
     }
