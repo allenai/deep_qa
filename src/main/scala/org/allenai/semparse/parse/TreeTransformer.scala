@@ -20,9 +20,8 @@ object transformers {
    * Replaces the _first_ occurrence of a child with label childLabel with newChild.  This is NOT
    * recursive, and will throw an error if the given child label is not found.
    *
-   * TODO(matt): I may need to change token indices with this, too, as getting the yield of a
-   * dependency tree sorts by token index.  So far I only call yield on NPs, which don't get
-   * modified with these methods, so we should be ok.  But this could be an issue later.
+   * NOTE: calling a yield method after transforming a tree with this is not safe!  It will not
+   * work as you expect, as indices aren't currently updated in this method.
    */
   def replaceChild(
     tree: DependencyTree,
@@ -49,6 +48,9 @@ object transformers {
 
   /**
    * Traverses the tree to find matching subtrees, and replaces them with the given tree.
+   *
+   * NOTE: calling a yield method after transforming a tree with this is not safe!  It will not
+   * work as you expect, as indices aren't currently updated in this method.
    */
   def replaceTree(
     tree: DependencyTree,
@@ -67,8 +69,8 @@ object transformers {
   }
 
   /**
-   * Removes the _first_ occurrence of a child with label childLabel.  ThiNOT recursive, and will
-   * throw an error if the given child label is not found.
+   * Removes the _first_ occurrence of a child with label childLabel.  This is NOT recursive, and
+   * will throw an error if the given child label is not found.
    */
   def removeChild(tree: DependencyTree, childLabel: String): DependencyTree = {
     val childWithIndex = tree.children.zipWithIndex.find(_._1._2 == childLabel)
@@ -171,7 +173,15 @@ object transformers {
 
     val newChildren = childrenBefore ++ Seq(newFirstChild) ++ newChildrenBetween ++ Seq(newSecondChild) ++ childrenAfter
 
-    DependencyTree(tree.token, newChildren)
+    // Finally, check if we need to update the root token index.
+    val rootIndex = tree.token.index
+    val newToken = if (rootIndex > secondChildStartToken && rootIndex < firstChildStartToken) {
+      tree.token.shiftIndexBy(shiftBetween)
+    } else {
+      tree.token
+    }
+
+    DependencyTree(newToken, newChildren)
   }
 
   /**
@@ -257,6 +267,29 @@ object transformers {
           transformChildren(transformed)
         } else {
           transformChildren(tree)
+        }
+      }
+    }
+  }
+
+  object MakeCopulaHead extends BaseTransformer {
+    override def transform(tree: DependencyTree): DependencyTree = {
+      tree.getChildWithLabel("cop") match {
+        case None => tree
+        case Some(cop) => {
+          tree.getChildWithLabel("nsubj") match {
+            case None => tree
+            case Some(nsubj) => {
+              val copulaRemoved = removeChild(tree, "cop")
+              val dobj = removeChild(removeChild(tree, "cop"), "nsubj")
+              val (addFirst, addSecond) = if (dobj.tokenStartIndex < nsubj.tokenStartIndex) {
+                ((dobj, "dobj"), (nsubj, "nsubj"))
+              } else {
+                ((nsubj, "nsubj"), (dobj, "dobj"))
+              }
+              addChild(addChild(cop, addFirst._1, addFirst._2), addSecond._1, addSecond._2)
+            }
+          }
         }
       }
     }

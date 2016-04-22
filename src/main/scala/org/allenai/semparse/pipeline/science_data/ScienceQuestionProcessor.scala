@@ -91,28 +91,17 @@ class ScienceQuestionProcessor(
     // can't deal with it, anyway.
     if (lastSentence.contains("How many")) return None
 
-    // I will handle these soon, but not just yet.  This is "How is" or "How are" questions.
-    if (lastSentence.startsWith("How ")) return None
-
     val sentenceWithBlank = if (lastSentence.contains("___")) {
       lastSentence
-    } else if (lastSentence.startsWith("Where is ") || lastSentence.startsWith("Where are ")) {
-      // A bit hacky, but it's just easier to special case this...
-      val tokens = lastSentence.replace("?", "").split(" ")
-      val copula = tokens(1)
-      val rest = tokens.drop(2)
-      if (question.answers.exists(_.text.startsWith("in "))) {
-        (rest ++ Seq(copula, "___.")).mkString(" ")
-      } else {
-        (rest ++ Seq(copula, "in", "___.")).mkString(" ")
-      }
     } else {
       val parse = parser.parseSentence(lastSentence)
       parse.dependencyTree match {
         case None => { System.err.println(s"couldn't parse question: $question"); return None }
         case Some(tree) => {
+          val fixedCopula = transformers.MakeCopulaHead.transform(tree)
+          val movementUndone = transformers.UndoWhMovement.transform(fixedCopula)
           val whPhrase = try {
-            transformers.findWhPhrase(tree)
+            transformers.findWhPhrase(movementUndone)
           } catch {
             case e: Throwable => {
               System.err.println(s"exception finding wh-phrase: $question")
@@ -122,18 +111,30 @@ class ScienceQuestionProcessor(
           whPhrase match {
             case None => {
               System.err.println(s"question didn't have blank or wh-phrase: $question")
+              movementUndone.print()
               return None
             }
             case Some(whTree) => {
-              val index = whTree.tokens.map(_.index).min
-              val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
-              transformers.replaceTree(tree, whTree, newTree)._yield + "."
+              if (whTree.lemmaYield == "where" && question.answers.exists(!_.text.startsWith("in "))) {
+                // Here we're going to special case "where" questions, because replacing "where"
+                // with the answer requires the insertion of "in", unless the answer already starts
+                // with "in".
+                val movementUndoneSentence = movementUndone._yield
+                // I should be able to do this with a regex, but I couldn't get it to work
+                // immediately, and this works.
+                val toReplace = if (movementUndoneSentence.contains("Where")) "Where" else "where"
+                movementUndoneSentence.replace(toReplace, "in ___.")
+              } else {
+                val index = whTree.tokens.map(_.index).min
+                val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
+                transformers.replaceTree(movementUndone, whTree, newTree)._yield + "."
+              }
             }
           }
         }
       }
     }
-    val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text), a.isCorrect))
+    val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text.toLowerCase), a.isCorrect))
     Some((questionText, answerSentences.map(makeAnswerUpperCase)))
   }
 

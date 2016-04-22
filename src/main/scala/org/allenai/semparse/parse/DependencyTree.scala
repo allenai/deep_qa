@@ -26,7 +26,7 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
   def isVerb(): Boolean = token.posTag.startsWith("VB")
   def isAdj(): Boolean = token.posTag.startsWith("JJ")
   def isDeterminer(): Boolean = token.posTag.contains("DT")
-  def isWhPhrase(): Boolean = token.posTag == "WDT" || token.posTag == "WP"
+  def isWhPhrase(): Boolean = token.posTag == "WDT" || token.posTag == "WP" || token.posTag == "WRB"
   def containsWhPhrase(): Boolean = isWhPhrase || children.exists(_._1.containsWhPhrase)
   def shiftIndicesBy(amount: Int): DependencyTree = {
     DependencyTree(token.shiftIndexBy(amount), children.map(c => (c._1.shiftIndicesBy(amount), c._2)))
@@ -48,6 +48,9 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
             val prep = label.replace("prep_", "")
             val prepToken = Token(prep, "IN", prep, child.token.index - 1)
             Seq(prepToken) ++ child.tokensInYield
+          } else if (label == "poss") {
+            val possToken = Token("'s", "POS", "'s", child.token.index + 1)
+            child.tokensInYield ++ Seq(possToken)
           } else {
             child.tokensInYield
           }
@@ -57,9 +60,9 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
   }
 
   // The initial underscore is because "yield" is a reserved word in scala.
-  lazy val _yield: String = tokensInYield.map(_.word).mkString(" ")
+  lazy val _yield: String = tokensInYield.map(_.word).mkString(" ").replace(" 's ", "'s ")
 
-  lazy val lemmaYield: String = tokensInYield.map(_.lemma).mkString(" ")
+  lazy val lemmaYield: String = tokensInYield.map(_.lemma).mkString(" ").replace(" 's ", "'s ")
 
   lazy val tokens: Seq[Token] = Seq(token) ++ children.flatMap(_._1.tokens)
 

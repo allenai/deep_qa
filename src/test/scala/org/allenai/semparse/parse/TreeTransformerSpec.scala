@@ -267,6 +267,20 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.swapChildrenOrder(tree, "nsubjpass", "dobj") should be(expectedTree)
   }
 
+  it should "update the root's token index if it is between the moved children" in {
+    val tree =
+      DependencyTree(Token("is", "VBZ", "be", 2), Seq(
+        (DependencyTree(Token("What", "WP", "what", 1), Seq()), "dobj"),
+        (DependencyTree(Token("stage", "NN", "stage", 4), Seq(
+          (DependencyTree(Token("the", "DT", "the", 3), Seq()), "det"))), "nsubj")))
+    val expectedTree =
+      DependencyTree(Token("is", "VBZ", "be", 3), Seq(
+        (DependencyTree(Token("stage", "NN", "stage", 2), Seq(
+          (DependencyTree(Token("the", "DT", "the", 1), Seq()), "det"))), "nsubj"),
+        (DependencyTree(Token("What", "WP", "what", 4), Seq()), "dobj")))
+    transformers.swapChildrenOrder(tree, "nsubj", "dobj") should be(expectedTree)
+  }
+
   it should "do nothing if the children aren't found" in {
     val tree = sentenceTrees("What is the male part of a flower called?")
     transformers.swapChildrenOrder(tree, "fake", "dobj") should be(tree)
@@ -325,6 +339,24 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
         (DependencyTree(Token("What", "WP", "what", 9), Seq()), "dobj")
       ))
     transformers.UndoWhMovement.transform(tree) should be(expecedTree)
+  }
+
+  "MakeCopulaHead" should "rotate the tree so the copula is the head" in {
+    val tree =
+      DependencyTree(Token("example", "NN", "example", 4), Seq(
+        (DependencyTree(Token("Photosynthesis", "NN", "photosynthesis", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("is", "VBZ", "be", 2), Seq()), "cop"),
+        (DependencyTree(Token("an", "DT", "a", 3), Seq()), "det"),
+        (DependencyTree(Token("process", "NN", "process", 7), Seq(
+          (DependencyTree(Token("a", "DT", "a", 6), Seq()), "det"))), "prep_of")))
+    val expectedTree =
+      DependencyTree(Token("is", "VBZ", "be", 2), Seq(
+        (DependencyTree(Token("Photosynthesis", "NN", "photosynthesis", 1), Seq()), "nsubj"),
+        (DependencyTree(Token("example", "NN", "example", 4), Seq(
+          (DependencyTree(Token("an", "DT", "a", 3), Seq()), "det"),
+          (DependencyTree(Token("process", "NN", "process", 7), Seq(
+            (DependencyTree(Token("a", "DT", "a", 6), Seq()), "det"))), "prep_of"))), "dobj")))
+    transformers.MakeCopulaHead.transform(tree) should be(expectedTree)
   }
 
   "UndoPassivization" should "switch nsubjpass to dobj, and agent to nsubj" in {
