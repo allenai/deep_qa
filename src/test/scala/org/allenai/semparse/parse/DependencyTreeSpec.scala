@@ -20,6 +20,15 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
       (DependencyTree(Token("water", "NNP", "water", 3), Seq(
         (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "poss"))),"prep_of")))
 
+  val treeWithConjunctions =
+    DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+      (DependencyTree(Token("Water", "NN", "water", 1), Seq(
+        (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "conj_and"),
+        (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "conj_and"))), "nsubj"),
+      (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
+      (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "nsubj"),
+      (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")))
+
   "_yield" should "return all of the tokens in a subtree, sorted by index" in {
     tree._yield should be("People eat good food")
     tree.children(0)._1._yield should be("People")
@@ -31,6 +40,10 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
     np2._yield should be("Most of Earth's water")
   }
 
+  it should "not repeat conjunctions" in {
+    treeWithConjunctions._yield should be("Water, wind and animals cause erosion")
+  }
+
   "lemmaYield" should "return the lemmas of all of the tokens in a subtree, sorted by index" in {
     tree.lemmaYield should be("people eat good food")
     tree.children(0)._1.lemmaYield should be("people")
@@ -40,6 +53,10 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
 
   it should "add back in prepositions and possessives" in {
     np2.lemmaYield should be("most of Earth's water")
+  }
+
+  it should "not repeat conjunctions" in {
+    treeWithConjunctions.lemmaYield should be("water, wind and animal cause erosion")
   }
 
   "simplifications" should "simplify a verb" in {

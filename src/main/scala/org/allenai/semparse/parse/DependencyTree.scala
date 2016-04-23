@@ -36,33 +36,47 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
 
   lazy val childLabels = children.map(_._2).toSet
 
-  // This adds back in tokens for prepositions, which were stripped when using collapsed
-  // dependencies.
+  // This adds back in tokens for prepositions and possessives, which were stripped when using
+  // collapsed dependencies.  And there's a bunch of fancy footwork for dealing with conjunctions,
+  // which are rather complicated to fix given the representation we have...
   lazy val tokensInYield: Seq[Token] = {
-    val trees = (children ++ Seq((this, "self"))).sortBy(_._1.token.index)
+    val normalizedTree = transformers.RemoveConjunctionDuplicates.transform(this)
+    val numberOfConjunctions = normalizedTree.getDescendentsWithLabel("conj_and").size
+    var conjunctionsSeen = 0
+    val trees = (normalizedTree.children ++ Seq((normalizedTree, "self"))).sortBy(_._1.token.index)
+    // NOTE: I'm mutating state in this flatMap!
     trees.flatMap(tree => {
       tree match {
-        case t if t._1 == this => Seq(token)
-        case (child, label) => {
-          if (label.startsWith("prep_")) {
-            val prep = label.replace("prep_", "")
-            val prepToken = Token(prep, "IN", prep, child.token.index - 1)
-            Seq(prepToken) ++ child.tokensInYield
-          } else if (label == "poss") {
-            val possToken = Token("'s", "POS", "'s", child.token.index + 1)
-            child.tokensInYield ++ Seq(possToken)
+        case t if t._1 == normalizedTree => Seq(token)
+        case (child, label) if label.startsWith("prep_") => {
+          val prep = label.replace("prep_", "")
+          val prepToken = Token(prep, "IN", prep, child.token.index - 1)
+          Seq(prepToken) ++ child.tokensInYield
+        }
+        case (child, "poss") => {
+          val possToken = Token("'s", "POS", "'s", child.token.index + 1)
+          child.tokensInYield ++ Seq(possToken)
+        }
+        case (child, "conj_and") => {
+          val conjToken = if (conjunctionsSeen == numberOfConjunctions - 1) {
+            Token("and", "CC", "and", child.token.index - 1)
           } else {
-            child.tokensInYield
+            Token(",", ",", ",", child.token.index - 1)
           }
+          conjunctionsSeen += 1
+          Seq(conjToken) ++ child.tokensInYield
+        }
+        case (child, label) => {
+          child.tokensInYield
         }
       }
     })
   }
 
   // The initial underscore is because "yield" is a reserved word in scala.
-  lazy val _yield: String = tokensInYield.map(_.word).mkString(" ").replace(" 's ", "'s ")
+  lazy val _yield: String = removeExtraSpacesInYield(tokensInYield.map(_.word).mkString(" "))
 
-  lazy val lemmaYield: String = tokensInYield.map(_.lemma).mkString(" ").replace(" 's ", "'s ")
+  lazy val lemmaYield: String = removeExtraSpacesInYield(tokensInYield.map(_.lemma).mkString(" "))
 
   lazy val tokens: Seq[Token] = Seq(token) ++ children.flatMap(_._1.tokens)
 
@@ -83,6 +97,10 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
     } else {
       None
     }
+  }
+
+  def getDescendentsWithLabel(label: String): Seq[DependencyTree] = {
+    children.filter(_._2 == label).map(_._1) ++ children.flatMap(_._1.getDescendentsWithLabel(label))
   }
 
   // Anything not shown here will get removed first, then the things at the beginning of this list.
@@ -107,6 +125,10 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
     for ((child, label) <- children) {
       child._print(level + 1, label)
     }
+  }
+
+  def removeExtraSpacesInYield(yieldStr: String): String = {
+    yieldStr.replace(" 's ", "'s ").replace(" , ", ", ")
   }
 }
 

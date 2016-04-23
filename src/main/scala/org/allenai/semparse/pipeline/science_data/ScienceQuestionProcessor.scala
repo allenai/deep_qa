@@ -86,6 +86,7 @@ class ScienceQuestionProcessor(
   def fillInAnswerOptions(question: ScienceQuestion): Option[(String, Seq[(String, Boolean)])] = {
     val questionText = question.sentences.mkString(" ")
     val lastSentence = question.sentences.last
+    println(s"Working on question: ${question.sentences}")
 
     // I don't want to deal with these questions right now, and the current model of semantics
     // can't deal with it, anyway.
@@ -98,8 +99,14 @@ class ScienceQuestionProcessor(
       parse.dependencyTree match {
         case None => { System.err.println(s"couldn't parse question: $question"); return None }
         case Some(tree) => {
+          //println("Original tree:")
+          //tree.print()
           val fixedCopula = transformers.MakeCopulaHead.transform(tree)
+          //println("Fixed copula tree:")
+          //fixedCopula.print()
           val movementUndone = transformers.UndoWhMovement.transform(fixedCopula)
+          //println("Moved tree:")
+          //movementUndone.print()
           val whPhrase = try {
             transformers.findWhPhrase(movementUndone)
           } catch {
@@ -127,6 +134,7 @@ class ScienceQuestionProcessor(
               } else {
                 val index = whTree.tokens.map(_.index).min
                 val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
+                println(s"Question ${question.sentences} finished")
                 transformers.replaceTree(movementUndone, whTree, newTree)._yield + "."
               }
             }

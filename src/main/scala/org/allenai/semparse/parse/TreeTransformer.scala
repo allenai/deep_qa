@@ -128,7 +128,9 @@ object transformers {
   /**
    *  This method looks for children with the given labels, and checks to see if they are already
    *  in the given order.  If both children exist, and they are in the wrong order, it swaps them
-   *  and updates their token indices (and the indices of all intermediate children).
+   *  and updates their token indices (and the indices of all intermediate children).  This can't
+   *  handle the case where there is more than one child with the same label, however.  For that,
+   *  you have to find the indices yourself and call _swapChildrenOrder.
    *
    *  Note that this method assumes the children are sorted according to token indices.  This is
    *  true of a freshly-constructed tree, but it's not necessarily true of a tree that's been
@@ -152,6 +154,19 @@ object transformers {
     val firstChildIndex = tree.children.indexOf(firstChild)
     val secondChildIndex = tree.children.indexOf(secondChild)
     if (firstChildIndex < secondChildIndex) return tree
+    _swapChildrenOrder(tree, firstChildIndex, secondChildIndex)
+  }
+
+  def _swapChildrenOrder(
+    tree: DependencyTree,
+    firstChildIndex: Int,
+    secondChildIndex: Int
+  ): DependencyTree = {
+
+    if (firstChildIndex < secondChildIndex) return tree
+
+    val firstChild = tree.children(firstChildIndex)
+    val secondChild = tree.children(secondChildIndex)
 
     // Ok, we found the right children, and they are out of order.  Now we swap them.
     val childrenBefore = tree.children.take(secondChildIndex)
@@ -165,7 +180,7 @@ object transformers {
     val shiftDown = secondChildStartToken - firstChildStartToken
     val newFirstChild = (firstChild._1.shiftIndicesBy(shiftDown), firstChild._2)
 
-    val shiftUp = firstChildStartToken - secondChildStartToken + firstChild._1.numTokens - 1
+    val shiftUp = firstChildStartToken - secondChildStartToken + firstChild._1.numTokens - secondChild._1.numTokens
     val newSecondChild = (secondChild._1.shiftIndicesBy(shiftUp), secondChild._2)
 
     val shiftBetween = firstChild._1.numTokens - secondChild._1.numTokens
@@ -322,6 +337,25 @@ object transformers {
     }
   }
 
+  object RemoveConjunctionDuplicates extends BaseTransformer {
+    def removeConjunctionChildren(
+      tree: DependencyTree,
+      conjunctions: Seq[DependencyTree]
+    ): DependencyTree = {
+      val newChildren = tree.children.filterNot(child => {
+        conjunctions.contains(child._1) && child._2 != "conj_and"
+      }).map(child => {
+        (removeConjunctionChildren(child._1, conjunctions), child._2)
+      })
+      DependencyTree(tree.token, newChildren)
+    }
+
+    override def transform(tree: DependencyTree): DependencyTree = {
+      val conjunctionNodes = tree.getDescendentsWithLabel("conj_and")
+      removeConjunctionChildren(tree, conjunctionNodes)
+    }
+  }
+
   /**
    * Removes a few words that are particular to our science questions.  A question will often say
    * something like, "which of the following is the best conductor of electricity?", with answer
@@ -371,28 +405,34 @@ object transformers {
       tree.children == sorted
     }
 
-    def findLabelsToSwap(tree: DependencyTree): Option[(String, String)] = {
+    def findIndicesToSwap(tree: DependencyTree): Option[(Int, Int)] = {
       for (i <- 0 until tree.children.size) {
         val iSortOrder = childSortKey(tree.children(i))
         for (j <- (i + 1) until tree.children.size) {
           val jSortOrder = childSortKey(tree.children(j))
-          if (iSortOrder > jSortOrder) return Some((tree.children(j)._2, tree.children(i)._2))
+          if (iSortOrder > jSortOrder) return Some((j, i))
         }
       }
       return None
     }
 
-    def transform(tree: DependencyTree): DependencyTree = {
+    override def transform(tree: DependencyTree): DependencyTree = {
       findWhPhrase(tree) match {
         case None => tree
         case Some(whTree) => {
-          var currentTree = tree
+          var currentTree = RemoveConjunctionDuplicates.transform(tree)
+          var swaps = 0
           while (!childrenAreSorted(currentTree)) {
-            val (firstLabel, secondLabel) = findLabelsToSwap(currentTree) match {
+            swaps += 1
+            if (swaps > 100) {
+              println("Something is wrong; too many swaps")
+              return tree
+            }
+            val (firstIndex, secondIndex) = findIndicesToSwap(currentTree) match {
               case None => throw new RuntimeException("not sure how this happened...")
               case Some((f, s)) => (f, s)
             }
-            currentTree = swapChildrenOrder(currentTree, firstLabel, secondLabel)
+            currentTree = _swapChildrenOrder(currentTree, firstIndex, secondIndex)
           }
           for (i <- ((order.indexOf("head") + 1) until order.size).reverse) {
             currentTree = moveHeadToLeftOfChild(currentTree, order(i))

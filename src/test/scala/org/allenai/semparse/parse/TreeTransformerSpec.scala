@@ -10,117 +10,61 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     "Cells contain genetic material called DNA." ->
       DependencyTree(Token("contain", "VBP", "contain", 2), Seq(
         (DependencyTree(Token("Cells", "NNS", "cell", 1), Seq()), "nsubj"),
-        (
-          DependencyTree(Token("material", "NN", "material", 4), Seq(
-            (DependencyTree(Token("genetic", "JJ", "genetic", 3), Seq()), "amod"),
-            (
-              DependencyTree(Token("called", "VBN", "call", 5), Seq(
-                (DependencyTree(Token("DNA", "NN", "dna", 6), Seq()), "dobj")
-              )),
-              "vmod"
-            )
-          )),
-          "dobj"
-        )
-      )),
+        (DependencyTree(Token("material", "NN", "material", 4), Seq(
+          (DependencyTree(Token("genetic", "JJ", "genetic", 3), Seq()), "amod"),
+          (DependencyTree(Token("called", "VBN", "call", 5), Seq(
+            (DependencyTree(Token("DNA", "NN", "dna", 6), Seq()), "dobj"))), "vmod"))), "dobj"))),
     "Most of Earth is covered by water." ->
       DependencyTree(Token("covered", "VBN", "cover", 5), Seq(
-        (
-          DependencyTree(Token("Most", "JJS", "most", 1), Seq(
-            (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "prep_of")
-          )),
-          "nsubjpass"
-        ),
+        (DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+          (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "prep_of"))), "nsubjpass"),
         (DependencyTree(Token("is", "VBZ", "be", 4), Seq()), "auxpass"),
-        (DependencyTree(Token("water", "NN", "water", 7), Seq()), "agent")
-      )),
+        (DependencyTree(Token("water", "NN", "water", 7), Seq()), "agent"))),
     "Which gas is given off by plants?" ->
       DependencyTree(Token("given", "VBN", "give", 4), Seq(
-        (
-          DependencyTree(Token("gas", "NN", "gas", 2), Seq(
-            (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det")
-          )),
-          "nsubjpass"
-        ),
+        (DependencyTree(Token("gas", "NN", "gas", 2), Seq(
+          (DependencyTree(Token("Which", "WDT", "which", 1), Seq()), "det"))), "nsubjpass"),
         (DependencyTree(Token("is", "VBZ", "be", 3), Seq()), "auxpass"),
         (DependencyTree(Token("off", "RP", "off", 5), Seq()), "prt"),
-        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent")
-      )),
+        (DependencyTree(Token("plants", "NNS", "plant", 7), Seq()), "agent"))),
     "Which of these is an example of liquid water?" ->
       DependencyTree(Token("is", "VBZ", "be", 4), Seq(
-        (
-          DependencyTree(Token("Which", "WDT", "which", 1), Seq(
-            (DependencyTree(Token("these", "DT", "these", 3), Seq()), "prep_of")
-          )),
-          "dep"
-        ),
-        (
-          DependencyTree(Token("example", "NN", "example", 6), Seq(
-            (DependencyTree(Token("an", "DT", "a", 5), Seq()), "det"),
-            (
-              DependencyTree(Token("water", "NN", "water", 9), Seq(
-                (DependencyTree(Token("liquid", "JJ", "liquid", 8), Seq()), "amod")
-              )),
-              "prep_of"
-            )
-          )),
-          "nsubj"
-        )
-      )),
+        (DependencyTree(Token("Which", "WDT", "which", 1), Seq(
+          (DependencyTree(Token("these", "DT", "these", 3), Seq()), "prep_of"))), "dep"),
+        (DependencyTree(Token("example", "NN", "example", 6), Seq(
+          (DependencyTree(Token("an", "DT", "a", 5), Seq()), "det"),
+          (DependencyTree(Token("water", "NN", "water", 9), Seq(
+            (DependencyTree(Token("liquid", "JJ", "liquid", 8), Seq()), "amod"))), "prep_of"))), "nsubj"))),
     "The seeds of an oak come from the fruit." ->
       DependencyTree(Token("come", "VBN", "come", 6), Seq(
-        (
-          DependencyTree(Token("seeds", "NNS", "seed", 2), Seq(
-            (DependencyTree(Token("The", "DT", "the", 1), Seq()), "det"),
-            (
-              DependencyTree(Token("oak", "NN", "oak", 5), Seq(
-                (DependencyTree(Token("an", "DT", "a", 4), Seq()), "det")
-              )),
-              "prep_of"
-            )
-          )),
-          "nsubj"
-        ),
-        (
-          DependencyTree(Token("fruit", "NN", "fruit", 9), Seq(
-            (DependencyTree(Token("the", "DT", "the", 8), Seq()), "det")
-          )),
-          "prep_from"
-        )
-      )),
+        (DependencyTree(Token("seeds", "NNS", "seed", 2), Seq(
+          (DependencyTree(Token("The", "DT", "the", 1), Seq()), "det"),
+          (DependencyTree(Token("oak", "NN", "oak", 5), Seq(
+            (DependencyTree(Token("an", "DT", "a", 4), Seq()), "det"))), "prep_of"))), "nsubj"),
+        (DependencyTree(Token("fruit", "NN", "fruit", 9), Seq(
+          (DependencyTree(Token("the", "DT", "the", 8), Seq()), "det"))), "prep_from"))),
     "Most erosion at a beach is caused by waves." ->
       DependencyTree(Token("caused", "VBN", "cause", 7), Seq(
-        (
-          DependencyTree(Token("erosion", "NN", "erosion", 2), Seq(
-            (DependencyTree(Token("Most", "JJS", "most", 1), Seq()), "amod"),
-            (DependencyTree(Token("beach", "NN", "beach", 5), Seq(
-              (DependencyTree(Token("a", "DT", "a", 4), Seq()), "det"))), "prep_at")
-          )),
-          "nsubjpass"
-        ),
+        (DependencyTree(Token("erosion", "NN", "erosion", 2), Seq(
+          (DependencyTree(Token("Most", "JJS", "most", 1), Seq()), "amod"),
+          (DependencyTree(Token("beach", "NN", "beach", 5), Seq(
+            (DependencyTree(Token("a", "DT", "a", 4), Seq()), "det"))), "prep_at"))), "nsubjpass"),
         (DependencyTree(Token("is", "VBZ", "be", 6), Seq()), "auxpass"),
-        (DependencyTree(Token("waves", "NNS", "wave", 9), Seq()), "agent")
-      )),
+        (DependencyTree(Token("waves", "NNS", "wave", 9), Seq()), "agent"))),
     "Water, wind and animals cause erosion." ->
       DependencyTree(Token("cause", "VB", "cause", 6), Seq(
-        (
-          DependencyTree(Token("Water", "NN", "water", 1), Seq(
-            (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "conj_and"),
-            (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "conj_and")
-          )),
-          "nsubj"
-        ),
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq(
+          (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "conj_and"),
+          (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "conj_and"))), "nsubj"),
         (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "nsubj"),
         (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "nsubj"),
-        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")
-      )),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj"))),
     "This process, photosynthesis, liberates oxygen." ->
       DependencyTree(Token("liberates", "VBZ", "liberate", 6), Seq(
         (DependencyTree(Token("process", "NN", "process", 2), Seq(
           (DependencyTree(Token("This", "DT", "this", 1), Seq()), "det"),
           (DependencyTree(Token("photosynthesis", "NN", "photosynthesis", 4), Seq()), "appos"))), "nsubj"),
-        (DependencyTree(Token("oxygen", "NN", "oxygen", 7), Seq()), "dobj")
-      )),
+        (DependencyTree(Token("oxygen", "NN", "oxygen", 7), Seq()), "dobj"))),
     "What is the male part of a flower called?" ->
       DependencyTree(Token("called", "VBN", "call", 9), Seq(
         (DependencyTree(Token("What", "WP", "what", 1), Seq()), "dobj"),
@@ -129,8 +73,7 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
           (DependencyTree(Token("the", "DT", "the", 3), Seq()), "det"),
           (DependencyTree(Token("male", "JJ", "male", 4), Seq()), "amod"),
           (DependencyTree(Token("flower", "NN", "flower", 8), Seq(
-            (DependencyTree(Token("a", "DT", "a", 7), Seq()), "det"))), "prep_of"))), "nsubjpass")
-      ))
+            (DependencyTree(Token("a", "DT", "a", 7), Seq()), "det"))), "prep_of"))), "nsubjpass")))
 
   )
 
@@ -326,6 +269,17 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.findWhPhrase(tree3) should be(Some(tree3.children(0)._1))
   }
 
+  "RemoveConjunctionDuplicates" should "remove duplicates in a tree with conjunctions" in {
+    val tree = sentenceTrees("Water, wind and animals cause erosion.")
+    val expectedTree =
+      DependencyTree(Token("cause", "VB", "cause", 6), Seq(
+        (DependencyTree(Token("Water", "NN", "water", 1), Seq(
+          (DependencyTree(Token("wind", "NN", "wind", 3), Seq()), "conj_and"),
+          (DependencyTree(Token("animals", "NNS", "animal", 5), Seq()), "conj_and"))), "nsubj"),
+        (DependencyTree(Token("erosion", "NN", "erosion", 7), Seq()), "dobj")))
+    transformers.RemoveConjunctionDuplicates.transform(tree) should be(expectedTree)
+  }
+
   "UndoWhMovement" should "undo wh-movement" in {
     val tree = sentenceTrees("What is the male part of a flower called?")
     val expecedTree =
@@ -339,6 +293,48 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
         (DependencyTree(Token("What", "WP", "what", 9), Seq()), "dobj")
       ))
     transformers.UndoWhMovement.transform(tree) should be(expecedTree)
+  }
+
+  it should "not get into an infinite loop" in {
+    val tree =
+      DependencyTree(Token("happen", "VB", "happen", 16), Seq(
+        (DependencyTree(Token("cleared", "VBN", "clear", 6), Seq(
+          (DependencyTree(Token("If", "IN", "if", 1), Seq()), "mark"),
+          (DependencyTree(Token("area", "NN", "area", 4), Seq(
+            (DependencyTree(Token("a", "DT", "a", 2), Seq()), "det"),
+            (DependencyTree(Token("wooded", "JJ", "wooded", 3), Seq()), "amod"))), "nsubjpass"),
+          (DependencyTree(Token("is", "VBZ", "be", 5), Seq()), "auxpass"),
+          (DependencyTree(Token("planted", "VBN", "plant", 10), Seq(
+            (DependencyTree(Token("corn", "NN", "corn", 8), Seq()), "nsubjpass"),
+            (DependencyTree(Token("is", "VBZ", "be", 9), Seq()), "auxpass"))), "conj_and"))), "advcl"),
+        (DependencyTree(Token("planted", "VBN", "plant", 10), Seq(
+          (DependencyTree(Token("corn", "NN", "corn", 8), Seq()), "nsubjpass"),
+          (DependencyTree(Token("is", "VBZ", "be", 9), Seq()), "auxpass"))), "advcl"),
+        (DependencyTree(Token("what", "WP", "what", 12), Seq()), "dobj"),
+        (DependencyTree(Token("will", "MD", "will", 13), Seq()), "aux"),
+        (DependencyTree(Token("MOST", "JJS", "most", 14), Seq(
+          (DependencyTree(Token("likely", "JJ", "likely", 15), Seq()), "amod"))), "nsubj")))
+    // Note that the token indices here are off by one in a few places, but the ordering is still
+    // correct.  That is because it's really difficult to handle clause-separating commas
+    // correctly.  They aren't in the dependency tree that Stanford gives us, and I don't want to
+    // bother figuring out where they go.  So, we'll just deal with this numbering oddity, as the
+    // code that uses this should still work if the ordering is correct.
+    val expectedTree =
+      DependencyTree(Token("happen", "VB", "happen", 5), Seq(
+        (DependencyTree(Token("MOST", "JJS", "most", 1), Seq(
+          (DependencyTree(Token("likely", "JJ", "likely", 2), Seq()), "amod"))), "nsubj"),
+        (DependencyTree(Token("will", "MD", "will", 4), Seq()), "aux"),
+        (DependencyTree(Token("what", "WP", "what", 6), Seq()), "dobj"),
+        (DependencyTree(Token("cleared", "VBN", "clear", 12), Seq(
+          (DependencyTree(Token("If", "IN", "if", 7), Seq()), "mark"),
+          (DependencyTree(Token("area", "NN", "area", 10), Seq(
+            (DependencyTree(Token("a", "DT", "a", 8), Seq()), "det"),
+            (DependencyTree(Token("wooded", "JJ", "wooded", 9), Seq()), "amod"))), "nsubjpass"),
+          (DependencyTree(Token("is", "VBZ", "be", 11), Seq()), "auxpass"),
+          (DependencyTree(Token("planted", "VBN", "plant", 16), Seq(
+            (DependencyTree(Token("corn", "NN", "corn", 14), Seq()), "nsubjpass"),
+            (DependencyTree(Token("is", "VBZ", "be", 15), Seq()), "auxpass"))), "conj_and"))), "advcl")))
+    transformers.UndoWhMovement.transform(tree) should be(expectedTree)
   }
 
   "MakeCopulaHead" should "rotate the tree so the copula is the head" in {

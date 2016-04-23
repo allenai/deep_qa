@@ -24,7 +24,7 @@ object ScienceQuestionPipeline {
   val kbGraphCreatorParamsWithType: JValue = kbGraphCreatorParams merge kbGraphCreatorType
 
   val questionProcesserParams: JValue =
-    ("question file" -> "data/monarch_questions/raw_questions.tsv") ~
+    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
     ("data name" -> "monarch_questions")
 
   val trainingDataParams: JValue =
