@@ -86,7 +86,6 @@ class ScienceQuestionProcessor(
   def fillInAnswerOptions(question: ScienceQuestion): Option[(String, Seq[(String, Boolean)])] = {
     val questionText = question.sentences.mkString(" ")
     val lastSentence = question.sentences.last
-    println(s"Working on question: ${question.sentences}")
 
     // I don't want to deal with these questions right now, and the current model of semantics
     // can't deal with it, anyway.
@@ -134,7 +133,6 @@ class ScienceQuestionProcessor(
               } else {
                 val index = whTree.tokens.map(_.index).min
                 val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
-                println(s"Question ${question.sentences} finished")
                 transformers.replaceTree(movementUndone, whTree, newTree)._yield + "."
               }
             }

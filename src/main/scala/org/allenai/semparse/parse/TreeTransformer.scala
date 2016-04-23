@@ -255,7 +255,8 @@ object transformers {
         } else if (successes.size == 1) {
           Some(successes.head)
         } else {
-          throw new IllegalStateException("found multiple wh-phrases - is this a real sentence?")
+          System.err.println(s"found multiple wh-phrases: ${tree._yield}")
+          None
         }
       }
     }
