@@ -141,4 +141,32 @@ class ScienceQuestionProcessorSpec extends FlatSpecLike with Matchers {
     processor.fillInAnswerOptions(question) should be(
       Some(questionText, Seq(("The end stage in a human's life cycle is death.", true))))
   }
+
+  it should "handle agents correctly" in {
+    val questionText = "What is a waste product excreted by lungs?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("carbon dioxide", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("A waste product excreted by lungs is carbon dioxide.", true))))
+  }
+
+  it should "undo movement correctly" in {
+    val questionText = "Which property of air does a barometer measure?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("pressure", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("A barometer does measure pressue.", true))))
+  }
+
+  it should "handle nested wh-phrases" in {
+    val questionText = "Where do plants get energy from to make food?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("the sun", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("Plants do get energy from the sun to make food.", true))))
+  }
+
+  it should "order adjuncts correctly" in {
+    val questionText = "What is the source of energy required to begin photosynthesis?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("sunlight", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("The source of energy required to begin photosynthesis is sunlight.", true))))
+  }
 }

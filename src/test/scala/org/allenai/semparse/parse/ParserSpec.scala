@@ -67,10 +67,8 @@ class StanfordParserSpec extends FlatSpecLike with Matchers {
   }
 
   it should "print my tree" in {
-    parser.parseSentence("Photosynthesis is an example of a process.").dependencyTree.get.print()
-    parser.parseSentence("Robbery is far too frequent today.").dependencyTree.get.print()
-    parser.parseSentence("What is your point?").dependencyTree.get.print()
-    parser.parseSentence("My point is too vague.").dependencyTree.get.print()
+    parser.parseSentence("From which part of the plant does a bee get food?").dependencyTree.get.print()
+    parser.parseSentence("What is a waste product excreted by lungs?").dependencyTree.get.print()
   }
 
   "splitSentences" should "return substrings of the original input" in {
