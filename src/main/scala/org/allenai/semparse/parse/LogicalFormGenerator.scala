@@ -5,6 +5,14 @@ case class Predicate(predicate: String, arguments: Seq[String]) {
     val argString = arguments.mkString(", ")
     s"$predicate(${arguments.mkString(", ")})"
   }
+
+  def toLisp(): String = {
+    arguments.size match {
+      case 1 => "((word-cat \"" + predicate + "\") \"" + arguments(0) + "\")"
+      case 2 => "((word-rel \"" + predicate + "\") \"" + arguments(0) + "\" \"" + arguments(1) + "\")"
+      case _ => throw new IllegalStateException("can't make lisp representation for predicate with more than 2 args")
+    }
+  }
 }
 
 object LogicalFormGenerator {
@@ -78,9 +86,17 @@ object LogicalFormGenerator {
     })
     val relativeClausePredicates = tree.children.filter(_._2 == "rcmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
-      val relativizer = child.children.filter(_._1.token.posTag == "WDT").head._1
-      val relativeClause = transformers.replaceTree(child, relativizer, npWithoutRelative)
-      getLogicForVerb(relativeClause)
+      child.children.filter(_._1.token.posTag == "WDT").headOption match {
+        case None => {
+          System.err.println("Error processing relative clause for tree:")
+          tree.print()
+          Seq()
+        }
+        case Some(relativizer) => {
+          val relativeClause = transformers.replaceTree(child, relativizer._1, npWithoutRelative)
+          getLogicForVerb(relativeClause)
+        }
+      }
     })
     val prepositionPredicates = tree.children.filter(_._2.startsWith("prep_")).flatMap(child => {
       val childTree = child._1

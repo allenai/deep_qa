@@ -86,6 +86,6 @@ class Trainer(
     val extraArgs = Seq(sfeSpecFile, dataName, serializedModelFile)
 
     // Just creating the environment will train and output the model.
-    new Environment(inputFiles, extraArgs, true)
+    new Environment(inputFiles, extraArgs)
   }
 }

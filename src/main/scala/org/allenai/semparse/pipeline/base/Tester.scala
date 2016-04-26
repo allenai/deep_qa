@@ -138,7 +138,7 @@ class Tester(
   }
 
   def _runStep() {
-    val env = new Environment(inputFiles, extraArgs, true)
+    val env = new Environment(inputFiles, extraArgs)
     val writer = fileUtil.getFileWriter(outputFile)
 
     // The test file is a JSON object, which is itself a list of objects containing the query

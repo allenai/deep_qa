@@ -16,11 +16,11 @@ import com.jayantkrish.jklol.util.IndexedList
 // Here, we can similarly run lisp programs, but we keep the environment around for you to
 // programmatically evaluate SExpressions.  Much more handy, I think, for running evaluations, than
 // trying to go through stdin and stdout with AmbLisp.
-class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boolean = false) {
+class Environment(lispFiles: Seq[String], extraArgs: Seq[String]) {
   val symbolTable = AmbEval.getInitialSymbolTable()
   val eval = new AmbEval(symbolTable)
   val parser = ExpressionParser.sExpression(symbolTable)
-  if (verbose) println(s"Reading program files: $lispFiles")
+  println(s"Reading program files: $lispFiles")
   val programExpression = LispUtil.readProgram(lispFiles.asJava, symbolTable)
   val fgBuilder = new ParametricBfgBuilder(true)
   val environment = {
@@ -30,7 +30,7 @@ class Environment(lispFiles: Seq[String], extraArgs: Seq[String], verbose: Boole
     env
   }
 
-  if (verbose) println("Loading initial environment")
+  println("Loading initial environment")
   eval.eval(programExpression, environment, fgBuilder)
 
   def evaluateSExpression(expressionText: String) = {

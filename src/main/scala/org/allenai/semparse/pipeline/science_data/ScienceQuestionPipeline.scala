@@ -10,6 +10,10 @@ import org.allenai.semparse.pipeline.base._
 object ScienceQuestionPipeline {
   val fileUtil = new FileUtil
 
+  //////////////////////////////////////////////////////////
+  // Step 1: Taking sentences and generating training data
+  //////////////////////////////////////////////////////////
+
   val sentenceProcessorParams: JValue =
     ("max word count per sentence" -> 10) ~
     ("data name" -> "petert_sentences") ~
@@ -17,21 +21,29 @@ object ScienceQuestionPipeline {
   val sentenceProcessorType: JValue = ("type" -> "science sentence processor")
   val sentenceProcessorParamsWithType: JValue = sentenceProcessorParams merge sentenceProcessorType
 
+  //////////////////////////////////////////////////////////
+  // Step 2: Generate a KB of triples from the parses above
+  //////////////////////////////////////////////////////////
+
   val kbGeneratorParams: JValue = ("sentences" -> sentenceProcessorParams)
 
   val kbGraphCreatorParams: JValue = ("graph name" -> "petert") ~ ("corpus triples" -> kbGeneratorParams)
   val kbGraphCreatorType: JValue = ("type" -> "kb graph creator")
   val kbGraphCreatorParamsWithType: JValue = kbGraphCreatorParams merge kbGraphCreatorType
 
-  val questionProcesserParams: JValue =
-    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
-    ("data name" -> "monarch_questions")
+  ////////////////////////////////////////////////////////////////
+  // Step 3: Processing the training data into Jayant's lisp files
+  ////////////////////////////////////////////////////////////////
 
   val trainingDataParams: JValue =
     ("training data creator" -> sentenceProcessorParamsWithType) ~
     ("data name" -> "science/petert_sentences") ~
     ("lines to use" -> 700000) ~
     ("word count threshold" -> 5)
+
+  ////////////////////////////////////////////////////////////////
+  // Step 4: Select features for each word
+  ////////////////////////////////////////////////////////////////
 
   val SFE_SPEC_FILE = "src/main/resources/science_sfe_spec.json"
 
@@ -43,12 +55,32 @@ object ScienceQuestionPipeline {
   val trainingDataPmiParams: JValue =
     ("training data features" -> trainingDataFeatureParams)
 
+  ////////////////////////////////////////////////////////////////
+  // Step 5: Train a model
+  ////////////////////////////////////////////////////////////////
+
   val modelParams: JValue =
     ("model type" -> "combined") ~
     ("feature computer" -> trainingDataPmiParams)
 
+  ////////////////////////////////////////////////////////////////
+  // Step 6: Process the questions into logical forms
+  ////////////////////////////////////////////////////////////////
+
+  val questionProcesserParams: JValue =
+    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
+    ("data name" -> "monarch_questions")
+
+  /////////////////////////////////////////////////////////////////////
+  // Step 7: Score the answer options for each question using the model
+  /////////////////////////////////////////////////////////////////////
+
+  val questionScorerParams: JValue =
+    ("questions" -> questionProcesserParams) ~
+    ("model" -> modelParams)
+
   def main(args: Array[String]) {
     //new Trainer(modelParams, fileUtil).runPipeline()
-    new ScienceQuestionProcessor(questionProcesserParams, fileUtil).runPipeline()
+    new ScienceQuestionScorer(questionScorerParams, fileUtil).runPipeline()
   }
 }
