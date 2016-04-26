@@ -46,8 +46,13 @@ class ScienceQuestionProcessor(
       case Some(filledInAnswer) => {
         Seq(filledInAnswer._1) ++ filledInAnswer._2.map(answerSentence => {
           val (text, correct) = answerSentence
+          val parsedAnswerOption = parser.parseSentence(text)
+          val logicalForm = parsedAnswerOption.dependencyTree match {
+            case None => ""
+            case Some(tree) => LogicalFormGenerator.getLogicalForm(tree)
+          }
           val correctString = if (correct) "1" else "0"
-          s"$text\t$correctString"
+          s"$text\t$logicalForm\t$correctString"
         }) ++ Seq("")
       }
     })

@@ -90,8 +90,6 @@ class Tester(
   val outputFile = {
     val ensemble = if (ensembledEvaluation) "ensemble" else "uschema"
     modelType match {
-      // ACK!  I need to make this more general...  The dataset should not be just "large" and
-      // "small"
       case "baseline" => s"results/${testName}/${dataName}/baseline/output.txt"
       case other => s"results/${testName}/${dataName}/${modelType}/${ranking}/${ensemble}/output.txt"
     }
