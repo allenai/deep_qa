@@ -20,8 +20,8 @@ class Trainer(
   JsonHelper.ensureNoExtras(params, "trainer", validParams)
 
   // The parameters we take.
-  val ranking = JsonHelper.extractOptionWithDefault(params, "ranking", Seq("query", "predicate"), "query")
-  val modelType = JsonHelper.extractOption(params, "model type", Seq("distributional", "formal", "combined"))
+  val ranking = JsonHelper.extractChoiceWithDefault(params, "ranking", Seq("query", "predicate"), "query")
+  val modelType = JsonHelper.extractChoice(params, "model type", Seq("distributional", "formal", "combined"))
 
   // A few necessary things from previous steps.
   val pmiComputer = new SparkPmiComputer(params \ "feature computer", fileUtil)

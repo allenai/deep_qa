@@ -75,13 +75,31 @@ class ScienceQuestionScorer(
     // Here we just need to iterate over the questions in the question file, score each of the
     // answer options, and output a file with the scores.
     val questions = readQuestionFile()
+    println(s"Found ${questions.size} questions")
     val env = new Environment(inputFiles, extraArgs)
 
+    val out = fileUtil.getFileWriter(outputFile)
+    for (question <- questions) {
+      val scores = scoreQuestion(question, env)
+      out.write(question.text)
+      out.write("\n")
+      for ((answer, score) <- scores) {
+        val text = answer.text
+        val logicalForm = answer.logicalForm
+        val correctString = if (answer.correct) "1" else "0"
+        out.write(s"$text\t$logicalForm\t$correctString\t$score\n")
+      }
+      out.write("\n")
+    }
+    out.close()
+    /*
+    println("Scoring questions")
     val scores = questions.par.map(question => {
       val score = scoreQuestion(question, env)
       (question, score)
     })
 
+    println("Outputting results")
     val outputLines = scores.flatMap(questionAndScores => {
       val (question, scores) = questionAndScores
       Seq(question.text) ++ scores.map(answerAndScore => {
@@ -93,6 +111,7 @@ class ScienceQuestionScorer(
       }) ++ Seq("")
     }).seq
     fileUtil.writeLinesToFile(outputFile, outputLines)
+    */
   }
 
   def scoreQuestion(question: ProcessedQuestion, env: Environment): Seq[(ProcessedAnswer, Double)] = {
@@ -124,6 +143,7 @@ class ScienceQuestionScorer(
         case Some(text) => {
           if (line.isEmpty) {
             val question = ProcessedQuestion(text, answers.toSeq)
+            questions += question
             questionText = None
             answers.clear()
           } else {

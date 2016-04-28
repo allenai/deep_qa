@@ -29,8 +29,8 @@ class ScienceSentenceProcessor(
   val dataDir = (params \ "data directory").extract[String]
   val minWordCount = JsonHelper.extractWithDefault(params, "min word count per sentence", 4)
   val maxWordCount = JsonHelper.extractWithDefault(params, "max word count per sentence", 20)
-  val formatOptions = Seq("training data", "debug")
-  val outputFormat = JsonHelper.extractOptionWithDefault(params, "output format", formatOptions, "training data")
+  val formatChoices = Seq("training data", "debug")
+  val outputFormat = JsonHelper.extractChoiceWithDefault(params, "output format", formatChoices, "training data")
   val outputFile = outputFormat match {
     case "training data" => s"data/science/$dataName/training_data.tsv"
     case "debug" => s"data/science/$dataName/sentence_lfs.txt"
@@ -60,6 +60,8 @@ class ScienceSentenceProcessor(
       maxWordCount,
       outputFormat
     )
+
+    sc.stop()
   }
 
   def parseSentences(

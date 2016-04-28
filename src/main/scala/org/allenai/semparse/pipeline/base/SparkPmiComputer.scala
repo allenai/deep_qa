@@ -181,6 +181,8 @@ class SparkPmiComputer(
       relWordFeatureFile,
       filteredMidPairFeatureFile
     )
+
+    sc.stop()
   }
 
   def computePmi(

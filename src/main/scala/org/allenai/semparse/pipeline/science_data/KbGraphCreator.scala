@@ -20,20 +20,34 @@ class KbGraphCreator(
 
   override val name = "KB Graph Creator"
 
-  // TODO(matt): allow other relation sets.
-  val validParams = Seq("graph name", "corpus triples")
+  val validParams = Seq("graph name", "corpus triples", "relation sets")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val kbGenerator = new KbGenerator(params \ "corpus triples", fileUtil)
+  val corpusRelationSet: Option[(JValue, (String, Option[Step]))] = (params \ "corpus triples") match {
+    case JNothing => None
+    case jval => {
+      val kbGenerator = new KbGenerator(jval, fileUtil)
+      val paramsForGraph: JValue = ("is kb" -> true) ~ ("relation file" -> kbGenerator.tripleFile)
+      Some((paramsForGraph, (kbGenerator.tripleFile, Some(kbGenerator))))
+    }
+  }
+  val suppliedRelationSetFiles = JsonHelper.extractWithDefault(params, "relation sets", Seq[String]())
+  val suppliedRelationSets: Seq[(JValue, (String, Option[Step]))] = {
+    suppliedRelationSetFiles.map(file => {
+      val paramsForGraph: JValue = ("is kb" -> true) ~ ("relation file" -> file)
+      (paramsForGraph, (file, None))
+    })
+  }
+  val relationSets = corpusRelationSet.toSeq ++ suppliedRelationSets
   val graphName = (params \ "graph name").extract[String]
   val baseGraphDir = "data/science/graphs"
   val outputter = Outputter.justLogger
 
   val graphCreatorParams: JValue =
     ("name" -> graphName) ~
-    ("relation sets" -> List(("is kb" -> true) ~ ("relation file" -> kbGenerator.tripleFile)))
+    ("relation sets" -> relationSets.map(_._1))
 
-  val graphCreatorInputs: Set[(String, Option[Step])] = Set((kbGenerator.tripleFile, Some(kbGenerator)))
+  val graphCreatorInputs: Set[(String, Option[Step])] = relationSets.map(_._2).toSet
 
   val graphCreator = new GraphCreator(baseGraphDir, graphCreatorParams, outputter, fileUtil) {
     override val inputs = graphCreatorInputs
