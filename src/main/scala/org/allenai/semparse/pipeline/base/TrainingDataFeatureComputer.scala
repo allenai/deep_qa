@@ -46,14 +46,14 @@ class PreFilteredFeatureComputer(
     relation,
     relationMetadata,
     outputter,
-    fileUtil
+    fileUtil = fileUtil
   )
   val nodePairFeatureGenerator = new NodePairSubgraphFeatureGenerator(
     params \ "node pair features",
     relation,
     relationMetadata,
     outputter,
-    fileUtil
+    fileUtil = fileUtil
   )
 
   def computeMidFeatures(mid: String): Seq[String] = {
