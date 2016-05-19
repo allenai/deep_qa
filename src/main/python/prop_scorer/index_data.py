@@ -31,17 +31,21 @@ class DataIndexer(object):
 
     def corrupt_indices(self, indices, num_locs=1):
         c_inds = []
+        inds_to_ignore = set([0])
+        for tok in [",", "(", ")", "."]:
+            if tok in self.word_index:
+                inds_to_ignore.add(self.word_index[tok])
         for ind in indices:
-            ind_start = 0
-            for i in ind:
-                if i == 0:
-                    ind_start += 1
-                else:
-                    break
             c_ind = list(ind)
-            for _ in range(num_locs):
-                rand_loc = random.randint(ind_start, len(ind)-1)
-                rand_i = random.randint(1, len(self.word_index))
+            corr_locs = 0
+            while corr_locs < num_locs:
+                rand_loc = random.randint(0, len(ind)-1)
+                if c_ind[rand_loc] in inds_to_ignore:
+                    continue
+                rand_i = 0
+                while rand_i in inds_to_ignore:
+                    rand_i = random.randint(1, len(self.word_index)-1)
                 c_ind[rand_loc] = rand_i
+                corr_locs += 1
             c_inds.append(c_ind)
         return c_inds

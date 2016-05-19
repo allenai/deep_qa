@@ -67,7 +67,7 @@ if __name__=="__main__":
     lines = [x.strip() for x in open(args.train_file).readlines()]
     test_lines = [x.strip() for x in open(args.test_file).readlines()]
     di = DataIndexer()
-    inds = di.pad_indices(di.get_indices(lines))
+    inds = di.get_indices(lines)
     test_inds = di.pad_indices(di.get_indices(test_lines), maxlen=len(inds[0]))
     corrupt_inds = di.corrupt_indices(inds)
     g_inds = numpy.asarray(inds, dtype='int32')
