@@ -2,6 +2,7 @@ package org.allenai.semparse.one_off
 
 import org.scalatest._
 
+import org.allenai.semparse.parse.Atom
 import org.allenai.semparse.parse.Predicate
 
 class debug_format_to_training_data_spec extends FlatSpecLike with Matchers {
@@ -9,8 +10,8 @@ class debug_format_to_training_data_spec extends FlatSpecLike with Matchers {
   "parseDebugLine" should "correctly process the line" in {
     val line = "Photosynthesis is ... -> spread_in(photosynthesis, nature) test(args)"
     val sentence = "Photosynthesis is ..."
-    val predicates = Set(Predicate("spread_in", Seq("photosynthesis", "nature")),
-      Predicate("test", Seq("args")))
+    val predicates = Set(Predicate("spread_in", Seq(Atom("photosynthesis"), Atom("nature"))),
+      Predicate("test", Seq(Atom("args"))))
     debug_format_to_training_data.parseDebugLine(line) should be((sentence, predicates))
   }
 

@@ -2,14 +2,15 @@ package org.allenai.semparse.pipeline.science_data
 
 import org.scalatest._
 
+import org.allenai.semparse.parse.Atom
 import org.allenai.semparse.parse.Predicate
 
 class ScienceSentenceProcessorSpec extends FlatSpecLike with Matchers {
   "logicalFormToTrainingData" should "produce correct output when the entities have commas" in {
     val predicates = Set(
-      Predicate("from", Seq("spam", "logic@imneverwrong.com, particularly blatant")),
-      Predicate("from", Seq("spam", "logic@imneverwrong.com,")),
-      Predicate("blatant", Seq("logic@imneverwrong.com,"))
+      Predicate("from", Seq(Atom("spam"), Atom("logic@imneverwrong.com, particularly blatant"))),
+      Predicate("from", Seq(Atom("spam"), Atom("logic@imneverwrong.com,"))),
+      Predicate("blatant", Seq(Atom("logic@imneverwrong.com,")))
     )
     val sentence = "sentence"
 

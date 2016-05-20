@@ -1,20 +1,5 @@
 package org.allenai.semparse.parse
 
-case class Predicate(predicate: String, arguments: Seq[String]) {
-  override def toString(): String = {
-    val argString = arguments.mkString(", ")
-    s"$predicate(${arguments.mkString(", ")})"
-  }
-
-  def toLisp(): String = {
-    arguments.size match {
-      case 1 => "((word-cat \"" + predicate + "\") \"" + arguments(0) + "\")"
-      case 2 => "((word-rel \"" + predicate + "\") \"" + arguments(0) + "\" \"" + arguments(1) + "\")"
-      case _ => throw new IllegalStateException("can't make lisp representation for predicate with more than 2 args")
-    }
-  }
-}
-
 object LogicalFormGenerator {
 
   // TODO(matt): At some point I'm going to have to make this return a Logic argument, instead of
@@ -70,7 +55,7 @@ object LogicalFormGenerator {
 
   def getLogicForOther(tree: DependencyTree): Set[Predicate] = {
     val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
-      Predicate(child.token.lemma, Seq(tree.token.lemma))
+      Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
     }).toSet
     val reducedRelativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
@@ -106,7 +91,7 @@ object LogicalFormGenerator {
       for (simplifiedTree <- withoutPrep.simplifications;
            simplifiedChild <- childTree.simplifications;
            subj = simplifiedTree.lemmaYield;
-           arg = simplifiedChild.lemmaYield) yield Predicate(prep, Seq(subj, arg))
+           arg = simplifiedChild.lemmaYield) yield Predicate(prep, Seq(Atom(subj), Atom(arg)))
     })
     adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
   }
@@ -137,7 +122,7 @@ object LogicalFormGenerator {
       }
       case Some(child) => {
         for (simplified <- child.simplifications)
-          yield Predicate("exists", Seq(simplified.lemmaYield))
+          yield Predicate("exists", Seq(Atom(simplified.lemmaYield)))
       }
     }
   }
@@ -227,7 +212,7 @@ object LogicalFormGenerator {
       for (subjTree <- arguments(0)._1.simplifications;
            subj = subjTree.lemmaYield;
            objTree <- arguments(1)._1.simplifications;
-           obj = objTree.lemmaYield) yield Predicate(token.lemma, Seq(subj, obj))
+           obj = objTree.lemmaYield) yield Predicate(token.lemma, Seq(Atom(subj), Atom(obj)))
     logic.toSet
   }
 
