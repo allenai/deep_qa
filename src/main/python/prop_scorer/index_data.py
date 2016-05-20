@@ -5,18 +5,25 @@ class DataIndexer(object):
     def __init__(self):
         self.word_index = {"PADDING":0}
 
-    def get_indices(self, lines, pad=True):
+    def get_indices(self, lines, pad=True, separate_props=True):
         indices = []
+        part_lens = []
         for line in lines:
-            words = word_tokenize(line.lower())
-            for word in words:
-                if word not in self.word_index:
-                    self.word_index[word] = len(self.word_index)
-            indices.append([self.word_index[word] for word in words])
+            if separate_props:
+                line_parts = line.split(";")
+            else:
+                line_parts = [line]
+            part_lens.append(len(line_parts))
+            for part in line_parts:
+                words = word_tokenize(part.lower())
+                for word in words:
+                    if word not in self.word_index:
+                        self.word_index[word] = len(self.word_index)
+                indices.append([self.word_index[word] for word in words])
         if pad:
-            return self.pad_indices(indices)
+            return part_lens, self.pad_indices(indices)
         else:
-            return indices
+            return part_lens, indices
 
     def pad_indices(self, indices, maxlen=None):
         if maxlen is None:
@@ -25,7 +32,8 @@ class DataIndexer(object):
         for ind in indices:
             p_ind = [0]*maxlen
             ind_len = min(len(ind), maxlen)
-            p_ind[-ind_len:] = ind[-ind_len:]
+            if ind_len != 0:
+                p_ind[-ind_len:] = ind[-ind_len:]
             padded_indices.append(p_ind)
         return padded_indices
 

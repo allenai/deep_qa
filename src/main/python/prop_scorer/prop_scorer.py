@@ -67,16 +67,25 @@ if __name__=="__main__":
     lines = [x.strip() for x in open(args.train_file).readlines()]
     test_lines = [x.strip() for x in open(args.test_file).readlines()]
     di = DataIndexer()
-    inds = di.get_indices(lines)
-    test_inds = di.pad_indices(di.get_indices(test_lines), maxlen=len(inds[0]))
+    _, inds = di.get_indices(lines, separate_props=False)
+    test_prop_lens, test_inds = di.get_indices(test_lines)
+    maxlen = max(len(inds[0]), len(test_inds[0]))
+    inds = di.pad_indices(inds, maxlen=maxlen)
+    test_inds = di.pad_indices(test_inds, maxlen=maxlen)
     corrupt_inds = di.corrupt_indices(inds)
     g_inds = numpy.asarray(inds, dtype='int32')
     b_inds = numpy.asarray(corrupt_inds, dtype='int32')
     test_inds = numpy.asarray(test_inds, dtype='int32')
-    vocab_size = max(g_inds.max(), test_inds.max()) + 1
+    vocab_size = max(g_inds.max(), b_inds.max(), test_inds.max()) + 1
     ps = PropScorer()
     ps.train(g_inds, b_inds, vocab_size=vocab_size)
-    test_scores = ps.score(test_inds)
+    test_all_prop_scores = ps.score(test_inds)
+    test_scores = []
+    t_ind = 0
+    for prop_len in test_prop_lens:
+        test_scores.append(test_all_prop_scores[t_ind:t_ind+prop_len].sum())
+        t_ind += prop_len
+    assert len(test_scores) == len(test_lines)
     outfile = open("out.txt", "w")
     for score, line in zip(test_scores, test_lines):
         print >>outfile, score, line
