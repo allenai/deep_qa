@@ -9,7 +9,7 @@ class LogicalFormGenerator(params: JValue) {
   val validParams = Seq("nested", "split trees")
   JsonHelper.ensureNoExtras(params, "LogicalFormGenerator", validParams)
 
-  val nestLogicalForms = JsonHelper.extractWithDefault(params, "nested", true)
+  val nestLogicalForms = JsonHelper.extractWithDefault(params, "nested", false)
   val shouldSplitTrees = JsonHelper.extractWithDefault(params, "split trees", true)
 
   def getLogicalForm(tree: DependencyTree): Option[Logic] = {
@@ -47,9 +47,50 @@ class LogicalFormGenerator(params: JValue) {
     } else {
       getLogicForOther(tree)
     }
-    val childLogic = tree.children.map(_._1).flatMap(_getLogicForNode)
-    val combined = logicForNode.toSet ++ childLogic.toSet
+    val childLogic = if (nestLogicalForms) Set() else tree.children.map(_._1).flatMap(_getLogicForNode)
+    val combined = logicForNode.toSet ++ childLogic
     if (combined.isEmpty) None else Some(Conjunction(combined))
+  }
+
+  /**
+   * Predicates are the main logic item we have.  This actually constructs Predicate objects.
+   * There shouldn't be any other place in the code where we construct a Predicate, besides these
+   * two methods.
+   *
+   * The reason we put it here is that we want to have a single switch for how we treat these
+   * things.  Either we can have a bunch of conjoined simplifications, or we can have nested
+   * predicates.
+   */
+  def getLogicForBinaryPredicate(
+    predicate: String,
+    arg1: DependencyTree,
+    arg2: DependencyTree
+  ): Option[Logic] = {
+    if (nestLogicalForms) {
+      val arg1Logic = _getLogicForNode(arg1)
+      val arg2Logic = _getLogicForNode(arg2)
+      arg1Logic.flatMap(arg1 => arg2Logic.map(arg2 => Predicate(predicate, Seq(arg1, arg2))))
+    } else {
+      val predicates: Set[Logic] = for (simplifiedArg1 <- arg1.simplifications;
+           simplifiedArg2 <- arg2.simplifications;
+           arg1 = simplifiedArg1.lemmaYield;
+           arg2 = simplifiedArg2.lemmaYield) yield Predicate(predicate, Seq(Atom(arg1), Atom(arg2)))
+      Some(Conjunction(predicates))
+    }
+  }
+
+  def getLogicForUnaryPredicate(
+    predicate: String,
+    arg: DependencyTree
+  ): Option[Logic] = {
+    if (nestLogicalForms) {
+      val argLogic = _getLogicForNode(arg)
+      argLogic.map(arg => Predicate(predicate, Seq(arg)))
+    } else {
+      val predicates: Set[Logic] = for (simplifiedArg <- arg.simplifications;
+           arg = simplifiedArg.lemmaYield) yield Predicate(predicate, Seq(Atom(arg)))
+      Some(Conjunction(predicates))
+    }
   }
 
   def isCopula(tree: DependencyTree): Boolean = {
@@ -102,10 +143,7 @@ class LogicalFormGenerator(params: JValue) {
       val label = child._2
       val prep = label.replace("prep_", "")
       val withoutPrep = transformers.removeTree(tree, childTree)
-      for (simplifiedTree <- withoutPrep.simplifications;
-           simplifiedChild <- childTree.simplifications;
-           subj = simplifiedTree.lemmaYield;
-           arg = simplifiedChild.lemmaYield) yield Predicate(prep, Seq(Atom(subj), Atom(arg)))
+      getLogicForBinaryPredicate(prep, withoutPrep, childTree)
     })
     val preds = adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
     if (preds.isEmpty) None else Some(Conjunction(preds))
@@ -135,11 +173,7 @@ class LogicalFormGenerator(params: JValue) {
         // This is a nested existential...  Let's just ignore it for now.
         None
       }
-      case Some(child) => {
-        val preds: Set[Logic] = for (simplified <- child.simplifications)
-          yield Predicate("exists", Seq(Atom(simplified.lemmaYield)))
-        Some(Conjunction(preds))
-      }
+      case Some(child) => { getLogicForUnaryPredicate("exists", child) }
     }
   }
 
@@ -225,12 +259,7 @@ class LogicalFormGenerator(params: JValue) {
 
   def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
     if (arguments.exists(_._1.isWhPhrase)) return None
-    val logic: Set[Logic] =
-      for (subjTree <- arguments(0)._1.simplifications;
-           subj = subjTree.lemmaYield;
-           objTree <- arguments(1)._1.simplifications;
-           obj = objTree.lemmaYield) yield Predicate(token.lemma, Seq(Atom(subj), Atom(obj)))
-    Some(Conjunction(logic))
+    getLogicForBinaryPredicate(token.lemma, arguments(0)._1, arguments(1)._1)
   }
 
   def argumentSortKey(arg: (DependencyTree, String)) = {
