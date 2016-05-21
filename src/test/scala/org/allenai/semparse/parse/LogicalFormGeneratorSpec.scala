@@ -2,7 +2,8 @@ package org.allenai.semparse.parse
 
 import org.scalatest._
 
-import org.json4s.JNothing
+import org.json4s._
+import org.json4s.JsonDSL._
 
 class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   val parser = new StanfordParser
@@ -302,6 +303,15 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("from", Seq(Atom("spam"), Atom("logic@imneverwrong.com,"))),
       Predicate("blatant", Seq(Atom("logic@imneverwrong.com,")))
     ))))
+  }
+
+  it should "work with nested predicates for \"Green plants produce oxygen.\" (simple case)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("Green plants produce oxygen.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("produce", Seq(Predicate("green", Seq(Atom("plant"))), Atom("oxygen")))))
   }
 
 }

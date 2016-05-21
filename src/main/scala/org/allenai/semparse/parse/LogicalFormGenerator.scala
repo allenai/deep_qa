@@ -109,6 +109,13 @@ class LogicalFormGenerator(params: JValue) {
   }
 
   def getLogicForOther(tree: DependencyTree): Option[Logic] = {
+    val wordPredicates = if (nestLogicalForms && tree.children.size == 0) {
+      // In the nested setting, we need to stop the recursion at an Atom somewhere.  This is where
+      // it happens.
+      Set(Atom(tree.token.lemma))
+    } else {
+      Set()
+    }
     val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
       Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
     }).toSet
@@ -145,7 +152,11 @@ class LogicalFormGenerator(params: JValue) {
       val withoutPrep = transformers.removeTree(tree, childTree)
       getLogicForBinaryPredicate(prep, withoutPrep, childTree)
     })
-    val preds = adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
+    val preds = wordPredicates ++
+      adjectivePredicates ++
+      reducedRelativeClausePredicates ++
+      prepositionPredicates ++
+      relativeClausePredicates
     if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
