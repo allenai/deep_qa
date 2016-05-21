@@ -2,17 +2,15 @@ package org.allenai.semparse.parse
 
 object LogicalFormGenerator {
 
-  // TODO(matt): At some point I'm going to have to make this return a Logic argument, instead of
-  // just a set of Predicates, so that I can handle negation, and disjunction, and other things.
-  // But this is good enough for now.
-  def getLogicalForm(tree: DependencyTree): Set[Predicate] = {
+  def getLogicalForm(tree: DependencyTree): Option[Logic] = {
     val splitTrees = transformers.SplitConjunctions.transform(tree).flatMap(t => {
       transformers.SplitAppositives.transform(t)
     })
     val transformedTrees = splitTrees.map(defaultTransformations)
-    transformedTrees.flatMap(t => {
+    val foundStatements = transformedTrees.flatMap(t => {
       _getLogicForNode(t)
     })
+    if (foundStatements.isEmpty) None else Some(Conjunction(foundStatements).flatten)
   }
 
   def defaultTransformations(tree: DependencyTree): DependencyTree = {
@@ -25,7 +23,7 @@ object LogicalFormGenerator {
     auxesRemoved
   }
 
-  def _getLogicForNode(tree: DependencyTree): Set[Predicate] = {
+  def _getLogicForNode(tree: DependencyTree): Option[Logic] = {
     val logicForNode = if (isExistential(tree)) {
       getLogicForExistential(tree)
     } else if (tree.isVerb) {
@@ -35,7 +33,9 @@ object LogicalFormGenerator {
     } else {
       getLogicForOther(tree)
     }
-    logicForNode ++ tree.children.map(_._1).flatMap(_getLogicForNode)
+    val childLogic = tree.children.map(_._1).flatMap(_getLogicForNode)
+    val combined = logicForNode.toSet ++ childLogic.toSet
+    if (combined.isEmpty) None else Some(Conjunction(combined))
   }
 
   def isCopula(tree: DependencyTree): Boolean = {
@@ -53,7 +53,7 @@ object LogicalFormGenerator {
     }
   }
 
-  def getLogicForOther(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForOther(tree: DependencyTree): Option[Logic] = {
     val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
       Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
     }).toSet
@@ -93,12 +93,13 @@ object LogicalFormGenerator {
            subj = simplifiedTree.lemmaYield;
            arg = simplifiedChild.lemmaYield) yield Predicate(prep, Seq(Atom(subj), Atom(arg)))
     })
-    adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
+    val preds = adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
+    if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
-  def getLogicForCopula(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForCopula(tree: DependencyTree): Option[Logic] = {
     tree.getChildWithLabel("nsubj") match {
-      case None => Set[Predicate]()
+      case None => None
       case Some(nsubj) => {
         val treeWithoutCopula = transformers.removeChild(tree, "cop")
         val preps = tree.children.filter(_._2.startsWith("prep_"))
@@ -114,20 +115,21 @@ object LogicalFormGenerator {
     }
   }
 
-  def getLogicForExistential(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForExistential(tree: DependencyTree): Option[Logic] = {
     tree.getChildWithLabel("nsubj") match {
       case None => {
         // This is a nested existential...  Let's just ignore it for now.
-        Set()
+        None
       }
       case Some(child) => {
-        for (simplified <- child.simplifications)
+        val preds: Set[Logic] = for (simplified <- child.simplifications)
           yield Predicate("exists", Seq(Atom(simplified.lemmaYield)))
+        Some(Conjunction(preds))
       }
     }
   }
 
-  def getLogicForVerb(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForVerb(tree: DependencyTree): Option[Logic] = {
     if (tree.children.exists(c => c._2 == "xcomp" || c._2.startsWith("prepc_"))) {
       return getLogicForControllingVerb(tree)
     }
@@ -135,7 +137,7 @@ object LogicalFormGenerator {
     getLogicForVerbWithArguments(tree.token, arguments)
   }
 
-  def getLogicForControllingVerb(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForControllingVerb(tree: DependencyTree): Option[Logic] = {
     // Control verbs are the only place we're going to try to handle passives without agents.
     // Passives _with_ agents are handled in the tree transformations, and most other constructions
     // with "is" or "are" are handled by getLogicForCopula.  Except, in some control sentences, we
@@ -173,10 +175,10 @@ object LogicalFormGenerator {
     getLogicForVerbWithArguments(combinedToken, arguments)
   }
 
-  def getLogicForVerbWithArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Set[Predicate] = {
-    // We have more than two arguments, so we'll handle this by taking all pairs of arguments.
-    // The arguments have already been sorted, so the subject is first, then the object (if any),
-    // then any prepositional arguments.
+  def getLogicForVerbWithArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+    // We might have more than two arguments, so we'll handle this by taking all pairs of
+    // arguments.  The arguments have already been sorted, so the subject is first, then the object
+    // (if any), then any prepositional arguments.
     val logic = for (i <- 0 until arguments.size;
                      j <- (i + 1) until arguments.size) yield {
       val arg1 = arguments(i)
@@ -203,17 +205,18 @@ object LogicalFormGenerator {
       }
       getLogicForTransitiveVerb(tokenWithArg2Prep, Seq(arg1, arg2))
     }
-    logic.flatten.toSet
+    val preds = logic.flatten.toSet
+    if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
-  def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Set[Predicate] = {
-    if (arguments.exists(_._1.isWhPhrase)) return Set()
-    val logic =
+  def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+    if (arguments.exists(_._1.isWhPhrase)) return None
+    val logic: Set[Logic] =
       for (subjTree <- arguments(0)._1.simplifications;
            subj = subjTree.lemmaYield;
            objTree <- arguments(1)._1.simplifications;
            obj = objTree.lemmaYield) yield Predicate(token.lemma, Seq(Atom(subj), Atom(obj)))
-    logic.toSet
+    Some(Conjunction(logic))
   }
 
   def argumentSortKey(arg: (DependencyTree, String)) = {

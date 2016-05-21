@@ -48,10 +48,13 @@ class ScienceQuestionProcessor(
           val (text, correct) = answerSentence
           val parsedAnswerOption = parser.parseSentence(text)
           val logicalForm = parsedAnswerOption.dependencyTree match {
-            case None => Set()
+            case None => None
             case Some(tree) => LogicalFormGenerator.getLogicalForm(tree)
           }
-          val logicalFormStr = "(and %s)".format(logicalForm.map(_.toLisp).mkString(" "))
+          val logicalFormStr = logicalForm match {
+            case None => ""
+            case Some(logicalForm) => logicalForm.toLisp
+          }
           val correctString = if (correct) "1" else "0"
           s"$text\t$logicalFormStr\t$correctString"
         }) ++ Seq("")
