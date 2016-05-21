@@ -41,10 +41,14 @@ case class Predicate(predicate: String, arguments: Seq[Logic]) extends Logic {
 
 case class Conjunction(arguments: Set[Logic]) extends Logic {
   override def flatten(): Logic = {
-    Conjunction(getFlattenedArguments())
+    if (arguments.size == 1) {
+      arguments.head.flatten
+    } else {
+      Conjunction(getFlattenedArguments())
+    }
   }
 
-  override def toString() = "(" + arguments.map(_.toString).mkString(" AND ") + ")"
+  override def toString() = arguments.map(_.toString).mkString(" AND ")
   override def toLisp(): String = {
     "(and " + arguments.map(_.toLisp).mkString(" ") + ")"
   }

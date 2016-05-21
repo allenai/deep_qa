@@ -1,11 +1,25 @@
 package org.allenai.semparse.parse
 
-object LogicalFormGenerator {
+import com.mattg.util.JsonHelper
+
+import org.json4s._
+
+class LogicalFormGenerator(params: JValue) {
+
+  val validParams = Seq("nested", "split trees")
+  JsonHelper.ensureNoExtras(params, "LogicalFormGenerator", validParams)
+
+  val nestLogicalForms = JsonHelper.extractWithDefault(params, "nested", true)
+  val shouldSplitTrees = JsonHelper.extractWithDefault(params, "split trees", true)
 
   def getLogicalForm(tree: DependencyTree): Option[Logic] = {
-    val splitTrees = transformers.SplitConjunctions.transform(tree).flatMap(t => {
-      transformers.SplitAppositives.transform(t)
-    })
+    val splitTrees = if (shouldSplitTrees) {
+      transformers.SplitConjunctions.transform(tree).flatMap(t => {
+        transformers.SplitAppositives.transform(t)
+      })
+    } else {
+      Set(tree)
+    }
     val transformedTrees = splitTrees.map(defaultTransformations)
     val foundStatements = transformedTrees.flatMap(t => {
       _getLogicForNode(t)

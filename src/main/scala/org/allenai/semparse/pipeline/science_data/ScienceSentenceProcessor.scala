@@ -85,10 +85,12 @@ class ScienceSentenceProcessor(
     }).distinct()
     val trees = sentences.flatMap(Helper.parseSentence)
     val logicalForms = trees.map(sentenceAndTree => {
+      // TODO(matt): fix allocation of this object
+      val logicalFormGenerator = new LogicalFormGenerator(JNothing)
       val sentence = sentenceAndTree._1
       val tree = sentenceAndTree._2
       val logicalForm = try {
-        LogicalFormGenerator.getLogicalForm(tree)
+        logicalFormGenerator.getLogicalForm(tree)
       } catch {
         case e: Throwable => { println(sentence); tree.print(); throw e }
       }

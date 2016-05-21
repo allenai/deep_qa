@@ -36,6 +36,7 @@ class ScienceQuestionProcessor(
   override val inProgressFile = outputFile.replace(".txt", "_in_progress")
 
   val parser = new StanfordParser
+  val logicalFormGenerator = new LogicalFormGenerator(JNothing)
 
   override def _runStep() {
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
@@ -49,7 +50,7 @@ class ScienceQuestionProcessor(
           val parsedAnswerOption = parser.parseSentence(text)
           val logicalForm = parsedAnswerOption.dependencyTree match {
             case None => None
-            case Some(tree) => LogicalFormGenerator.getLogicalForm(tree)
+            case Some(tree) => logicalFormGenerator.getLogicalForm(tree)
           }
           val logicalFormStr = logicalForm match {
             case None => ""
