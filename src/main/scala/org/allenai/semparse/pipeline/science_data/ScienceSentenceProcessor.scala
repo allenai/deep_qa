@@ -9,7 +9,9 @@ import org.json4s._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
+import org.allenai.semparse.parse.Conjunction
 import org.allenai.semparse.parse.DependencyTree
+import org.allenai.semparse.parse.Logic
 import org.allenai.semparse.parse.LogicalFormGenerator
 import org.allenai.semparse.parse.Predicate
 import org.allenai.semparse.parse.StanfordParser
@@ -83,10 +85,12 @@ class ScienceSentenceProcessor(
     }).distinct()
     val trees = sentences.flatMap(Helper.parseSentence)
     val logicalForms = trees.map(sentenceAndTree => {
+      // TODO(matt): fix allocation of this object
+      val logicalFormGenerator = new LogicalFormGenerator(JNothing)
       val sentence = sentenceAndTree._1
       val tree = sentenceAndTree._2
       val logicalForm = try {
-        LogicalFormGenerator.getLogicalForm(tree)
+        logicalFormGenerator.getLogicalForm(tree)
       } catch {
         case e: Throwable => { println(sentence); tree.print(); throw e }
       }
@@ -158,7 +162,7 @@ object Helper {
   def logicalFormToString(
     outputFormat: String
   )(
-    logicalForm: (String, Set[Predicate])
+    logicalForm: (String, Option[Logic])
   ): Seq[String] = {
     outputFormat match {
       case "training data" => logicalFormToTrainingData(logicalForm)
@@ -167,30 +171,38 @@ object Helper {
     }
   }
 
-  def logicalFormToTrainingData(logicalForm: (String, Set[Predicate])): Seq[String] = {
+  def logicalFormToTrainingData(logicalForm: (String, Option[Logic])): Seq[String] = {
     val sentence = logicalForm._1
-    val predicates = logicalForm._2
-    val fullJson = "[" + predicates.map(predicate => {
-      val names = predicate.arguments.map("\"" + _ + "\"").mkString(",")
-      s"""["${predicate.predicate}",$names]"""
-    }).mkString(", ") + "]"
-    predicates.map(predicate => {
-      // I'm trying to stay as close to the previous training data format as possible.  But, the
-      // way the ids were formatted with Freebase data will not work for our noun phrases.  So, I'm
-      // going to leave the id column blank as a single that the name column should be used
-      // instead.
-      val ids = ""
-      val names = predicate.arguments.map("\"" + _ + "\"").mkString(" ")
-      val catWord = if (predicate.arguments.size == 1) predicate.predicate else ""
-      val relWord = if (predicate.arguments.size == 2) predicate.predicate else ""
-      val wordRelOrCat = if (predicate.arguments.size == 1) "word-cat" else "word-rel"
-      val lambdaExpression = s"""(($wordRelOrCat "${predicate.predicate}") $names)"""
-      val fields = Seq(ids, names, catWord, relWord, lambdaExpression, fullJson, sentence)
-      fields.mkString("\t")
-    }).toSeq
+    val logic = logicalForm._2
+    val fullJson = logic match {
+      case None => "[]"
+      case Some(logic) => logic.toJson
+    }
+    logic match {
+      case Some(Conjunction(args)) => {
+        args.map(_ match {
+          case Predicate(predicate, arguments) => {
+            // I'm trying to stay as close to the previous training data format as possible.  But,
+            // the way the ids were formatted with Freebase data will not work for our noun
+            // phrases.  So, I'm going to leave the id column blank as a single that the name
+            // column should be used instead.
+            val ids = ""
+            val names = arguments.map("\"" + _ + "\"").mkString(" ")
+            val catWord = if (arguments.size == 1) predicate else ""
+            val relWord = if (arguments.size == 2) predicate else ""
+            val wordRelOrCat = if (arguments.size == 1) "word-cat" else "word-rel"
+            val lambdaExpression = s"""(($wordRelOrCat "${predicate}") $names)"""
+            val fields = Seq(ids, names, catWord, relWord, lambdaExpression, fullJson, sentence)
+            fields.mkString("\t")
+          }
+          case _ => throw new IllegalStateException
+        }).toSeq
+      }
+      case _ => throw new IllegalStateException
+    }
   }
 
-  def sentenceAndLogicalFormAsString(logicalForm: (String, Set[Predicate])): Seq[String] = {
+  def sentenceAndLogicalFormAsString(logicalForm: (String, Option[Logic])): Seq[String] = {
     val sentence = logicalForm._1
     val lf = logicalForm._2
     val lfString = lf.map(_.toString).mkString(" ")

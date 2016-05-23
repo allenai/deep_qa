@@ -23,6 +23,7 @@ class SparkPmiComputer(
     "features per word",
     "use squared pmi",
     "run locally",
+    "mid or mid pair",
     "training data features"
   )
   JsonHelper.ensureNoExtras(params, "pmi computer", validParams)
@@ -53,6 +54,17 @@ class SparkPmiComputer(
   // and specify in your experiment configuration where those files are, and get your AWS keys into
   // your shell environment, and so on...
   val runningLocally = JsonHelper.extractWithDefault(params, "run locally", true)
+
+  // Should we compute features for MIDs, MID pairs, or both?
+  val computeForMidOrMidPair = {
+    val choices = Seq("mid", "mid pair", "both")
+    val choice = JsonHelper.extractChoiceWithDefault(params, "mid or mid pair", choices, "both")
+    if (choice == "both") {
+      Set("mid", "mid pair")
+    } else {
+      Set(choice)
+    }
+  }
 
   // TODO(matt): maybe this should be a parameter...?  But this one is purely computational, and
   // changing it does not change the output, so I don't really want it to get saved in the param
@@ -117,18 +129,36 @@ class SparkPmiComputer(
   override val paramFile = s"$outDir/pmi_params.json"
   override val inProgressFile = s"$outDir/pmi_in_progress"
   override val name = "Spark PMI computer"
-  override val inputs = Set(
-    (midMatrixFile, if (runningLocally) Some(featureComputer) else None),
-    (midPairMatrixFile, if (runningLocally) Some(featureComputer) else None),
-    (midWordFile, if (runningLocally) Some(processor) else None),
-    (midPairWordFile, if (runningLocally) Some(processor) else None)
-  )
-  override val outputs = Set(
-    catWordFeatureFile,
-    relWordFeatureFile,
-    filteredMidFeatureFile,
-    filteredMidPairFeatureFile
-  )
+
+  val midInputs = if (computeForMidOrMidPair.contains("mid")) {
+    Set(
+      (midMatrixFile, if (runningLocally) Some(featureComputer) else None),
+      (midWordFile, if (runningLocally) Some(processor) else None)
+    )
+  } else {
+    Set()
+  }
+  val midPairInputs = if (computeForMidOrMidPair.contains("mid pair")) {
+    Set(
+      (midPairMatrixFile, if (runningLocally) Some(featureComputer) else None),
+      (midPairWordFile, if (runningLocally) Some(processor) else None)
+    )
+  } else {
+    Set()
+  }
+  override val inputs = midInputs ++ midPairInputs
+
+  val midOutputs = if (computeForMidOrMidPair.contains("mid")) {
+    Set(catWordFeatureFile, filteredMidFeatureFile)
+  } else {
+    Set()
+  }
+  val midPairOutputs = if (computeForMidOrMidPair.contains("mid pair")) {
+    Set(relWordFeatureFile, filteredMidPairFeatureFile)
+  } else {
+    Set()
+  }
+  override val outputs = midOutputs ++ midPairOutputs
 
   /**
    * Here we select a set of features to use for each word in our data.  The main steps in the
@@ -155,32 +185,36 @@ class SparkPmiComputer(
 
     val sc = new SparkContext(conf)
 
-    computePmi(
-      sc,
-      "mid",
-      maxWordCount_,
-      maxFeatureCount_,
-      useSquaredPmi_,
-      featuresPerWord_,
-      minMidFeatureCount,
-      midMatrixFile,
-      midWordFile,
-      catWordFeatureFile,
-      filteredMidFeatureFile
-    )
-    computePmi(
-      sc,
-      "mid_pair",
-      maxWordCount_,
-      maxFeatureCount_,
-      useSquaredPmi_,
-      featuresPerWord_,
-      minMidPairFeatureCount,
-      midPairMatrixFile,
-      midPairWordFile,
-      relWordFeatureFile,
-      filteredMidPairFeatureFile
-    )
+    if (computeForMidOrMidPair.contains("mid")) {
+      computePmi(
+        sc,
+        "mid",
+        maxWordCount_,
+        maxFeatureCount_,
+        useSquaredPmi_,
+        featuresPerWord_,
+        minMidFeatureCount,
+        midMatrixFile,
+        midWordFile,
+        catWordFeatureFile,
+        filteredMidFeatureFile
+      )
+    }
+    if (computeForMidOrMidPair.contains("mid pair")) {
+      computePmi(
+        sc,
+        "mid_pair",
+        maxWordCount_,
+        maxFeatureCount_,
+        useSquaredPmi_,
+        featuresPerWord_,
+        minMidPairFeatureCount,
+        midPairMatrixFile,
+        midPairWordFile,
+        relWordFeatureFile,
+        filteredMidPairFeatureFile
+      )
+    }
 
     sc.stop()
   }

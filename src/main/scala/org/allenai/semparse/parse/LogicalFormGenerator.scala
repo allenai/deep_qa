@@ -1,33 +1,30 @@
 package org.allenai.semparse.parse
 
-case class Predicate(predicate: String, arguments: Seq[String]) {
-  override def toString(): String = {
-    val argString = arguments.mkString(", ")
-    s"$predicate(${arguments.mkString(", ")})"
-  }
+import com.mattg.util.JsonHelper
 
-  def toLisp(): String = {
-    arguments.size match {
-      case 1 => "((word-cat \"" + predicate + "\") \"" + arguments(0) + "\")"
-      case 2 => "((word-rel \"" + predicate + "\") \"" + arguments(0) + "\" \"" + arguments(1) + "\")"
-      case _ => throw new IllegalStateException("can't make lisp representation for predicate with more than 2 args")
+import org.json4s._
+
+class LogicalFormGenerator(params: JValue) {
+
+  val validParams = Seq("nested", "split trees")
+  JsonHelper.ensureNoExtras(params, "LogicalFormGenerator", validParams)
+
+  val nestLogicalForms = JsonHelper.extractWithDefault(params, "nested", false)
+  val shouldSplitTrees = JsonHelper.extractWithDefault(params, "split trees", true)
+
+  def getLogicalForm(tree: DependencyTree): Option[Logic] = {
+    val splitTrees = if (shouldSplitTrees) {
+      transformers.SplitConjunctions.transform(tree).flatMap(t => {
+        transformers.SplitAppositives.transform(t)
+      })
+    } else {
+      Set(tree)
     }
-  }
-}
-
-object LogicalFormGenerator {
-
-  // TODO(matt): At some point I'm going to have to make this return a Logic argument, instead of
-  // just a set of Predicates, so that I can handle negation, and disjunction, and other things.
-  // But this is good enough for now.
-  def getLogicalForm(tree: DependencyTree): Set[Predicate] = {
-    val splitTrees = transformers.SplitConjunctions.transform(tree).flatMap(t => {
-      transformers.SplitAppositives.transform(t)
-    })
     val transformedTrees = splitTrees.map(defaultTransformations)
-    transformedTrees.flatMap(t => {
+    val foundStatements = transformedTrees.flatMap(t => {
       _getLogicForNode(t)
     })
+    if (foundStatements.isEmpty) None else Some(Conjunction(foundStatements).flatten)
   }
 
   def defaultTransformations(tree: DependencyTree): DependencyTree = {
@@ -40,7 +37,7 @@ object LogicalFormGenerator {
     auxesRemoved
   }
 
-  def _getLogicForNode(tree: DependencyTree): Set[Predicate] = {
+  def _getLogicForNode(tree: DependencyTree): Option[Logic] = {
     val logicForNode = if (isExistential(tree)) {
       getLogicForExistential(tree)
     } else if (tree.isVerb) {
@@ -50,7 +47,50 @@ object LogicalFormGenerator {
     } else {
       getLogicForOther(tree)
     }
-    logicForNode ++ tree.children.map(_._1).flatMap(_getLogicForNode)
+    val childLogic = if (nestLogicalForms) Set() else tree.children.map(_._1).flatMap(_getLogicForNode)
+    val combined = logicForNode.toSet ++ childLogic
+    if (combined.isEmpty) None else Some(Conjunction(combined))
+  }
+
+  /**
+   * Predicates are the main logic item we have.  This actually constructs Predicate objects.
+   * There shouldn't be any other place in the code where we construct a Predicate, besides these
+   * two methods.
+   *
+   * The reason we put it here is that we want to have a single switch for how we treat these
+   * things.  Either we can have a bunch of conjoined simplifications, or we can have nested
+   * predicates.
+   */
+  def getLogicForBinaryPredicate(
+    predicate: String,
+    arg1: DependencyTree,
+    arg2: DependencyTree
+  ): Option[Logic] = {
+    if (nestLogicalForms) {
+      val arg1Logic = _getLogicForNode(arg1)
+      val arg2Logic = _getLogicForNode(arg2)
+      arg1Logic.flatMap(arg1 => arg2Logic.map(arg2 => Predicate(predicate, Seq(arg1, arg2))))
+    } else {
+      val predicates: Set[Logic] = for (simplifiedArg1 <- arg1.simplifications;
+           simplifiedArg2 <- arg2.simplifications;
+           arg1 = simplifiedArg1.lemmaYield;
+           arg2 = simplifiedArg2.lemmaYield) yield Predicate(predicate, Seq(Atom(arg1), Atom(arg2)))
+      Some(Conjunction(predicates))
+    }
+  }
+
+  def getLogicForUnaryPredicate(
+    predicate: String,
+    arg: DependencyTree
+  ): Option[Logic] = {
+    if (nestLogicalForms) {
+      val argLogic = _getLogicForNode(arg)
+      argLogic.map(arg => Predicate(predicate, Seq(arg)))
+    } else {
+      val predicates: Set[Logic] = for (simplifiedArg <- arg.simplifications;
+           arg = simplifiedArg.lemmaYield) yield Predicate(predicate, Seq(Atom(arg)))
+      Some(Conjunction(predicates))
+    }
   }
 
   def isCopula(tree: DependencyTree): Boolean = {
@@ -68,9 +108,16 @@ object LogicalFormGenerator {
     }
   }
 
-  def getLogicForOther(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForOther(tree: DependencyTree): Option[Logic] = {
+    val wordPredicates = if (nestLogicalForms && tree.children.size == 0) {
+      // In the nested setting, we need to stop the recursion at an Atom somewhere.  This is where
+      // it happens.
+      Set(Atom(tree.token.lemma))
+    } else {
+      Set()
+    }
     val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
-      Predicate(child.token.lemma, Seq(tree.token.lemma))
+      Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
     }).toSet
     val reducedRelativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
@@ -103,17 +150,19 @@ object LogicalFormGenerator {
       val label = child._2
       val prep = label.replace("prep_", "")
       val withoutPrep = transformers.removeTree(tree, childTree)
-      for (simplifiedTree <- withoutPrep.simplifications;
-           simplifiedChild <- childTree.simplifications;
-           subj = simplifiedTree.lemmaYield;
-           arg = simplifiedChild.lemmaYield) yield Predicate(prep, Seq(subj, arg))
+      getLogicForBinaryPredicate(prep, withoutPrep, childTree)
     })
-    adjectivePredicates ++ reducedRelativeClausePredicates ++ prepositionPredicates ++ relativeClausePredicates
+    val preds = wordPredicates ++
+      adjectivePredicates ++
+      reducedRelativeClausePredicates ++
+      prepositionPredicates ++
+      relativeClausePredicates
+    if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
-  def getLogicForCopula(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForCopula(tree: DependencyTree): Option[Logic] = {
     tree.getChildWithLabel("nsubj") match {
-      case None => Set[Predicate]()
+      case None => None
       case Some(nsubj) => {
         val treeWithoutCopula = transformers.removeChild(tree, "cop")
         val preps = tree.children.filter(_._2.startsWith("prep_"))
@@ -129,20 +178,17 @@ object LogicalFormGenerator {
     }
   }
 
-  def getLogicForExistential(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForExistential(tree: DependencyTree): Option[Logic] = {
     tree.getChildWithLabel("nsubj") match {
       case None => {
         // This is a nested existential...  Let's just ignore it for now.
-        Set()
+        None
       }
-      case Some(child) => {
-        for (simplified <- child.simplifications)
-          yield Predicate("exists", Seq(simplified.lemmaYield))
-      }
+      case Some(child) => { getLogicForUnaryPredicate("exists", child) }
     }
   }
 
-  def getLogicForVerb(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForVerb(tree: DependencyTree): Option[Logic] = {
     if (tree.children.exists(c => c._2 == "xcomp" || c._2.startsWith("prepc_"))) {
       return getLogicForControllingVerb(tree)
     }
@@ -150,7 +196,7 @@ object LogicalFormGenerator {
     getLogicForVerbWithArguments(tree.token, arguments)
   }
 
-  def getLogicForControllingVerb(tree: DependencyTree): Set[Predicate] = {
+  def getLogicForControllingVerb(tree: DependencyTree): Option[Logic] = {
     // Control verbs are the only place we're going to try to handle passives without agents.
     // Passives _with_ agents are handled in the tree transformations, and most other constructions
     // with "is" or "are" are handled by getLogicForCopula.  Except, in some control sentences, we
@@ -188,10 +234,10 @@ object LogicalFormGenerator {
     getLogicForVerbWithArguments(combinedToken, arguments)
   }
 
-  def getLogicForVerbWithArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Set[Predicate] = {
-    // We have more than two arguments, so we'll handle this by taking all pairs of arguments.
-    // The arguments have already been sorted, so the subject is first, then the object (if any),
-    // then any prepositional arguments.
+  def getLogicForVerbWithArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+    // We might have more than two arguments, so we'll handle this by taking all pairs of
+    // arguments.  The arguments have already been sorted, so the subject is first, then the object
+    // (if any), then any prepositional arguments.
     val logic = for (i <- 0 until arguments.size;
                      j <- (i + 1) until arguments.size) yield {
       val arg1 = arguments(i)
@@ -218,17 +264,13 @@ object LogicalFormGenerator {
       }
       getLogicForTransitiveVerb(tokenWithArg2Prep, Seq(arg1, arg2))
     }
-    logic.flatten.toSet
+    val preds = logic.flatten.toSet
+    if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
-  def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Set[Predicate] = {
-    if (arguments.exists(_._1.isWhPhrase)) return Set()
-    val logic =
-      for (subjTree <- arguments(0)._1.simplifications;
-           subj = subjTree.lemmaYield;
-           objTree <- arguments(1)._1.simplifications;
-           obj = objTree.lemmaYield) yield Predicate(token.lemma, Seq(subj, obj))
-    logic.toSet
+  def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+    if (arguments.exists(_._1.isWhPhrase)) return None
+    getLogicForBinaryPredicate(token.lemma, arguments(0)._1, arguments(1)._1)
   }
 
   def argumentSortKey(arg: (DependencyTree, String)) = {

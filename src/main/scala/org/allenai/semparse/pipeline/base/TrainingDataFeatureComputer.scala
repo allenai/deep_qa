@@ -113,7 +113,7 @@ class TrainingDataFeatureComputer(
   override val paramFile = s"$outDir/tdfc_params.json"
   override val inProgressFile = s"$outDir/tdfc_in_progress"
   override val name = "Training data feature computer"
-  override def inputs = Set(
+  override val inputs = Set(
     (graphDirectory, graphCreator),
     (midFile, Some(trainingDataProcessor)),
     (midPairFile, Some(trainingDataProcessor))
