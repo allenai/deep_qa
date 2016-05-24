@@ -314,4 +314,75 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("produce", Seq(Predicate("green", Seq(Atom("plant"))), Atom("oxygen")))))
   }
 
+  it should "work with nested predicates for \"Cells contain genetic material called dna.\" (triple nesting)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("Cells contain genetic material called dna.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("contain", Atom("cell"), Seq(Predicate("call", Seq(Predicate("genetic", Seq(Atom("material"))), Atom("dna")))))))
+  }
+
+  it should "work with nested predicates for \"Humans depend on plans for oxygen.\" (nested structure with two prepositions)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("Humans depend on plans for oxygen.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("for", Seq(Predicate("depend_on", Seq(Atom("human"), Atom("plant"))), Atom("oxygen")))))
+  }
+
+  it should "work with nested predicates for \"Oxygen is given off by plants.\" (Passive with preposition)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("Oxygen is given off by plants.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("give_off", Seq(Atom("plant"), Atom("oxygen")))))
+  }
+
+  it should "work with nested predicates for \"The male part of a flower is called stamen.\" (Main verb \"is\")" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("The male part of a flower is called stamen.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("call", Seq(Predicate("of", Seq(Predicate("male", Seq(Atom("part"))), Atom("plant"))), Atom("stamen")))))
+  }
+
+  it should "work with nested predicates for \"Matter that is vibrating is producing sound..\" (Relative clause with that)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("Matter that is vibrating is producing sound.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("produce", Seq(Predicate("vibrate", Seq(Atom("matter"))), Atom("sound")))))
+  }
+
+  it should "work with nested predicates for \"One example of a consumer is a reindeer.\" (\"example of\" sentence with non-determiner to be ignored)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("One example of a consumer is a reindeer.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("be", Seq(Atom("reindeer"), Predicate("of", Seq(Atom("example"), Atom("consumer")))))))
+  }
+
+  it should "work with nested predicates for \"Most of Earth's water is located in oceans.\" (noun-noun relation with \"'s\")" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("Most of Earth's water is located in oceans.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("located_in", Seq(Predicate("of", Seq(Atom("most"), Predicate("'s", Seq(Atom("earth"), Atom("water"))))), Atom("ocean")))))
+  }
+
+  it should "work with nested predicates for \"All known living things are made up of cells.\" (Passive with phrasal verb)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("All known living things are made up of cells.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("make_up", Seq("cell", Predicate("known", Seq("living", Seq(Atom("thing"))))))))
+  }
 }
