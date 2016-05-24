@@ -70,6 +70,7 @@ object ScienceQuestionPipeline {
 
   val questionProcesserParams: JValue =
     ("question file" -> "data/science/animal_questions/raw_questions.tsv") ~
+    ("logical forms" -> ("nested" -> true)) ~
     ("data name" -> "animal_questions")
 
   /////////////////////////////////////////////////////////////////////
@@ -82,6 +83,6 @@ object ScienceQuestionPipeline {
 
   def main(args: Array[String]) {
     //new Trainer(modelParams, fileUtil).runPipeline()
-    new ScienceQuestionScorer(questionScorerParams, fileUtil).runPipeline()
+    new ScienceQuestionProcessor(questionProcesserParams, fileUtil).runPipeline()
   }
 }
