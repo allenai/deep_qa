@@ -5,55 +5,60 @@ class DataIndexer(object):
     def __init__(self):
         self.word_index = {"PADDING":0}
 
-    def get_indices(self, lines, pad=True, separate_props=True):
+    def get_indices(self, lines, pad=True, separate_propositions=True):
+	'''
+	lines: list(str). Sequence of proposition strings. If propositions have to be grouped (to keep track of which sentences they come from), separate props in a line with ';'
+	pad: bool. Left pad index vectors to make them all the same size?
+	separate_propositions: Use ';' as a proposition delimiter?
+	'''
         indices = []
-        part_lens = []
+        num_propositions_in_lines = []
         for line in lines:
-            if separate_props:
-                line_parts = line.split(";")
+            if separate_propositions:
+                line_propositions = line.split(";")
             else:
-                line_parts = [line]
-            part_lens.append(len(line_parts))
-            for part in line_parts:
-                words = word_tokenize(part.lower())
+                line_propositions = [line]
+            num_propositions_in_lines.append(len(line_propositions))
+            for proposition in line_propositions:
+                words = word_tokenize(proposition.lower())
                 for word in words:
                     if word not in self.word_index:
                         self.word_index[word] = len(self.word_index)
                 indices.append([self.word_index[word] for word in words])
         if pad:
-            return part_lens, self.pad_indices(indices)
+            return num_propositions_in_lines, self.pad_indices(indices)
         else:
-            return part_lens, indices
+            return num_propositions_in_lines, indices
 
-    def pad_indices(self, indices, maxlen=None):
-        if maxlen is None:
-            maxlen = max([len(ind) for ind in indices])
-        padded_indices = []
-        for ind in indices:
-            p_ind = [0]*maxlen
-            ind_len = min(len(ind), maxlen)
-            if ind_len != 0:
-                p_ind[-ind_len:] = ind[-ind_len:]
-            padded_indices.append(p_ind)
-        return padded_indices
+    def pad_indices(self, all_indices, max_length=None):
+        if max_length is None:
+            max_length = max([len(ind) for ind in all_indices])
+        all_padded_indices = []
+        for indices in all_indices:
+            padded_indices = [0]*max_length
+            indices_length = min(len(indices), max_length)
+            if indices_length != 0:
+                padded_indices[-indices_length:] = indices[-indices_length:]
+            all_padded_indices.append(padded_indices)
+        return all_padded_indices
 
-    def corrupt_indices(self, indices, num_locs=1):
-        c_inds = []
-        inds_to_ignore = set([0])
-        for tok in [",", "(", ")", "."]:
-            if tok in self.word_index:
-                inds_to_ignore.add(self.word_index[tok])
-        for ind in indices:
-            c_ind = list(ind)
-            corr_locs = 0
-            while corr_locs < num_locs:
-                rand_loc = random.randint(0, len(ind)-1)
-                if c_ind[rand_loc] in inds_to_ignore:
+    def corrupt_indices(self, all_indices, num_locations_to_corrupt=1):
+        all_corrupted_indices = []
+        indices_to_ignore = set([0])
+        for token in [",", "(", ")", "."]:
+            if token in self.word_index:
+                indices_to_ignore.add(self.word_index[token])
+        for indices in all_indices:
+            corrupted_indices = list(indices)
+            num_corrupted_locations = 0
+            while num_corrupted_locations < num_locations_to_corrupt:
+                rand_location = random.randint(0, len(indices)-1)
+                if corrupted_indices[rand_location] in indices_to_ignore:
                     continue
-                rand_i = 0
-                while rand_i in inds_to_ignore:
-                    rand_i = random.randint(1, len(self.word_index)-1)
-                c_ind[rand_loc] = rand_i
-                corr_locs += 1
-            c_inds.append(c_ind)
-        return c_inds
+                rand_index = 0
+                while rand_index in indices_to_ignore:
+                    rand_index = random.randint(1, len(self.word_index)-1)
+                corrupted_indices[rand_location] = rand_index
+                num_corrupted_locations += 1
+            all_corrupted_indices.append(corrupted_indices)
+        return all_corrupted_indices
