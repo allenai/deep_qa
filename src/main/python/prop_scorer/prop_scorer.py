@@ -55,6 +55,8 @@ class PropScorer(object):
         model.compile(loss=score_hinge_loss, optimizer='rmsprop')
         model.fit([good_input, bad_input], numpy.zeros((good_input.shape[:1]))) # Note: target is ignored by loss. See above.
         self.model = model
+
+        ## Step 6: Define a scoring model taking the necessary parts of the trained model
         test_input = Input(good_input.shape[1:], dtype='int32')
         test_embed = embed_layer(test_input)
         test_lstm_out = lstm_layer(test_embed)

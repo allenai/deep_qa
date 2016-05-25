@@ -6,12 +6,12 @@ class DataIndexer(object):
         self.word_index = {"PADDING":0}
 
     def get_indices(self, lines, pad=True, separate_propositions=True):
-	'''
-	lines: list(str). Sequence of proposition strings. If propositions have to be grouped (to keep track of which sentences they come from), separate props in a line with ';'
-	pad: bool. Left pad index vectors to make them all the same size?
-	separate_propositions: Use ';' as a proposition delimiter?
-	'''
-        indices = []
+        '''
+        lines: list(str). Sequence of proposition strings. If propositions have to be grouped (to keep track of which sentences they come from), separate props in a line with ';'
+        pad: bool. Left pad index vectors to make them all the same size?
+        separate_propositions: Use ';' as a proposition delimiter?
+        '''
+        proposition_indices = []
         num_propositions_in_lines = []
         for line in lines:
             if separate_propositions:
@@ -24,11 +24,11 @@ class DataIndexer(object):
                 for word in words:
                     if word not in self.word_index:
                         self.word_index[word] = len(self.word_index)
-                indices.append([self.word_index[word] for word in words])
+                proposition_indices.append([self.word_index[word] for word in words])
         if pad:
-            return num_propositions_in_lines, self.pad_indices(indices)
+            return num_propositions_in_lines, self.pad_indices(proposition_indices)
         else:
-            return num_propositions_in_lines, indices
+            return num_propositions_in_lines, proposition_indices
 
     def pad_indices(self, all_indices, max_length=None):
         if max_length is None:
