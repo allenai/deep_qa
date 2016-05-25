@@ -44,6 +44,7 @@ class DataIndexer(object):
 
     def corrupt_indices(self, all_indices, num_locations_to_corrupt=1):
         all_corrupted_indices = []
+        # We would want to ignore the padding token, parentheses and commas while corrputing data
         indices_to_ignore = set([0])
         for token in [",", "(", ")", "."]:
             if token in self.word_index:
