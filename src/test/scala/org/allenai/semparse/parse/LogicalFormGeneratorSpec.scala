@@ -365,7 +365,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val parse = parser.parseSentence("One example of a consumer is a reindeer.")
     parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("be", Seq(Atom("reindeer"), Predicate("of", Seq(Atom("example"), Atom("consumer")))))))
+      Predicate("example_of", Seq(Atom("consumer"), Atom("reindeer")))))
   }
 
   it should "work with nested predicates for \"Most of Earth's water is located in oceans.\" (noun-noun relation with \"'s\")" in {
