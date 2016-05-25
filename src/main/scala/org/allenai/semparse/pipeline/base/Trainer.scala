@@ -25,7 +25,8 @@ class Trainer(
 
   // A few necessary things from previous steps.
   val pmiComputer = new SparkPmiComputer(params \ "feature computer", fileUtil)
-  val processor = pmiComputer.featureComputer.trainingDataProcessor
+  // TODO(matt): figure out what to do if this is None
+  val processor = pmiComputer.featureComputer.trainingDataProcessor.get
   val dataName = processor.dataName
 
   // The output file.
