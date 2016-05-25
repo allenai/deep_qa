@@ -48,7 +48,7 @@ case class Conjunction(arguments: Set[Logic]) extends Logic {
     }
   }
 
-  override def toString() = arguments.map(_.toString).mkString(" AND ")
+  override def toString() = s"and(${arguments.mkString(", ")})"
   override def toLisp(): String = {
     "(and " + arguments.map(_.toLisp).mkString(" ") + ")"
   }
