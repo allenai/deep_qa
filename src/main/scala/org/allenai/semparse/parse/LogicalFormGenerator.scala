@@ -108,18 +108,12 @@ class LogicalFormGenerator(params: JValue) {
     }
   }
 
-  def getLogicForOther(tree: DependencyTree): Option[Logic] = {
-    val wordPredicates = if (nestLogicalForms && tree.children.size == 0) {
-      // In the nested setting, we need to stop the recursion at an Atom somewhere.  This is where
-      // it happens.
-      Set(Atom(tree.token.lemma))
-    } else {
-      Set()
-    }
-    val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
-      Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
-    }).toSet
-    val reducedRelativeClausePredicates = tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
+  def isReducedRelative(tree: DependencyTree): Boolean = {
+    tree.children.exists(_._2 == "vmod")
+  }
+
+  def getLogicForReducedRelative(tree: DependencyTree): Set[Logic] = {
+    tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
       child.getChildWithLabel("dobj") match {
         case None => Set[Predicate]()
@@ -130,7 +124,30 @@ class LogicalFormGenerator(params: JValue) {
           getLogicForVerb(verbWithObject)
         }
       }
-    })
+    }).toSet
+  }
+
+  /**
+   * Most frequently, this method will produce logic for nouns.  There are a lot of ways that nouns
+   * can produce logic statements: by having adjective modifiers, prepositional phrase attachments,
+   * relative clauses, and so on.  We'll check for them in this method, and merge them all at the
+   * end.  The merging is a little complicated for nested predicates, though.
+   */
+  def getLogicForOther(tree: DependencyTree): Option[Logic] = {
+    val wordPredicates = if (nestLogicalForms && tree.children.size == 0) {
+      // In the nested setting, we need to stop the recursion at an Atom somewhere.  This is where
+      // it happens.
+      Set(Atom(tree.token.lemma))
+    } else {
+      Set()
+    }
+
+    val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
+      Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
+    }).toSet
+
+    val reducedRelativeClausePredicates = getLogicForReducedRelative(tree)
+
     val relativeClausePredicates = tree.children.filter(_._2 == "rcmod").map(_._1).flatMap(child => {
       val npWithoutRelative = transformers.removeTree(tree, child)
       child.children.filter(_._1.token.posTag == "WDT").headOption match {
@@ -145,6 +162,7 @@ class LogicalFormGenerator(params: JValue) {
         }
       }
     })
+
     val prepositionPredicates = tree.children.filter(_._2.startsWith("prep_")).flatMap(child => {
       val childTree = child._1
       val label = child._2
@@ -152,11 +170,29 @@ class LogicalFormGenerator(params: JValue) {
       val withoutPrep = transformers.removeTree(tree, childTree)
       getLogicForBinaryPredicate(prep, withoutPrep, childTree)
     })
-    val preds = wordPredicates ++
+
+    // Finally, we get to the merge step.
+    val preds = if (nestLogicalForms) {
+      // This is complicated if we're nesting logical forms, because some of these end up being
+      // dupcliates.  We want to set an order of precedence, and only return the top-most level,
+      // because everything else will have already been generated as part of that logical form.
+      // For example, in the phrase "genetic material called dna", there's a reduced relative
+      // clause that generates the predicate `call(genetic(material), dna)`.  We don't want to also
+      // produce `genetic(material)` from the adjective predicates above, because that duplicates
+      // what we've already included with the nesting.
+      if (!reducedRelativeClausePredicates.isEmpty) {
+        reducedRelativeClausePredicates
+      } else {
+        wordPredicates ++ adjectivePredicates ++ prepositionPredicates ++ relativeClausePredicates
+      }
+    } else {
+      // If we aren't nesting logical forms, this is trivial - we just add them all into a set.
+      wordPredicates ++
       adjectivePredicates ++
       reducedRelativeClausePredicates ++
       prepositionPredicates ++
       relativeClausePredicates
+    }
     if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
@@ -235,6 +271,42 @@ class LogicalFormGenerator(params: JValue) {
   }
 
   def getLogicForVerbWithArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+    if (nestLogicalForms) {
+      getNestedLogicForVerbArguments(token, arguments)
+    } else {
+      getCrossProductOfVerbArguments(token, arguments)
+    }
+  }
+
+  def getNestedLogicForVerbArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+    // The basic strategy here is to order the arguments in an adjunct hierarchy, create a base
+    // predicate with the core arguments, and nest that inside of the next argument, recursively.
+    // So, for example, "animals depend on plants for food" would give `for(depend_on(animals,
+    // plants), food)`
+    val logic = getCrossProductOfVerbArguments(token, arguments.take(2))
+    logic match {
+      case None => None
+      case Some(logic) => {
+        var currentLogic = logic
+        for (argument <- arguments.drop(2)) {
+          val predicate = argument._2.replace("prep_", "")
+          val argumentLogic = getLogicalForm(argument._1)
+          argumentLogic match {
+            case None => {
+              // Really not sure what to do here...  Need to see when this happens.  Let's just punt
+              // for now, and do nothing.
+            }
+            case Some(argumentLogic) => {
+              currentLogic = Predicate(predicate, Seq(currentLogic, argumentLogic))
+            }
+          }
+        }
+        Some(currentLogic)
+      }
+    }
+  }
+
+  def getCrossProductOfVerbArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
     // We might have more than two arguments, so we'll handle this by taking all pairs of
     // arguments.  The arguments have already been sorted, so the subject is first, then the object
     // (if any), then any prepositional arguments.
@@ -284,7 +356,7 @@ class LogicalFormGenerator(params: JValue) {
       case "iobj" => 6
       case _ => 7
     }
-    (sortIndex, label)
+    (sortIndex, arg._1.tokenStartIndex)
   }
 
   def getVerbArguments(tree: DependencyTree) = {
