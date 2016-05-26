@@ -323,10 +323,10 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("contain", Atom("cell"), Seq(Predicate("call", Seq(Predicate("genetic", Seq(Atom("material"))), Atom("dna")))))))
   }
 
-  it should "work with nested predicates for \"Humans depend on plans for oxygen.\" (nested structure with two prepositions)" in {
+  it should "work with nested predicates for \"Humans depend on plants for oxygen.\" (nested structure with two prepositions)" in {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
-    val parse = parser.parseSentence("Humans depend on plans for oxygen.")
+    val parse = parser.parseSentence("Humans depend on plants for oxygen.")
     parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
       Predicate("for", Seq(Predicate("depend_on", Seq(Atom("human"), Atom("plant"))), Atom("oxygen")))))
@@ -374,7 +374,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val parse = parser.parseSentence("Most of Earth's water is located in oceans.")
     parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("located_in", Seq(Predicate("of", Seq(Atom("most"), Predicate("'s", Seq(Atom("earth"), Atom("water"))))), Atom("ocean")))))
+      Predicate("locate_in", Seq(Predicate("of", Seq(Atom("most"), Predicate("'s", Seq(Atom("earth"), Atom("water"))))), Atom("ocean")))))
   }
 
   it should "work with nested predicates for \"All known living things are made up of cells.\" (Passive with phrasal verb)" in {
@@ -383,6 +383,6 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val parse = parser.parseSentence("All known living things are made up of cells.")
     parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("make_up", Seq("cell", Predicate("known", Seq("living", Seq(Atom("thing"))))))))
+      Predicate("make_up_of", Seq(Predicate("all", Seq("known", Seq("living", Seq(Atom("thing"))))), Atom("cell")))))
   }
 }
