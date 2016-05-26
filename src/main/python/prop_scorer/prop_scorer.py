@@ -101,10 +101,15 @@ if __name__=="__main__":
     test_all_prop_scores = prop_scorer.score(test_indices)
     test_scores = []
     t_ind = 0
+
+    # Iterating through all propositions in the sentence and aggregating their scores
     for num_propositions in test_lengths:
         test_scores.append(test_all_prop_scores[t_ind:t_ind+num_propositions].sum())
         t_ind += num_propositions
+
+    # Once aggregated, the number of scores should be the same as test sentences.
     assert len(test_scores) == len(test_lines)
+
     outfile = open("out.txt", "w")
     for score, line in zip(test_scores, test_lines):
         print >>outfile, score, line
