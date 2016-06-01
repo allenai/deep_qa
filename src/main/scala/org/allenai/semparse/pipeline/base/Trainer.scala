@@ -19,9 +19,14 @@ class Trainer(
   val validParams = Seq("model type", "ranking", "feature computer")
   JsonHelper.ensureNoExtras(params, "trainer", validParams)
 
+  // We don't actually do anything for the baseline (that currently has to be trained with a
+  // separate script outside of this pipeline), but we allow it as an option here so that the
+  // pipeline is a lot cleaner.
+  val allowedModelTypes = Seq("distributional", "formal", "combined", "baseline")
+
   // The parameters we take.
   val ranking = JsonHelper.extractChoiceWithDefault(params, "ranking", Seq("query", "predicate"), "query")
-  val modelType = JsonHelper.extractChoice(params, "model type", Seq("distributional", "formal", "combined"))
+  val modelType = JsonHelper.extractChoice(params, "model type", allowedModelTypes)
 
   // A few necessary things from previous steps.
   val pmiComputer = new SparkPmiComputer(params \ "feature computer", fileUtil)
@@ -73,16 +78,19 @@ class Trainer(
   override val paramFile = serializedModelFile.replace("model.ser", "params.json")
   override val inProgressFile = serializedModelFile.replace("model.ser", "in_progress")
   override val name = "Model trainer"
-  override val inputs =
+  override val inputs = if (modelType == "baseline") Set[(String, Option[Step])]() else {
     handwrittenLispFiles.map((_, None)).toSet ++
     Set((sfeSpecFile, None)) ++
     dataFiles.map((_, Some(processor))).toSet ++
     featureFiles.map((_, Some(pmiComputer))).toSet
-  override val outputs = Set(
-    serializedModelFile
-  )
+  }
+  override val outputs = if (modelType == "baseline") Set[String]() else Set(serializedModelFile)
 
   override def _runStep() {
+    // As noted above, the baseline option is just here so that the pipeline code is cleaner in
+    // this case.  You currently have to run a python script to train the baseline.
+    if (modelType == "baseline") return
+
     val inputFiles = dataFiles ++ handwrittenLispFiles
     val extraArgs = Seq(sfeSpecFile, dataName, serializedModelFile)
 
