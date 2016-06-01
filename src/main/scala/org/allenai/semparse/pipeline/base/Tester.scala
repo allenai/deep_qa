@@ -50,7 +50,7 @@ class Tester(
   // These are code files, specifying the model we're using.
   val lispModelFiles = if (ensembledEvaluation) {
     if (modelType == "baseline") throw new IllegalStateException("You can't ensemble the baseline...")
-    Seq(s"$lispBase/model_baseline", s"$lispBase/model_${modelType}.lisp")
+    Seq(s"$lispBase/model_baseline.lisp", s"$lispBase/model_${modelType}.lisp")
   } else {
     Seq(s"$lispBase/model_${modelType}.lisp")
   }
@@ -81,17 +81,16 @@ class Tester(
   // we have to handle these two cases differently.
   val (inputFiles, extraArgs) = modelType match {
     case "baseline" => (baselineModelFile +: baseInputFiles, baseExtraArgs)
-    case other => ensembledEvaluation match {
-      case true => (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
-      case false => (baseInputFiles, baseExtraArgs :+ serializedModelFile)
+    case other => if (ensembledEvaluation) {
+      (baselineModelFile +: baseInputFiles, baseExtraArgs :+ serializedModelFile)
+    } else {
+      (baseInputFiles, baseExtraArgs :+ serializedModelFile)
     }
   }
 
   val outputFile = {
     val ensemble = if (ensembledEvaluation) "ensemble" else "uschema"
     modelType match {
-      // ACK!  I need to make this more general...  The dataset should not be just "large" and
-      // "small"
       case "baseline" => s"results/${testName}/${dataName}/baseline/output.txt"
       case other => s"results/${testName}/${dataName}/${modelType}/${ranking}/${ensemble}/output.txt"
     }
@@ -101,15 +100,27 @@ class Tester(
   override val paramFile = outputFile.replace("output.txt", "params.json")
   override val inProgressFile = outputFile.replace("output.txt", "in_progress")
   override val name = "Model tester"
+
+  val modelInputs = if (modelType == "baseline") {
+    Set((baselineModelFile, None))  // the baseline code is currently still in python...
+  } else {
+    if (ensembledEvaluation) {
+      Set(
+        (serializedModelFile, Some(trainer)),
+        (baselineModelFile, None)  // the baseline code is currently still in python...
+      )
+    } else {
+      Set((serializedModelFile, Some(trainer)))
+    }
+  }
   override val inputs =
     handwrittenLispFiles.map((_, None)).toSet ++
     Set((sfeSpecFile, None), (trainingDataFile, None), (queryFile, None)) ++
     dataFiles.map((_, Some(processor))).toSet ++
-    Set((serializedModelFile, Some(trainer)))
+    modelInputs
   override val outputs = Set(
     outputFile
   )
-
 
   // These query formats are how we interface from the JSON query object that we get to the lisp
   // environment (which holds the model) that we're evaluating.
@@ -140,7 +151,7 @@ class Tester(
   }
 
   def _runStep() {
-    val env = new Environment(inputFiles, extraArgs, true)
+    val env = new Environment(inputFiles, extraArgs)
     val writer = fileUtil.getFileWriter(outputFile)
 
     // The test file is a JSON object, which is itself a list of objects containing the query

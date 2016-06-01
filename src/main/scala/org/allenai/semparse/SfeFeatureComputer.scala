@@ -27,20 +27,20 @@ class SfeFeatureComputer(specFile: String, dataName: String, fileUtil: FileUtil 
   val relation = "relation doesn't matter"
   val outputter = Outputter.justLogger
   val relationMetadata = new RelationMetadata(JNothing, praBase, outputter, fileUtil)
-  val graph = Graph.create(params \ "graph", praBase, outputter, fileUtil).get
+  val graph = Graph.create(params \ "graph", "", outputter, fileUtil).get
   val nodeFeatureGenerator = new NodeSubgraphFeatureGenerator(
     params \ "node features",
     relation,
     relationMetadata,
     outputter,
-    fileUtil
+    fileUtil = fileUtil
   )
   val nodePairFeatureGenerator = new NodePairSubgraphFeatureGenerator(
     params \ "node pair features",
     relation,
     relationMetadata,
     outputter,
-    fileUtil
+    fileUtil = fileUtil
   )
 
   // And here we set up the cached entity feature files and pre-computed word feature dictionaries.

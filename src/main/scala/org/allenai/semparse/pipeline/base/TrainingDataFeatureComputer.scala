@@ -39,21 +39,21 @@ class PreFilteredFeatureComputer(
   val praBase = "/dev/null"
   val relation = "relation doesn't matter"
   val outputter = Outputter.justLogger
-  val relationMetadata = new RelationMetadata(JNothing, praBase, outputter, fileUtil)
+  val relationMetadata = new RelationMetadata(params \ "relation metadata", praBase, outputter, fileUtil)
   val graph = Graph.create(params \ "graph", "", outputter, fileUtil).get
   val nodeFeatureGenerator = new NodeSubgraphFeatureGenerator(
     params \ "node features",
     relation,
     relationMetadata,
     outputter,
-    fileUtil
+    fileUtil = fileUtil
   )
   val nodePairFeatureGenerator = new NodePairSubgraphFeatureGenerator(
     params \ "node pair features",
     relation,
     relationMetadata,
     outputter,
-    fileUtil
+    fileUtil = fileUtil
   )
 
   def computeMidFeatures(mid: String): Seq[String] = {
@@ -83,13 +83,21 @@ class TrainingDataFeatureComputer(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
 
-  val validParams = Seq("training data", "sfe spec file", "graph creator")
+  // The `mid file`, `mid pair file`, and `out dir` params are only meaningful if `training data`
+  // is not given.  If you give both `mid file` and `training data`, for instance, things will
+  // probably break.
+  val validParams = Seq("training data", "sfe spec file", "graph creator", "mid or mid pair",
+    "mid file", "mid pair file", "out dir")
   JsonHelper.ensureNoExtras(params, "feature matrix computer", validParams)
 
-  val trainingDataParams = (params \ "training data")
   val sfeSpecFile = (params \ "sfe spec file").extract[String]
   val sfeParams = new SpecFileReader("/dev/null").readSpecFile(sfeSpecFile)
   val graphDirectory = (sfeParams \ "graph").extract[String]
+
+  val trainingDataProcessor = (params \ "training data") match {
+    case JNothing => None
+    case jval => Some(new TrainingDataProcessor(jval, fileUtil))
+  }
   val graphCreator: Option[Step] = (params \ "graph creator") match {
     case JNothing => None
     case jval => {
@@ -101,24 +109,42 @@ class TrainingDataFeatureComputer(
       }
     }
   }
-  val trainingDataProcessor = new TrainingDataProcessor(trainingDataParams, fileUtil)
-  val dataName = trainingDataProcessor.dataName
-  val outDir = s"data/$dataName"
 
-  val midFile = s"${outDir}/training_mids.tsv"
-  val midPairFile = s"${outDir}/training_mid_pairs.tsv"
+  val outDir = trainingDataProcessor match {
+    case None => (params \ "out dir").extract[String]
+    case Some(tdp) => s"data/${tdp.dataName}"
+  }
+
+  val computeForMidOrMidPair = {
+    val choices = Seq("mid", "mid pair", "both")
+    val choice = JsonHelper.extractChoiceWithDefault(params, "mid or mid pair", choices, "both")
+    if (choice == "both") {
+      Set("mid", "mid pair")
+    } else {
+      Set(choice)
+    }
+  }
+
+  val midFile = JsonHelper.extractWithDefault(params, "mid file", s"${outDir}/training_mids.tsv")
+  val midPairFile = JsonHelper.extractWithDefault(params, "mid pair file", s"${outDir}/training_mid_pairs.tsv")
   val midFeatureFile = s"${outDir}/pre_filtered_mid_features.tsv"
   val midPairFeatureFile = s"${outDir}/pre_filtered_mid_pair_features.tsv"
 
   override val paramFile = s"$outDir/tdfc_params.json"
   override val inProgressFile = s"$outDir/tdfc_in_progress"
   override val name = "Training data feature computer"
-  override def inputs = Set(
-    (graphDirectory, graphCreator),
-    (midFile, Some(trainingDataProcessor)),
-    (midPairFile, Some(trainingDataProcessor))
-  )
-  override val outputs = Set(midFeatureFile, midPairFeatureFile)
+  val (midInputs, midOutputs) = if (computeForMidOrMidPair.contains("mid")) {
+    (Set((midFile, trainingDataProcessor)), Set(midFeatureFile))
+  } else {
+    (Set(), Set())
+  }
+  val (midPairInputs, midPairOutputs) = if (computeForMidOrMidPair.contains("mid pair")) {
+    (Set((midPairFile, trainingDataProcessor)), Set(midPairFeatureFile))
+  } else {
+    (Set(), Set())
+  }
+  override val inputs = Set((graphDirectory, graphCreator)) ++ midInputs ++ midPairInputs
+  override val outputs = midOutputs ++ midPairOutputs
 
   override def _runStep() {
     processInMemory()
@@ -128,42 +154,44 @@ class TrainingDataFeatureComputer(
     val fileUtil = new FileUtil
     val computer = new PreFilteredFeatureComputer(sfeParams, fileUtil)
 
-    println("Computing MID features")
-    val midWriter = fileUtil.getFileWriter(midFeatureFile)
-    var i = 0
-    fileUtil.processFile(midFile, (line: String) => {
-      i += 1
-      fileUtil.logEvery(1000, i)
-      val mid = line
-      val features = computer.computeMidFeatures(mid)
-      val featureStr = features.mkString(" -#- ")
-      midWriter.write(s"${mid}\t${featureStr}\n")
-    })
-    midWriter.close()
+    if (computeForMidOrMidPair.contains("mid")) {
+      println("Computing MID features")
+      val midWriter = fileUtil.getFileWriter(midFeatureFile)
+      var i = 0
+      fileUtil.processFile(midFile, (line: String) => {
+        i += 1
+        fileUtil.logEvery(1000, i)
+        val mid = line
+        val features = computer.computeMidFeatures(mid)
+        val featureStr = features.mkString(" -#- ")
+        midWriter.write(s"${mid}\t${featureStr}\n")
+      })
+      midWriter.close()
+    }
 
-    val midPairWriter = fileUtil.getFileWriter(midPairFeatureFile)
-    i = 0
-    fileUtil.processFile(midPairFile, (line: String) => {
-      i += 1
-      fileUtil.logEvery(1000, i)
-      val midPair = line
-      val midPairFields = midPair.split("__##__")
-      val mid1 = midPairFields(0)
-      val mid2 = midPairFields(1)
-      val features = computer.computeMidPairFeatures(mid1, mid2)
-      val featureStr = features.mkString(" -#- ")
-      midPairWriter.write(s"${midPair}\t${featureStr}\n")
-    })
-    midPairWriter.close()
+    if (computeForMidOrMidPair.contains("mid pair")) {
+      val midPairWriter = fileUtil.getFileWriter(midPairFeatureFile)
+      var i = 0
+      fileUtil.processFile(midPairFile, (line: String) => {
+        i += 1
+        fileUtil.logEvery(1000, i)
+        val midPair = line
+        val midPairFields = midPair.split("__##__")
+        val mid1 = midPairFields(0)
+        val mid2 = midPairFields(1)
+        val features = computer.computeMidPairFeatures(mid1, mid2)
+        val featureStr = features.mkString(" -#- ")
+        midPairWriter.write(s"${midPair}\t${featureStr}\n")
+      })
+      midPairWriter.close()
+    }
   }
 
   def processInMemory() {
     val fileUtil = new FileUtil
     val computer = new PreFilteredFeatureComputer(sfeParams, fileUtil)
 
-    {
-      // This block is so that midFeatures goes out of scope and can be garbage collected once it's
-      // written to disk.
+    if (computeForMidOrMidPair.contains("mid")) {
       println("Computing MID features")
       val midFeatures = fileUtil.parMapLinesFromFile(midFile, (line: String) => {
         val mid = line
@@ -174,7 +202,7 @@ class TrainingDataFeatureComputer(
       fileUtil.writeLinesToFile(midFeatureFile, midFeatures)
     }
 
-    {
+    if (computeForMidOrMidPair.contains("mid pair")) {
       println("Computing MID pair features")
       val midPairFeatures = fileUtil.parMapLinesFromFile(midPairFile, (line: String) => {
         val midPair = line
@@ -192,39 +220,43 @@ class TrainingDataFeatureComputer(
   def processMemoryConstrained() {
     val fileUtil = new FileUtil
     val computer = new PreFilteredFeatureComputer(sfeParams, fileUtil)
-    val midWriter = fileUtil.getFileWriter(midFeatureFile)
-    fileUtil.parProcessFileInChunks(fileUtil.getLineIterator(midFile), (lines: Seq[String]) => {
-      val midFeatures = lines.map(line => {
-        val mid = line
-        val features = computer.computeMidFeatures(mid)
-        val featureStr = features.mkString(" -#- ")
-        s"${mid}\t${featureStr}\n"
-      })
-      midWriter synchronized {
-        for (midFeatureLine <- midFeatures) {
-          midWriter.write(midFeatureLine)
+    if (computeForMidOrMidPair.contains("mid")) {
+      val midWriter = fileUtil.getFileWriter(midFeatureFile)
+      fileUtil.parProcessFileInChunks(fileUtil.getLineIterator(midFile), (lines: Seq[String]) => {
+        val midFeatures = lines.map(line => {
+          val mid = line
+          val features = computer.computeMidFeatures(mid)
+          val featureStr = features.mkString(" -#- ")
+          s"${mid}\t${featureStr}\n"
+        })
+        midWriter synchronized {
+          for (midFeatureLine <- midFeatures) {
+            midWriter.write(midFeatureLine)
+          }
         }
-      }
-    }, chunkSize=1024)
-    midWriter.close()
+      }, chunkSize=1024)
+      midWriter.close()
+    }
 
-    val midPairWriter = fileUtil.getFileWriter(midPairFeatureFile)
-    fileUtil.parProcessFileInChunks(fileUtil.getLineIterator(midPairFile), (lines: Seq[String]) => {
-      val midPairFeatures = lines.map(line => {
-        val midPair = line
-        val midPairFields = midPair.split("__##__")
-        val mid1 = midPairFields(0)
-        val mid2 = midPairFields(1)
-        val features = computer.computeMidPairFeatures(mid1, mid2)
-        val featureStr = features.mkString(" -#- ")
-        s"${midPair}\t${featureStr}\n"
-      })
-      midPairWriter synchronized {
-        for (midPairFeatureLine <- midPairFeatures) {
-          midPairWriter.write(midPairFeatureLine)
+    if (computeForMidOrMidPair.contains("mid pair")) {
+      val midPairWriter = fileUtil.getFileWriter(midPairFeatureFile)
+      fileUtil.parProcessFileInChunks(fileUtil.getLineIterator(midPairFile), (lines: Seq[String]) => {
+        val midPairFeatures = lines.map(line => {
+          val midPair = line
+          val midPairFields = midPair.split("__##__")
+          val mid1 = midPairFields(0)
+          val mid2 = midPairFields(1)
+          val features = computer.computeMidPairFeatures(mid1, mid2)
+          val featureStr = features.mkString(" -#- ")
+          s"${midPair}\t${featureStr}\n"
+        })
+        midPairWriter synchronized {
+          for (midPairFeatureLine <- midPairFeatures) {
+            midPairWriter.write(midPairFeatureLine)
+          }
         }
-      }
-    }, chunkSize=1024)
-    midPairWriter.close()
+      }, chunkSize=1024)
+      midPairWriter.close()
+    }
   }
 }

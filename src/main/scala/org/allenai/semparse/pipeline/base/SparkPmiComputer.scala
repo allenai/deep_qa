@@ -16,6 +16,14 @@ class SparkPmiComputer(
   implicit val formats = DefaultFormats
 
   val validParams = Seq(
+    "mid matrix file",
+    "mid pair matrix file",
+    "mid word file",
+    "mid pair word file",
+    "cat word feature file",
+    "rel word feature file",
+    "filtered mid feature file",
+    "filtered mid pair feature file",
     "max word count",
     "max feature count",
     "min mid feature count",
@@ -23,6 +31,7 @@ class SparkPmiComputer(
     "features per word",
     "use squared pmi",
     "run locally",
+    "mid or mid pair",
     "training data features"
   )
   JsonHelper.ensureNoExtras(params, "pmi computer", validParams)
@@ -54,6 +63,17 @@ class SparkPmiComputer(
   // your shell environment, and so on...
   val runningLocally = JsonHelper.extractWithDefault(params, "run locally", true)
 
+  // Should we compute features for MIDs, MID pairs, or both?
+  val computeForMidOrMidPair = {
+    val choices = Seq("mid", "mid pair", "both")
+    val choice = JsonHelper.extractChoiceWithDefault(params, "mid or mid pair", choices, "both")
+    if (choice == "both") {
+      Set("mid", "mid pair")
+    } else {
+      Set(choice)
+    }
+  }
+
   // TODO(matt): maybe this should be a parameter...?  But this one is purely computational, and
   // changing it does not change the output, so I don't really want it to get saved in the param
   // file...
@@ -62,73 +82,54 @@ class SparkPmiComputer(
   // OK, that's all of the parameters specific to this step, now to set up the inputs and outputs.
   val featureComputer = new TrainingDataFeatureComputer(params \ "training data features", fileUtil)
   val processor = featureComputer.trainingDataProcessor
-  val dataName = processor.dataName
 
-  val outDir = s"data/${dataName}"
+  val outDir = featureComputer.outDir
 
-  val midMatrixFile = if (runningLocally) {
-    s"$outDir/pre_filtered_mid_features.tsv"
-  } else {
-    (params \ "mid matrix file").extract[String]  // some S3 URI
-  }
-
-  val midPairMatrixFile = if (runningLocally) {
-    s"$outDir/pre_filtered_mid_pair_features.tsv"
-  } else {
-    (params \ "mid pair matrix file").extract[String]  // some S3 URI
-  }
-
-  val midWordFile = if (runningLocally) {
-    s"$outDir/training_mid_words.tsv"
-  } else {
-    (params \ "mid word file").extract[String]  // some S3 URI
-  }
-
-  val midPairWordFile = if (runningLocally) {
-    s"$outDir/training_mid_pair_words.tsv"
-  } else {
-    (params \ "mid pair word file").extract[String]  // some S3 URI
-  }
-
-  val catWordFeatureFile = if (runningLocally) {
-    s"$outDir/cat_word_features.tsv"
-  } else {
-    (params \ "cat word feature file").extract[String]  // some S3 URI
-  }
-
-  val relWordFeatureFile = if (runningLocally) {
-    s"$outDir/rel_word_features.tsv"
-  } else {
-    (params \ "rel word feature file").extract[String]  // some S3 URI
-  }
-
-  val filteredMidFeatureFile = if (runningLocally) {
-    s"$outDir/mid_features.tsv"
-  } else {
-    (params \ "filtered mid feature file").extract[String]  // some S3 URI
-  }
-
-  val filteredMidPairFeatureFile = if (runningLocally) {
-    s"$outDir/mid_pair_features.tsv"
-  } else {
-    (params \ "filtered mid pair feature file").extract[String]  // some S3 URI
-  }
+  // We allow all of these input and output files to be specified manually, which is necessary if
+  // you want to run this on a cluster, with the files stored in S3.  (It's also necessary if you
+  // want to bypass some of the steps in the pipeline...)
+  val midMatrixFile = JsonHelper.extractWithDefault(params, "mid matrix file", s"$outDir/pre_filtered_mid_features.tsv")
+  val midPairMatrixFile = JsonHelper.extractWithDefault(params, "mid pair matrix file", s"$outDir/pre_filtered_mid_pair_features.tsv")
+  val midWordFile = JsonHelper.extractWithDefault(params, "mid word file", s"$outDir/training_mid_words.tsv")
+  val midPairWordFile = JsonHelper.extractWithDefault(params, "mid pair word file", s"$outDir/training_mid_pair_words.tsv")
+  val catWordFeatureFile = JsonHelper.extractWithDefault(params, "cat word feature file", s"$outDir/cat_word_features.tsv")
+  val relWordFeatureFile = JsonHelper.extractWithDefault(params, "rel word feature file", s"$outDir/rel_word_features.tsv")
+  val filteredMidFeatureFile = JsonHelper.extractWithDefault(params, "filtered mid feature file", s"$outDir/mid_features.tsv")
+  val filteredMidPairFeatureFile = JsonHelper.extractWithDefault(params, "filtered mid pair feature file", s"$outDir/mid_pair_features.tsv")
 
   override val paramFile = s"$outDir/pmi_params.json"
   override val inProgressFile = s"$outDir/pmi_in_progress"
   override val name = "Spark PMI computer"
-  override val inputs = Set(
-    (midMatrixFile, if (runningLocally) Some(featureComputer) else None),
-    (midPairMatrixFile, if (runningLocally) Some(featureComputer) else None),
-    (midWordFile, if (runningLocally) Some(processor) else None),
-    (midPairWordFile, if (runningLocally) Some(processor) else None)
-  )
-  override val outputs = Set(
-    catWordFeatureFile,
-    relWordFeatureFile,
-    filteredMidFeatureFile,
-    filteredMidPairFeatureFile
-  )
+
+  val midInputs = if (computeForMidOrMidPair.contains("mid")) {
+    Set(
+      (midMatrixFile, if (runningLocally) Some(featureComputer) else None),
+      (midWordFile, if (runningLocally) processor else None)
+    )
+  } else {
+    Set()
+  }
+  val midPairInputs = if (computeForMidOrMidPair.contains("mid pair")) {
+    Set(
+      (midPairMatrixFile, if (runningLocally) Some(featureComputer) else None),
+      (midPairWordFile, if (runningLocally) processor else None)
+    )
+  } else {
+    Set()
+  }
+  override val inputs = midInputs ++ midPairInputs
+
+  val midOutputs = if (computeForMidOrMidPair.contains("mid")) {
+    Set(catWordFeatureFile, filteredMidFeatureFile)
+  } else {
+    Set()
+  }
+  val midPairOutputs = if (computeForMidOrMidPair.contains("mid pair")) {
+    Set(relWordFeatureFile, filteredMidPairFeatureFile)
+  } else {
+    Set()
+  }
+  override val outputs = midOutputs ++ midPairOutputs
 
   /**
    * Here we select a set of features to use for each word in our data.  The main steps in the
@@ -155,32 +156,38 @@ class SparkPmiComputer(
 
     val sc = new SparkContext(conf)
 
-    computePmi(
-      sc,
-      "mid",
-      maxWordCount_,
-      maxFeatureCount_,
-      useSquaredPmi_,
-      featuresPerWord_,
-      minMidFeatureCount,
-      midMatrixFile,
-      midWordFile,
-      catWordFeatureFile,
-      filteredMidFeatureFile
-    )
-    computePmi(
-      sc,
-      "mid_pair",
-      maxWordCount_,
-      maxFeatureCount_,
-      useSquaredPmi_,
-      featuresPerWord_,
-      minMidPairFeatureCount,
-      midPairMatrixFile,
-      midPairWordFile,
-      relWordFeatureFile,
-      filteredMidPairFeatureFile
-    )
+    if (computeForMidOrMidPair.contains("mid")) {
+      computePmi(
+        sc,
+        "mid",
+        maxWordCount_,
+        maxFeatureCount_,
+        useSquaredPmi_,
+        featuresPerWord_,
+        minMidFeatureCount,
+        midMatrixFile,
+        midWordFile,
+        catWordFeatureFile,
+        filteredMidFeatureFile
+      )
+    }
+    if (computeForMidOrMidPair.contains("mid pair")) {
+      computePmi(
+        sc,
+        "mid_pair",
+        maxWordCount_,
+        maxFeatureCount_,
+        useSquaredPmi_,
+        featuresPerWord_,
+        minMidPairFeatureCount,
+        midPairMatrixFile,
+        midPairWordFile,
+        relWordFeatureFile,
+        filteredMidPairFeatureFile
+      )
+    }
+
+    sc.stop()
   }
 
   def computePmi(
