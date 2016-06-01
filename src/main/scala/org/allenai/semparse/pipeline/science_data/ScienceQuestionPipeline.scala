@@ -16,8 +16,9 @@ object ScienceQuestionPipeline {
 
   val sentenceProcessorParams: JValue =
     ("max word count per sentence" -> 10) ~
+    ("logical forms" -> ("nested" -> true)) ~
     ("data name" -> "petert_animal_sentences") ~
-    ("data directory" -> "/home/mattg/data/petert_animal_sentences")
+    ("data directory" -> "/home/pradeepd/data/petert_animal_sentences")
   val sentenceProcessorType: JValue = ("type" -> "science sentence processor")
   val sentenceProcessorParamsWithType: JValue = sentenceProcessorParams merge sentenceProcessorType
 

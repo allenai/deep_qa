@@ -23,7 +23,7 @@ class ScienceQuestionProcessor(
   implicit val formats = DefaultFormats
   override val name = "Science Question Processor"
 
-  val validParams = Seq("question file", "data name")
+  val validParams = Seq("question file", "logical forms", "data name")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val questionFile = (params \ "question file").extract[String]
@@ -36,7 +36,7 @@ class ScienceQuestionProcessor(
   override val inProgressFile = outputFile.replace(".txt", "_in_progress")
 
   val parser = new StanfordParser
-  val logicalFormGenerator = new LogicalFormGenerator(JNothing)
+  val logicalFormGenerator = new LogicalFormGenerator(params \ "logical forms")
 
   override def _runStep() {
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
