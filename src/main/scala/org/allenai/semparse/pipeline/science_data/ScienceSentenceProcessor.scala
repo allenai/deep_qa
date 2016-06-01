@@ -24,7 +24,7 @@ class ScienceSentenceProcessor(
   override val name = "Science Sentence Processor"
 
   val validParams = Seq("min word count per sentence", "max word count per sentence",
-    "data directory", "data name", "output format")
+    "data directory", "data name", "output format", "logical forms")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataName = (params \ "data name").extract[String]
@@ -37,6 +37,7 @@ class ScienceSentenceProcessor(
     case "training data" => s"data/science/$dataName/training_data.tsv"
     case "debug" => s"data/science/$dataName/sentence_lfs.txt"
   }
+  val lfParams = (params \ "logical forms")
 
   val numPartitions = 1
 
@@ -86,7 +87,7 @@ class ScienceSentenceProcessor(
     val trees = sentences.flatMap(Helper.parseSentence)
     val logicalForms = trees.map(sentenceAndTree => {
       // TODO(matt): fix allocation of this object
-      val logicalFormGenerator = new LogicalFormGenerator(JNothing)
+      val logicalFormGenerator = new LogicalFormGenerator(lfParams)
       val sentence = sentenceAndTree._1
       val tree = sentenceAndTree._2
       val logicalForm = try {
