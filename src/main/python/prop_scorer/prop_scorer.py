@@ -5,6 +5,7 @@ import numpy
 import pickle
 from keras.layers import Embedding, Input, LSTM, Dense, merge
 from keras.models import Model, model_from_yaml
+from keras.callbacks import EarlyStopping
 from keras import backend as K
 
 from index_data import DataIndexer
@@ -55,7 +56,8 @@ class PropScorer(object):
         score_hinge_loss = lambda dummy_target, diff: K.mean(diff + 0*dummy_target, axis=-1)
         model = Model(input=[good_input_layer, bad_input_layer], output=score_diff)
         model.compile(loss=score_hinge_loss, optimizer='rmsprop')
-        model.fit([good_input, bad_input], numpy.zeros((good_input.shape[:1])), validation_split=0.1) # Note: target is ignored by loss. See above.
+        early_stopping = EarlyStopping(patience=1)
+        model.fit([good_input, bad_input], numpy.zeros((good_input.shape[:1])), validation_split=0.1, callbacks=[early_stopping]) # Note: target is ignored by loss. See above.
         self.model = model
 
         ## Step 6: Define a scoring model taking the necessary parts of the trained model
