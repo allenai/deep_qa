@@ -8,7 +8,36 @@ import org.json4s.JsonDSL._
 class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   val parser = new StanfordParser
   val logicalFormGenerator = new LogicalFormGenerator(JNothing)
-  "getLogicalForm" should "work for \"Cells contain genetic material called DNA.\" (simplifications)" in {
+
+  "getLogicalForm" should "handle basic alternations (intransitive verb)" in {
+    val parse = parser.parseSentence("Animals eat.")
+    logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("eat", Seq(Atom("animal")))
+    ))
+  }
+
+  it should "handle basic alternations (passive verb with no agent)" in {
+    val parse = parser.parseSentence("Animals are eaten.")
+    logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("eaten", Seq(Atom("animal")))
+    ))
+  }
+
+  it should "handle basic alternations (passive verb with agent)" in {
+    val parse = parser.parseSentence("Animals are eaten by wolves.")
+    logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("eat", Seq(Atom("wolf"), Atom("animal")))
+    ))
+  }
+
+  it should "handle basic alternations (passive verb with preposition)" in {
+    val parse = parser.parseSentence("Animals are eaten in the city.")
+    logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("eaten_in", Seq(Atom("animal"), Atom("city")))
+    ))
+  }
+
+  it should "work for \"Cells contain genetic material called DNA.\" (simplifications)" in {
     val parse = parser.parseSentence("Cells contain genetic material called DNA.")
     logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(Conjunction(Set(
       Predicate("contain", Seq(Atom("cell"), Atom("genetic material call dna"))),
@@ -299,6 +328,8 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   it should "work for \"A spam from LOGIC@imneverwrong.com, a particularly blatant crank.\" (weird error)" in {
     val parse = parser.parseSentence("A spam from LOGIC@imneverwrong.com, a particularly blatant crank.")
     logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(Conjunction(Set(
+      Predicate("crank", Seq(Atom("spam"))),
+      Predicate("crank", Seq(Atom("spam from logic@imneverwrong.com, particularly blatant"))),
       Predicate("from", Seq(Atom("spam"), Atom("logic@imneverwrong.com, particularly blatant"))),
       Predicate("from", Seq(Atom("spam"), Atom("logic@imneverwrong.com,"))),
       Predicate("blatant", Seq(Atom("logic@imneverwrong.com,")))
@@ -353,16 +384,14 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
     val parse = parser.parseSentence("The male part of a flower is called stamen.")
-    parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("call", Seq(Predicate("of", Seq(Predicate("male", Seq(Atom("part"))), Atom("plant"))), Atom("stamen")))))
+      Predicate("called", Seq(Predicate("of", Seq(Predicate("male", Seq(Atom("part"))), Atom("flower"))), Atom("stamen")))))
   }
 
   it should "properly nest \"Matter that is vibrating is producing sound.\" (Relative clause with that)" in {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
     val parse = parser.parseSentence("Matter that is vibrating is producing sound.")
-    parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
       Predicate("produce", Seq(Predicate("vibrate", Seq(Atom("matter"))), Atom("sound")))))
   }

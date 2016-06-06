@@ -182,8 +182,10 @@ class LogicalFormGenerator(params: JValue) {
       // what we've already included with the nesting.
       if (!reducedRelativeClausePredicates.isEmpty) {
         reducedRelativeClausePredicates
+      } else if (!prepositionPredicates.isEmpty) {
+        prepositionPredicates.toSet
       } else {
-        wordPredicates ++ adjectivePredicates ++ prepositionPredicates ++ relativeClausePredicates
+        wordPredicates ++ adjectivePredicates ++ relativeClausePredicates
       }
     } else {
       // If we aren't nesting logical forms, this is trivial - we just add them all into a set.
@@ -233,18 +235,18 @@ class LogicalFormGenerator(params: JValue) {
   }
 
   def getLogicForControllingVerb(tree: DependencyTree): Option[Logic] = {
-    // Control verbs are the only place we're going to try to handle passives without agents.
     // Passives _with_ agents are handled in the tree transformations, and most other constructions
-    // with "is" or "are" are handled by getLogicForCopula.  Except, in some control sentences, we
-    // actually have two arguments, and one of them is technically the subject of a passive.  We
-    // change that passive into the upper argument of a control verb here.
+    // with "is" or "are" are handled by getLogicForCopula.  Except, in some control sentences
+    // (like "Tools are used to measure things"), we actually have two arguments, and one of them
+    // is technically the subject of a passive.  We change that passive into the upper argument of
+    // a control verb here.
     val rootArguments = getVerbArguments(tree).map(arg => {
       if (arg._2 == "dobj") {
         (arg._1, "upper_dobj")
       } else {
         arg
       }
-    }) ++ getPassiveSubject(tree).map(arg => (arg._1, "upper_dobj"))
+    }).filterNot(_._2 == "nsubjpass") ++ getPassiveSubject(tree).map(arg => (arg._1, "upper_dobj"))
 
     // TODO(matt): I should probably handle this as a map, instead of a find, in case we have
     // both...  I'll worry about that when I see it in a sentence, though.
@@ -267,23 +269,31 @@ class LogicalFormGenerator(params: JValue) {
     }
     val tokenWithCombiner = tree.token.addPreposition(combiner)
     val combinedToken = tokenWithCombiner.combineWith(controlledVerb._1.token)
-    getLogicForVerbWithArguments(combinedToken, arguments)
+    getLogicForVerbWithArguments(combinedToken, arguments, allowEmptySubject=true)
   }
 
-  def getLogicForVerbWithArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+  def getLogicForVerbWithArguments(
+    token: Token,
+    arguments: Seq[(DependencyTree, String)],
+    allowEmptySubject: Boolean = false
+  ): Option[Logic] = {
     if (nestLogicalForms) {
-      getNestedLogicForVerbArguments(token, arguments)
+      getNestedLogicForVerbArguments(token, arguments, allowEmptySubject)
     } else {
-      getCrossProductOfVerbArguments(token, arguments)
+      getCrossProductOfVerbArguments(token, arguments, allowEmptySubject)
     }
   }
 
-  def getNestedLogicForVerbArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+  def getNestedLogicForVerbArguments(
+    token: Token,
+    arguments: Seq[(DependencyTree, String)],
+    allowEmptySubject: Boolean
+  ): Option[Logic] = {
     // The basic strategy here is to order the arguments in an adjunct hierarchy, create a base
     // predicate with the core arguments, and nest that inside of the next argument, recursively.
     // So, for example, "animals depend on plants for food" would give `for(depend_on(animals,
     // plants), food)`
-    val logic = getCrossProductOfVerbArguments(token, arguments.take(2))
+    val logic = getCrossProductOfVerbArguments(token, arguments.take(2), allowEmptySubject)
     logic match {
       case None => None
       case Some(logic) => {
@@ -306,55 +316,83 @@ class LogicalFormGenerator(params: JValue) {
     }
   }
 
-  def getCrossProductOfVerbArguments(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
-    // We might have more than two arguments, so we'll handle this by taking all pairs of
-    // arguments.  The arguments have already been sorted, so the subject is first, then the object
-    // (if any), then any prepositional arguments.
+  def getCrossProductOfVerbArguments(
+    token: Token,
+    arguments: Seq[(DependencyTree, String)],
+    allowEmptySubject: Boolean
+  ): Option[Logic] = {
+    // If we got here with a verb that has no subject, bail.  This may have happened when checking
+    // the children of a control verb, or a few other odd constructions.
+    if (!allowEmptySubject && !arguments.exists(_._2.contains("subj"))) return None
+    // First we handle the case where we have one argument.  This is an intransitive verb (or a
+    // transitive verb in the passive voice with no agent; our tree transformations will handle the
+    // case where there is an agent).
+    if (arguments.size == 1) {
+      val tokenWithArg = modifyPredicateForArg1(token, arguments(0))
+      return getLogicForUnaryPredicate(tokenWithArg.lemma, arguments(0)._1)
+    }
+    // Now the other cases.  We might have more than two arguments, so we'll handle this by taking
+    // all pairs of arguments.  The arguments have already been sorted, so the subject is first,
+    // then the object (if any), then any prepositional arguments.
     val logic = for (i <- 0 until arguments.size;
                      j <- (i + 1) until arguments.size) yield {
       val arg1 = arguments(i)
       val arg2 = arguments(j)
-      val tokenWithArg1Prep = if (arg1._2.startsWith("prep_")) {
-        val prep = arg1._2.replace("prep_", "")
-        token.addPreposition(prep)
-      } else if (arg1._2.endsWith("dobj")) {
-        token.addPreposition("obj")
-      } else if (arg1._2 == "iobj") {
-        token.addPreposition("obj2")
-      } else {
-        token
-      }
-      val tokenWithArg2Prep = if (arg2._2.startsWith("prep_")) {
-        val prep = arg2._2.replace("prep_", "")
-        tokenWithArg1Prep.addPreposition(prep)
-      } else if (arg2._2 == "lower_dobj") {
-        tokenWithArg1Prep.addPreposition("obj")
-      } else if (arg2._2 == "iobj") {
-        tokenWithArg1Prep.addPreposition("obj2")
-      } else {
-        tokenWithArg1Prep
-      }
-      getLogicForTransitiveVerb(tokenWithArg2Prep, Seq(arg1, arg2))
+      val tokenWithArg1 = modifyPredicateForArg1(token, arg1)
+      val tokenWithArg2 = modifyPredicateForArg2(tokenWithArg1, arg2)
+      getLogicForTransitiveVerb(tokenWithArg2.lemma, Seq(arg1, arg2))
     }
     val preds = logic.flatten.toSet
     if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
-  def getLogicForTransitiveVerb(token: Token, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
+  def modifyPredicateForArg1(token: Token, argument: (DependencyTree, String)): Token = {
+    if (argument._2 == "nsubjpass") {
+      // This is a passive verb without an agent.  In this case, we are going to use the participle
+      // as the predicate, instead of the lemma, to differentiate it from the active voice.  So we
+      // just return a new token with `token.word` copied into `token.lemma`.
+      Token(token.word, token.posTag, token.word, token.index)
+    } else if (argument._2.startsWith("prep_")) {
+      val prep = argument._2.replace("prep_", "")
+      token.addPreposition(prep)
+    } else if (argument._2.endsWith("dobj")) {
+      token.addPreposition("obj")
+    } else if (argument._2 == "iobj") {
+      token.addPreposition("obj2")
+    } else {
+      token
+    }
+  }
+
+  def modifyPredicateForArg2(token: Token, argument: (DependencyTree, String)): Token = {
+    if (argument._2.startsWith("prep_")) {
+      val prep = argument._2.replace("prep_", "")
+      token.addPreposition(prep)
+    } else if (argument._2 == "lower_dobj") {
+      token.addPreposition("obj")
+    } else if (argument._2 == "iobj") {
+      token.addPreposition("obj2")
+    } else {
+      token
+    }
+  }
+
+  def getLogicForTransitiveVerb(predicate: String, arguments: Seq[(DependencyTree, String)]): Option[Logic] = {
     if (arguments.exists(_._1.isWhPhrase)) return None
-    getLogicForBinaryPredicate(token.lemma, arguments(0)._1, arguments(1)._1)
+    getLogicForBinaryPredicate(predicate, arguments(0)._1, arguments(1)._1)
   }
 
   def argumentSortKey(arg: (DependencyTree, String)) = {
     val label = arg._2
     val sortIndex = label match {
       case "nsubj" => 1
-      case "csubj" => 2
-      case "dobj" => 3
-      case "upper_dobj" => 4
-      case "lower_dobj" => 5
-      case "iobj" => 6
-      case _ => 7
+      case "nsubjpass" => 2  // we transform this if there's an agent, but there might not be one
+      case "csubj" => 3
+      case "dobj" => 4
+      case "upper_dobj" => 5
+      case "lower_dobj" => 6
+      case "iobj" => 7
+      case _ => 8
     }
     (sortIndex, arg._1.tokenStartIndex)
   }
@@ -362,7 +400,7 @@ class LogicalFormGenerator(params: JValue) {
   def getVerbArguments(tree: DependencyTree) = {
     val arguments = tree.children.filter(c => {
       val label = c._2
-      label.endsWith("subj") || label == "dobj" || label == "iobj" || label.startsWith("prep_")
+      label.contains("subj") || label == "dobj" || label == "iobj" || label.startsWith("prep_")
     })
     arguments.sortBy(argumentSortKey)
   }
