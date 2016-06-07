@@ -132,6 +132,9 @@ class LogicalFormGenerator(params: JValue) {
    * can produce logic statements: by having adjective modifiers, prepositional phrase attachments,
    * relative clauses, and so on.  We'll check for them in this method, and merge them all at the
    * end.  The merging is a little complicated for nested predicates, though.
+   *
+   * TODO(matt): this method is a mess.  What I need to do is have an ordered list of things to
+   * look for, pick it out (i.e., remove it from the tree), and then recurse on this method.
    */
   def getLogicForOther(tree: DependencyTree): Option[Logic] = {
     val wordPredicates = if (nestLogicalForms && tree.children.size == 0) {
@@ -171,6 +174,13 @@ class LogicalFormGenerator(params: JValue) {
       getLogicForBinaryPredicate(prep, withoutPrep, childTree)
     })
 
+    val possessivePredicates = tree.children.filter(_._2 == "poss").flatMap(child => {
+      val token = Token("'s", "V", "'s", 0)
+      val arg1 = child._1
+      val arg2 = transformers.removeTree(tree, child._1)
+      getLogicForVerbWithArguments(token, Seq((arg1, "nsubj"), (arg2, "dobj")))
+    })
+
     // Finally, we get to the merge step.
     val preds = if (nestLogicalForms) {
       // This is complicated if we're nesting logical forms, because some of these end up being
@@ -184,6 +194,8 @@ class LogicalFormGenerator(params: JValue) {
         reducedRelativeClausePredicates
       } else if (!prepositionPredicates.isEmpty) {
         prepositionPredicates.toSet
+      } else if (!possessivePredicates.isEmpty) {
+        possessivePredicates.toSet
       } else {
         wordPredicates ++ adjectivePredicates ++ relativeClausePredicates
       }
@@ -193,7 +205,8 @@ class LogicalFormGenerator(params: JValue) {
       adjectivePredicates ++
       reducedRelativeClausePredicates ++
       prepositionPredicates ++
-      relativeClausePredicates
+      relativeClausePredicates ++
+      possessivePredicates
     }
     if (preds.isEmpty) None else Some(Conjunction(preds))
   }

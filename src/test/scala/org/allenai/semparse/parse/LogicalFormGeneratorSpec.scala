@@ -409,9 +409,8 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
     val parse = parser.parseSentence("Most of Earth's water is located in oceans.")
-    parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("locate_in", Seq(Predicate("of", Seq(Atom("most"), Predicate("'s", Seq(Atom("earth"), Atom("water"))))), Atom("ocean")))))
+      Predicate("located_in", Seq(Predicate("of", Seq(Atom("most"), Predicate("'s", Seq(Atom("earth"), Atom("water"))))), Atom("ocean")))))
   }
 
   it should "properly nest \"All known living things are made up of cells.\" (Passive with phrasal verb)" in {
