@@ -37,6 +37,7 @@ class ScienceSentenceProcessor(
     case "training data" => s"data/science/$dataName/training_data.tsv"
     case "debug" => s"data/science/$dataName/sentence_lfs.txt"
   }
+  val logicalFormGenerator = new LogicalFormGenerator(params \ "logical forms")
 
   val numPartitions = 1
 
@@ -56,6 +57,7 @@ class ScienceSentenceProcessor(
 
     parseSentences(
       sc,
+      logicalFormGenerator,
       outputFile,
       dataDir,
       minWordCount,
@@ -68,6 +70,7 @@ class ScienceSentenceProcessor(
 
   def parseSentences(
     sc: SparkContext,
+    logicalFormGenerator: LogicalFormGenerator,
     outputFile: String,
     dataDir: String,
     minWordCount: Int,
@@ -86,7 +89,6 @@ class ScienceSentenceProcessor(
     val trees = sentences.flatMap(Helper.parseSentence)
     val logicalForms = trees.map(sentenceAndTree => {
       // TODO(matt): fix allocation of this object
-      val logicalFormGenerator = new LogicalFormGenerator(JNothing)
       val sentence = sentenceAndTree._1
       val tree = sentenceAndTree._2
       val logicalForm = try {

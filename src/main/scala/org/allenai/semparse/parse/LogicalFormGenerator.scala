@@ -4,7 +4,7 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
-class LogicalFormGenerator(params: JValue) {
+class LogicalFormGenerator(params: JValue) extends Serializable {
 
   val validParams = Seq("nested", "split trees")
   JsonHelper.ensureNoExtras(params, "LogicalFormGenerator", validParams)
@@ -155,8 +155,8 @@ class LogicalFormGenerator(params: JValue) {
       val npWithoutRelative = transformers.removeTree(tree, child)
       child.children.filter(_._1.token.posTag == "WDT").headOption match {
         case None => {
-          System.err.println("Error processing relative clause for tree:")
-          tree.print()
+          //System.err.println("Error processing relative clause for tree:")
+          //tree.print()
           Seq()
         }
         case Some(relativizer) => {

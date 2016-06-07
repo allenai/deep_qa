@@ -16,8 +16,10 @@ object ScienceQuestionPipeline {
 
   val sentenceProcessorParams: JValue =
     ("max word count per sentence" -> 10) ~
-    ("data name" -> "petert_animal_sentences") ~
-    ("data directory" -> "/home/mattg/data/petert_animal_sentences")
+    ("logical forms" -> ("nested" -> true)) ~
+    ("output format" -> "debug") ~
+    ("data name" -> "petert_sentences") ~
+    ("data directory" -> "/home/pradeepd/data/petert_science_sentences")
   val sentenceProcessorType: JValue = ("type" -> "science sentence processor")
   val sentenceProcessorParamsWithType: JValue = sentenceProcessorParams merge sentenceProcessorType
 
@@ -38,7 +40,7 @@ object ScienceQuestionPipeline {
 
   val trainingDataParams: JValue =
     ("training data creator" -> sentenceProcessorParamsWithType) ~
-    ("data name" -> "science/petert_animal_sentences") ~
+    ("data name" -> "science/petert_science_sentences") ~
     ("lines to use" -> 700000) ~
     ("word count threshold" -> 5)
 
@@ -68,7 +70,7 @@ object ScienceQuestionPipeline {
   // Step 6: Process the questions into logical forms
   ////////////////////////////////////////////////////////////////
 
-  val questionProcesserParams: JValue =
+  val questionProcessorParams: JValue =
     ("question file" -> "data/science/animal_questions/raw_questions.tsv") ~
     ("logical forms" -> ("nested" -> true)) ~
     ("data name" -> "animal_questions")
@@ -78,11 +80,11 @@ object ScienceQuestionPipeline {
   /////////////////////////////////////////////////////////////////////
 
   val questionScorerParams: JValue =
-    ("questions" -> questionProcesserParams) ~
+    ("questions" -> questionProcessorParams) ~
     ("model" -> modelParams)
 
   def main(args: Array[String]) {
     //new Trainer(modelParams, fileUtil).runPipeline()
-    new ScienceQuestionProcessor(questionProcesserParams, fileUtil).runPipeline()
+    new ScienceSentenceProcessor(sentenceProcessorParams, fileUtil).runPipeline()
   }
 }
