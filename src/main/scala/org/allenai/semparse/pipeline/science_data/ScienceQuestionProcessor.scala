@@ -23,11 +23,14 @@ class ScienceQuestionProcessor(
   implicit val formats = DefaultFormats
   override val name = "Science Question Processor"
 
-  val validParams = Seq("question file", "logical forms", "data name")
+  val validParams = Seq("question file", "logical forms", "output format", "data name")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val questionFile = (params \ "question file").extract[String]
   val dataName = (params \ "data name").extract[String]
+  // TODO(matt): change these names to "lisp" and [something else]
+  val formatChoices = Seq("training data", "debug")
+  val outputFormat = JsonHelper.extractChoiceWithDefault(params, "output format", formatChoices, "training data")
   val outputFile = s"data/science/$dataName/processed_questions.txt"
 
   override val inputs: Set[(String, Option[Step])] = Set((questionFile, None))
@@ -54,7 +57,13 @@ class ScienceQuestionProcessor(
           }
           val logicalFormStr = logicalForm match {
             case None => ""
-            case Some(logicalForm) => logicalForm.toLisp
+            case Some(logicalForm) => {
+              if (outputFormat == "training data") {
+                logicalForm.toLisp
+              } else {
+                logicalForm.toString
+              }
+            }
           }
           val correctString = if (correct) "1" else "0"
           s"$text\t$logicalFormStr\t$correctString"

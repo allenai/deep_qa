@@ -228,6 +228,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       Predicate("exists", Seq(Atom("two stage of photosynthesis"))),
       Predicate("exists", Seq(Atom("stage of photosynthesis"))),
       Predicate("exists", Seq(Atom("stage"))),
+      Predicate("two", Seq(Atom("stage"))),
       Predicate("of", Seq(Atom("two stage"), Atom("photosynthesis"))),
       Predicate("of", Seq(Atom("stage"), Atom("photosynthesis")))
     ))))
@@ -400,9 +401,8 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
     val parse = parser.parseSentence("One example of a consumer is a reindeer.")
-    parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("example_of", Seq(Atom("consumer"), Atom("reindeer")))))
+      Predicate("example_of", Seq(Atom("reindeer"), Atom("consumer")))))
   }
 
   it should "properly nest \"Most of Earth's water is located in oceans.\" (noun-noun relation with \"'s\")" in {
@@ -417,8 +417,9 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
     val parse = parser.parseSentence("All known living things are made up of cells.")
-    parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("make_up_of", Seq(Predicate("all", Seq(Predicate("known", Seq(Predicate("living", Seq(Atom("thing"))))), Atom("cell")))))))
+      // The "all" is missing here because we drop determiners.  It really should be handled as a
+      // quantification, anyway...
+      Predicate("made_up_of", Seq(Predicate("known", Seq(Predicate("living", Seq(Atom("thing"))))), Atom("cell")))))
   }
 }

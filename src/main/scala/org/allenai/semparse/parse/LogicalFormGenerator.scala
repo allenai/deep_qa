@@ -4,6 +4,9 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
+// TODO(matt): This class is getting pretty big.  Would it make sense to split this into several
+// classes, each of which handles specific cases?  Like, a VerbLogicGenerator?  That would also
+// allow for easier customization of particular structures.
 class LogicalFormGenerator(params: JValue) extends Serializable {
 
   val validParams = Seq("nested", "split trees")
@@ -108,15 +111,53 @@ class LogicalFormGenerator(params: JValue) extends Serializable {
     }
   }
 
+  def isAdjectiveLike(child: (DependencyTree, String)): Boolean = {
+    val label = child._2
+    label == "amod" || label == "nn" || label == "num"
+  }
+
   def isReducedRelative(tree: DependencyTree): Boolean = {
     tree.children.exists(_._2 == "vmod")
   }
 
-  def getLogicForReducedRelative(tree: DependencyTree): Set[Logic] = {
-    tree.children.filter(_._2 == "vmod").map(_._1).flatMap(child => {
+  /**
+   * The "other" category is where we handle things that aren't verbs or other special
+   * constructions.  Mostly, this will be noun phrases; if it's not a noun phrase, we will probably
+   * return None from this method.
+   *
+   * Our plan for handling noun phrases is to take one dependency off at a time, process it into a
+   * logical form, then recurse.  The recursion happens in one of two ways:
+   *   1. If we're using nested logical forms, the getLogic* methods are indirectly recursive.
+   *   2. If we're not using nested logical forms, getLogicForOther does the recursion, using the
+   *      subtree we return from this method.
+   *
+   * The order in which we handle the modifiers in this method is important for nested logical
+   * forms - the things that show up first here will be the outer-most predicates in the logical
+   * form.
+   */
+  def processOneChildForOther(tree: DependencyTree): (Option[Logic], Option[DependencyTree]) = {
+    if (tree.children.exists(_._2 == "rcmod")) {
+      // These are relative clauses (e.g., "genetic material that is called DNA")
+      val child = tree.children.find(_._2 == "rcmod").map(_._1).get
       val npWithoutRelative = transformers.removeTree(tree, child)
-      child.getChildWithLabel("dobj") match {
-        case None => Set[Predicate]()
+      val logic = child.children.filter(_._1.token.posTag == "WDT").headOption match {
+        case None => {
+          //System.err.println("Error processing relative clause for tree:")
+          //tree.print()
+          None
+        }
+        case Some(relativizer) => {
+          val relativeClause = transformers.replaceTree(child, relativizer._1, npWithoutRelative)
+          getLogicForVerb(relativeClause)
+        }
+      }
+      (logic, Some(npWithoutRelative))
+    } else if (tree.children.exists(_._2 == "vmod")) {
+      // These are reduced relative clauses (e.g., "genetic material called DNA")
+      val child = tree.children.find(_._2 == "vmod").map(_._1).get
+      val npWithoutRelative = transformers.removeTree(tree, child)
+      val logic = child.getChildWithLabel("dobj") match {
+        case None => None
         case Some(dobj) => {
           val verb = transformers.removeTree(child, dobj)
           val verbWithSubject = transformers.addChild(verb, npWithoutRelative, "nsubj")
@@ -124,106 +165,109 @@ class LogicalFormGenerator(params: JValue) extends Serializable {
           getLogicForVerb(verbWithObject)
         }
       }
-    }).toSet
-  }
-
-  /**
-   * Most frequently, this method will produce logic for nouns.  There are a lot of ways that nouns
-   * can produce logic statements: by having adjective modifiers, prepositional phrase attachments,
-   * relative clauses, and so on.  We'll check for them in this method, and merge them all at the
-   * end.  The merging is a little complicated for nested predicates, though.
-   *
-   * TODO(matt): this method is a mess.  What I need to do is have an ordered list of things to
-   * look for, pick it out (i.e., remove it from the tree), and then recurse on this method.
-   */
-  def getLogicForOther(tree: DependencyTree): Option[Logic] = {
-    val wordPredicates = if (nestLogicalForms && tree.children.size == 0) {
-      // In the nested setting, we need to stop the recursion at an Atom somewhere.  This is where
-      // it happens.
-      Set(Atom(tree.token.lemma))
-    } else {
-      Set()
-    }
-
-    val adjectivePredicates = tree.children.filter(c => c._2 == "amod" || c._2 == "nn").map(_._1).map(child => {
-      Predicate(child.token.lemma, Seq(Atom(tree.token.lemma)))
-    }).toSet
-
-    val reducedRelativeClausePredicates = getLogicForReducedRelative(tree)
-
-    val relativeClausePredicates = tree.children.filter(_._2 == "rcmod").map(_._1).flatMap(child => {
-      val npWithoutRelative = transformers.removeTree(tree, child)
-      child.children.filter(_._1.token.posTag == "WDT").headOption match {
-        case None => {
-          //System.err.println("Error processing relative clause for tree:")
-          //tree.print()
-          Seq()
-        }
-        case Some(relativizer) => {
-          val relativeClause = transformers.replaceTree(child, relativizer._1, npWithoutRelative)
-          getLogicForVerb(relativeClause)
-        }
-      }
-    })
-
-    val prepositionPredicates = tree.children.filter(_._2.startsWith("prep_")).flatMap(child => {
+      (logic, Some(npWithoutRelative))
+    } else if (tree.children.exists(_._2.startsWith("prep_"))) {
+      // Prepositional attachments
+      val child = tree.children.find(_._2.startsWith("prep_")).get
       val childTree = child._1
       val label = child._2
       val prep = label.replace("prep_", "")
       val withoutPrep = transformers.removeTree(tree, childTree)
-      getLogicForBinaryPredicate(prep, withoutPrep, childTree)
-    })
-
-    val possessivePredicates = tree.children.filter(_._2 == "poss").flatMap(child => {
+      val logic = getLogicForBinaryPredicate(prep, withoutPrep, childTree)
+      (logic, Some(withoutPrep))
+    } else if (tree.children.exists(_._2 == "poss")) {
+      // Possessives
+      val child = tree.children.find(_._2 == "poss").map(_._1).get
       val token = Token("'s", "V", "'s", 0)
-      val arg1 = child._1
-      val arg2 = transformers.removeTree(tree, child._1)
-      getLogicForVerbWithArguments(token, Seq((arg1, "nsubj"), (arg2, "dobj")))
-    })
-
-    // Finally, we get to the merge step.
-    val preds = if (nestLogicalForms) {
-      // This is complicated if we're nesting logical forms, because some of these end up being
-      // dupcliates.  We want to set an order of precedence, and only return the top-most level,
-      // because everything else will have already been generated as part of that logical form.
-      // For example, in the phrase "genetic material called dna", there's a reduced relative
-      // clause that generates the predicate `call(genetic(material), dna)`.  We don't want to also
-      // produce `genetic(material)` from the adjective predicates above, because that duplicates
-      // what we've already included with the nesting.
-      if (!reducedRelativeClausePredicates.isEmpty) {
-        reducedRelativeClausePredicates
-      } else if (!prepositionPredicates.isEmpty) {
-        prepositionPredicates.toSet
-      } else if (!possessivePredicates.isEmpty) {
-        possessivePredicates.toSet
-      } else {
-        wordPredicates ++ adjectivePredicates ++ relativeClausePredicates
-      }
+      val arg1 = child
+      val arg2 = transformers.removeTree(tree, child)
+      val logic = getLogicForVerbWithArguments(token, Seq((arg1, "nsubj"), (arg2, "dobj")))
+      (logic, Some(arg2))
+    } else if (tree.children.exists(isAdjectiveLike)) {
+      // Adjectives
+      val child = tree.children.find(isAdjectiveLike).map(_._1).get
+      val withoutAdjective = transformers.removeTree(tree, child)
+      val logic = getLogicForUnaryPredicate(child.token.lemma, withoutAdjective)
+      (logic, Some(withoutAdjective))
     } else {
-      // If we aren't nesting logical forms, this is trivial - we just add them all into a set.
-      wordPredicates ++
-      adjectivePredicates ++
-      reducedRelativeClausePredicates ++
-      prepositionPredicates ++
-      relativeClausePredicates ++
-      possessivePredicates
+      // We didn't find a modifier to convert into logic.  We'll either return a base Atom, or
+      // we'll return nothing.
+      if (nestLogicalForms && tree.children.size == 0) {
+        // In the nested setting, we need to stop the recursion at an Atom somewhere.  This is where
+        // it happens.
+        (Some(Atom(tree.token.lemma)), None)
+      } else {
+        (None, None)
+      }
     }
-    if (preds.isEmpty) None else Some(Conjunction(preds))
   }
 
+  /**
+   * Most frequently, this method will produce logic for noun phrases.  There are a lot of ways
+   * that noun phrases can produce logic statements: by having adjective modifiers, prepositional
+   * phrase attachments, relative clauses, and so on.  We'll check for them in this method, one by
+   * one, handle them, remove them, and recurse.
+   */
+  def getLogicForOther(tree: DependencyTree): Option[Logic] = {
+    val (logic, remainingTree) = processOneChildForOther(tree)
+    if (nestLogicalForms) {
+      // If we're using nested logical forms, the recursion has already happened when producing the
+      // logic that we got, so there is no need to look at the remaining tree.
+      logic
+    } else {
+      // But, if we are not nesting logical forms, the recursion has not happened yet.  We do that
+      // here, and add the results to a Conjunction.
+      remainingTree match {
+        case None => logic
+        case Some(tree) => {
+          val preds = logic.toSet ++ _getLogicForNode(tree).toSet
+          if (preds.isEmpty) None else Some(Conjunction(preds))
+        }
+      }
+    }
+  }
+
+  /**
+   * Copula sentences are funny cases.  It could just be a noun and an adjective, like "Grass is
+   * green".  In these cases, we want to return something like "be(grass, green)".  It could
+   * instead be expressing a relationship between two nouns, like "Grass is a kind of plant".  In
+   * these cases, we want to grab the relationship and make it the predicate: "kind_of(grass,
+   * plant)".  But, this same idea could be expressed as "One kind of plant is grass", and we
+   * really want to get the same logical form out for this.  So, there's some complexity in the
+   * code to try to figure out if one side or the other of the "is" has a prepositional phrase
+   * attachment.
+   */
   def getLogicForCopula(tree: DependencyTree): Option[Logic] = {
     tree.getChildWithLabel("nsubj") match {
       case None => None
       case Some(nsubj) => {
         val treeWithoutCopula = transformers.removeChild(tree, "cop")
         val preps = tree.children.filter(_._2.startsWith("prep_"))
-        if (preps.size == 0) {
-          val withoutCopAndSubj = transformers.removeTree(treeWithoutCopula, nsubj)
-          val args = Seq((withoutCopAndSubj, "nsubj"), (nsubj, "dobj"))
-          getLogicForVerbWithArguments(Token("be", "V", "be", 0), args)
-        } else {
+        if (preps.size > 0) {
+          // We have a prepositional phrase in the usual case ("Grass is a kind of plant").  The
+          // Stanford parser will have made "kind" the head word in this case, so we take that as
+          // the predicate, and use our standard verb logic to handle this (the verb logic will add
+          // the preposition to the predicate name).
           val args = Seq((nsubj, "nsubj")) ++ preps
           getLogicForVerbWithArguments(tree.token, args)
+        } else {
+          // The usual case ("Grass is a kind of plant") is not present.  So we check for the other
+          // case ("One kind of a plant is grass").
+          val nsubjPreps = nsubj.children.filter(_._2.startsWith("prep_"))
+          if (nsubjPreps.size > 0) {
+            // We found it.  So, we do some funny business to switch the argument order, so we get
+            // the same predicate out that we would in the usual case.  The token we want to use
+            // this time is the nsubj, the tree minus the nsubj is the first argument, and the
+            // prepositional phrase attachments are the remaining arguments.
+            val withoutNsubj = transformers.removeTree(treeWithoutCopula, nsubj)
+            val args = Seq((withoutNsubj, "nsubj")) ++ nsubjPreps
+            getLogicForVerbWithArguments(nsubj.token, args)
+          } else {
+            // No prepositional phrase found, so just use "be" as the predicate.
+            val withoutCopAndSubj = transformers.removeTree(treeWithoutCopula, nsubj)
+            val args = Seq((withoutCopAndSubj, "nsubj"), (nsubj, "dobj"))
+            getLogicForVerbWithArguments(Token("be", "V", "be", 0), args)
+          }
         }
       }
     }
@@ -421,5 +465,4 @@ class LogicalFormGenerator(params: JValue) extends Serializable {
   def getPassiveSubject(tree: DependencyTree) = {
     tree.children.filter(_._2 == "nsubjpass")
   }
-
 }

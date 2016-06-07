@@ -15,11 +15,11 @@ object ScienceQuestionPipeline {
   //////////////////////////////////////////////////////////
 
   val sentenceProcessorParams: JValue =
-    ("max word count per sentence" -> 10) ~
+    ("max word count per sentence" -> 100) ~
     ("logical forms" -> ("nested" -> true)) ~
     ("output format" -> "debug") ~
-    ("data name" -> "petert_sentences") ~
-    ("data directory" -> "/home/pradeepd/data/petert_science_sentences")
+    ("data name" -> "monarch_sentences") ~
+    ("data directory" -> "data/science/monarch_questions")
   val sentenceProcessorType: JValue = ("type" -> "science sentence processor")
   val sentenceProcessorParamsWithType: JValue = sentenceProcessorParams merge sentenceProcessorType
 
@@ -71,9 +71,10 @@ object ScienceQuestionPipeline {
   ////////////////////////////////////////////////////////////////
 
   val questionProcessorParams: JValue =
-    ("question file" -> "data/science/animal_questions/raw_questions.tsv") ~
+    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
+    ("output format" -> "debug") ~
     ("logical forms" -> ("nested" -> true)) ~
-    ("data name" -> "animal_questions")
+    ("data name" -> "monarch_questions")
 
   /////////////////////////////////////////////////////////////////////
   // Step 7: Score the answer options for each question using the model
@@ -85,6 +86,6 @@ object ScienceQuestionPipeline {
 
   def main(args: Array[String]) {
     //new Trainer(modelParams, fileUtil).runPipeline()
-    new ScienceSentenceProcessor(sentenceProcessorParams, fileUtil).runPipeline()
+    new ScienceQuestionProcessor(questionProcessorParams, fileUtil).runPipeline()
   }
 }
