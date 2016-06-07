@@ -417,8 +417,9 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     val params: JValue = ("nested" -> true)
     val generator = new LogicalFormGenerator(params)
     val parse = parser.parseSentence("All known living things are made up of cells.")
-    parse.dependencyTree.get.print()
     generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("make_up_of", Seq(Predicate("all", Seq(Predicate("known", Seq(Predicate("living", Seq(Atom("thing"))))), Atom("cell")))))))
+      // The "all" is missing here because we drop determiners.  It really should be handled as a
+      // quantification, anyway...
+      Predicate("made_up_of", Seq(Predicate("known", Seq(Predicate("living", Seq(Atom("thing"))))), Atom("cell")))))
   }
 }
