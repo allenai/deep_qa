@@ -39,7 +39,7 @@ class PreFilteredFeatureComputer(
   val praBase = "/dev/null"
   val relation = "relation doesn't matter"
   val outputter = Outputter.justLogger
-  val relationMetadata = new RelationMetadata(JNothing, praBase, outputter, fileUtil)
+  val relationMetadata = new RelationMetadata(params \ "relation metadata", praBase, outputter, fileUtil)
   val graph = Graph.create(params \ "graph", "", outputter, fileUtil).get
   val nodeFeatureGenerator = new NodeSubgraphFeatureGenerator(
     params \ "node features",

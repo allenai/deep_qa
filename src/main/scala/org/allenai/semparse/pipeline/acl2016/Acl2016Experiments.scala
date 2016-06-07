@@ -90,6 +90,9 @@ object Acl2016Experiments {
   val newLfCombinedModelParams: JValue =
     ("model type" -> "combined") ~
     ("feature computer" -> newLfTrainingDataPmiParams)
+  val newLfBaselineModelParams: JValue =
+    ("model type" -> "baseline") ~
+    ("feature computer" -> newLfTrainingDataPmiParams)
 
   val oldLfFormalModelParams: JValue =
     ("model type" -> "formal") ~
@@ -130,10 +133,24 @@ object Acl2016Experiments {
     ("test name" -> FINAL_TEST_SET._1) ~
     ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfDistributionalModelParams)
+  val newLfDistributionalModelEnsembleFinalTestParams: JValue =
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
+    ("model" -> newLfDistributionalModelParams) ~
+    ("ensembled evaluation" -> true)
   val newLfCombinedModelFinalTestParams: JValue =
     ("test name" -> FINAL_TEST_SET._1) ~
     ("test query file" -> FINAL_TEST_SET._2) ~
     ("model" -> newLfCombinedModelParams)
+  val newLfCombinedModelEnsembleFinalTestParams: JValue =
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
+    ("model" -> newLfCombinedModelParams) ~
+    ("ensembled evaluation" -> true)
+  val newLfBaselineFinalTestParams: JValue =
+    ("test name" -> FINAL_TEST_SET._1) ~
+    ("test query file" -> FINAL_TEST_SET._2) ~
+    ("model" -> newLfBaselineModelParams)
 
   val newLfFormalModelDevSetParams: JValue =
     ("test name" -> DEV_SET._1) ~
@@ -204,7 +221,10 @@ object Acl2016Experiments {
     val methods = Seq(
       ("formal-acl2016", newLfFormalModelFinalTestParams),
       ("distributional-acl2016", newLfDistributionalModelFinalTestParams),
-      ("combined-acl2016", newLfCombinedModelFinalTestParams)
+      ("distributional-ensemble-acl2016", newLfDistributionalModelEnsembleFinalTestParams),
+      ("baseline-acl2016", newLfBaselineFinalTestParams),
+      ("combined-acl2016", newLfCombinedModelFinalTestParams),
+      ("combined-ensemble-acl2016", newLfCombinedModelEnsembleFinalTestParams)
     )
     new Evaluator(methods, fileUtil).runPipeline()
   }
