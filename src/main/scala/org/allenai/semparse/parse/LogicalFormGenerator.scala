@@ -4,6 +4,9 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
+// TODO(matt): This class is getting pretty big.  Would it make sense to split this into several
+// classes, each of which handles specific cases?  Like, a VerbLogicGenerator?  That would also
+// allow for easier customization of particular structures.
 class LogicalFormGenerator(params: JValue) {
 
   val validParams = Seq("nested", "split trees")
@@ -108,6 +111,11 @@ class LogicalFormGenerator(params: JValue) {
     }
   }
 
+  def isAdjectiveLike(child: (DependencyTree, String)): Boolean = {
+    val label = child._2
+    label == "amod" || label == "nn" || label == "num"
+  }
+
   def isReducedRelative(tree: DependencyTree): Boolean = {
     tree.children.exists(_._2 == "vmod")
   }
@@ -175,9 +183,9 @@ class LogicalFormGenerator(params: JValue) {
       val arg2 = transformers.removeTree(tree, child)
       val logic = getLogicForVerbWithArguments(token, Seq((arg1, "nsubj"), (arg2, "dobj")))
       (logic, Some(arg2))
-    } else if (tree.children.exists(c => c._2 == "amod" || c._2 == "nn")) {
+    } else if (tree.children.exists(isAdjectiveLike)) {
       // Adjectives
-      val child = tree.children.find(c => c._2 == "amod" || c._2 == "nn").map(_._1).get
+      val child = tree.children.find(isAdjectiveLike).map(_._1).get
       val withoutAdjective = transformers.removeTree(tree, child)
       val logic = getLogicForUnaryPredicate(child.token.lemma, withoutAdjective)
       (logic, Some(withoutAdjective))
@@ -219,19 +227,47 @@ class LogicalFormGenerator(params: JValue) {
     }
   }
 
+  /**
+   * Copula sentences are funny cases.  It could just be a noun and an adjective, like "Grass is
+   * green".  In these cases, we want to return something like "be(grass, green)".  It could
+   * instead be expressing a relationship between two nouns, like "Grass is a kind of plant".  In
+   * these cases, we want to grab the relationship and make it the predicate: "kind_of(grass,
+   * plant)".  But, this same idea could be expressed as "One kind of plant is grass", and we
+   * really want to get the same logical form out for this.  So, there's some complexity in the
+   * code to try to figure out if one side or the other of the "is" has a prepositional phrase
+   * attachment.
+   */
   def getLogicForCopula(tree: DependencyTree): Option[Logic] = {
     tree.getChildWithLabel("nsubj") match {
       case None => None
       case Some(nsubj) => {
         val treeWithoutCopula = transformers.removeChild(tree, "cop")
         val preps = tree.children.filter(_._2.startsWith("prep_"))
-        if (preps.size == 0) {
-          val withoutCopAndSubj = transformers.removeTree(treeWithoutCopula, nsubj)
-          val args = Seq((withoutCopAndSubj, "nsubj"), (nsubj, "dobj"))
-          getLogicForVerbWithArguments(Token("be", "V", "be", 0), args)
-        } else {
+        if (preps.size > 0) {
+          // We have a prepositional phrase in the usual case ("Grass is a kind of plant").  The
+          // Stanford parser will have made "kind" the head word in this case, so we take that as
+          // the predicate, and use our standard verb logic to handle this (the verb logic will add
+          // the preposition to the predicate name).
           val args = Seq((nsubj, "nsubj")) ++ preps
           getLogicForVerbWithArguments(tree.token, args)
+        } else {
+          // The usual case ("Grass is a kind of plant") is not present.  So we check for the other
+          // case ("One kind of a plant is grass").
+          val nsubjPreps = nsubj.children.filter(_._2.startsWith("prep_"))
+          if (nsubjPreps.size > 0) {
+            // We found it.  So, we do some funny business to switch the argument order, so we get
+            // the same predicate out that we would in the usual case.  The token we want to use
+            // this time is the nsubj, the tree minus the nsubj is the first argument, and the
+            // prepositional phrase attachments are the remaining arguments.
+            val withoutNsubj = transformers.removeTree(treeWithoutCopula, nsubj)
+            val args = Seq((withoutNsubj, "nsubj")) ++ nsubjPreps
+            getLogicForVerbWithArguments(nsubj.token, args)
+          } else {
+            // No prepositional phrase found, so just use "be" as the predicate.
+            val withoutCopAndSubj = transformers.removeTree(treeWithoutCopula, nsubj)
+            val args = Seq((withoutCopAndSubj, "nsubj"), (nsubj, "dobj"))
+            getLogicForVerbWithArguments(Token("be", "V", "be", 0), args)
+          }
         }
       }
     }
@@ -429,5 +465,4 @@ class LogicalFormGenerator(params: JValue) {
   def getPassiveSubject(tree: DependencyTree) = {
     tree.children.filter(_._2 == "nsubjpass")
   }
-
 }
