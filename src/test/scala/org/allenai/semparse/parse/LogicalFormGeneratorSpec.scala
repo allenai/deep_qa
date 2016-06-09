@@ -422,4 +422,39 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
       // quantification, anyway...
       Predicate("made_up_of", Seq(Predicate("known", Seq(Predicate("living", Seq(Atom("thing"))))), Atom("cell")))))
   }
+
+  it should "work with nested predicates for \"The end stage in a human's life cycle is death.\" (preposition as a predicate)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("The end stage in a human's life cycle is death.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("be", 
+          Seq(Predicate("in", 
+              Seq(Predicate("end", Seq(Atom("stage"))), 
+                  Predicate("'s", Seq(Atom("human"), Predicate("life", Seq(Atom("cycle")))))
+                  ))), 
+          Atom("death"))
+      ))
+  }
+
+  it should "work with nested predicates for \"One thing all organisms need to survive is energy.\" (Question to statement)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("One thing all organisms need to survive is energy.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("be", Seq(Predicate("need_Csubj_survive", Seq(Atom("organism"), Predicate("one", Seq(Atom("thing"))))), Atom("energy")))
+      ))
+  }
+
+  it should "work with nested predicates for \"A cactus is most likely to compete for water.\" (quantifier)" in {
+    val params: JValue = ("nested" -> true)
+    val generator = new LogicalFormGenerator(params)
+    val parse = parser.parseSentence("A cactus is most likely to compete for water.")
+    parse.dependencyTree.get.print()
+    generator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("compete_for", Seq(Atom("cactus"), Atom("water")))
+      ))
+  }
 }
