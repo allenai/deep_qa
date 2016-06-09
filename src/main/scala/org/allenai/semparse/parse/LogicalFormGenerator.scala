@@ -7,7 +7,7 @@ import org.json4s._
 // TODO(matt): This class is getting pretty big.  Would it make sense to split this into several
 // classes, each of which handles specific cases?  Like, a VerbLogicGenerator?  That would also
 // allow for easier customization of particular structures.
-class LogicalFormGenerator(params: JValue) {
+class LogicalFormGenerator(params: JValue) extends Serializable {
 
   val validParams = Seq("nested", "split trees")
   JsonHelper.ensureNoExtras(params, "LogicalFormGenerator", validParams)
@@ -142,8 +142,8 @@ class LogicalFormGenerator(params: JValue) {
       val npWithoutRelative = transformers.removeTree(tree, child)
       val logic = child.children.filter(_._1.token.posTag == "WDT").headOption match {
         case None => {
-          System.err.println("Error processing relative clause for tree:")
-          tree.print()
+          //System.err.println("Error processing relative clause for tree:")
+          //tree.print()
           None
         }
         case Some(relativizer) => {
