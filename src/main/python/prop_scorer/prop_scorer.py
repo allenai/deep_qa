@@ -3,9 +3,10 @@ import argparse
 import random
 import numpy
 import pickle
-from keras.layers import Embedding, Input, LSTM, Dense, merge
-from keras.models import Model, model_from_yaml
+from keras.layers import Embedding, Input, LSTM, Dense, Dropout, merge
+from keras.models import Model, model_from_json
 from keras.callbacks import EarlyStopping
+from keras.regularizers import l2
 from keras import backend as K
 
 from index_data import DataIndexer
@@ -38,12 +39,15 @@ class PropScorer(object):
         # Share embedding layer for both propositions
         good_embed = embed_layer(good_input_layer)
         bad_embed = embed_layer(bad_input_layer)
+        # Add a dropout to regularize the input representations
+        regularized_good_embed = Dropout(0.5)(good_embed)
+        regularized_bad_embed = Dropout(0.5)(bad_embed)
 
         ## STEP 3: Pass the sequences of word vectors through the same LSTM
-        lstm_layer = LSTM(output_dim=embedding_size, name='lstm')
+        lstm_layer = LSTM(output_dim=embedding_size, W_regularizer=l2(0.01), U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='lstm')
         # Share LSTM layer for both propositions
-        good_lstm_out = lstm_layer(good_embed)
-        bad_lstm_out = lstm_layer(bad_embed)
+        good_lstm_out = lstm_layer(regularized_good_embed)
+        bad_lstm_out = lstm_layer(regularized_bad_embed)
 
         ## STEP 4: Score the two propositions by passing the outputs from LSTM twough the same 
         # dense layer
@@ -64,7 +68,8 @@ class PropScorer(object):
         #TODO: Add a margin on the hinge loss
         score_hinge_loss = lambda dummy_target, diff: K.mean(diff + 0*dummy_target, axis=-1)
         model = Model(input=[good_input_layer, bad_input_layer], output=score_diff)
-        model.compile(loss=score_hinge_loss, optimizer='rmsprop')
+        model.compile(loss=score_hinge_loss, optimizer='adam')
+        print >>sys.stderr, model.summary()
 
         ## Step 6: Train the full model jointly
         # Define early stopping with patience of 1 (will wait for atmost one epoch after validation loss 
@@ -87,8 +92,8 @@ class PropScorer(object):
 
     def save_model(self, model_name_prefix):
         # Serializing the scoring model for future use.
-        model_config = self.scoring_model.to_yaml()
-        model_config_file = open("%s_config.yaml"%(model_name_prefix), "w")
+        model_config = self.scoring_model.to_json()
+        model_config_file = open("%s_config.json"%(model_name_prefix), "w")
         print >>model_config_file, model_config
         self.scoring_model.save_weights("%s_weights.h5"%model_name_prefix, overwrite=True)
         data_indexer_file = open("%s_data_indexer.pkl"%model_name_prefix, "wb")
@@ -98,9 +103,9 @@ class PropScorer(object):
 
     def load_model(self, model_name_prefix):
         # Loading serialized model
-        model_config_file = open("%s_config.yaml"%(model_name_prefix))
-        model_config_yaml = model_config_file.read()
-        self.scoring_model = model_from_yaml(model_config_yaml)
+        model_config_file = open("%s_config.json"%(model_name_prefix))
+        model_config_json = model_config_file.read()
+        self.scoring_model = model_from_json(model_config_json)
         self.scoring_model.load_weights("%s_weights.h5"%model_name_prefix)
         data_indexer_file = open("%s_data_indexer.pkl"%model_name_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
