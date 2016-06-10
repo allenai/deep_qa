@@ -2,6 +2,7 @@ import sys
 import argparse
 import random
 import numpy
+import codecs
 import pickle
 from keras.layers import Embedding, Input, LSTM, Dense, Dropout, merge
 from keras.models import Model, model_from_json
@@ -172,7 +173,7 @@ if __name__=="__main__":
     max_length = prop_scorer.scoring_model.get_input_shape_at(0)[1] 
 
     if args.test_file is not None:
-        test_lines = [x.strip() for x in open(args.test_file).readlines()]
+        test_lines = [x.strip() for x in codecs.open(args.test_file,'r', 'utf-8').readlines()]
         num_test_propositions, test_indices = prop_scorer.prepare_test_data(test_lines, 
                 max_length=max_length)
         print >>sys.stderr, "Scoring test data"
@@ -188,7 +189,7 @@ if __name__=="__main__":
         # Once aggregated, the number of scores should be the same as test sentences.
         assert len(test_scores) == len(test_lines)
 
-        outfile = open("out.txt", "w")
+        outfile = codecs.open("out.txt", "w", "utf-8")
         for score, line in zip(test_scores, test_lines):
             print >>outfile, score, line
         outfile.close()
