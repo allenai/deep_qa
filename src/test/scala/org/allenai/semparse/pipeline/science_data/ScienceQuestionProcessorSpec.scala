@@ -169,4 +169,61 @@ class ScienceQuestionProcessorSpec extends FlatSpecLike with Matchers {
     processor.fillInAnswerOptions(question) should be(
       Some(questionText, Seq(("The source of energy required to begin photosynthesis is sunlight.", true))))
   }
+
+  it should "deal with extra words correctly" in {
+    val questionText = "The digestion process begins in which of the following?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("mouth", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("The digestion process begins in mouth.", true))))
+  }
+
+  it should "deal with PP attachment on the wh word and a redundant word in the answer correctly" in {
+    val questionText = "Where is the pigment chrolophyll found in plants?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("in the leaves", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("The pigment chlorophyll is found in the leaves in plants.", true))))
+  }
+
+  it should "deal with does in question correctly" in {
+    val questionText = "From which part of the plant does a bee get food?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("flower", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("A bee does get food from flower part of the plant.", true))))
+  }
+
+  it should "identify the object correctly in" in {
+    val questionText = "How are genes usually grouped in a cell?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("in pairs", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("Genes are usually grouped in a cell in pairs.", true))))
+  }
+
+  it should "deal with wh questions with prepositions in answers correctly" in {
+    val questionText = "Where do offspring get their genes?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("From their parents", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("Offspring do get their genes from their parents.", true))))
+  }
+
+  it should "deal with modal verbs correctly" in {
+    val questionText = "What tool should this student use?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("magnet", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("This student should use magnet.", true))))
+  }
+
+  it should "get the word order right" in {
+    val questionText = "Which of the following resources does an animal use for energy?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("food", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("An animal does use food for energy.", true))))
+  }
+
+  it should "deal with Why correctly" in {
+    val questionText = "Why is competition important?"
+    val question = ScienceQuestion(Seq(questionText), Seq(Answer("It maintains a natural balance", true)))
+    processor.fillInAnswerOptions(question) should be(
+      Some(questionText, Seq(("Competition is important because it maintains a natural balance.", true))))
+  }
+  
 }
