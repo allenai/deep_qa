@@ -16,6 +16,11 @@ import org.allenai.semparse.parse.LogicalFormGenerator
 import org.allenai.semparse.parse.Predicate
 import org.allenai.semparse.parse.StanfordParser
 
+import scala.concurrent._
+import scala.util.{Success, Failure}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+
 class ScienceSentenceProcessor(
   params: JValue,
   fileUtil: FileUtil
@@ -24,7 +29,7 @@ class ScienceSentenceProcessor(
   override val name = "Science Sentence Processor"
 
   val validParams = Seq("min word count per sentence", "max word count per sentence",
-    "data directory", "data name", "output format")
+    "data directory", "data name", "output format", "logical forms")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataName = (params \ "data name").extract[String]
@@ -37,6 +42,7 @@ class ScienceSentenceProcessor(
     case "training data" => s"data/science/$dataName/training_data.tsv"
     case "debug" => s"data/science/$dataName/sentence_lfs.txt"
   }
+  val logicalFormGenerator = new LogicalFormGenerator(params \ "logical forms")
 
   val numPartitions = 1
 
@@ -46,9 +52,9 @@ class ScienceSentenceProcessor(
   override val inProgressFile = outputs.head.dropRight(4) + "_in_progress"
 
   override def _runStep() {
-    val conf = new SparkConf().setAppName(s"Compute PMI")
+    val conf = new SparkConf().setAppName(s"Sentence Processor")
       .set("spark.driver.maxResultSize", "0")
-      .set("spark.network.timeout", "1000000")
+      .set("spark.network.timeout", "100000")
       .set("spark.akka.frameSize", "1028")
       .setMaster("local[*]")
 
@@ -56,6 +62,7 @@ class ScienceSentenceProcessor(
 
     parseSentences(
       sc,
+      logicalFormGenerator,
       outputFile,
       dataDir,
       minWordCount,
@@ -68,6 +75,7 @@ class ScienceSentenceProcessor(
 
   def parseSentences(
     sc: SparkContext,
+    logicalFormGenerator: LogicalFormGenerator,
     outputFile: String,
     dataDir: String,
     minWordCount: Int,
@@ -84,19 +92,49 @@ class ScienceSentenceProcessor(
       }
     }).distinct()
     val trees = sentences.flatMap(Helper.parseSentence)
-    val logicalForms = trees.map(sentenceAndTree => {
-      // TODO(matt): fix allocation of this object
-      val logicalFormGenerator = new LogicalFormGenerator(JNothing)
-      val sentence = sentenceAndTree._1
-      val tree = sentenceAndTree._2
-      val logicalForm = try {
-        logicalFormGenerator.getLogicalForm(tree)
-      } catch {
-        case e: Throwable => { println(sentence); tree.print(); throw e }
+    val logicalForms = trees.flatMap(sentenceAndTree => {
+      val result = Helper.runWithTimeout(2000, () => {
+        val sentence = sentenceAndTree._1
+        val tree = sentenceAndTree._2
+        val logicalForm = try {
+          logicalFormGenerator.getLogicalForm(tree)
+        } catch {
+          case e: Throwable => { println(sentence); tree.print(); throw e }
+        }
+        (sentence, logicalForm)
+      })
+      result match {
+        case None => {
+          println(s"Timeout while processing sentence: ${sentenceAndTree._1}")
+          Seq()
+        }
+        case Some(either) => either match {
+          case Left(t) => {
+            println(s"Exception thrown while processing sentence: ${sentenceAndTree._1} ---- ${t.getMessage}")
+            Seq()
+          }
+          case Right(result) => Seq(result)
+        }
       }
-      (sentence, logicalForm)
     })
-    val outputStrings = logicalForms.flatMap(Helper.logicalFormToString(outputFormat))
+    val outputStrings = logicalForms.flatMap(sentenceAndLf => {
+      val result = Helper.runWithTimeout(2000, () => {
+        Helper.logicalFormToString(outputFormat)(sentenceAndLf)
+      })
+      result match {
+        case None => {
+          println(s"Timeout while printing sentence: ${sentenceAndLf._1}")
+          Seq()
+        }
+        case Some(either) => either match {
+          case Left(t) => {
+            println(s"Exception thrown while printing sentence: ${sentenceAndLf._1} ---- ${t.getMessage}")
+            Seq()
+          }
+          case Right(result) => result
+        }
+      }
+    })
 
     val finalOutput = outputStrings.collect()
     fileUtil.writeLinesToFile(outputFile, finalOutput)
@@ -107,7 +145,7 @@ class ScienceSentenceProcessor(
 object Helper {
   val parser = new StanfordParser
 
-  val badChars = Seq("?", "!", ":", ";", "&", "_", "-", "\\", "(", ")", "{", "}", "[", "]", "<", ">", "\"", "'")
+  val badChars = Seq("?", "!", ":", ";", "&", "_", "-", "\\", "(", ")", "{", "}", "[", "]", "<", ">", "\"", "'", "=", "|", "~", "%")
   def shouldKeepSentence(sentence: String, minWordCount: Int, maxWordCount: Int): Boolean = {
     val wordCount = sentence.split(" ").length
     if (wordCount < minWordCount) return false
@@ -117,6 +155,26 @@ object Helper {
     }
     if (hasPronoun(sentence)) return false
     return true
+  }
+
+  def runWithTimeout[T](milliseconds: Long, f: () => T): Option[Either[Throwable, T]] = {
+    val result = Future(f())
+    try {
+      Await.result(result, 1 seconds)
+      result.value match {
+        case None => None
+        case Some(tryResult) => tryResult match {
+          case Success(result) => Some(Right(result))
+          case Failure(t) => {
+            Some(Left(t))
+          }
+        }
+      }
+    } catch {
+      case e: java.util.concurrent.TimeoutException => {
+        None
+      }
+    }
   }
 
   val pronouns = Seq("i", "me", "my", "we", "us", "our", "you", "your", "it", "its", "he", "him",
