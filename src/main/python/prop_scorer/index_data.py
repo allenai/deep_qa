@@ -123,7 +123,7 @@ class DataIndexer(object):
                 # It is possible the proposition is just one word. In that case, 
                 # rand_location is the index of that word itself, and we assume
                 # the word is a predicate.
-                if rand_location < len(corrupted_indices):
+                if rand_location < len(corrupted_indices)-1:
                     next_word_index = corrupted_indices[rand_location + 1]
                 if next_word_index == open_paren_index or next_word_index == -1:
                     rand_index = random.sample(self.predicate_indices, 1)[0]
