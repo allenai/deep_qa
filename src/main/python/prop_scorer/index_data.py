@@ -11,7 +11,7 @@ class DataIndexer(object):
         self.argument_indices = set([])
 
     def process_data(self, lines, separate_propositions=True, 
-            for_train=True):
+            for_train=True, max_length=None):
         '''
         lines: list(str). Sequence of proposition strings. If propositions 
             have to be grouped (to keep track of which sentences they come 
@@ -20,6 +20,8 @@ class DataIndexer(object):
         for_train: bool. Setting this to False will treat new words as OOV. 
             Setting it to True will add them to the index if they occur 
             atleast twice. Singletons will always be treated as OOV.
+        max_length: int. Ignore propositions greater than this length. 
+            Applicable only during training.
         '''
         all_proposition_indices = []
         num_propositions_in_lines = []
@@ -36,8 +38,10 @@ class DataIndexer(object):
             num_propositions_in_lines.append(len(line_propositions))
             for proposition in line_propositions:
                 words = word_tokenize(proposition.lower())
-                all_proposition_words.append(words)
                 if for_train:
+                    if max_length is not None:
+                        if len(words) > max_length:
+                            continue
                     for i, word in enumerate(words):
                         if i < len(words)-1:
                             next_word = words[i+1]
@@ -57,6 +61,7 @@ class DataIndexer(object):
                                 # We have not seen this word. It is 
                                 #a singleton (atleast for now)
                                 self.singletons.add(word)
+                all_proposition_words.append(words)
         if for_train:
             # Add non-singletons to index. The singletons will remain unknown.
             for word in self.non_singletons:

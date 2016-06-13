@@ -115,10 +115,14 @@ class PropScorer(object):
         data_indexer_file.close()
 
     def prepare_training_data(self, data_lines, max_length=None):
+        # max_length is used for ignoring long training instances
+        # and also padding all instances to make them of the same 
+        # length
+
         # Indexing training data
         print >>sys.stderr, "Indexing training data"
         num_train_propositions, good_input = self.data_indexer.process_data(data_lines, 
-                separate_propositions=False, for_train=True)
+                separate_propositions=False, for_train=True, max_length=max_length)
         # Padding to prespecified length
         good_input = self.data_indexer.pad_indices(good_input, max_length=max_length)
 
@@ -155,6 +159,10 @@ if __name__=="__main__":
     argparser = argparse.ArgumentParser(description="Simple proposition scorer")
     argparser.add_argument('--train_file', type=str)
     argparser.add_argument('--test_file', type=str)
+    argparser.add_argument('--length_upper_limit', type=int, 
+            help="Upper limit on length of training data. Ignored during testing.")
+    argparser.add_argument('--max_train_size', type=int, 
+            help="Upper limit on the size of training data")
     args = argparser.parse_args()
     prop_scorer = PropScorer()
 
@@ -169,7 +177,12 @@ if __name__=="__main__":
         # Shuffling lines now since Keras does not shuffle data before validation
         # split is made. This will ensure validation data is not at the end of the file.
         random.shuffle(lines)
-        _, (good_input, bad_input) = prop_scorer.prepare_training_data(lines)
+        _, (good_input, bad_input) = prop_scorer.prepare_training_data(lines, 
+                max_length=args.length_upper_limit)
+        if args.max_train_size is not None:
+            print >>sys.stderr, "Limiting training size to %d"%(args.max_train_size)
+            good_input = good_input[:args.max_train_size]
+            bad_input = bad_input[:args.max_train_size]
         print >>sys.stderr, "Training model"
         prop_scorer.train(good_input, bad_input)
         prop_scorer.save_model("prop_scorer")
