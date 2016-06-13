@@ -122,9 +122,15 @@ class PropScorer(object):
         # Padding to prespecified length
         good_input = self.data_indexer.pad_indices(good_input, max_length=max_length)
 
-        # Corrupting train indices to bet "bad" data
+        # Corrupting train indices to get "bad" data
         print >>sys.stderr, "Corrupting training data"
         bad_input = self.data_indexer.corrupt_indices(good_input)
+
+        # Print a training sample
+        print >>sys.stderr, "Sample training pairs:"
+        for good_prop_indices, bad_prop_indices in zip(good_input, bad_input)[:10]:
+            print >>sys.stderr, "%s vs. %s"%(self.data_indexer.get_words_from_indices(good_prop_indices), 
+                    self.data_indexer.get_words_from_indices(bad_prop_indices))
 
         # Make int32 array so that Keras will view them as indices.
         good_input = numpy.asarray(good_input, dtype='int32')
