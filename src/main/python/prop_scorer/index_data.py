@@ -119,7 +119,7 @@ class DataIndexer(object):
                 # If not, it is an argument.
                 # Since predicate and argument indices sets contain non-singleton
                 # words that are not "(", ")" and ",", we do not need to do other checks.
-                nex_word_index = -1
+                next_word_index = -1
                 # It is possible the proposition is just one word. In that case, 
                 # rand_location is the index of that word itself, and we assume
                 # the word is a predicate.
