@@ -119,8 +119,13 @@ class DataIndexer(object):
                 # If not, it is an argument.
                 # Since predicate and argument indices sets contain non-singleton
                 # words that are not "(", ")" and ",", we do not need to do other checks.
-                next_word_index = corrupted_indices[rand_location + 1]
-                if next_word_index == open_paren_index:
+                nex_word_index = -1
+                # It is possible the proposition is just one word. In that case, 
+                # rand_location is the index of that word itself, and we assume
+                # the word is a predicate.
+                if rand_location < len(corrupted_indices):
+                    next_word_index = corrupted_indices[rand_location + 1]
+                if next_word_index == open_paren_index or next_word_index == -1:
                     rand_index = random.sample(self.predicate_indices, 1)[0]
                 else:
                     rand_index = random.sample(self.argument_indices, 1)[0]
