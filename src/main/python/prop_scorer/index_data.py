@@ -4,6 +4,7 @@ from nltk.tokenize import word_tokenize
 class DataIndexer(object):
     def __init__(self):
         self.word_index = {"PADDING":0, "UNK":1}
+        self.reverse_word_index = {0:"PADDING", 1:"UNK"}
         self.singletons = set([])
         self.non_singletons = set([])
         # differentiate between predicate and argument indices for type specific corruption
@@ -77,6 +78,8 @@ class DataIndexer(object):
                     self.word_index else self.word_index["UNK"] for word in words]
             all_proposition_indices.append(proposition_indices)
 
+        # Update the reverse index
+        self.reverse_word_index = {index:word for (word, index) in self.word_index.items()}
         return num_propositions_in_lines, all_proposition_indices
 
     def pad_indices(self, all_indices, max_length=None):
@@ -129,9 +132,6 @@ class DataIndexer(object):
                     rand_index = random.sample(self.predicate_indices, 1)[0]
                 else:
                     rand_index = random.sample(self.argument_indices, 1)[0]
-                #rand_index = 0
-                #while rand_index in indices_to_ignore:
-                #    rand_index = random.randint(1, len(self.word_index)-1)
                 corrupted_indices[rand_location] = rand_index
                 num_corrupted_locations += 1
             all_corrupted_indices.append(corrupted_indices)
@@ -141,5 +141,4 @@ class DataIndexer(object):
         return len(self.word_index) + 1
 
     def get_words_from_indices(self, indices):
-        rev_index = {j:i for (i, j) in self.word_index.items()}
-        return " ".join([rev_index[i] for i in indices]).replace("PADDING", "").strip()
+        return " ".join([self.reverse_word_index[i] for i in indices]).replace("PADDING", "").strip()
