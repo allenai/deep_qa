@@ -15,11 +15,11 @@ object ScienceQuestionPipeline {
   //////////////////////////////////////////////////////////
 
   val sentenceProcessorParams: JValue =
-    ("max word count per sentence" -> 100) ~
+    ("max word count per sentence" -> 10) ~
     ("logical forms" -> ("nested" -> true)) ~
     ("output format" -> "debug") ~
-    ("data name" -> "monarch_sentences") ~
-    ("data directory" -> "data/science/monarch_questions")
+    ("data name" -> "petert_sentences") ~
+    ("data directory" -> "/home/mattg/data/petert_science_sentences")
   val sentenceProcessorType: JValue = ("type" -> "science sentence processor")
   val sentenceProcessorParamsWithType: JValue = sentenceProcessorParams merge sentenceProcessorType
 
@@ -86,6 +86,6 @@ object ScienceQuestionPipeline {
 
   def main(args: Array[String]) {
     //new Trainer(modelParams, fileUtil).runPipeline()
-    new ScienceQuestionProcessor(questionProcessorParams, fileUtil).runPipeline()
+    new ScienceSentenceProcessor(sentenceProcessorParams, fileUtil).runPipeline()
   }
 }

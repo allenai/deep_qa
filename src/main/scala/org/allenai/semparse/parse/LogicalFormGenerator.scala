@@ -52,7 +52,7 @@ class LogicalFormGenerator(params: JValue) extends Serializable {
     }
     val childLogic = if (nestLogicalForms) Set() else tree.children.map(_._1).flatMap(_getLogicForNode)
     val combined = logicForNode.toSet ++ childLogic
-    if (combined.isEmpty) None else Some(Conjunction(combined))
+    if (combined.isEmpty) None else if (combined.size == 1) Some(combined.head) else Some(Conjunction(combined))
   }
 
   /**
@@ -221,7 +221,7 @@ class LogicalFormGenerator(params: JValue) extends Serializable {
         case None => logic
         case Some(tree) => {
           val preds = logic.toSet ++ _getLogicForNode(tree).toSet
-          if (preds.isEmpty) None else Some(Conjunction(preds))
+          if (preds.isEmpty) None else if (preds.size == 1) Some(preds.head) else Some(Conjunction(preds))
         }
       }
     }

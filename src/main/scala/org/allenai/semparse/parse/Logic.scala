@@ -22,7 +22,7 @@ case class Predicate(predicate: String, arguments: Seq[Logic]) extends Logic {
   }
   override def toString(): String = {
     val argString = arguments.mkString(", ")
-    s"$predicate(${arguments.mkString(", ")})"
+    s"$predicate($argString)"
   }
 
   override def toJson(): String = {
