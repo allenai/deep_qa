@@ -16,7 +16,7 @@ connectInput := true
 
 cancelable in Global := true
 
-javaOptions ++= Seq("-Xmx4g", "-Xms4g")
+javaOptions ++= Seq("-Xmx140g", "-Xms140g")
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "1.6.0",
