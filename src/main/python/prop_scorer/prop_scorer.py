@@ -49,14 +49,16 @@ class PropScorer(object):
         # Share LSTM layer for both propositions
         good_lstm_out = lstm_layer(regularized_good_embed)
         bad_lstm_out = lstm_layer(regularized_bad_embed)
+	regularized_good_lstm_out = Dropout(0.2)(good_lstm_out)
+	regularized_bad_lstm_out = Dropout(0.2)(bad_lstm_out)
 
         ## STEP 4: Score the two propositions by passing the outputs from LSTM twough the same 
         # dense layer
         #TODO: Can make the scorer more complex by adding more layers
-        scorer_layer = Dense(1, activation='tanh', name='scorer')
+        scorer_layer = Dense(1, activation='tanh', W_regularizer=l2(0.01), b_regularizer=l2(0.01), name='scorer')
         # Share scoring layer for both propositions
-        good_score = scorer_layer(good_lstm_out)
-        bad_score = scorer_layer(bad_lstm_out)
+        good_score = scorer_layer(regularized_good_lstm_out)
+        bad_score = scorer_layer(regularized_bad_lstm_out)
 
         ## Step 5: Define the score difference as the loss and compile the model
         score_diff = merge([good_score, bad_score], mode=lambda scores: scores[1] - scores[0], 
