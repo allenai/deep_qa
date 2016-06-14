@@ -66,10 +66,11 @@ class PropScorer(object):
         # Defining a simple hingeloss that depends only on the diff between scores of the two 
         # inputs, since Keras has only supervised losses predefined.
         # But Keras expects a "target" (dummy_target) in a loss. Just ignore it in the function. 
-        #Technically dummy_target is an argument of the final function, and Theano will complain 
+        # Technically dummy_target is an argument of the final function, and Theano will complain 
         # if it is not a part of the computational graph. So, resorting to this hack of 0*dummy_target
-        #TODO: Add a margin on the hinge loss
-        score_hinge_loss = lambda dummy_target, diff: K.mean(diff + 0*dummy_target, axis=-1)
+        # Loss = max(0, margin + bad_score - good_score)
+        margin = 1.0
+        score_hinge_loss = lambda dummy_target, diff: K.mean(K.switch(margin+diff>0.0, margin+diff, 0.0) + 0*dummy_target, axis=-1)
         model = Model(input=[good_input_layer, bad_input_layer], output=score_diff)
         model.compile(loss=score_hinge_loss, optimizer='adam')
         print >>sys.stderr, model.summary()
