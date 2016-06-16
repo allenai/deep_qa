@@ -9,6 +9,12 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
       (DependencyTree(Token("food", "NN", "food", 4), Seq(
         (DependencyTree(Token("good", "JJ", "good", 3), Seq()), "amod"))), "dobj")))
 
+  val passiveTree =
+    DependencyTree(Token("eaten", "VBN", "eat", 3), Seq(
+      (DependencyTree(Token("Food", "NN", "food", 1), Seq()), "nsubjpass"),
+      (DependencyTree(Token("is", "VB", "be", 2), Seq()), "auxpass"),
+      (DependencyTree(Token("people", "NNS", "people", 5), Seq()), "agent")))
+
   val np1 =
     DependencyTree(Token("material", "NN", "material", 4), Seq(
       (DependencyTree(Token("genetic", "JJ", "genetic", 3), Seq()), "amod"),
@@ -17,8 +23,13 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
 
   val np2 =
     DependencyTree(Token("Most", "JJS", "most", 1), Seq(
-      (DependencyTree(Token("water", "NNP", "water", 3), Seq(
+      (DependencyTree(Token("water", "NNP", "water", 4), Seq(
         (DependencyTree(Token("Earth", "NNP", "Earth", 3), Seq()), "poss"))),"prep_of")))
+
+  val np3 =
+    DependencyTree(Token("Most", "JJS", "most", 1), Seq(
+      (DependencyTree(Token("water", "NNP", "water", 4), Seq(
+        (DependencyTree(Token("their", "PRP$", "they", 3), Seq()), "poss"))),"prep_of")))
 
   val treeWithConjunctions =
     DependencyTree(Token("cause", "VB", "cause", 6), Seq(
@@ -38,6 +49,14 @@ class DependencyTreeSpec extends FlatSpecLike with Matchers {
 
   it should "add back in prepositions and possessives" in {
     np2._yield should be("Most of Earth's water")
+  }
+
+  it should "not add 's when the possessive is a pronoun" in {
+    np3._yield should be("Most of their water")
+  }
+
+  it should "add back in \"by\" in passive sentences with an agent" in {
+    passiveTree._yield should be("Food is eaten by people")
   }
 
   it should "not repeat conjunctions" in {

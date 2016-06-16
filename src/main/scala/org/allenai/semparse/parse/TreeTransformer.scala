@@ -297,13 +297,11 @@ object transformers {
             case None => tree
             case Some(nsubj) => {
               val copulaRemoved = removeChild(tree, "cop")
-              val dobj = removeChild(removeChild(tree, "cop"), "nsubj")
-              val (addFirst, addSecond) = if (dobj.tokenStartIndex < nsubj.tokenStartIndex) {
-                ((dobj, "dobj"), (nsubj, "nsubj"))
-              } else {
-                ((nsubj, "nsubj"), (dobj, "dobj"))
-              }
-              addChild(addChild(cop, addFirst._1, addFirst._2), addSecond._1, addSecond._2)
+              val dobj = removeChild(copulaRemoved, "nsubj")
+              val adverbs = dobj.children.filter(_._2 == "advmod")
+              val fixedDobj = adverbs.map(_._1).foldLeft(dobj)(removeTree)
+              val childrenToAdd = (Seq((nsubj, "nsubj"), (fixedDobj, "dobj")) ++ adverbs).sortBy(_._1.tokenStartIndex)
+              childrenToAdd.foldLeft(cop)((l, r) => addChild(l, r._1, r._2))
             }
           }
         }
@@ -393,24 +391,35 @@ object transformers {
   }
 
   object UndoWhMovement extends BaseTransformer {
-    val order = Seq("nsubj", "nsubjpass", "aux", "auxpass", "head", "iobj", "dobj", "advmod")
-    def childSortKey(child: (DependencyTree, String)) = {
-      order.indexOf(child._2) match {
-        case -1 => order.size
-        case i => i
+    val orderWithAgent = Seq("nsubjpass", "head", "xcomp", "agent", "auxpass", "iobj", "dobj", "advmod")
+    val orderWithoutAgent = Seq("nsubj", "nsubjpass", "xcomp", "aux", "auxpass", "head", "iobj", "dobj", "vmod", "advmod", "prep")
+
+    def childSortKey(order: Seq[String])(child: (DependencyTree, String)) = {
+      val lookupKey = if (child._2.startsWith("prep")) "prep" else child._2
+      order.indexOf(lookupKey) match {
+        case -1 => {
+          order.size
+        }
+        case i => {
+          if (child._2 == "advmod" && child._1.isWhPhrase) {
+            order.size + 2
+          } else {
+            i
+          }
+        }
       }
     }
 
-    def childrenAreSorted(tree: DependencyTree): Boolean = {
-      val sorted = tree.children.sortBy(childSortKey)
+    def childrenAreSorted(order: Seq[String])(tree: DependencyTree): Boolean = {
+      val sorted = tree.children.sortBy(childSortKey(order))
       tree.children == sorted
     }
 
-    def findIndicesToSwap(tree: DependencyTree): Option[(Int, Int)] = {
+    def findIndicesToSwap(order: Seq[String])(tree: DependencyTree): Option[(Int, Int)] = {
       for (i <- 0 until tree.children.size) {
-        val iSortOrder = childSortKey(tree.children(i))
+        val iSortOrder = childSortKey(order)(tree.children(i))
         for (j <- (i + 1) until tree.children.size) {
-          val jSortOrder = childSortKey(tree.children(j))
+          val jSortOrder = childSortKey(order)(tree.children(j))
           if (iSortOrder > jSortOrder) return Some((j, i))
         }
       }
@@ -421,22 +430,25 @@ object transformers {
       findWhPhrase(tree) match {
         case None => tree
         case Some(whTree) => {
+          val order = if (tree.children.exists(c => c._2 == "agent" || c._2 == "xcomp")) orderWithAgent else orderWithoutAgent
           var currentTree = RemoveConjunctionDuplicates.transform(tree)
           var swaps = 0
-          while (!childrenAreSorted(currentTree)) {
+          while (!childrenAreSorted(order)(currentTree)) {
             swaps += 1
             if (swaps > 100) {
               println("Something is wrong; too many swaps")
               return tree
             }
-            val (firstIndex, secondIndex) = findIndicesToSwap(currentTree) match {
+            val (firstIndex, secondIndex) = findIndicesToSwap(order)(currentTree) match {
               case None => throw new RuntimeException("not sure how this happened...")
               case Some((f, s)) => (f, s)
             }
             currentTree = _swapChildrenOrder(currentTree, firstIndex, secondIndex)
           }
-          for (i <- ((order.indexOf("head") + 1) until order.size).reverse) {
-            currentTree = moveHeadToLeftOfChild(currentTree, order(i))
+          val childrenToCheck = order.drop(order.indexOf("head")) ++
+            currentTree.children.filter(_._2.startsWith("prep")).map(_._2)
+          for (childLabel <- childrenToCheck.reverse) {
+            currentTree = moveHeadToLeftOfChild(currentTree, childLabel)
           }
           currentTree
         }
