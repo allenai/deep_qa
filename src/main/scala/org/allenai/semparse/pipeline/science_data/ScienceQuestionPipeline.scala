@@ -23,6 +23,13 @@ object ScienceQuestionPipeline {
   val sentenceProcessorType: JValue = ("type" -> "science sentence processor")
   val sentenceProcessorParamsWithType: JValue = sentenceProcessorParams merge sentenceProcessorType
 
+  //////////////////////////////////////////////////////////////////
+  // Step 1.5: Use noise contrastive estimation to get negative data
+  //////////////////////////////////////////////////////////////////
+
+  val sentenceCorruptorParams: JValue =
+    ("positive data" -> sentenceProcessorParams)
+
   //////////////////////////////////////////////////////////
   // Step 2: Create a KB graph
   //////////////////////////////////////////////////////////
@@ -86,6 +93,7 @@ object ScienceQuestionPipeline {
 
   def main(args: Array[String]) {
     //new Trainer(modelParams, fileUtil).runPipeline()
-    new ScienceSentenceProcessor(sentenceProcessorParams, fileUtil).runPipeline()
+    //new ScienceSentenceProcessor(sentenceProcessorParams, fileUtil).runPipeline()
+    new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
   }
 }
