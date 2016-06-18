@@ -53,7 +53,11 @@ case class DependencyTree(token: Token, children: Seq[(DependencyTree, String)])
           val prepToken = Token(prep, "IN", prep, child.token.index - 1)
           Seq(prepToken) ++ child.tokensInYield
         }
-        case (child, "poss") => {
+        case (child, "agent") => {
+          val prepToken = Token("by", "IN", "by", child.token.index - 1)
+          Seq(prepToken) ++ child.tokensInYield
+        }
+        case (child, "poss") if child.token.posTag != "PRP$" => {
           val possToken = Token("'s", "POS", "'s", child.token.index + 1)
           child.tokensInYield ++ Seq(possToken)
         }

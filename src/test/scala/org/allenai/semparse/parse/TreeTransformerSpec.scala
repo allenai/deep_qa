@@ -355,6 +355,20 @@ class TreeTransformerSpec extends FlatSpecLike with Matchers {
     transformers.MakeCopulaHead.transform(tree) should be(expectedTree)
   }
 
+  it should "keep adverbs attached to the root" in {
+    val tree =
+      DependencyTree(Token("important", "JJ", "important", 4), Seq(
+        (DependencyTree(Token("Why", "WRB", "why", 1), Seq()), "advmod"),
+        (DependencyTree(Token("is", "VBZ", "be", 2), Seq()), "cop"),
+        (DependencyTree(Token("competition", "NN", "competition", 3), Seq()), "nsubj")))
+    val expectedTree =
+      DependencyTree(Token("is", "VBZ", "be", 2), Seq(
+        (DependencyTree(Token("Why", "WRB", "why", 1), Seq()), "advmod"),
+        (DependencyTree(Token("competition", "NN", "competition", 3), Seq()), "nsubj"),
+        (DependencyTree(Token("important", "JJ", "important", 4), Seq()), "dobj")))
+    transformers.MakeCopulaHead.transform(tree) should be(expectedTree)
+  }
+
   "UndoPassivization" should "switch nsubjpass to dobj, and agent to nsubj" in {
     val tree1 = sentenceTrees("Most of Earth is covered by water.")
     transformers.UndoPassivization.transform(tree1) should be(

@@ -140,15 +140,10 @@ class ScienceQuestionProcessor(
               return None
             }
             case Some(whTree) => {
-              if (whTree.lemmaYield == "where" && question.answers.exists(!_.text.startsWith("in "))) {
-                // Here we're going to special case "where" questions, because replacing "where"
-                // with the answer requires the insertion of "in", unless the answer already starts
-                // with "in".
-                val movementUndoneSentence = movementUndone._yield
-                // I should be able to do this with a regex, but I couldn't get it to work
-                // immediately, and this works.
-                val toReplace = if (movementUndoneSentence.contains("Where")) "Where" else "where"
-                movementUndoneSentence.replace(toReplace, "in ___.")
+              if (isWhereQuestion(whTree, movementUndone, question)) {
+                fillInWhereQuestion(movementUndone, question)
+              } else if (isWhyQuestion(whTree, movementUndone, question)) {
+                fillInWhyQuestion(movementUndone, question)
               } else {
                 val index = whTree.tokens.map(_.index).min
                 val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
@@ -161,6 +156,40 @@ class ScienceQuestionProcessor(
     }
     val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text.toLowerCase), a.isCorrect))
     Some((questionText, answerSentences.map(makeAnswerUpperCase)))
+  }
+
+  def isWhereQuestion(
+    whTree: DependencyTree,
+    finalTree: DependencyTree,
+    question: ScienceQuestion
+  ): Boolean = {
+    // We check to see if the question is "where", _and_ there is not already an "in" in the answer
+    // option.  If there is already an "in", we'll just handle this like normal.
+    whTree.lemmaYield == "where" &&
+    !finalTree.children.exists(_._2 == "prep") &&
+    !question.answers.exists(_.text.toLowerCase.startsWith("in ")) &&
+    !question.answers.exists(_.text.toLowerCase.startsWith("from "))
+  }
+
+  def fillInWhereQuestion(finalTree: DependencyTree, question: ScienceQuestion): String = {
+    val finalSentence = finalTree._yield
+    val toReplace = if (finalSentence.contains("Where")) "Where" else "where"
+    finalSentence.replace(toReplace, "in ___.")
+  }
+
+  def isWhyQuestion(
+    whTree: DependencyTree,
+    finalTree: DependencyTree,
+    question: ScienceQuestion
+  ): Boolean = {
+    // Similar to isWhereQuestion
+    whTree.lemmaYield == "why" && question.answers.exists(!_.text.startsWith("because "))
+  }
+
+  def fillInWhyQuestion(finalTree: DependencyTree, question: ScienceQuestion): String = {
+    val finalSentence = finalTree._yield
+    val toReplace = if (finalSentence.contains("Why")) "Why" else "why"
+    finalSentence.replace(toReplace, "because ___.")
   }
 
   def makeAnswerUpperCase(answer: (String, Boolean)): (String, Boolean) = {
