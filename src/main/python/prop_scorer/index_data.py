@@ -1,5 +1,6 @@
 import random
 from nltk.tokenize import word_tokenize
+from constants import S_OP, R2_OP, R3_OP
 
 class DataIndexer(object):
     def __init__(self):
@@ -81,6 +82,49 @@ class DataIndexer(object):
         # Update the reverse index
         self.reverse_word_index = {index:word for (word, index) in self.word_index.items()}
         return num_propositions_in_lines, all_proposition_indices
+
+    def get_shift_reduce_sequences(self, all_indices):
+        # This function splits sequences containing parantheses and commas into two sequences, one
+        # containing only elements (predicates and arguments) and the other containing
+        # shift and reduce operations.
+        # Example: 
+        # Input: ['a', '(', 'b', '(', 'c', ')', ',', 'd', '(', 'e', ',', 'f', ')', ')'] 
+        # Outputs: ['a', 'b', 'c', 'd', 'e', 'f']; [S, S, S, R2, S, S, S, R3, R3]
+        # Note: This function operates on the indices instead of the actual strings
+        all_transitions = []
+        all_elements = []
+        comma_index = self.word_index[","]
+        open_paren_index = self.word_index["("]
+        close_paren_index = self.word_index[")"]
+        for indices in all_indices:
+            last_symbols = [] # Keeps track of commas and open parens
+            transitions = []
+            elements = []
+            for ind in indices:
+                if ind == comma_index:
+                    last_symbols.append(",")
+                elif ind == open_paren_index:
+                    last_symbols.append("(")
+                elif ind == close_paren_index:
+                    if len(last_symbols) == 0:
+                        raise Exception, "Malformed semantic parse!"
+                    last_symbol = last_symbols.pop()
+                    if last_symbol == "(":
+                        transitions.append(R2_OP)
+                    else:
+                        # Last symbol is a comma. Pop the open paren
+                        # before it as well.
+                        last_symbols.pop()
+                        transitions.append(R3_OP)
+                else:
+                    # The token is padding, predicate or an argument.
+                    transitions.append(S_OP)
+                    elements.append(ind)
+            if len(last_symbols) != 0:
+                raise Exception, "Malformed semantic parse!"
+            all_transitions.append(transitions)
+            all_elements.append(elements)
+        return all_transitions, all_elements
 
     def pad_indices(self, all_indices, max_length=None):
         if max_length is None:
