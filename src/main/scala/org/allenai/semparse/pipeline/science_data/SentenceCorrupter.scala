@@ -51,14 +51,20 @@ class SentenceCorruptor(
       .setMaster("local[*]")
 
     val sc = new SparkContext(conf)
-    val random = new Random()
 
     fileUtil.mkdirsForFile(outputFile)
-    val instances = sc.textFile(positiveDataFile, numPartitions).flatMap(parseToLogic)
+
+    corruptData(sc, positiveDataFile, numPartitions, fileUtil)
+    sc.stop()
+  }
+
+  def corruptData(sc: SparkContext, positiveDataFile: String, numPartitions: Int, fileUtil: FileUtil) {
+    val random = new Random()
+    val instances = sc.textFile(positiveDataFile, numPartitions).flatMap(SentenceCorruptor.parseToLogic)
 
     // For this initial, naive approach, we're just going to sample by frequency in the positive
     // data, so we need count up how many times we see each predicate and argument in the data.
-    val wordOccurrences = instances.flatMap(getLogicCounts)
+    val wordOccurrences = instances.flatMap(SentenceCorruptor.getLogicCounts)
 
     val predicateOccurrences = wordOccurrences.filter(_._1 == "predicate").map(c => (c._2, c._3))
     val predicateCountsPB = predicateOccurrences.reduceByKey(_ + _).collectAsMap
@@ -72,7 +78,7 @@ class SentenceCorruptor(
 
     // Now, with the counts, we actually corrupt the data.
     val instancesWithCorruptions = instances.map(
-      corruptInstance(
+      SentenceCorruptor.corruptInstance(
         random,
         atomCounts.value,
         totalAtomCount,
@@ -89,13 +95,18 @@ class SentenceCorruptor(
 
     // Cleaning this up is important, as other steps in the pipeline might need to use a spark
     // context.  If we don't stop it, the rest of the pipeline will break.
-    sc.stop()
   }
+}
+
+object SentenceCorruptor {
 
   def parseToLogic(line: String): Option[Logic] = {
-    // The Option here is in case we get some error.  I'm not doing any error handling yet, but I
-    // might need to.
-    Some(Logic.fromString(line))
+    // TODO(matt): this isn't the best format to be passing around.  There's a reason this is
+    // currently called the "debug" format...
+    line.split(" -> ").last match {
+      case "" => None
+      case logicalFormString => Some(Logic.fromString(logicalFormString))
+    }
   }
 
   def getLogicCounts(logic: Logic): Seq[(String, String, Int)] = {
