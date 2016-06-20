@@ -1,4 +1,5 @@
 import warnings
+import copy
 from keras import backend as K
 from keras import activations, initializations, regularizers
 from keras.layers import Recurrent
@@ -31,13 +32,13 @@ class TreeCompositionLSTM(Recurrent):
         self.forget_bias_init = initializations.get(forget_bias_init)
         self.activation = activations.get(activation)
         self.inner_activation = activations.get(inner_activation)
-        # Make two copies each of W, U and b since regularizers.get() method modifes them!
-        W2_regularizer = dict(W_regularizer)
-        W3_regularizer = dict(W_regularizer)
-        U2_regularizer = dict(U_regularizer)
-        U3_regularizer = dict(U_regularizer)
-        b2_regularizer = dict(b_regularizer)
-        b3_regularizer = dict(b_regularizer)
+        # Make two deep copies each of W, U and b since regularizers.get() method modifes them!
+        W2_regularizer = copy.deepcopy(W_regularizer)
+        W3_regularizer = copy.deepcopy(W_regularizer)
+        U2_regularizer = copy.deepcopy(U_regularizer)
+        U3_regularizer = copy.deepcopy(U_regularizer)
+        b2_regularizer = copy.deepcopy(b_regularizer)
+        b3_regularizer = copy.deepcopy(b_regularizer)
         # W, U and b get two copies of each corresponding regularizer
         self.W_regularizers = [regularizers.get(W2_regularizer), regularizers.get(W3_regularizer)] if W_regularizer else None
         self.U_regularizers = [regularizers.get(U2_regularizer), regularizers.get(U3_regularizer)] if U_regularizer else None
