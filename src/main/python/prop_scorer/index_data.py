@@ -1,4 +1,5 @@
 import random
+import warnings
 from nltk.tokenize import word_tokenize
 from constants import S_OP, R2_OP, R3_OP
 
@@ -100,6 +101,7 @@ class DataIndexer(object):
             last_symbols = [] # Keeps track of commas and open parens
             transitions = []
             elements = []
+	    is_malformed = False
             for ind in indices:
                 if ind == comma_index:
                     last_symbols.append(",")
@@ -107,7 +109,10 @@ class DataIndexer(object):
                     last_symbols.append("(")
                 elif ind == close_paren_index:
                     if len(last_symbols) == 0:
-                        raise Exception, "Malformed semantic parse!"
+			# This means we saw a closing paren without an opening paren.
+			# Ignore this parse.
+                        is_malformed = True
+			break
                     last_symbol = last_symbols.pop()
                     if last_symbol == "(":
                         transitions.append(R2_OP)
@@ -120,8 +125,12 @@ class DataIndexer(object):
                     # The token is padding, predicate or an argument.
                     transitions.append(S_OP)
                     elements.append(ind)
-            if len(last_symbols) != 0:
-                raise Exception, "Malformed semantic parse!"
+            if len(last_symbols) != 0 or is_malformed:
+		# We either have more opening parens than closing parens, or we 
+		# ignored the parse earlier. Throw a warning, and ignore this parse.
+		parse = self.get_words_from_indices(indices)
+            	warnings.warn("Malformed binary semantic parse: %s"%parse, RuntimeWarning)
+		continue
             all_transitions.append(transitions)
             all_elements.append(elements)
         return all_transitions, all_elements
