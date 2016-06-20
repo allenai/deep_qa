@@ -101,7 +101,7 @@ class DataIndexer(object):
             last_symbols = [] # Keeps track of commas and open parens
             transitions = []
             elements = []
-	    is_malformed = False
+            is_malformed = False
             for ind in indices:
                 if ind == comma_index:
                     last_symbols.append(",")
@@ -109,10 +109,10 @@ class DataIndexer(object):
                     last_symbols.append("(")
                 elif ind == close_paren_index:
                     if len(last_symbols) == 0:
-			# This means we saw a closing paren without an opening paren.
-			# Ignore this parse.
+                        # This means we saw a closing paren without an opening paren.
+                        # Ignore this parse.
                         is_malformed = True
-			break
+                        break
                     last_symbol = last_symbols.pop()
                     if last_symbol == "(":
                         transitions.append(R2_OP)
@@ -126,11 +126,11 @@ class DataIndexer(object):
                     transitions.append(S_OP)
                     elements.append(ind)
             if len(last_symbols) != 0 or is_malformed:
-		# We either have more opening parens than closing parens, or we 
-		# ignored the parse earlier. Throw a warning, and ignore this parse.
-		parse = self.get_words_from_indices(indices)
-            	warnings.warn("Malformed binary semantic parse: %s"%parse, RuntimeWarning)
-		continue
+                # We either have more opening parens than closing parens, or we 
+                # ignored the parse earlier. Throw a warning, and ignore this parse.
+                parse = self.get_words_from_indices(indices)
+                warnings.warn("Malformed binary semantic parse: %s"%parse, RuntimeWarning)
+                continue
             all_transitions.append(transitions)
             all_elements.append(elements)
         return all_transitions, all_elements
