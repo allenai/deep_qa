@@ -55,6 +55,8 @@ object ScienceQuestionPipeline {
   // Step 4: Select features for each word
   ////////////////////////////////////////////////////////////////
 
+  // TODO(matt): just put the SFE spec in here, not in a file.  I guess that makes interaction with
+  // the lisp code hard, though...
   val SFE_SPEC_FILE = "src/main/resources/science_sfe_spec.json"
 
   val trainingDataFeatureParams: JValue =
