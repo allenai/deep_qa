@@ -1,7 +1,7 @@
 import random
 import warnings
 from nltk.tokenize import word_tokenize
-from constants import S_OP, R2_OP, R3_OP
+from constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 
 class DataIndexer(object):
     def __init__(self):
@@ -115,15 +115,15 @@ class DataIndexer(object):
                         break
                     last_symbol = last_symbols.pop()
                     if last_symbol == "(":
-                        transitions.append(R2_OP)
+                        transitions.append(REDUCE2_OP)
                     else:
                         # Last symbol is a comma. Pop the open paren
                         # before it as well.
                         last_symbols.pop()
-                        transitions.append(R3_OP)
+                        transitions.append(REDUCE3_OP)
                 else:
                     # The token is padding, predicate or an argument.
-                    transitions.append(S_OP)
+                    transitions.append(SHIFT_OP)
                     elements.append(ind)
             if len(last_symbols) != 0 or is_malformed:
                 # We either have more opening parens than closing parens, or we 
