@@ -447,8 +447,10 @@ if __name__=="__main__":
                 in_shift_reduce_format=args.use_tree_lstm)
         if args.max_train_size is not None:
             print >>sys.stderr, "Limiting training size to %d"%(args.max_train_size)
-            good_input = good_input[:args.max_train_size]
-            bad_input = bad_input[:args.max_train_size]
+            good_input = [input_[:args.max_train_size] for input_ in good_input] \
+                    if args.use_tree_lstm else good_input[:args.max_train_size]
+            bad_input = [input_[:args.max_train_size] for input_ in bad_input] \
+                    if args.use_tree_lstm else bad_input[:args.max_train_size]
         print >>sys.stderr, "Training model"
         prop_scorer.train(good_input, bad_input, validation_input, validation_labels, 
                 num_epochs=args.num_epochs)
