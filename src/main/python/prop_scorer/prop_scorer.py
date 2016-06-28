@@ -268,14 +268,17 @@ class LSTMScorer(NNScorer):
         
         best_accuracy = 0.0
         for epoch_id in range(num_epochs):
-            model.fit(inputs, targets, nb_epoch=1)
+            # History callback contains the losses of all training samples
+            history_callback = model.fit(inputs, targets, nb_epoch=1)
+            training_loss = numpy.mean(history_callback.history['loss']) 
             accuracy = self.evaluate(validation_labels, validation_input)
             print >>sys.stderr, "Validation accuracy: %.4f"%accuracy
-            if accuracy < best_accuracy:
+            if accuracy < best_accuracy and training_loss < margin:
                 print >>sys.stderr, "Stopping training"
                 break
             else:
-                best_accuracy = accuracy
+                if accuracy >= best_accuracy:
+                    best_accuracy = accuracy
                 self.save_model("propscorer_lstm", epoch_id)
 
 class TreeLSTMScorer(NNScorer):
@@ -391,14 +394,16 @@ class TreeLSTMScorer(NNScorer):
         
         best_accuracy = 0.0
         for epoch_id in range(num_epochs):
-            model.fit(inputs, targets, nb_epoch=1)
+            history_callback = model.fit(inputs, targets, nb_epoch=1)
+            training_loss = numpy.mean(history_callback.history['loss']) 
             accuracy = self.evaluate(validation_labels, validation_input)
             print >>sys.stderr, "Validation accuracy: %.4f"%accuracy
-            if accuracy < best_accuracy:
+            if accuracy < best_accuracy and training_loss < margin:
                 print >>sys.stderr, "Stopping training"
                 break
             else:
-                best_accuracy = accuracy
+                if accuracy >= best_accuracy:
+                    best_accuracy = accuracy
                 self.save_model("propscorer_treelstm", epoch_id)
 
 if __name__=="__main__":
