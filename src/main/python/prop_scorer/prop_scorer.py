@@ -273,13 +273,16 @@ class LSTMScorer(NNScorer):
             training_loss = numpy.mean(history_callback.history['loss']) 
             accuracy = self.evaluate(validation_labels, validation_input)
             print >>sys.stderr, "Validation accuracy: %.4f"%accuracy
-            if accuracy < best_accuracy and training_loss < margin:
-                print >>sys.stderr, "Stopping training"
-                break
-            else:
-                if accuracy >= best_accuracy:
+            if training_loss < margin:
+                # We want to either stop training or update the best accuracy
+                # only if the training loss went below the margin. If not, 
+                # the model hasn't learned anything yet.
+                if accuracy < best_accuracy:
+                    print >>sys.stderr, "Stopping training"
+                    break
+                else:
                     best_accuracy = accuracy
-                self.save_model("propscorer_lstm", epoch_id)
+                    self.save_model("propscorer_lstm", epoch_id)
 
 class TreeLSTMScorer(NNScorer):
     def __init(self):
@@ -398,13 +401,16 @@ class TreeLSTMScorer(NNScorer):
             training_loss = numpy.mean(history_callback.history['loss']) 
             accuracy = self.evaluate(validation_labels, validation_input)
             print >>sys.stderr, "Validation accuracy: %.4f"%accuracy
-            if accuracy < best_accuracy and training_loss < margin:
-                print >>sys.stderr, "Stopping training"
-                break
-            else:
-                if accuracy >= best_accuracy:
+            if training_loss < margin:
+                # We want to either stop training or update the best accuracy
+                # only if the training loss went below the margin. If not, 
+                # the model hasn't learned anything yet.
+                if accuracy < best_accuracy:
+                    print >>sys.stderr, "Stopping training"
+                    break
+                else:
                     best_accuracy = accuracy
-                self.save_model("propscorer_treelstm", epoch_id)
+                    self.save_model("propscorer_treelstm", epoch_id)
 
 if __name__=="__main__":
     argparser = argparse.ArgumentParser(description="Simple proposition scorer")
