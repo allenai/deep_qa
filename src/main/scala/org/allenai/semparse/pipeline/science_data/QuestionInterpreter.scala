@@ -16,22 +16,18 @@ import org.allenai.semparse.parse.transformers
 case class Answer(text: String, isCorrect: Boolean)
 case class ScienceQuestion(sentences: Seq[String], answers: Seq[Answer])
 
-class ScienceQuestionProcessor(
+class QuestionInterpreter(
   params: JValue,
   fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
-  override val name = "Science Question Processor"
+  override val name = "Question Interpreter"
 
-  val validParams = Seq("question file", "logical forms", "output format", "data name")
+  val validParams = Seq("question file", "output file")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val questionFile = (params \ "question file").extract[String]
-  val dataName = (params \ "data name").extract[String]
-  // TODO(matt): change these names to "lisp" and [something else]
-  val formatChoices = Seq("training data", "debug")
-  val outputFormat = JsonHelper.extractChoiceWithDefault(params, "output format", formatChoices, "training data")
-  val outputFile = s"data/science/$dataName/processed_questions.txt"
+  val outputFile = (params \ "output file").extract[String]
 
   override val inputs: Set[(String, Option[Step])] = Set((questionFile, None))
   override val outputs = Set(outputFile)
@@ -39,7 +35,6 @@ class ScienceQuestionProcessor(
   override val inProgressFile = outputFile.replace(".txt", "_in_progress")
 
   val parser = new StanfordParser
-  val logicalFormGenerator = new LogicalFormGenerator(params \ "logical forms")
 
   override def _runStep() {
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
@@ -51,22 +46,8 @@ class ScienceQuestionProcessor(
         Seq(filledInAnswer._1) ++ filledInAnswer._2.map(answerSentence => {
           val (text, correct) = answerSentence
           val parsedAnswerOption = parser.parseSentence(text)
-          val logicalForm = parsedAnswerOption.dependencyTree match {
-            case None => None
-            case Some(tree) => logicalFormGenerator.getLogicalForm(tree)
-          }
-          val logicalFormStr = logicalForm match {
-            case None => ""
-            case Some(logicalForm) => {
-              if (outputFormat == "training data") {
-                logicalForm.toLisp
-              } else {
-                logicalForm.toString
-              }
-            }
-          }
           val correctString = if (correct) "1" else "0"
-          s"$text\t$logicalFormStr\t$correctString"
+          s"$text\t$correctString"
         }) ++ Seq("")
       }
     })

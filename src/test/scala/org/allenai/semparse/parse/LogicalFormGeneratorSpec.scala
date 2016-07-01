@@ -157,8 +157,10 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
 
   it should "work for \"an example is photosynthesis.\" (copula)" in {
     val parse = parser.parseSentence("an example is photosynthesis.")
+    // It would be better to do `example(photosynthesis)` here, but we can't really figure that
+    // out, so we have to rely on what the dependency parse gives us for this.
     logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("be", Seq(Atom("photosynthesis"), Atom("example")))
+      Predicate("photosynthesis", Seq(Atom("example")))
     ))
   }
 
@@ -180,7 +182,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   it should "work for \"But, photosynthesis is older.\" (drop CCs)" in {
     val parse = parser.parseSentence("But, photosynthesis is older.")
     logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("be", Seq(Atom("older"), Atom("photosynthesis")))
+      Predicate("older", Seq(Atom("photosynthesis")))
     ))
   }
 
@@ -189,7 +191,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(Conjunction(Set(
       Predicate("liberate", Seq(Atom("photosynthesis"), Atom("oxygen"))),
       Predicate("liberate", Seq(Atom("process"), Atom("oxygen"))),
-      Predicate("appos", Seq(Atom("process"), Atom("photosynthesis")))
+      Predicate("process", Seq(Atom("photosynthesis")))
     ))))
   }
 
@@ -205,7 +207,7 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
   it should "work for \"An example would be photosynthesis.\" (copula with modal)" in {
     val parse = parser.parseSentence("An example would be photosynthesis.")
     logicalFormGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
-      Predicate("be", Seq(Atom("photosynthesis"), Atom("example")))
+      Predicate("photosynthesis", Seq(Atom("example")))
     ))
   }
 
@@ -456,11 +458,27 @@ class LogicalFormGeneratorSpec extends FlatSpecLike with Matchers {
     parse.dependencyTree.get.print()
     nestedGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
       Predicate("compete_for", Seq(Atom("cactus"), Atom("water")))
-      ))
+    ))
   }
 
   it should "not get into an infinite loop with long strings of symbols" in {
     val parse = parser.parseSentence("Walt ======================================== | Cave ne ante ullas catapultas ambules.")
     nestedGenerator.getLogicalForm(parse.dependencyTree.get).toString should not be(None)
+  }
+
+  it should "handle simple copulatives as unary predicates" in {
+    val parse = parser.parseSentence("Pixar is a company.")
+    parse.dependencyTree.get.print()
+    nestedGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("company", Seq(Atom("pixar")))
+    ))
+  }
+
+  it should "handle copulatives with a reduced relative" in {
+    val parse = parser.parseSentence("Pixar is a company located in California.")
+    parse.dependencyTree.get.print()
+    nestedGenerator.getLogicalForm(parse.dependencyTree.get) should be(Some(
+      Predicate("located_in", Seq(Predicate("company", Seq(Atom("pixar")))))
+    ))
   }
 }

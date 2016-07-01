@@ -31,14 +31,14 @@ class SentenceCorruptor(
   val validParams = Seq("positive data")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val sentenceProcessor = new ScienceSentenceProcessor(params \ "positive data", fileUtil)
-  val positiveDataFile = sentenceProcessor.outputFile
-  val dataName = sentenceProcessor.dataName
+  val sentenceSelector = new SentenceSelectorStep(params \ "positive data", fileUtil)
+  val positiveDataFile = sentenceSelector.outputFile
+  val dataName = sentenceSelector.dataName
   val outputFile = s"data/science/$dataName/corrupted_data.tsv"
 
   val numPartitions = 100
 
-  override val inputs: Set[(String, Option[Step])] = Set((positiveDataFile, Some(sentenceProcessor)))
+  override val inputs: Set[(String, Option[Step])] = Set((positiveDataFile, Some(sentenceSelector)))
   override val outputs = Set(outputFile)
   override val paramFile = outputs.head.dropRight(4) + "_params.json"
   override val inProgressFile = outputs.head.dropRight(4) + "_in_progress"

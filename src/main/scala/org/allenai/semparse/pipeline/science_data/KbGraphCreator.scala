@@ -10,6 +10,8 @@ import com.mattg.util.JsonHelper
 import edu.cmu.ml.rtw.pra.experiments.Outputter
 import edu.cmu.ml.rtw.pra.graphs.GraphCreator
 
+import org.allenai.semparse.pipeline.jklol.KbGenerator
+
 // This is mostly just a class to create a set of params and hand off to the GraphCreator in the
 // PRA code.  Because of this, we don't pass our params to the base Step object.
 class KbGraphCreator(
