@@ -6,12 +6,19 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
+import org.allenai.ari.controller.questionparser._
+import org.allenai.ari.controller.decomposer.SimpleLongAnswerGenerator
+import org.allenai.ari.models.ParentheticalChoiceIdentifier
+import org.allenai.ari.models.SquareBracketedChoiceIdentifier
+import org.allenai.nlpstack.parse.poly.polyparser.Parser
+import org.allenai.nlpstack.parse.poly.core.{Token => PPToken}
+
 import org.allenai.semparse.parse.DependencyTree
-import org.allenai.semparse.parse.LogicalFormGenerator
-import org.allenai.semparse.parse.Predicate
 import org.allenai.semparse.parse.StanfordParser
 import org.allenai.semparse.parse.Token
 import org.allenai.semparse.parse.transformers
+
+import com.typesafe.scalalogging.LazyLogging
 
 case class Answer(text: String, isCorrect: Boolean)
 case class ScienceQuestion(sentences: Seq[String], answers: Seq[Answer])
@@ -23,40 +30,46 @@ class QuestionInterpreter(
   implicit val formats = DefaultFormats
   override val name = "Question Interpreter"
 
-  val validParams = Seq("question file", "output file")
+  val validParams = Seq("question file", "wh-movement", "output file")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val questionFile = (params \ "question file").extract[String]
   val outputFile = (params \ "output file").extract[String]
+  val whMover = WhMover.create(params \ "wh-movement")
 
   override val inputs: Set[(String, Option[Step])] = Set((questionFile, None))
   override val outputs = Set(outputFile)
-  override val paramFile = outputFile.replace(".txt", "_params.json")
-  override val inProgressFile = outputFile.replace(".txt", "_in_progress")
+  override val paramFile = outputFile.dropRight(4) + "_params.json"
+  override val inProgressFile = outputFile.dropRight(4) + "_in_progress"
 
   val parser = new StanfordParser
 
   override def _runStep() {
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
-    val questions = rawQuestions.map(parseQuestionLine)
-    val filledInAnswers = questions.map(fillInAnswerOptions)
-    val outputLines = filledInAnswers.seq.flatMap(_ match {
-      case None => Seq()
-      case Some(filledInAnswer) => {
-        Seq(filledInAnswer._1) ++ filledInAnswer._2.map(answerSentence => {
-          val (text, correct) = answerSentence
-          val parsedAnswerOption = parser.parseSentence(text)
-          val correctString = if (correct) "1" else "0"
-          s"$text\t$correctString"
-        }) ++ Seq("")
+    val outputLines = rawQuestions.take(10).seq.flatMap(questionLine => {
+      val question = parseQuestionLine(questionLine)
+      val sentenceStrings = fillInAnswerOptions(question)
+      sentenceStrings match {
+        case None => Seq()
+        case Some(filledInAnswers) => {
+          val answerStrings = filledInAnswers.map(answerSentence => {
+            val (text, correct) = answerSentence
+            val correctString = if (correct) "1" else "0"
+            s"$text\t$correctString"
+          })
+          Seq(question.sentences.mkString(" ")) ++ answerStrings ++ Seq("")
+        }
       }
-    })
+    }).seq
     fileUtil.writeLinesToFile(outputFile, outputLines)
   }
 
   /**
    *  Parses a question line formatted as "[correct_answer]\t[question] [answers]", returning a
    *  ScienceQuestion object.
+   *
+   *  TODO(matt): There's code in the question decomposer that will handle this more generally, but
+   *  that code is heavy...
    */
   def parseQuestionLine(questionLine: String): ScienceQuestion = {
     val fields = questionLine.split("\t")
@@ -83,60 +96,85 @@ class QuestionInterpreter(
    * Currently, this just takes the _last sentence_ and tries to fill in the blank (or replace the
    * wh-phrase).  This will have to change once my model can incorporate the whole question text.
    */
-  def fillInAnswerOptions(question: ScienceQuestion): Option[(String, Seq[(String, Boolean)])] = {
-    val questionText = question.sentences.mkString(" ")
+  def fillInAnswerOptions(question: ScienceQuestion): Option[Seq[(String, Boolean)]] = {
     val lastSentence = question.sentences.last
-
-    // I don't want to deal with these questions right now, and the current model of semantics
-    // can't deal with it, anyway.
-    if (lastSentence.contains("How many")) return None
 
     val sentenceWithBlank = if (lastSentence.contains("___")) {
       lastSentence
     } else {
-      val parse = parser.parseSentence(lastSentence)
-      parse.dependencyTree match {
-        case None => { System.err.println(s"couldn't parse question: $question"); return None }
-        case Some(tree) => {
-          //println("Original tree:")
-          //tree.print()
-          val fixedCopula = transformers.MakeCopulaHead.transform(tree)
-          //println("Fixed copula tree:")
-          //fixedCopula.print()
-          val movementUndone = transformers.UndoWhMovement.transform(fixedCopula)
-          //println("Moved tree:")
-          //movementUndone.print()
-          val whPhrase = try {
-            transformers.findWhPhrase(movementUndone)
-          } catch {
-            case e: Throwable => {
-              System.err.println(s"exception finding wh-phrase: $question")
-              return None
-            }
+      whMover.whQuestionToFillInTheBlank(question, lastSentence) match {
+        case None => return None
+        case Some(sentence) => sentence
+      }
+    }
+    val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text.toLowerCase), a.isCorrect))
+    Some(answerSentences.map(makeAnswerUpperCase))
+  }
+
+  def makeAnswerUpperCase(answer: (String, Boolean)): (String, Boolean) = {
+    (answer._1.capitalize, answer._2)
+  }
+}
+
+abstract class WhMover(params: JValue) extends LazyLogging {
+  def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String]
+}
+
+object WhMover {
+  def create(params: JValue): WhMover = {
+    params match {
+      case JString("matt's") => new MattsWhMover
+      case JString("mark's") => new MarksWhMover
+      case _ => throw new IllegalStateException("unrecognized wh-mover parameters")
+    }
+  }
+}
+
+class MattsWhMover extends WhMover(JNothing) {
+
+  val parser = new StanfordParser
+
+  def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String] = {
+    val parse = parser.parseSentence(lastSentence)
+    parse.dependencyTree match {
+      case None => { logger.error(s"couldn't parse question: $question"); return None }
+      case Some(tree) => {
+        //println("Original tree:")
+        //tree.print()
+        val fixedCopula = transformers.MakeCopulaHead.transform(tree)
+        //println("Fixed copula tree:")
+        //fixedCopula.print()
+        val movementUndone = transformers.UndoWhMovement.transform(fixedCopula)
+        //println("Moved tree:")
+        //movementUndone.print()
+        val whPhrase = try {
+          transformers.findWhPhrase(movementUndone)
+        } catch {
+          case e: Throwable => {
+            logger.error(s"exception finding wh-phrase: $question")
+            return None
           }
-          whPhrase match {
-            case None => {
-              System.err.println(s"question didn't have blank or wh-phrase: $question")
-              movementUndone.print()
-              return None
-            }
-            case Some(whTree) => {
-              if (isWhereQuestion(whTree, movementUndone, question)) {
-                fillInWhereQuestion(movementUndone, question)
-              } else if (isWhyQuestion(whTree, movementUndone, question)) {
-                fillInWhyQuestion(movementUndone, question)
-              } else {
-                val index = whTree.tokens.map(_.index).min
-                val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
-                transformers.replaceTree(movementUndone, whTree, newTree)._yield + "."
-              }
+        }
+        whPhrase match {
+          case None => {
+            logger.error(s"question didn't have blank or wh-phrase: $question")
+            movementUndone.print()
+            return None
+          }
+          case Some(whTree) => {
+            if (isWhereQuestion(whTree, movementUndone, question)) {
+              Some(fillInWhereQuestion(movementUndone, question))
+            } else if (isWhyQuestion(whTree, movementUndone, question)) {
+              Some(fillInWhyQuestion(movementUndone, question))
+            } else {
+              val index = whTree.tokens.map(_.index).min
+              val newTree = DependencyTree(Token("___", "NN", "___", index), Seq())
+              Some(transformers.replaceTree(movementUndone, whTree, newTree)._yield + ".")
             }
           }
         }
       }
     }
-    val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text.toLowerCase), a.isCorrect))
-    Some((questionText, answerSentences.map(makeAnswerUpperCase)))
   }
 
   def isWhereQuestion(
@@ -172,8 +210,18 @@ class QuestionInterpreter(
     val toReplace = if (finalSentence.contains("Why")) "Why" else "why"
     finalSentence.replace(toReplace, "because ___.")
   }
+}
 
-  def makeAnswerUpperCase(answer: (String, Boolean)): (String, Boolean) = {
-    (answer._1.capitalize, answer._2)
+class MarksWhMover extends WhMover(JNothing) {
+  val fillInTheBlankGenerator = FillInTheBlankGenerator.mostRecent
+  val fillInTheBlankProcessor = new FillInTheBlankQuestionProcessor
+  override def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String] = {
+    logger.info(s"last sentence: $lastSentence")
+    val standardQuestion = StandardQuestion(lastSentence)
+    val fillInTheBlankQuestion = fillInTheBlankGenerator.generateFITB(standardQuestion).get
+    logger.info(s"fill in the blank question: ${fillInTheBlankQuestion}")
+    val finalQuestion = fillInTheBlankQuestion.text.replace("BLANK_", "___").replaceAll(" ,", ",").replace(" .", ".")
+    logger.info(finalQuestion)
+    Some(finalQuestion)
   }
 }
