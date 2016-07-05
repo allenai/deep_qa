@@ -94,7 +94,6 @@ class NNScorer(object):
                     max_length=max_transition_length)
             bad_elements = self.data_indexer.pad_indices(bad_elements, 
                     max_length=max_transition_length)
-            #bad_elements = self.data_indexer.corrupt_indices(good_elements)
             training_sample = zip(good_elements, bad_elements)[:10]
             # Make int32 array so that Keras will view them as indices.
             good_elements = numpy.asarray(good_elements, dtype='int32')
@@ -102,10 +101,22 @@ class NNScorer(object):
             # TreeLSTM's transitions input has an extra trailing dimension for 
             # concatenation. This has to match.
             transitions = numpy.expand_dims(transitions, axis=-1)
+            num_good_inputs = good_elements.shape[0]
+            num_bad_inputs = bad_elements.shape[0]
+            # Labels will represent true statements as [0,1] and false statements as [1,0]
+            labels = numpy.zeros((num_good_inputs+num_bad_inputs, 2))
+            labels[:num_good_inputs, 1] = 1 # true statements
+            labels[num_good_inputs:, 0] = 1 # false statements
+            # Let's shuffle so that any sample taken from input-label combination will not have 
+            # one dominating label.
             # Since transition sequences will not change for bad input, reusing those from
             # good input.
-            inputs = (numpy.concatenate([transitions, transitions]), 
-                    numpy.concatenate([good_elements, bad_elements]))
+            zipped_input_labels = zip(numpy.concatenate([transitions, transitions]), 
+                    numpy.concatenate([good_elements, bad_elements]), labels)
+            random.shuffle(zipped_input_labels)
+            shuffled_transitions, shuffled_elements, labels = [numpy.asarray(array) for 
+                    array in zip(*zipped_input_labels)]
+            inputs = (shuffled_transitions, shuffled_elements)
         else:
             # Padding to prespecified length
             good_input = self.data_indexer.pad_indices(good_input, max_length=max_length)
@@ -116,10 +127,18 @@ class NNScorer(object):
             good_input = numpy.asarray(good_input, dtype='int32')
             bad_input = numpy.asarray(bad_input, dtype='int32')
             inputs = numpy.concatenate([good_input, bad_input])
-        # Labels will represent true statements as [0,1] and false statements as [1,0]
-        labels = numpy.zeros((2*train_data_size, 2))
-        labels[:train_data_size, 1] = 1 # true statements
-        labels[train_data_size:, 0] = 1 # false statements
+            num_good_inputs = good_input.shape[0]
+            num_bad_inputs = bad_input.shape[0]
+            print num_good_inputs, num_bad_inputs, train_data_size 
+            # Labels will represent true statements as [0,1] and false statements as [1,0]
+            labels = numpy.zeros((num_good_inputs+num_bad_inputs, 2))
+            labels[:num_good_inputs, 1] = 1 # true statements
+            labels[num_good_inputs:, 0] = 1 # false statements
+            # Let's shuffle so that any sample taken from input-label combination will not have 
+            # one dominating label.
+            zipped_input_labels = zip(numpy.concatenate([good_input, bad_input]), labels)
+            random.shuffle(zipped_input_labels)
+            inputs, labels = [numpy.asarray(array) for array in zip(*zipped_input_labels)]
         
         # Print a training sample
         print >>sys.stderr, "Sample training pairs:"
@@ -362,9 +381,6 @@ if __name__=="__main__":
         assert args.validation_file is not None, "Validation data is needed for training"
         print >>sys.stderr, "Reading training data"
         lines = [x.strip() for x in open(args.train_file).readlines()]
-        # Shuffling lines now since Keras does not shuffle data before validation
-        # split is made. This will ensure validation data is not at the end of the file.
-        random.shuffle(lines)
         _, (inputs, labels) = prop_scorer.prepare_training_data(lines, 
                 max_length=args.length_upper_limit, 
                 in_shift_reduce_format=args.use_tree_lstm)
