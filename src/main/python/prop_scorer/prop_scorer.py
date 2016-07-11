@@ -320,13 +320,10 @@ class TreeLSTMScorer(NNScorer):
 
         ## STEP 2: Embed the two propositions by changing word indices to word vectors
         # Share embedding layer for both propositions
-        # We are not masking zero here since the merge in step 3 complains if input
-        # is masked. However, masking is unnecessary because the TreeLSTM's states
-        # do not change when the transition is not one of the three ops, making the
-        # gradient 0.
-        # TODO (pradeep): Confirm the claim.
+        # If merge in step 3 complains that input is masked, Keras needs to be updated. 
+        # Merge supports masked input as of Keras 1.0.5
         embed_layer = Embedding(input_dim=vocab_size, output_dim=embedding_size, 
-                name='embedding')
+                mask_zero=True, name='embedding')
         good_embed = embed_layer(good_buffer_input)
         bad_embed = embed_layer(bad_buffer_input)
         # Add a dropout to regularize the input representations
