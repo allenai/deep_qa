@@ -19,7 +19,7 @@ class KnowledgeBackedLSTM(LSTM):
             attention_init='uniform', attention_activation='tanh', **kwargs):
         """
         output_dim (int): Dimensionality of output (same as LSTM)
-        token_dim (int): Input dimnesionality of tokens
+        token_dim (int): Input dimensionality of token embeddings
         info_dim (int): Input dimensionality of background info
         info_length (int): Number of units of background information
             provided per token
@@ -94,15 +94,17 @@ class KnowledgeBackedLSTM(LSTM):
         # the time dimension and calls this function once per timestep.
         h_tm1 = states[0] # Output from previous (t-1) timestep
         token_t = x[:, 0, :self.token_dim] # Current token (batch_size, token_dim)
-        tiled_token_t = x[:, :, :self.token_dim] 
         # Repeated along info_len (batch_size, info_len, token_dim)
+        tiled_token_t = x[:, :, :self.token_dim] 
         info_t = x[:, :, self.token_dim:] # Current info (batch_size, info_len, info_dim)
+        # TODO: Try out other kinds of interactions between background info and tokens
+        # Candidates: dot product, difference, element wise product, inner product ..
         projected_combination = self.attention_activation(K.dot(info_t, self.info_projector)
                 + K.dot(tiled_token_t, self.token_projector)) 
         # (batch_size, info_len, proj_dim)
         attention_scores = K.softmax(K.dot(projected_combination, 
             self.attention_scorer)) # (batch_size, info_len)
-        # Add a dimension at at the end for attention scores to make the number of 
+        # Add a dimension at the end for attention scores to make the number of 
         # dimensions the same as that of info_t, multiply and compute sum along info_len to
         # get a weighted average of all pieces of background information.
         attended_info = K.sum(info_t * K.expand_dims(attention_scores, -1), 
