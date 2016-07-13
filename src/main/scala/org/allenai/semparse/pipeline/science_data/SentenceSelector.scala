@@ -14,6 +14,11 @@ import org.apache.spark.SparkContext
  * deep neural network.  At present, this is very simple, selecting only based on the number of
  * words in the sentence, but the plan is to make this much more complicated eventually, likely
  * involved a trained classifier, a coreference resolution system, or other things.
+ *
+ * INPUTS: a collection of documents
+ * OUTPUTS: a file containing sentences, one sentence per line.  File format is
+ * "[sentence index][tab][sentence]", or just "[sentence]", depending on the `use sentence indices`
+ * parameter.
  */
 class SentenceSelectorStep(
   params: JValue,
@@ -21,11 +26,12 @@ class SentenceSelectorStep(
 ) extends Step(Some(params), fileUtil) {
   implicit val formats = DefaultFormats
   override val name = "Sentence Selector Step"
-  val validParams = Seq("sentence selector", "data directory", "data name")
+  val validParams = Seq("sentence selector", "data directory", "data name", "create sentence indices")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataName = (params \ "data name").extract[String]
   val dataDir = (params \ "data directory").extract[String]
+  val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
 
   val outputFile = s"data/science/$dataName/training_data.tsv"
   val numPartitions = 1
@@ -50,7 +56,11 @@ class SentenceSelectorStep(
       val sentence = line.replace("<SENT>", "").replace("</SENT>", "")
       if (sentenceSelector.shouldKeepSentence(line)) Seq(sentence) else Seq()
     }).distinct()
-    val outputLines = sentences.collect()
+    val outputSentences = sentences.collect()
+    val outputLines = outputSentences.zipWithIndex.map(sentenceWithIndex => {
+      val (sentence, index) = sentenceWithIndex
+      if (indexSentences) s"${index}\t${sentence}" else s"${sentence}"
+    })
     fileUtil.writeLinesToFile(outputFile, outputLines)
 
     sc.stop()

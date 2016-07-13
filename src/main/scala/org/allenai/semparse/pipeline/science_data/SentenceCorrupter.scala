@@ -20,6 +20,17 @@ import scala.util.Random
  * The goal of this class is to take some positive training data as input, then produce a set of
  * corrupted data for each positive instance, so we can train a model using noise contrastive
  * estimation.
+ *
+ * INPUTS: a file containing good sentences, one sentence per line.  The input can optionally have
+ * indices for each sentence.  The expected file format is either "[sentence]" or
+ * "[index][tab][sentence]".
+ *
+ * OUTPUTS: a file containing corrupted sentences, one sentence per line.  In addition to the
+ * sentence itself, there are two optional fields that can also be output: a back-pointer to the
+ * original sentence index (only possible if the input has indices), and a new index for each
+ * corrupted sentence.  Output file format is
+ * "[corrupted sentence index][tab][sentence][tab][original sentence index]", where the first and
+ * last columns may be dropped depending on the given parameters.
  */
 class SentenceCorruptor(
   params: JValue,
@@ -28,8 +39,11 @@ class SentenceCorruptor(
   implicit val formats = DefaultFormats
   override val name = "Sentence Corruptor"
 
-  val validParams = Seq("positive data")
+  val validParams = Seq("positive data", "include back pointers", "create sentence indices")
   JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val includeBackPointers = JsonHelper.extractWithDefault(params, "include back pointers", false)
+  val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
 
   val sentenceSelector = new SentenceSelectorStep(params \ "positive data", fileUtil)
   val positiveDataFile = sentenceSelector.outputFile
