@@ -26,13 +26,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
  * Here we convert sentences into logical forms, using the LogicalFormGenerator.
  *
- * INPUTS: a file containing sentences, one sentence per line.  The line could be multi-column; we
- * just output the line as is, with an additional column containing the logical form.  The actual
- * sentence must be in the first column, or the first column must be an integer, and with the
- * second column containing the sentence.
+ * INPUTS: a file containing sentences, one sentence per line.  Expected file format is
+ * "[sentence index][tab][sentence]", or just "[sentence]".
  *
- * OUTPUTS: a file identical to the second one, with an additional column containing logical forms.
- * Optionally, we can drop the line if the logical form generation failed for that line.
+ * OUTPUTS: a file containing logical statements, one statement per line.  Output file format is
+ * the same as the input file, except sentences are replaced with logical forms.  We keep the same
+ * index, if an index is provided.  Optionally, we drop a line if the logical form generation
+ * failed for that line.
  */
 class SentenceToLogic(
   params: JValue,
@@ -51,13 +51,11 @@ class SentenceToLogic(
   val logicalFormGenerator = new LogicalFormGenerator(params \ "logical forms")
 
   val outputFile = JsonHelper.extractAsOption[String](params, "output file") match {
-    case None => {
-      new File(sentencesFile).getParent() + "logical_forms.tsv"
-    }
+    case None => sentencesFile.dropRight(4) + "_as_logic.tsv"
     case Some(filename) => filename
   }
 
-  val numPartitions = 1
+  val numPartitions = 100
 
   override val inputs: Set[(String, Option[Step])] = Set(sentencesInput)
   override val outputs = Set(outputFile)
@@ -73,37 +71,40 @@ class SentenceToLogic(
 
     val sc = new SparkContext(conf)
 
-    parseSentences(sc, logicalFormGenerator, outputFile)
+    parseSentences(sc, logicalFormGenerator, dropErrors, outputFile)
 
     sc.stop()
   }
 
-  def parseSentences(sc: SparkContext, logicalFormGenerator: LogicalFormGenerator, outputFile: String) {
+  def parseSentences(
+    sc: SparkContext,
+    logicalFormGenerator: LogicalFormGenerator,
+    dropErrors: Boolean,
+    outputFile: String
+  ) {
     fileUtil.mkdirsForFile(outputFile)
-    val lines = sc.textFile(sentencesFile)
+    val lines = sc.textFile(sentencesFile, numPartitions)
     val sentences = lines.map(SentenceToLogic.getSentenceFromLine)
     val trees = sentences.map(SentenceToLogic.parseSentence)
     val logicalForms = trees.flatMap(sentenceAndTree => {
       val result = SentenceToLogic.runWithTimeout(2000, () => {
-        val sentence = sentenceAndTree._1._1
-        val line = sentenceAndTree._1._2
         val tree = sentenceAndTree._2
         val logicalForm = try {
           tree.flatMap(logicalFormGenerator.getLogicalForm)
         } catch {
-          case e: Throwable => { println(sentence); tree.map(_.print()); throw e }
+          case e: Throwable => { println(sentenceAndTree._1); tree.map(_.print()); throw e }
         }
-        (sentence, line, logicalForm)
+        (sentenceAndTree._1, logicalForm)
       })
       result match {
         case None => {
           println(s"Timeout while processing sentence: ${sentenceAndTree._1._1}")
-          if (dropErrors) Seq() else Seq((sentenceAndTree._1._1, sentenceAndTree._1._2, None))
+          if (dropErrors) Seq() else Seq((sentenceAndTree._1, None))
         }
         case Some(either) => either match {
           case Left(t) => {
             println(s"Exception thrown while processing sentence: ${sentenceAndTree._1._1} ---- ${t.getMessage}")
-            if (dropErrors) Seq() else Seq((sentenceAndTree._1._1, sentenceAndTree._1._2, None))
+            if (dropErrors) Seq() else Seq((sentenceAndTree._1, None))
           }
           case Right(result) => Seq(result)
         }
@@ -113,17 +114,18 @@ class SentenceToLogic(
       val result = SentenceToLogic.runWithTimeout(2000, () => {
         SentenceToLogic.sentenceAndLogicalFormAsString(sentenceAndLf)
       })
+      val failureStr = sentenceAndLf._1._2.map(index => s"${index}\t").getOrElse("")
       result match {
         case None => {
           println(s"Timeout while printing sentence: ${sentenceAndLf._1}")
-          Seq()
+          if (dropErrors) Seq() else Seq(failureStr)
         }
         case Some(either) => either match {
           case Left(t) => {
             println(s"Exception thrown while printing sentence: ${sentenceAndLf._1} ---- ${t.getMessage}")
-            Seq()
+            if (dropErrors) Seq() else Seq(failureStr)
           }
-          case Right(result) => result
+          case Right(result) => if (result.isEmpty() && dropErrors) Seq() else Seq(result)
         }
       }
     })
@@ -135,13 +137,16 @@ class SentenceToLogic(
 
 // This semi-ugliness is so that the spark functions are serializable.
 object SentenceToLogic {
+  type IndexedSentence = (String, Option[Int])
+
   val parser = new StanfordParser
 
   def getSentencesInput(params: JValue, fileUtil: FileUtil): (String, Option[Step]) = {
-    val sentenceSelector = new SentenceSelectorStep(params \ "sentence selector step", fileUtil)
+    val sentenceSelector = new SentenceSelectorStep(params, fileUtil)
     // TODO(matt): I need a "type" parameter here, which says whether we get the sentences from a
-    // sentence selector, or a sentence corrupter, or somewhere else.
-    ("fake", None)
+    // sentence selector, or a sentence corrupter, or somewhere else.  For now, we'll just assume
+    // our input is from a SentenceSelector.
+    (sentenceSelector.outputFile, Some(sentenceSelector))
   }
 
   def runWithTimeout[T](milliseconds: Long, f: () => T): Option[Either[Throwable, T]] = {
@@ -165,19 +170,19 @@ object SentenceToLogic {
     }
   }
 
-  def getSentenceFromLine(line: String): (String, String) = {
+  def getSentenceFromLine(line: String): IndexedSentence = {
     val fields = line.split("\t")
-    if (fields.length > 1 && fields(0).forall(Character.isDigit)) {
-      (fields(1), line)
+    if (fields.length == 2 && fields(0).forall(Character.isDigit)) {
+      (fields(1), Some(fields(0).toInt))
     } else {
-      (fields(0), line)
+      (fields(0), None)
     }
   }
 
-  def parseSentence(sentenceAndLine: (String, String)): ((String, String), Option[DependencyTree]) = {
-    val parse = parser.parseSentence(sentenceAndLine._1)
+  def parseSentence(indexedSentence: IndexedSentence): (IndexedSentence, Option[DependencyTree]) = {
+    val parse = parser.parseSentence(indexedSentence._1)
     val tree = parse.dependencyTree.flatMap(tree => if (shouldKeepTree(tree)) Some(tree) else None)
-    (sentenceAndLine, tree)
+    (indexedSentence, tree)
   }
 
   def shouldKeepTree(tree: DependencyTree): Boolean = {
@@ -193,11 +198,14 @@ object SentenceToLogic {
     }
   }
 
-  def sentenceAndLogicalFormAsString(input: (String, String, Option[Logic])): Seq[String] = {
-    val sentence = input._1
-    val line = input._2
-    val logicalForm = input._3
+  def sentenceAndLogicalFormAsString(input: (IndexedSentence, Option[Logic])): String = {
+    val sentence = input._1._1
+    val index = input._1._2
+    val logicalForm = input._2
     val lfString = logicalForm.map(_.toString).mkString(" ")
-    Seq(s"${line}\t${lfString}")
+    index match {
+      case None => lfString
+      case Some(index) => s"${index}\t${lfString}"
+    }
   }
 }

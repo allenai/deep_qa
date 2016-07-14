@@ -19,7 +19,7 @@ cancelable in Global := true
 javaOptions ++= Seq("-Xmx140g", "-Xms140g")
 
 libraryDependencies ++= Seq(
-  "org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",
+  //"org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",
   "org.apache.spark" %% "spark-core" % "1.6.0",
   "org.json4s" %% "json4s-native" % "3.2.11",
   "com.jayantkrish.jklol" % "jklol" % "1.1",

@@ -24,6 +24,12 @@ trait Parser {
   def splitSentences(document: String): Seq[String]
 }
 
+object Parser {
+  // Using this global object is not recommended, if it's avoidable.  Just create your own
+  // StanfordParser object.  I put this here to make some spark processing stuff easier.
+  val stanford = new StanfordParser
+}
+
 // Some really simple representations, containing only what I need them to for the rest of this
 // code.
 trait ParsedSentence {

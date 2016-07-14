@@ -9,6 +9,8 @@ import org.json4s._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
+import org.allenai.semparse.parse.Parser
+
 /**
  * The job of this Step is to select sentences from a large corpus that are suitable for training a
  * deep neural network.  At present, this is very simple, selecting only based on the number of
@@ -27,6 +29,7 @@ class SentenceSelectorStep(
   implicit val formats = DefaultFormats
   override val name = "Sentence Selector Step"
   val validParams = Seq("sentence selector", "data directory", "data name", "create sentence indices")
+  println(params)
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataName = (params \ "data name").extract[String]
@@ -52,9 +55,21 @@ class SentenceSelectorStep(
 
     val sc = new SparkContext(conf)
 
+    processCorpus(sc, dataDir, numPartitions, indexSentences, sentenceSelector)
+    sc.stop()
+  }
+
+  def processCorpus(
+    sc: SparkContext,
+    dataDir: String,
+    numPartitions: Int,
+    indexSentences: Boolean,
+    sentenceSelector: SentenceSelector
+  ) {
     val sentences = sc.textFile(dataDir, numPartitions).flatMap(line => {
-      val sentence = line.replace("<SENT>", "").replace("</SENT>", "")
-      if (sentenceSelector.shouldKeepSentence(line)) Seq(sentence) else Seq()
+      val tagsRemoved = line.replace("<SENT>", "").replace("</SENT>", "")
+      val sentences = Parser.stanford.splitSentences(tagsRemoved)
+      sentences.filter(sentenceSelector.shouldKeepSentence)
     }).distinct()
     val outputSentences = sentences.collect()
     val outputLines = outputSentences.zipWithIndex.map(sentenceWithIndex => {
@@ -62,8 +77,6 @@ class SentenceSelectorStep(
       if (indexSentences) s"${index}\t${sentence}" else s"${sentence}"
     })
     fileUtil.writeLinesToFile(outputFile, outputLines)
-
-    sc.stop()
   }
 }
 

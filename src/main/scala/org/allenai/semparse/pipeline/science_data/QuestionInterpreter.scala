@@ -6,12 +6,14 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
+/*
 import org.allenai.ari.controller.questionparser._
 import org.allenai.ari.controller.decomposer.SimpleLongAnswerGenerator
 import org.allenai.ari.models.ParentheticalChoiceIdentifier
 import org.allenai.ari.models.SquareBracketedChoiceIdentifier
 import org.allenai.nlpstack.parse.poly.polyparser.Parser
 import org.allenai.nlpstack.parse.poly.core.{Token => PPToken}
+*/
 
 import org.allenai.semparse.parse.DependencyTree
 import org.allenai.semparse.parse.StanfordParser
@@ -213,9 +215,10 @@ class MattsWhMover extends WhMover(JNothing) {
 }
 
 class MarksWhMover extends WhMover(JNothing) {
-  val fillInTheBlankGenerator = FillInTheBlankGenerator.mostRecent
-  val fillInTheBlankProcessor = new FillInTheBlankQuestionProcessor
+  //val fillInTheBlankGenerator = FillInTheBlankGenerator.mostRecent
+  //val fillInTheBlankProcessor = new FillInTheBlankQuestionProcessor
   override def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String] = {
+    /*
     logger.info(s"last sentence: $lastSentence")
     val standardQuestion = StandardQuestion(lastSentence)
     val fillInTheBlankQuestion = fillInTheBlankGenerator.generateFITB(standardQuestion).get
@@ -223,5 +226,7 @@ class MarksWhMover extends WhMover(JNothing) {
     val finalQuestion = fillInTheBlankQuestion.text.replace("BLANK_", "___").replaceAll(" ,", ",").replace(" .", ".")
     logger.info(finalQuestion)
     Some(finalQuestion)
+    */
+    None
   }
 }
