@@ -8,8 +8,8 @@ class DataIndexer(object):
         self.word_index = {"PADDING":0}
         self.reverse_word_index = {0: "PADDING"}
 
-    def index_sentence(self, sentence):
-        words = word_tokenize(sentence)
+    def index_sentence(self, sentence, tokenize):
+        words = word_tokenize(sentence) if tokenize else sentence.split()
         # Adding start and end tags after tokenization to avoid tokenizing those symbols
         words = ['<s>'] + words + ['</s>']
         indices = []
@@ -21,10 +21,10 @@ class DataIndexer(object):
             indices.append(self.word_index[word])
         return indices
 
-    def index_data(self, sentences, max_length=None):
+    def index_data(self, sentences, max_length=None, tokenize=True):
         all_indices = []
         for sentence in sentences:
-            sentence_indices = self.index_sentence(sentence)
+            sentence_indices = self.index_sentence(sentence, tokenize=tokenize)
             all_indices.append(sentence_indices)
         # Note: sentence_length includes start and end symbols as well.
         sentence_lengths = [len(indices) for indices in all_indices]
