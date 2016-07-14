@@ -5,17 +5,17 @@ import argparse
 
 from index_data import DataIndexer
 from keras.models import Model, model_from_json
-from keras.layers import Input, LSTM, Embedding, Dropout, merge, TimeDistributed, Dense
+from keras.layers import Input, LSTM, Embedding, Dropout, merge, TimeDistributed, Dense, SimpleRNN
 from keras.callbacks import EarlyStopping
 
 class WordReplacer(object):
     def __init__(self):
         self.data_indexer = DataIndexer()
     
-    def process_data(self, sentences, max_length=None, factor_base=2):
+    def process_data(self, sentences, max_length=None, factor_base=2, tokenize=True):
         #TODO: Deal with OOV
         sentence_lengths, indexed_sentences = self.data_indexer.index_data(sentences, 
-                max_length)
+                max_length, tokenize)
         # We want the inputs to be words 0..n-1 and targets to be words 1..n in all 
         # sentences, so that at each time step t, p(w_{t+1} | w_{0}..w_{t}) will be 
         # predicted.
@@ -26,27 +26,28 @@ class WordReplacer(object):
         return sentence_lengths, input_array, factored_target_arrays
 
     def train_model(self, sentences, word_dim=50, factor_base=2, num_epochs=20, 
-            model_serialization_prefix="lexsub"):
+            tokenize=True, use_lstm=False, model_serialization_prefix="lexsub"):
         _, input_array, factored_target_arrays = self.process_data(sentences, 
-                factor_base=factor_base)
+                factor_base=factor_base, tokenize=tokenize)
         vocab_size = self.data_indexer.get_vocab_size()
         num_factors = len(factored_target_arrays)
         model_input = Input(shape=input_array.shape[1:], dtype='int32')
         embedding = Embedding(input_dim=vocab_size, output_dim=word_dim, mask_zero=True)
         embedded_input = embedding(model_input)
         regularized_embedded_input = Dropout(0.5)(embedded_input)
-        # Bidirectional LSTM = Two LSTMs, with the second one processing the input 
+        # Bidirectional RNNs = Two RNNs, with the second one processing the input 
         # backwards, and the two outputs concatenated.
         # Return sequences returns output at every timestep, instead of just the last one.
-        forward_lstm = LSTM(output_dim=word_dim/2, return_sequences=True, 
-                name='forward_lstm')
-        backward_lstm = LSTM(output_dim=word_dim/2, go_backwards=True, 
-                return_sequences=True, name='backward_lstm')
-        forward_lstm_out = forward_lstm(regularized_embedded_input)
-        backward_lstm_out = backward_lstm(regularized_embedded_input)
-        bidirectional_lstm_out = merge([forward_lstm_out, backward_lstm_out],
+        rnn_model = LSTM if use_lstm else SimpleRNN
+        forward_rnn = rnn_model(output_dim=word_dim/2, return_sequences=True, 
+                name='forward_rnn')
+        backward_rnn = rnn_model(output_dim=word_dim/2, go_backwards=True, 
+                return_sequences=True, name='backward_rnn')
+        forward_rnn_out = forward_rnn(regularized_embedded_input)
+        backward_rnn_out = backward_rnn(regularized_embedded_input)
+        bidirectional_rnn_out = merge([forward_rnn_out, backward_rnn_out],
                 mode='concat')
-        regularized_lstm_out=Dropout(0.2)(bidirectional_lstm_out)
+        regularized_rnn_out=Dropout(0.2)(bidirectional_rnn_out)
         model_outputs = []
         # Make as many output layers as there are factored target arrays, and the same size
         for i in range(num_factors):
@@ -55,7 +56,7 @@ class WordReplacer(object):
             # n+1 dimensional input, where dimension1 is time.
             factor_output = TimeDistributed(Dense(output_dim=factor_base, 
                     activation='softmax', name='factor_output_%d'%i))
-            model_outputs.append(factor_output(regularized_lstm_out))
+            model_outputs.append(factor_output(regularized_rnn_out))
         model = Model(input=model_input, output=model_outputs)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
         print >>sys.stderr, model.summary()
@@ -81,7 +82,7 @@ class WordReplacer(object):
         print >>sys.stderr, self.model.summary()
 
     def get_substitutes(self, sentences, locations, num_substitutes=5, 
-            train_sequence_length=None):
+            train_sequence_length=None, tokenize=True):
         '''
         sentences (list(str)): List of sentences with words that need to be substituted
         locations (list(int)): List of indices, the same size as sentences, containing
@@ -89,7 +90,8 @@ class WordReplacer(object):
         train_sequence_length (int): Length of sequences the model was trained on
         '''
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences, 
-                max_length=train_sequence_length+1) # +1 because the last word would be stripped
+                max_length=train_sequence_length+1, tokenize=tokenize) 
+        # +1 because the last word would be stripped
         all_word_predictions = self.model.predict(indexed_sentences)
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths, 
@@ -106,25 +108,28 @@ class WordReplacer(object):
             
 if __name__=="__main__":
     argparser = argparse.ArgumentParser(description="Generate lexical substitutes using a \
-            bidirectional LSTM")
+            bidirectional RNN")
     argparser.add_argument("--train_file", type=str, help="File with sentences to train on,\
             one per line.")
     argparser.add_argument("--test_file", type=str, help="Tsv file with indices and \
             sentences to replace words, one per line.")
     argparser.add_argument("--word_dim", type=int, help="Word dimensionality, default=50",
             default=50)
+    argparser.add_argument("--use_lstm", help="Use LSTM instead of simple RNN", action='store_true')
     argparser.add_argument("--factor_base", type=int, help="Base of factored indices, \
             default=2", default=2)
     argparser.add_argument("--num_epochs", type=int, help="Maximum number of epochs (will\
             stop early), default=20", default=20)
+    argparser.add_argument("--no_tokenize", help="Do not tokenize input", action='store_true')
     args = argparser.parse_args()
+    tokenize = False if args.no_tokenize else True
     word_replacer = WordReplacer()
     if args.train_file is not None:
         print >>sys.stderr, "Reading training data"
         train_sentences = [x.strip().lower() for x in codecs.open(args.train_file, 
             "r", "utf-8")]
         word_replacer.train_model(train_sentences, factor_base=args.factor_base, 
-                num_epochs=args.num_epochs)
+                num_epochs=args.num_epochs, tokenize=tokenize, use_lstm=args.use_lstm)
     else:
         print >>sys.stderr, "Loading saved model"
         word_replacer.load_model()
@@ -142,7 +147,7 @@ if __name__=="__main__":
         locations = [int(x) for x in locations]
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations, 
-                train_sequence_length=train_sequence_length)
+                train_sequence_length=train_sequence_length, tokenize=tokenize)
         # TODO: Better output format.
         outfile = codecs.open("out.txt", "w", "utf-8")
         for logprob_substitute_list in substitutes:
