@@ -31,32 +31,37 @@ class WordReplacer(object):
                 factor_base=factor_base, tokenize=tokenize)
         vocab_size = self.data_indexer.get_vocab_size()
         num_factors = len(factored_target_arrays)
-        model_input = Input(shape=input_array.shape[1:], dtype='int32')
+        model_input = Input(shape=input_array.shape[1:], dtype='int32') # (batch_size, num_words)
         embedding = Embedding(input_dim=vocab_size, output_dim=word_dim, mask_zero=True)
-        embedded_input = embedding(model_input)
+        embedded_input = embedding(model_input) # (batch_size, num_words, word_dim)
         regularized_embedded_input = Dropout(0.5)(embedded_input)
         # Bidirectional RNNs = Two RNNs, with the second one processing the input 
         # backwards, and the two outputs concatenated.
         # Return sequences returns output at every timestep, instead of just the last one.
         rnn_model = LSTM if use_lstm else SimpleRNN
+        # Since we will project the output of the lstm down to factor_base in the next
+        # step anyway, it is okay to project it down a bit now. So output_dim = word_dim/2
+        # This minimizes the number of parameters significantly. All four Ws in LSTM
+        # will now be half as big as they would be if output_dim = word_dim.
         forward_rnn = rnn_model(output_dim=word_dim/2, return_sequences=True, 
                 name='forward_rnn')
         backward_rnn = rnn_model(output_dim=word_dim/2, go_backwards=True, 
                 return_sequences=True, name='backward_rnn')
-        forward_rnn_out = forward_rnn(regularized_embedded_input)
-        backward_rnn_out = backward_rnn(regularized_embedded_input)
+        forward_rnn_out = forward_rnn(regularized_embedded_input) # (batch_size, num_words, word_dim/2)
+        backward_rnn_out = backward_rnn(regularized_embedded_input) # (batch_size, num_words, word_dim/2)
         bidirectional_rnn_out = merge([forward_rnn_out, backward_rnn_out],
-                mode='concat')
+                mode='concat') # (batch_size, num_words, word_dim)
         regularized_rnn_out=Dropout(0.2)(bidirectional_rnn_out)
         model_outputs = []
         # Make as many output layers as there are factored target arrays, and the same size
         for i in range(num_factors):
             # TimeDistributed(layer) makes layer accept an additional time distribution.
             # i.e. if layer takes a n-dimensional input, TimeDistributed(layer) takes a
-            # n+1 dimensional input, where dimension1 is time.
+            # n+1 dimensional input, where the second dimension is time (or words in the 
+            # sentence). We need this now because RNN above returns one output per timestep
             factor_output = TimeDistributed(Dense(output_dim=factor_base, 
                     activation='softmax', name='factor_output_%d'%i))
-            model_outputs.append(factor_output(regularized_rnn_out))
+            model_outputs.append(factor_output(regularized_rnn_out)) # (batch_size, num_words, factor_base)
         model = Model(input=model_input, output=model_outputs)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
         print >>sys.stderr, model.summary()
@@ -75,14 +80,14 @@ class WordReplacer(object):
         return self.model.get_input_shape_at(0)
 
     def load_model(self, model_serialization_prefix="lexsub"):
-        self.data_indexer = pickle.load(open("%s_di.pkl"%model_serialization_prefix))
-        self.model = model_from_json(open("%s_config.json"%model_serialization_prefix).read())
-        self.model.load_weights("%s_weights.h5"%model_serialization_prefix)
+        self.data_indexer = pickle.load(open("%s_di.pkl" % model_serialization_prefix))
+        self.model = model_from_json(open("%s_config.json" % model_serialization_prefix).read())
+        self.model.load_weights("%s_weights.h5" % model_serialization_prefix)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         print >>sys.stderr, self.model.summary()
 
-    def get_substitutes(self, sentences, locations, num_substitutes=5, 
-            train_sequence_length=None, tokenize=True):
+    def get_substitutes(self, sentences, locations, train_sequence_length, 
+            num_substitutes=5, tokenize=True):
         '''
         sentences (list(str)): List of sentences with words that need to be substituted
         locations (list(int)): List of indices, the same size as sentences, containing
@@ -92,16 +97,19 @@ class WordReplacer(object):
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences, 
                 max_length=train_sequence_length+1, tokenize=tokenize) 
         # +1 because the last word would be stripped
-        all_word_predictions = self.model.predict(indexed_sentences)
+        all_prediction_factors = self.model.predict(indexed_sentences)
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths, 
                 locations)):
             prediction_length = sentence_length - 1 # Ignore the starting <s> symbol
-            # Take all "digits" of the prediction of appropriate lengths corresponding 
-            # to this sentence, and then get the corresponding location probabilities
-            # to make sure location points to the appropriate word.
+            # Each prediction factor is of the shape 
+            # (num_sentences, padding_length+num_words, factor_base)
+            # We need to take the probability of word given by "location" in sentence
+            # given by sentence_id. For that, we need to collect the probabilities over
+            # all factors, remove padding, and then look up the factor probabilities at 
+            # index=location
             word_predictions = [predictions[sentence_id][-prediction_length:][location] for 
-                    predictions in all_word_predictions]
+                    predictions in all_prediction_factors]
             sorted_substitutes = self.data_indexer.unfactor_probabilities(word_predictions)
             all_substitutes.append(sorted_substitutes[:num_substitutes])
         return all_substitutes
@@ -126,7 +134,7 @@ if __name__=="__main__":
     word_replacer = WordReplacer()
     if args.train_file is not None:
         print >>sys.stderr, "Reading training data"
-        train_sentences = [x.strip().lower() for x in codecs.open(args.train_file, 
+        train_sentences = [x.strip() for x in codecs.open(args.train_file, 
             "r", "utf-8")]
         word_replacer.train_model(train_sentences, factor_base=args.factor_base, 
                 num_epochs=args.num_epochs, tokenize=tokenize, use_lstm=args.use_lstm)
@@ -142,12 +150,12 @@ if __name__=="__main__":
         # are. Ideally, the process should be in this module.
         # Note: The indices will be used with sentences tokenized using NLTK's word
         # tokenizer.
-        locations, test_sentences = zip(*[x.strip().lower().split("\t") for x in 
+        locations, test_sentences = zip(*[x.strip().split("\t") for x in 
             codecs.open(args.test_file, "r", "utf-8")])
         locations = [int(x) for x in locations]
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations, 
-                train_sequence_length=train_sequence_length, tokenize=tokenize)
+                train_sequence_length, tokenize=tokenize)
         # TODO: Better output format.
         outfile = codecs.open("out.txt", "w", "utf-8")
         for logprob_substitute_list in substitutes:
