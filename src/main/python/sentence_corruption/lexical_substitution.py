@@ -2,6 +2,8 @@ import sys
 import pickle
 import codecs
 import argparse
+import random
+from nltk.tokenize import word_tokenize
 
 from index_data import DataIndexer
 from keras.models import Model, model_from_json
@@ -150,14 +152,27 @@ if __name__=="__main__":
         # are. Ideally, the process should be in this module.
         # Note: The indices will be used with sentences tokenized using NLTK's word
         # tokenizer.
-        locations, test_sentences = zip(*[x.strip().split("\t") for x in 
-            codecs.open(args.test_file, "r", "utf-8")])
-        locations = [int(x) for x in locations]
+        test_sentence_words = [word_tokenize(x.strip()) for x in codecs.open(args.test_file,
+            "r", "utf-8")]
+        test_sentences = []
+        locations = []
+        for words in test_sentence_words:
+            # Generate a random location, between 0 and the second last position 
+            # because the last position is usually a period
+            locations.append(random.randint(0, len(words)-2)) 
+            test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations, 
                 train_sequence_length, tokenize=tokenize)
         # TODO: Better output format.
         outfile = codecs.open("out.txt", "w", "utf-8")
-        for logprob_substitute_list in substitutes:
-            print >>outfile, "\t".join("%s %f"%(word, logprob) for logprob, word in 
-                    logprob_substitute_list)
+        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words
+                , locations):
+            word_being_replaced = words[location]
+            for _, substitute in logprob_substitute_list:
+                if substitute not in [word_being_replaced, "<s>", "</s>", "PADDING", ".", ","]:
+                    corrupted_words = list(words)
+                    corrupted_words[location] = substitute
+                    print >>outfile, "%s\t%s"%(" ".join(words), " ".join(corrupted_words))
+                    break
+        outfile.close()
