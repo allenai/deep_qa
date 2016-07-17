@@ -3,6 +3,7 @@ package org.allenai.semparse.pipeline.science_data
 import org.json4s._
 
 import com.mattg.pipeline.Step
+import com.mattg.pipeline.SubprocessStep
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
 
@@ -22,17 +23,16 @@ import com.mattg.util.JsonHelper
 abstract class NeuralNetworkTrainer(
   params: JValue,
   fileUtil: FileUtil
-) extends Step(Some(params), fileUtil) {
-  implicit val formats = DefaultFormats
-  val baseParams = Seq("command to execute")
-
-  val commandToExecute = (params \ "command to execute").extract[String]
-
-  override def _runStep() {
-    // TODO(matt): execute the command here
-  }
+) extends SubprocessStep(Some(params), fileUtil) {
+  override val binary = "python"
 }
 
+object NeuralNetworkTrainer {
+  def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
+    // TODO(matt): actually have a type parameter, and use it here.
+    new NoBackgroundKnowledgeNNTrainer(params, fileUtil)
+  }
+}
 
 class NoBackgroundKnowledgeNNTrainer(
   params: JValue,
@@ -40,16 +40,31 @@ class NoBackgroundKnowledgeNNTrainer(
 ) extends NeuralNetworkTrainer(params, fileUtil) {
   override val name = "Neural Network Trainer, no background knowledge input"
 
-  override val inputs: Set[(String, Option[Step])] = Set()  // TODO(matt)
-  override val outputs: Set[String] = Set()  // TODO(matt)
+  val validParams = Seq("positive data", "negative data", "validataion questions",
+    "number of epochs")
+  JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
+  val trainingFile = ""  // TODO(matt)
+  val validationFile = ""  // TODO(matt)
+
+  override val scriptFile = "src/main/python/prop_scorer/prop_scorer.py"
+  override val arguments = Seq[String](
+    "--train_file", trainingFile,  // TODO(matt): change prop_scorer.py to take two separate input files
+    "--validation_file", validationFile,
+    "--use_tree_lstm", false.toString,  // TODO(matt)
+    "--length-upper-limit", 100.toString,  // TODO(matt)
+    "--max_train_size", 1000000.toString,  // TODO(matt)
+    "--num_epochs", numEpochs.toString
+  )
+
+  // TODO(matt): positive training data, negative training data, validation questions
+  override val inputs: Set[(String, Option[Step])] = Set()
+
+  // TODO(matt): model file, other things that get saved
+  override val outputs: Set[String] = Set()
+
+  // TODO(matt): base these off of the model file
   override val inProgressFile = ""  // TODO(matt)
   override val paramFile = ""  // TODO(matt)
-}
-
-
-object NeuralNetworkTrainer {
-  def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
-    // TODO(matt)
-    new NoBackgroundKnowledgeNNTrainer(params, fileUtil)
-  }
 }
