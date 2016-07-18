@@ -242,7 +242,7 @@ class LSTMScorer(NNScorer):
                 U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='lstm')
         lstm_out = lstm_layer(regularized_embed)
         # Add a dropout after LSTM
-	regularized_lstm_out = Dropout(0.2)(lstm_out)
+        regularized_lstm_out = Dropout(0.2)(lstm_out)
 
         ## STEP 4: Find p(true | proposition) by passing the outputs from LSTM through
         # an MLP with ReLU layers
@@ -321,7 +321,7 @@ class TreeLSTMScorer(NNScorer):
                 U_regularizer=l2(0.01), V_regularizer=l2(0.01),
                 b_regularizer=l2(0.01), name='treelstm')
         lstm_out = lstm_layer(lstm_input)
-	regularized_lstm_out = Dropout(0.2)(lstm_out)
+        regularized_lstm_out = Dropout(0.2)(lstm_out)
 
         ## STEP 5: Find p(true | proposition) by passing the encoded proposition through
         # MLP with ReLU followed by softmax

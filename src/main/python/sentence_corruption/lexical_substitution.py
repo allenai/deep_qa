@@ -64,6 +64,8 @@ class WordReplacer(object):
             factor_output = TimeDistributed(Dense(output_dim=factor_base, 
                     activation='softmax', name='factor_output_%d'%i))
             model_outputs.append(factor_output(regularized_rnn_out)) # (batch_size, num_words, factor_base)
+        # We have num_factors number of outputs in the model. So, the effective output shape is
+        # [(batch_size, num_words, factor_base)] * num_factors
         model = Model(input=model_input, output=model_outputs)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
         print >>sys.stderr, model.summary()
@@ -96,10 +98,12 @@ class WordReplacer(object):
             indices of words in sentences that need to be substituted
         train_sequence_length (int): Length of sequences the model was trained on
         '''
+        
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences, 
-                max_length=train_sequence_length+1, tokenize=tokenize) 
-        # +1 because the last word would be stripped
-        all_prediction_factors = self.model.predict(indexed_sentences)
+                max_length=train_sequence_length+1, # +1 because the last word would be stripped
+                tokenize=tokenize)
+        # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
+        all_prediction_factors = self.model.predict(indexed_sentences) 
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths, 
                 locations)):
@@ -164,7 +168,6 @@ if __name__=="__main__":
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations, 
                 train_sequence_length, tokenize=tokenize)
-        # TODO: Better output format.
         outfile = codecs.open("out.txt", "w", "utf-8")
         for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words
                 , locations):
