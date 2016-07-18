@@ -131,6 +131,8 @@ if __name__=="__main__":
             sentences to replace words, one per line.")
     argparser.add_argument("--word_dim", type=int, help="Word dimensionality, default=50",
             default=50)
+    argparser.add_argument("--max_instances", type=int,
+                           help="Maximum number of training examples to use")
     argparser.add_argument("--use_lstm", help="Use LSTM instead of simple RNN", action='store_true')
     argparser.add_argument("--factor_base", type=int, help="Base of factored indices, \
             default=2", default=2)
@@ -146,6 +148,9 @@ if __name__=="__main__":
     if args.train_file is not None:
         print >>sys.stderr, "Reading training data"
         train_sentences = [x.strip() for x in codecs.open(args.train_file, "r", "utf-8")]
+        random.shuffle(train_sentences)
+        if args.max_instances is not None:
+            train_sentences = train_sentences[:args.max_instances]
         word_replacer.train_model(train_sentences, factor_base=args.factor_base,
                 num_epochs=args.num_epochs, tokenize=tokenize, use_lstm=args.use_lstm)
         word_replacer.save_model(args.model_serialization_prefix)

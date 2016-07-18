@@ -36,6 +36,8 @@ class SentenceCorruptorTrainer(
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
+  val maxSentences = JsonHelper.extractAsOption[Int](params, "maximum training sentences")
+  val maxSentencesArgs = maxSentences.map(max => Seq("--max_sentences", max.toString)).toSeq.flatten
   val wordDimensionality = JsonHelper.extractWithDefault(params, "word dimensionality", 50)
   val factorBase = JsonHelper.extractWithDefault(params, "factor base", 2)
   val tokenizeInput = JsonHelper.extractWithDefault(params, "tokenize input", true)
@@ -56,7 +58,7 @@ class SentenceCorruptorTrainer(
     "--factor_base", factorBase.toString,
     "--num_epochs", trainingEpochs.toString,
     "--model_serialization_prefix", modelPrefix
-  ) ++ tokenizeInputArg ++ useLstmArg
+  ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs
 
   override val inputs: Set[(String, Option[Step])] = Set((positiveDataFile, Some(sentenceSelector)))
   override val outputs = Set(
