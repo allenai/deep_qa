@@ -31,13 +31,13 @@ class SentenceCorruptorTrainer(
   implicit val formats = DefaultFormats
   override val name = "Sentence Corruptor Trainer"
 
-  val validParams = Seq("positive data", "word dimensionality", "factor base", "tokenize input",
-    "use lstm", "max training epochs")
+  val validParams = Seq("positive data", "maximum training sentences", "word dimensionality",
+    "factor base", "tokenize input", "use lstm", "max training epochs")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
   val maxSentences = JsonHelper.extractAsOption[Int](params, "maximum training sentences")
-  val maxSentencesArgs = maxSentences.map(max => Seq("--max_sentences", max.toString)).toSeq.flatten
+  val maxSentencesArgs = maxSentences.map(max => Seq("--max_instances", max.toString)).toSeq.flatten
   val wordDimensionality = JsonHelper.extractWithDefault(params, "word dimensionality", 50)
   val factorBase = JsonHelper.extractWithDefault(params, "factor base", 2)
   val tokenizeInput = JsonHelper.extractWithDefault(params, "tokenize input", true)

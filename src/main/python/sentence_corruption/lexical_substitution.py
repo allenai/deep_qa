@@ -72,15 +72,15 @@ class WordReplacer(object):
         early_stopping = EarlyStopping()
         model.fit(input_array, factored_target_arrays, nb_epoch=num_epochs,
                 validation_split=0.1, callbacks=[early_stopping])
+        self.model = model
 
     def save_model(self, model_serialization_prefix):
         data_indexer_pickle_file = open("%s_di.pkl" % model_serialization_prefix, "wb")
         pickle.dump(self.data_indexer, data_indexer_pickle_file)
-        model_config = model.to_json()
+        model_config = self.model.to_json()
         model_config_file = open("%s_config.json" % model_serialization_prefix, "w")
         print >>model_config_file, model_config
-        model.save_weights("%s_weights.h5" % model_serialization_prefix, overwrite=True)
-        self.model = model
+        self.model.save_weights("%s_weights.h5" % model_serialization_prefix, overwrite=True)
 
     def get_model_input_shape(self):
         return self.model.get_input_shape_at(0)
@@ -152,7 +152,8 @@ if __name__=="__main__":
         if args.max_instances is not None:
             train_sentences = train_sentences[:args.max_instances]
         word_replacer.train_model(train_sentences, factor_base=args.factor_base,
-                num_epochs=args.num_epochs, tokenize=tokenize, use_lstm=args.use_lstm)
+                                  word_dim=args.word_dim, num_epochs=args.num_epochs,
+                                  tokenize=tokenize, use_lstm=args.use_lstm)
         word_replacer.save_model(args.model_serialization_prefix)
     else:
         print >>sys.stderr, "Loading saved model"
