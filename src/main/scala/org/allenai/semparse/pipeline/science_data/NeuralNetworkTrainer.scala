@@ -30,11 +30,11 @@ abstract class NeuralNetworkTrainer(
 object NeuralNetworkTrainer {
   def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
     // TODO(matt): actually have a type parameter, and use it here.
-    new NoBackgroundKnowledgeNNTrainer(params, fileUtil)
+    new NoBackgroundKnowledgeNNSentenceTrainer(params, fileUtil)
   }
 }
 
-class NoBackgroundKnowledgeNNTrainer(
+class NoBackgroundKnowledgeNNSentenceTrainer(
   params: JValue,
   fileUtil: FileUtil
 ) extends NeuralNetworkTrainer(params, fileUtil) {
@@ -48,7 +48,7 @@ class NoBackgroundKnowledgeNNTrainer(
   val trainingFile = ""  // TODO(matt)
   val validationFile = ""  // TODO(matt)
 
-  override val scriptFile = "src/main/python/prop_scorer/prop_scorer.py"
+  override val scriptFile = Some("src/main/python/prop_scorer/prop_scorer.py")
   override val arguments = Seq[String](
     "--train_file", trainingFile,  // TODO(matt): change prop_scorer.py to take two separate input files
     "--validation_file", validationFile,
