@@ -48,9 +48,9 @@ class NoBackgroundKnowledgeNNSentenceTrainer(
   val trainingFile = ""  // TODO(matt)
   val validationFile = ""  // TODO(matt)
 
-  override val scriptFile = Some("src/main/python/prop_scorer/prop_scorer.py")
+  override val scriptFile = Some("src/main/python/prop_scorer/nn_solver.py")
   override val arguments = Seq[String](
-    "--train_file", trainingFile,  // TODO(matt): change prop_scorer.py to take two separate input files
+    "--train_file", trainingFile,  // TODO(matt): change nn_solver.py to take two separate input files
     "--validation_file", validationFile,
     "--use_tree_lstm", false.toString,  // TODO(matt)
     "--length-upper-limit", 100.toString,  // TODO(matt)
