@@ -29,6 +29,7 @@ object SimpleLstmExperiments {
     ("positive data" -> sentenceSelectorParams) ~
     ("tokenize input" -> false) ~
     ("word dimensionality" -> 10) ~
+    ("max training epochs" -> 1) ~
     ("maximum training sentences" -> 1000)
 
   // Step 2b: actually corrupt the data
