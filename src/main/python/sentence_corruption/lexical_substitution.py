@@ -29,7 +29,7 @@ class WordReplacer(object):
         return sentence_lengths, input_array, factored_target_arrays
 
     def train_model(self, sentences, word_dim=50, factor_base=2, num_epochs=20,
-            tokenize=True, use_lstm=False, model_serialization_prefix="lexsub"):
+                    tokenize=True, use_lstm=False):
         _, input_array, factored_target_arrays = self.process_data(sentences,
                 factor_base=factor_base, tokenize=tokenize)
         vocab_size = self.data_indexer.get_vocab_size()
@@ -63,7 +63,7 @@ class WordReplacer(object):
             # n+1 dimensional input, where the second dimension is time (or words in the
             # sentence). We need this now because RNN above returns one output per timestep
             factor_output = TimeDistributed(Dense(output_dim=factor_base,
-                    activation='softmax', name='factor_output_%d'%i))
+                    activation='softmax', name='factor_output_%d' % i))
             model_outputs.append(factor_output(regularized_rnn_out)) # (batch_size, num_words, factor_base)
         # We have num_factors number of outputs in the model. So, the effective output shape is
         # [(batch_size, num_words, factor_base)] * num_factors
@@ -73,18 +73,20 @@ class WordReplacer(object):
         early_stopping = EarlyStopping()
         model.fit(input_array, factored_target_arrays, nb_epoch=num_epochs,
                 validation_split=0.1, callbacks=[early_stopping])
+        self.model = model
+
+    def save_model(self, model_serialization_prefix):
         data_indexer_pickle_file = open("%s_di.pkl" % model_serialization_prefix, "wb")
         pickle.dump(self.data_indexer, data_indexer_pickle_file)
-        model_config = model.to_json()
+        model_config = self.model.to_json()
         model_config_file = open("%s_config.json" % model_serialization_prefix, "w")
         print(model_config, file=model_config_file)
-        model.save_weights("%s_weights.h5" % model_serialization_prefix, overwrite=True)
-        self.model = model
+        self.model.save_weights("%s_weights.h5" % model_serialization_prefix, overwrite=True)
 
     def get_model_input_shape(self):
         return self.model.get_input_shape_at(0)
 
-    def load_model(self, model_serialization_prefix="lexsub"):
+    def load_model(self, model_serialization_prefix):
         self.data_indexer = pickle.load(open("%s_di.pkl" % model_serialization_prefix))
         self.model = model_from_json(open("%s_config.json" % model_serialization_prefix).read())
         self.model.load_weights("%s_weights.h5" % model_serialization_prefix)
@@ -126,55 +128,70 @@ if __name__=="__main__":
             bidirectional RNN")
     argparser.add_argument("--train_file", type=str, help="File with sentences to train on,\
             one per line.")
-    argparser.add_argument("--test_file", type=str, help="Tsv file with indices and \
-            sentences to replace words, one per line.")
+    argparser.add_argument("--test_file", type=str, help="File with sentences to replace words,\
+            one per line.")
     argparser.add_argument("--word_dim", type=int, help="Word dimensionality, default=50",
             default=50)
+    argparser.add_argument("--max_instances", type=int,
+                           help="Maximum number of training examples to use")
     argparser.add_argument("--use_lstm", help="Use LSTM instead of simple RNN", action='store_true')
     argparser.add_argument("--factor_base", type=int, help="Base of factored indices, \
             default=2", default=2)
     argparser.add_argument("--num_epochs", type=int, help="Maximum number of epochs (will\
             stop early), default=20", default=20)
     argparser.add_argument("--no_tokenize", help="Do not tokenize input", action='store_true')
+    argparser.add_argument("--model_serialization_prefix", default="lexsub",
+                           help="Prefix for saving and loading model files")
+    argparser.add_argument("--output_file", help="Place to save corrupted test file")
     args = argparser.parse_args()
     tokenize = False if args.no_tokenize else True
     word_replacer = WordReplacer()
     if args.train_file is not None:
         print("Reading training data", file=sys.stderr)
-        train_sentences = [x.strip() for x in codecs.open(args.train_file,
-            "r", "utf-8")]
+        train_sentences = [x.strip() for x in codecs.open(args.train_file, "r", "utf-8")]
+        random.shuffle(train_sentences)
+        if args.max_instances is not None:
+            train_sentences = train_sentences[:args.max_instances]
         word_replacer.train_model(train_sentences, factor_base=args.factor_base,
-                num_epochs=args.num_epochs, tokenize=tokenize, use_lstm=args.use_lstm)
+                                  word_dim=args.word_dim, num_epochs=args.num_epochs,
+                                  tokenize=tokenize, use_lstm=args.use_lstm)
+        word_replacer.save_model(args.model_serialization_prefix)
     else:
         print("Loading saved model", file=sys.stderr)
-        word_replacer.load_model()
+        word_replacer.load_model(args.model_serialization_prefix)
 
     if args.test_file is not None:
+        if args.output_file is None:
+            print("Need to specify where to save output with --output_file", file=sys.stderr)
+            sys.exit(-1)
         print("Reading test data", file=sys.stderr)
-        # TODO: The test file is expected to contain indices for replacement. This
-        # is because randomly replacing any word may not be helpful. The assumption
-        # is that there is an external process which decides what the important words
-        # are. Ideally, the process should be in this module.
-        # Note: The indices will be used with sentences tokenized using NLTK's word
-        # tokenizer.
         test_sentence_words = [word_tokenize(x.strip()) for x in codecs.open(args.test_file,
             "r", "utf-8")]
         test_sentences = []
         locations = []
+        # Stop words. Do not replace these or let them be replacements.
+        words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the",
+                 "to", "and", "is", "a"])
         for words in test_sentence_words:
+            if len(set(words).difference(words_to_ignore)) == 0:
+                # This means that there are no non-stop words in the input. Ignore it.
+                continue
             # Generate a random location, between 0 and the second last position
             # because the last position is usually a period
-            locations.append(random.randint(0, len(words)-2))
+            location = random.randint(0, len(words) - 2)
+            while words[location] in words_to_ignore:
+                location = random.randint(0, len(words) - 2)
+            locations.append(location)
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations,
                 train_sequence_length, tokenize=tokenize)
-        outfile = codecs.open("out.txt", "w", "utf-8")
-        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words
-                , locations):
+        outfile = codecs.open(args.output_file, "w", "utf-8")
+        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words,
+                locations):
             word_being_replaced = words[location]
             for _, substitute in logprob_substitute_list:
-                if substitute not in [word_being_replaced, "<s>", "</s>", "PADDING", ".", ","]:
+                if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
                     corrupted_words = list(words)
                     corrupted_words[location] = substitute
                     print("%s\t%s" % (" ".join(words), " ".join(corrupted_words)), file=outfile)
