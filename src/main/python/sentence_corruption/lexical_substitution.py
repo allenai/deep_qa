@@ -156,21 +156,26 @@ if __name__=="__main__":
             "r", "utf-8")]
         test_sentences = []
         locations = []
+        # Stop words. Do not replace these or let them be replacements.
+        words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the", 
+                 "to", "and", "is", "a"])
         for words in test_sentence_words:
             # Generate a random location, between 0 and the second last position 
             # because the last position is usually a period
-            locations.append(random.randint(0, len(words)-2)) 
+            location = random.randint(0, len(words) - 2)
+            while words[location] in words_to_ignore:
+                location = random.randint(0, len(words) - 2)
+            locations.append(location) 
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations, 
                 train_sequence_length, tokenize=tokenize)
-        # TODO: Better output format.
         outfile = codecs.open("out.txt", "w", "utf-8")
         for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words
                 , locations):
             word_being_replaced = words[location]
             for _, substitute in logprob_substitute_list:
-                if substitute not in [word_being_replaced, "<s>", "</s>", "PADDING", ".", ","]:
+                if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
                     corrupted_words = list(words)
                     corrupted_words[location] = substitute
                     print >>outfile, "%s\t%s"%(" ".join(words), " ".join(corrupted_words))
