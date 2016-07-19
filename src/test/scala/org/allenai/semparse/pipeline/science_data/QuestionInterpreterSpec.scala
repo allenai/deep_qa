@@ -7,9 +7,9 @@ import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
-class ScienceQuestionProcessorSpec extends FlatSpecLike with Matchers {
+class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
   val params: JValue = ("question file" -> "/dev/null") ~ ("data name" -> "test data")
-  val processor = new ScienceQuestionProcessor(params, new FileUtil)
+  val processor = new QuestionInterpreter(params, new FileUtil)
 
 
   "parseQuestionLine" should "correctly split the question and answer, and the answer options" in {
