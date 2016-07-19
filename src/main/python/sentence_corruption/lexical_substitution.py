@@ -127,8 +127,8 @@ if __name__=="__main__":
             bidirectional RNN")
     argparser.add_argument("--train_file", type=str, help="File with sentences to train on,\
             one per line.")
-    argparser.add_argument("--test_file", type=str, help="Tsv file with indices and \
-            sentences to replace words, one per line.")
+    argparser.add_argument("--test_file", type=str, help="File with sentences to replace words,\
+            one per line.")
     argparser.add_argument("--word_dim", type=int, help="Word dimensionality, default=50",
             default=50)
     argparser.add_argument("--max_instances", type=int,
@@ -164,30 +164,33 @@ if __name__=="__main__":
             print >>sys.stderr, "Need to specify where to save output with --output_file"
             sys.exit(-1)
         print >>sys.stderr, "Reading test data"
-        # TODO: The test file is expected to contain indices for replacement. This
-        # is because randomly replacing any word may not be helpful. The assumption
-        # is that there is an external process which decides what the important words
-        # are. Ideally, the process should be in this module.
-        # Note: The indices will be used with sentences tokenized using NLTK's word
-        # tokenizer.
         test_sentence_words = [word_tokenize(x.strip()) for x in codecs.open(args.test_file,
             "r", "utf-8")]
         test_sentences = []
         locations = []
+        # Stop words. Do not replace these or let them be replacements.
+        words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the", 
+                 "to", "and", "is", "a"])
         for words in test_sentence_words:
-            # Generate a random location, between 0 and the second last position
+            if len(set(words).difference(words_to_ignore)) == 0:
+                # This means that there are no non-stop words in the input. Ignore it.
+                continue
+            # Generate a random location, between 0 and the second last position 
             # because the last position is usually a period
-            locations.append(random.randint(0, len(words)-2))
+            location = random.randint(0, len(words) - 2)
+            while words[location] in words_to_ignore:
+                location = random.randint(0, len(words) - 2)
+            locations.append(location) 
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         substitutes = word_replacer.get_substitutes(test_sentences, locations,
                 train_sequence_length, tokenize=tokenize)
         outfile = codecs.open(args.output_file, "w", "utf-8")
-        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words
-                , locations):
+        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, 
+                locations):
             word_being_replaced = words[location]
             for _, substitute in logprob_substitute_list:
-                if substitute not in [word_being_replaced, "<s>", "</s>", "PADDING", ".", ","]:
+                if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
                     corrupted_words = list(words)
                     corrupted_words[location] = substitute
                     print >>outfile, "%s\t%s" % (" ".join(words), " ".join(corrupted_words))
