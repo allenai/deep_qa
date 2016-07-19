@@ -1,7 +1,7 @@
 from nltk.tokenize import word_tokenize
-import time
 import numpy
 import math
+from collections import defaultdict
 import itertools
 
 class DataIndexer(object):
@@ -9,7 +9,7 @@ class DataIndexer(object):
         self.word_index = {"PADDING":0}
         self.reverse_word_index = {0: "PADDING"}
         self.word_factored_indices = None
-        self.word_frequencies = {}
+        self.word_frequencies = defaultdict(int)
         self.frequent_words = set([])
 
     def index_sentence(self, sentence, tokenize):
@@ -24,7 +24,6 @@ class DataIndexer(object):
                 # does not occur in the input.
                 self.word_index[word] = index
                 self.reverse_word_index[index] = word
-                self.word_frequencies[word] = 1
             else:
                 self.word_frequencies[word] += 1
             indices.append(self.word_index[word])
@@ -42,7 +41,7 @@ class DataIndexer(object):
         all_indices_array = numpy.zeros((len(all_indices), max_length))
         for i, indices in enumerate(all_indices):
             all_indices_array[i][-len(indices):] = indices
-        # Frequency sort the vocab based on the frequencies of words in the data
+        # Sort the vocab based on the frequencies of words in the data
         frequency_sorted_vocab = sorted(self.word_frequencies.items(), 
             key=lambda a: a[1], reverse=True)
         # Update the list of frequent words (top 5000)
@@ -141,29 +140,7 @@ class DataIndexer(object):
                     i in range(num_digits_per_word)]
             log_probability = sum(log_probs)
             word_log_probabilities.append((log_probability, word))
-        '''    
-        num_digits_per_word = len(probabilities)
-        base = len(probabilities[0])
-        word_log_probabilities = []
-        # Iterate over all possible combinations of indices. i.e if base is 2, and 
-        # number of digits 3, (0,0,0), (0,0,1), (0,1,0), (0, 1, 1), ...
-        for factored_index in itertools.product(*[[b for b in range(base)]]*num_digits_per_word):
-            # compute the index from factored index. i.e convert to base 10 to match word_index
-            index = sum([(base ** i) * factored_index[i] for i in range(num_digits_per_word)]) 
-            word = self.get_word_from_index(index)
-            # Calculate probability only if there is a word that corresponds to this index.
-            # There will most likely be more bits in our representation than we need, so
-            # some computed indices do not map to words.
-            if word:
-                # If the current factored_index is (0, 1, 0), and the base is 2,
-                # we have three digits, and to calculate the final log-probability
-                # we do probabilities[0][0] + probabilities[1][1] + probabilities[2][0]
-                log_probs = [math.log(probabilities[i][factored_index[i]]) for 
-                        i in range(num_digits_per_word)]
-                log_probability = sum(log_probs)
-                word_log_probabilities.append((log_probability, word))
         # Return the probabilities and mapped words, sorted with the most prob. word first.
-        '''
         return sorted(word_log_probabilities, reverse=True)
 
     def factor_all_indices(self, num_digits_per_word, base):
