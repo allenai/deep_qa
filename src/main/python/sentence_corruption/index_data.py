@@ -73,19 +73,36 @@ class DataIndexer(object):
         #   where N is the set of word indices [0, vocab_size-1]
         # Output spec: all_one_hot_factored_arrays = list(one_hot_factored_array)
         #   where each one_hot_factored_array \in {0,1}^{batch_size \times \num_words 
-        #   \times base}, each row a one-hot (indicator) vector showing the index
+        #   \times base}, each row a one-hot (indicator) vector showing the index.
         #   len(all_one_hot_factored_arrays) is the number of factors (or 
-        #   high-dimensional digits) 
+        #   high-dimensional digits)
+        #
+        # The idea used here is class-factored softmax described in the following 
+        # paper:
+        # http://arxiv.org/pdf/1412.7119.pdf
+        #
         # Example:
-        # factor_target_indices([[0, 1], [2, 3]], 2)
+        # Input: [[0, 1], [2, 3]], base=2
+        # We will convert the indices to binary, with one numpy array for each
+        # bit of all indices in the input. That is,
+        # Factored Input:
+        # [
+        #   [[0, 1], [0, 1]],
+        #   [[0, 0], [1, 1]]
+        # ]
+        # We have one slice per digit. Note that the most significant digit is at the
+        # end, so this needs to be read back wards. input[j][k] -> factored_input[:][j][k]
+        # and since base is 2, binary(input[j][k]) = reverse(factored_input[:][j][k])
+        # Finally convert this to one-hot representation, so that we can think of 
+        # predicting each bit as a classification problem. Generally, if base = k,
+        # each one-hot representation will be of length k.
+        # Output:
         # [ 
         #   [[[1, 0], [0, 1]], [[1, 0], [0, 1]]],
         #   [[[1, 0], [1, 0]], [[0, 1], [0, 1]]]
         # ]
-        # Since the base is 2, we are essentially converting indices to 
-        # binary (length of each row is 2). Since max index is 3, we need two
-        # bits (number of outer most arrays is 2).
-        # input[j][k] -> [output[i][j][k] for i in range(num_digits)]
+        # Each vector in the output corresponds to a bit in the factored input.
+        # That is, each 0 -> [1, 0] and 1 -> [0, 1]
         vocab_size = target_indices.max() + 1
         num_digits_per_word = int(math.ceil(math.log(vocab_size) / math.log(base)))
         all_factored_arrays = []
@@ -108,8 +125,9 @@ class DataIndexer(object):
 
     def unfactor_probabilities(self, probabilities):
         # Given probabilities at all factored digits, compute the probabilities
-        # of all indices. Input format is the same as the output format of
-        # factor target_indices.
+        # of all indices. Input shape is the same as the output format of
+        # factor target_indices. But instead of one hot vectors, we have 
+        # probability vectors.
         # For example, if the factored indices had five digits of 
         # base 2, and we get probabilities of both bits at all five digits, we can 
         # use those to calculate the probabilities of all 2 ** 5 = 32 words.
@@ -133,7 +151,7 @@ class DataIndexer(object):
             # compute the index from factored index. i.e convert to base 10 to match word_index
             index = sum([(base ** i) * factored_index[i] for i in range(num_digits_per_word)]) 
             word = self.get_word_from_index(index)
-            # Calculate probability only of there is a word that corresponds to this index.
+            # Calculate probability only if there is a word that corresponds to this index.
             # There will most likely be more bits in our representation than we need, so
             # some computed indices do not map to words.
             if word:
