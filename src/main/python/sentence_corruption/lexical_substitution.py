@@ -125,8 +125,8 @@ if __name__=="__main__":
             bidirectional RNN")
     argparser.add_argument("--train_file", type=str, help="File with sentences to train on,\
             one per line.")
-    argparser.add_argument("--test_file", type=str, help="Tsv file with indices and \
-            sentences to replace words, one per line.")
+    argparser.add_argument("--test_file", type=str, help="File with sentences to replace words,\
+            one per line.")
     argparser.add_argument("--word_dim", type=int, help="Word dimensionality, default=50",
             default=50)
     argparser.add_argument("--use_lstm", help="Use LSTM instead of simple RNN", action='store_true')
@@ -150,12 +150,6 @@ if __name__=="__main__":
 
     if args.test_file is not None:
         print >>sys.stderr, "Reading test data"
-        # TODO: The test file is expected to contain indices for replacement. This
-        # is because randomly replacing any word may not be helpful. The assumption
-        # is that there is an external process which decides what the important words 
-        # are. Ideally, the process should be in this module.
-        # Note: The indices will be used with sentences tokenized using NLTK's word
-        # tokenizer.
         test_sentence_words = [word_tokenize(x.strip()) for x in codecs.open(args.test_file,
             "r", "utf-8")]
         test_sentences = []
