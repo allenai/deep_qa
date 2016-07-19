@@ -24,8 +24,20 @@ object SimpleLstmExperiments {
   // Step 2: Corrupt the positive sentences to get negative data
   //////////////////////////////////////////////////////////////////
 
+  // Step 2a: train a language model on the positive data.
+  val sentenceCorruptorTrainerParams: JValue =
+    ("positive data" -> sentenceSelectorParams) ~
+    ("tokenize input" -> false) ~
+    ("word dimensionality" -> 10) ~
+    ("max training epochs" -> 1) ~
+    ("maximum training sentences" -> 1000)
+
+  // Step 2b: actually corrupt the data
   val sentenceCorruptorParams: JValue =
-    ("positive data" -> sentenceSelectorParams)
+    ("positive data" -> sentenceSelectorParams) ~
+    ("trainer" -> sentenceCorruptorTrainerParams)
+
+  // STUFF BELOW HERE STILL TODO
 
   ////////////////////////////////////////////////////////////////
   // Step 3: Train a model
