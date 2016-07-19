@@ -186,8 +186,8 @@ if __name__=="__main__":
         substitutes = word_replacer.get_substitutes(test_sentences, locations,
                 train_sequence_length, tokenize=tokenize)
         outfile = codecs.open(args.output_file, "w", "utf-8")
-        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words
-                , locations):
+        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, 
+                locations):
             word_being_replaced = words[location]
             for _, substitute in logprob_substitute_list:
                 if substitute not in set(list(words_to_ignore) + [word_being_replaced]):

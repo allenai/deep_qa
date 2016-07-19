@@ -144,6 +144,9 @@ class DataIndexer(object):
         return sorted(word_log_probabilities, reverse=True)
 
     def factor_all_indices(self, num_digits_per_word, base):
+        # This function will be called during test time on demand. This is a separate function
+        # because we don't want to do this during training, so that we can avoid pickling the
+        # factored indices.
         self.word_factored_indices = []
         # Iterate over all possible combinations of indices. i.e if base is 2, and 
         # number of digits 3, (0,0,0), (0,0,1), (0,1,0), (0, 1, 1), ...
