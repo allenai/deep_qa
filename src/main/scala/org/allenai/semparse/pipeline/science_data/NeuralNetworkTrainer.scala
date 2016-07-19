@@ -52,7 +52,7 @@ class NoBackgroundKnowledgeNNSentenceTrainer(
   override val arguments = Seq[String](
     "--train_file", trainingFile,  // TODO(matt): change nn_solver.py to take two separate input files
     "--validation_file", validationFile,
-    "--use_tree_lstm", false.toString,  // TODO(matt)
+    "--use_tree_lstm", false.toString,  // TODO(matt): make this like in SentenceCorruptor.scala
     "--length-upper-limit", 100.toString,  // TODO(matt)
     "--max_train_size", 1000000.toString,  // TODO(matt)
     "--num_epochs", numEpochs.toString
