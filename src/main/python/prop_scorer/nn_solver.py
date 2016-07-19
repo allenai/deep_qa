@@ -11,9 +11,9 @@ from keras.regularizers import l2
 from keras import backend as K
 
 from index_data import DataIndexer
-from treecomp_lstm import TreeCompositionLSTM
+from encoders import TreeCompositionLSTM
 
-class NNScorer(object):
+class NNSolver(object):
     def __init__(self):
         self.model = None
         self.data_indexer = DataIndexer()
@@ -203,9 +203,9 @@ class NNScorer(object):
         accuracy = float(num_correct)/num_questions
         return accuracy
 
-class LSTMScorer(NNScorer):
+class LSTMSolver(NNSolver):
     def __init__(self):
-        super(LSTMScorer, self).__init__()
+        super(LSTMSolver, self).__init__()
 
     def train(self, train_input, train_labels, validation_input, validation_labels, 
             embedding_size=50, vocab_size=None, num_epochs=20):
@@ -271,9 +271,9 @@ class LSTMScorer(NNScorer):
                 best_accuracy = accuracy
                 self.save_model("propscorer_lstm", epoch_id)
 
-class TreeLSTMScorer(NNScorer):
+class TreeLSTMSolver(NNSolver):
     def __init__(self):
-        super(TreeLSTMScorer, self).__init__()
+        super(TreeLSTMSolver, self).__init__()
 
     def train(self, train_input, train_labels, validation_input, validation_labels, 
             embedding_size=50, vocab_size=None, num_epochs=20):
@@ -365,20 +365,20 @@ if __name__=="__main__":
     argparser.add_argument('--use_model_from_epoch', type=int, default=0, 
             help="Use the model from a particular epoch (0 by default)")
     args = argparser.parse_args()
-    prop_scorer = TreeLSTMScorer() if args.use_tree_lstm else LSTMScorer()
+    nn_solver = TreeLSTMSolver() if args.use_tree_lstm else LSTMSolver()
 
     if not args.train_file:
         # Training file is not given. There must be a serialized model.
         print >>sys.stderr, "Loading scoring model from disk"
         model_type = "treelstm" if args.use_tree_lstm else "lstm"
         model_name_prefix = "propscorer_%s"%model_type
-        prop_scorer.load_model(model_name_prefix, args.use_model_from_epoch)
+        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch)
         # input shape of scoring model is (samples, max_length)
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
         print >>sys.stderr, "Reading training data"
         lines = [x.strip() for x in open(args.train_file).readlines()]
-        _, (inputs, labels) = prop_scorer.prepare_training_data(lines, 
+        _, (inputs, labels) = nn_solver.prepare_training_data(lines, 
                 max_length=args.length_upper_limit, 
                 in_shift_reduce_format=args.use_tree_lstm)
 
@@ -387,7 +387,7 @@ if __name__=="__main__":
         print >>sys.stderr, "Reading validation data"
         validation_lines = [x.strip() for x in codecs.open(args.validation_file,'r', 
             'utf-8').readlines()]
-        validation_labels, validation_input = prop_scorer.prepare_test_data(
+        validation_labels, validation_input = nn_solver.prepare_test_data(
                 validation_lines, max_length=train_sequence_length, 
                 in_shift_reduce_format=args.use_tree_lstm)
         if args.max_train_size is not None:
@@ -396,21 +396,21 @@ if __name__=="__main__":
                     if args.use_tree_lstm else inputs[:args.max_train_size]
             labels = labels[:args.max_train_size]
         print >>sys.stderr, "Training model"
-        prop_scorer.train(inputs, labels, validation_input, validation_labels, 
+        nn_solver.train(inputs, labels, validation_input, validation_labels, 
                 num_epochs=args.num_epochs)
     
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
-    max_length = prop_scorer.model.get_input_shape_at(0)[0][1] \
-            if args.use_tree_lstm else prop_scorer.model.get_input_shape_at(0)[1]
+    max_length = nn_solver.model.get_input_shape_at(0)[0][1] \
+            if args.use_tree_lstm else nn_solver.model.get_input_shape_at(0)[1]
 
     if args.test_file is not None:
         test_lines = [x.strip() for x in codecs.open(args.test_file,'r', 'utf-8').readlines()]
-        test_labels, test_input = prop_scorer.prepare_test_data(test_lines, 
+        test_labels, test_input = nn_solver.prepare_test_data(test_lines, 
                 max_length=max_length, in_shift_reduce_format=args.use_tree_lstm)
         print >>sys.stderr, "Scoring test data"
-        test_scores = prop_scorer.score(test_input)
-        accuracy = prop_scorer.evaluate(test_labels, test_input)
+        test_scores = nn_solver.score(test_input)
+        accuracy = nn_solver.evaluate(test_labels, test_input)
         print >>sys.stderr, "Test accuracy: %.4f"%accuracy
         assert len(test_scores) == len(test_lines)
 
