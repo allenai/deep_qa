@@ -29,7 +29,8 @@ class DataIndexer(object):
             indices.append(self.word_index[word])
         return indices
 
-    def index_data(self, sentences, max_length=None, tokenize=True):
+    def index_data(self, sentences, max_length=None, tokenize=True, search_space_size=5000, 
+            train_time=True):
         all_indices = []
         for sentence in sentences:
             sentence_indices = self.index_sentence(sentence, tokenize=tokenize)
@@ -44,8 +45,9 @@ class DataIndexer(object):
         # Sort the vocab based on the frequencies of words in the data
         frequency_sorted_vocab = sorted(self.word_frequencies.items(), 
             key=lambda a: a[1], reverse=True)
-        # Update the list of frequent words (top 5000)
-        self.frequent_words = set([x[0] for x in frequency_sorted_vocab][:5000])
+        if train_time:
+            # Update the list of frequent words
+            self.frequent_words = set([x[0] for x in frequency_sorted_vocab][:search_space_size])
         return sentence_lengths, all_indices_array
 
     def _make_one_hot(self, target_indices, vector_size):
