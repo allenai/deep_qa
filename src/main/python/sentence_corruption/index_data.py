@@ -56,7 +56,7 @@ class DataIndexer(object):
         # the cartesian product of the sets {0,1,2,3,4} and {0,1,2,3,4,5}
         # Note: this works even if target_indices is a higher order tensor.
         for index in itertools.product(*[numpy.arange(s) for s in target_indices.shape]):
-            # If element at (p, q) in target_indices is r, make (p, q, r) in the 
+            # If element at (p, q) in target_indices is r, make (p, q, r) in the
             # one hot array 1.
             full_one_hot_index = index + (target_indices[index],)
             one_hot_vectors[full_one_hot_index] = 1
@@ -64,19 +64,19 @@ class DataIndexer(object):
 
     def factor_target_indices(self, target_indices, base=2):
         # Factors target indices into a hierarchy of depth log_{base}(vocab_size)
-        # i.e. one integer index will be converted into log_{base}(vocab_size) 
+        # i.e. one integer index will be converted into log_{base}(vocab_size)
         # arrays, each of size = base.
         # Essentially coverting given integers to the given base, but operating
         # on arrays instead.
         # Input spec: target_indices \in N^{batch_size \times num_words}
         #   where N is the set of word indices [0, vocab_size-1]
         # Output spec: all_one_hot_factored_arrays = list(one_hot_factored_array)
-        #   where each one_hot_factored_array \in {0,1}^{batch_size \times \num_words 
+        #   where each one_hot_factored_array \in {0,1}^{batch_size \times \num_words
         #   \times base}, each row a one-hot (indicator) vector showing the index.
-        #   len(all_one_hot_factored_arrays) is the number of factors (or 
+        #   len(all_one_hot_factored_arrays) is the number of factors (or
         #   high-dimensional digits)
         #
-        # The idea used here is class-factored softmax described in the following 
+        # The idea used here is class-factored softmax described in the following
         # paper:
         # http://arxiv.org/pdf/1412.7119.pdf
         #
@@ -92,11 +92,11 @@ class DataIndexer(object):
         # We have one slice per digit. Note that the most significant digit is at the
         # end, so this needs to be read back wards. input[j][k] -> factored_input[:][j][k]
         # and since base is 2, binary(input[j][k]) = reverse(factored_input[:][j][k])
-        # Finally convert this to one-hot representation, so that we can think of 
+        # Finally convert this to one-hot representation, so that we can think of
         # predicting each bit as a classification problem. Generally, if base = k,
         # each one-hot representation will be of length k.
         # Output:
-        # [ 
+        # [
         #   [[[1, 0], [0, 1]], [[1, 0], [0, 1]]],
         #   [[[1, 0], [1, 0]], [[0, 1], [0, 1]]]
         # ]
@@ -118,17 +118,17 @@ class DataIndexer(object):
             temp_target_indices = numpy.copy(temp_target_indices / base)
         # Note: Most significant digit first.
         # Now get one hot vectors of the factored arrays
-        all_one_hot_factored_arrays = [self._make_one_hot(array, base) for 
+        all_one_hot_factored_arrays = [self._make_one_hot(array, base) for
                 array in all_factored_arrays]
         return all_one_hot_factored_arrays
 
     def unfactor_probabilities(self, probabilities):
         # Given probabilities at all factored digits, compute the probabilities
         # of all indices. Input shape is the same as the output format of
-        # factor target_indices. But instead of one hot vectors, we have 
+        # factor target_indices. But instead of one hot vectors, we have
         # probability vectors.
-        # For example, if the factored indices had five digits of 
-        # base 2, and we get probabilities of both bits at all five digits, we can 
+        # For example, if the factored indices had five digits of
+        # base 2, and we get probabilities of both bits at all five digits, we can
         # use those to calculate the probabilities of all 2 ** 5 = 32 words.
         num_digits_per_word = len(probabilities)
         base = len(probabilities[0])
@@ -136,7 +136,7 @@ class DataIndexer(object):
             self.factor_all_indices(num_digits_per_word, base)
         word_log_probabilities = []
         for word, factored_index in self.word_factored_indices:
-            log_probs = [math.log(probabilities[i][factored_index[i]]) for 
+            log_probs = [math.log(probabilities[i][factored_index[i]]) for
                     i in range(num_digits_per_word)]
             log_probability = sum(log_probs)
             word_log_probabilities.append((log_probability, word))
@@ -148,11 +148,11 @@ class DataIndexer(object):
         # because we don't want to do this during training, so that we can avoid pickling the
         # factored indices.
         self.word_factored_indices = []
-        # Iterate over all possible combinations of indices. i.e if base is 2, and 
+        # Iterate over all possible combinations of indices. i.e if base is 2, and
         # number of digits 3, (0,0,0), (0,0,1), (0,1,0), (0, 1, 1), ...
         for factored_index in itertools.product(*[[b for b in range(base)]]*num_digits_per_word):
             # compute the index from factored index. i.e convert to base 10 to match word_index
-            index = sum([(base ** i) * factored_index[i] for i in range(num_digits_per_word)]) 
+            index = sum([(base ** i) * factored_index[i] for i in range(num_digits_per_word)])
             # Limit the word_factored_indices to frequent words, so that the search space
             # in unfactor_probabilities is smaller.
             word = self.get_word_from_index(index, only_if_frequent=True)

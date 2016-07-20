@@ -10,18 +10,18 @@ from constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 
 class TreeCompositionLSTM(Recurrent):
     '''
-    Conceptual differences from LSTM: 
+    Conceptual differences from LSTM:
     1. Tree LSTM does not differentiate between x and h, because
         tree composition is not applied at every time step (it is applied when the input symbol is a
-        reduce) and when it is applied, there is no "current input".  
+        reduce) and when it is applied, there is no "current input".
     2. Input sequences are not the
         ones being composed, they are operations on the buffer containing elements corresponding to
-        tokens. There isn't one token per timestep like LSTMs.  
+        tokens. There isn't one token per timestep like LSTMs.
     3. Single vectors h and c are replaced
         by a stack and buffer of h and c corresponding to the structure processed so far.
     4. Gates are
         applied on two or three elements at a time depending on the type of reduce. Accordingly there
-        are two classes of gates: G_2 (two elements) and G_3 (three elements) 
+        are two classes of gates: G_2 (two elements) and G_3 (three elements)
     5. G_2 has two forget
         gates, for each element that can be forgotten and G_3 has three.
     '''
@@ -58,7 +58,7 @@ class TreeCompositionLSTM(Recurrent):
         self.b_regularizers = [regularizers.get(b2_regularizer),
                 regularizers.get(b3_regularizer)] if b_regularizer else None
         # TODO: Ensure output_dim = input_dim - 1
-        
+
         self.dropout_W = dropout_W
         self.dropout_U = dropout_U
         self.dropout_V = dropout_V
@@ -77,7 +77,7 @@ class TreeCompositionLSTM(Recurrent):
 
     def get_initial_states(self, x):
         # The initial buffer is sent into the TreeLSTM as a part of the input.
-        # i.e., x is a concatenation of the transitions and the initial buffer.  
+        # i.e., x is a concatenation of the transitions and the initial buffer.
         # (batch_size, buffer_limit, output_dim+1)
         # We will now separate the buffer and the transitions and initialize the
         # buffer state of the TreeLSTM with the initial buffer value.
@@ -95,7 +95,7 @@ class TreeCompositionLSTM(Recurrent):
         # init_stack The problem is the first dim (samples) is a place holder and not an actual
         # value. So we'll use the following trick
         temp_state = K.zeros_like(x) # (samples, buffer_ops_limit, input_dim)
-        temp_state = K.tile(K.sum(temp_state, axis=(1,2)), 
+        temp_state = K.tile(K.sum(temp_state, axis=(1,2)),
                 (self.stack_limit, 2*self.output_dim, 1)) # (stack_limit, 2*output_dim, samples)
         init_stack = K.permute_dimensions(temp_state, (2,0,1)) # (samples, stack_limit, 2*output_dim)
         return [init_buffer, init_stack]
@@ -104,7 +104,7 @@ class TreeCompositionLSTM(Recurrent):
         # Defining two classes of parameters:
         # 1) predicate, one argument composition (*2_*)
         # 2) predicate, two arguments composition (*3_*)
-        # 
+        #
         # The naming scheme is an extension of the one used
         # in the LSTM code of Keras. W is a weight and b is a bias
         # *_i: input gate parameters
@@ -245,7 +245,7 @@ class TreeCompositionLSTM(Recurrent):
 
             self.trainable_weights = [self.W2_i, self.U2_i, self.W3_i, self.U3_i, self.V3_i, self.b2_i, self.b3_i,
                                       self.W2_fp, self.U2_fp, self.W2_fa, self.U2_fa, self.b2_fp, self.b2_fa,
-                                      self.W3_fp, self.U3_fp, self.V3_fp, self.W3_fa1, self.U3_fa1, self.V3_fa1, 
+                                      self.W3_fp, self.U3_fp, self.V3_fp, self.W3_fa1, self.U3_fa1, self.V3_fa1,
                                       self.W3_fa2, self.U3_fa2, self.V3_fa2, self.b3_fp, self.b3_fa1, self.b3_fa2,
                                       self.W2_u, self.U2_u, self.W3_u, self.U3_u, self.V3_u, self.b2_u, self.b3_u,
                                       self.W2_o, self.U2_o, self.W3_o, self.U3_o, self.V3_o, self.b2_o, self.b3_o]
@@ -280,7 +280,7 @@ class TreeCompositionLSTM(Recurrent):
             del self.initial_weights
 
     def _one_arg_compose(self, pred_arg):
-        # pred_arg: Tensors of size (batch_size, 2, dim) where 
+        # pred_arg: Tensors of size (batch_size, 2, dim) where
         # pred_arg[:,0,:] are arg vectors (h,c) of all samples
         # pred_arg[:,1,:] are pred vectors (h,c) of all samples
         pred_h = pred_arg[:,1,:self.output_dim]
@@ -321,7 +321,7 @@ class TreeCompositionLSTM(Recurrent):
         c = (i * u) + (fp * pred_c) + (fa * arg_c)
         o = self.inner_activation(z_o)
 
-        # Calculate the composition output. SPINN does not have a non-linearity in the 
+        # Calculate the composition output. SPINN does not have a non-linearity in the
         # following computation, but the original LSTM does.
         h = o * self.activation(c)
 
@@ -386,8 +386,8 @@ class TreeCompositionLSTM(Recurrent):
 
     def step(self, x, states):
         # This function is called at each timestep. Before calling this, Keras' rnn
-        # dimshuffles the input to have time as the leading dimension, and iterates over 
-        # it So, 
+        # dimshuffles the input to have time as the leading dimension, and iterates over
+        # it So,
         # x: (samples, input_dim) = (samples, x_op + <current timestep's buffer input>)
         #
         # We do not need the current timestep's buffer input here, since the buffer
@@ -395,24 +395,24 @@ class TreeCompositionLSTM(Recurrent):
 
         buff = states[0] # Current state of buffer
         stack = states[1] # Current state of stack
-        
+
         step_ops = x[:,0] #(samples, 1), current ops for all samples.
 
-        # We need to make tensors from the ops vectors, one to apply to all dimensions 
+        # We need to make tensors from the ops vectors, one to apply to all dimensions
         # of stack, and the other for the buffer.
         # For the stack:
         # Note stack's dimensionality is 2*output_dim because it holds both h and c
-        stack_tiled_step_ops = K.permute_dimensions(K.tile(step_ops, (self.stack_limit, 
+        stack_tiled_step_ops = K.permute_dimensions(K.tile(step_ops, (self.stack_limit,
             2*self.output_dim, 1)), (2,0,1)) #(samples, stack_limit, 2*dim)
-      
+
         # For the buffer:
-        buff_tiled_step_ops = K.permute_dimensions(K.tile(step_ops, (self.buffer_ops_limit, 
+        buff_tiled_step_ops = K.permute_dimensions(K.tile(step_ops, (self.buffer_ops_limit,
             2*self.output_dim, 1)), (2,0,1)) #(samples, buff_len, 2*dim)
 
         shifted_stack = K.concatenate([buff[:,:1], stack], axis=1)[:,:self.stack_limit]
-        one_reduced_stack = K.concatenate([self._one_arg_compose(stack[:, :2]), 
+        one_reduced_stack = K.concatenate([self._one_arg_compose(stack[:, :2]),
             stack[:,2:], K.zeros_like(stack)[:,:1]], axis=1)
-        two_reduced_stack = K.concatenate([self._two_arg_compose(stack[:, :3]), 
+        two_reduced_stack = K.concatenate([self._two_arg_compose(stack[:, :3]),
             stack[:,3:], K.zeros_like(stack)[:,:2]], axis=1)
         shifted_buff = K.concatenate([buff[:,1:], K.zeros_like(buff)[:,:1]], axis=1)
 
@@ -426,7 +426,7 @@ class TreeCompositionLSTM(Recurrent):
         return stack_top_h, [buff, stack]
 
     def get_constants(self, x):
-        # TODO: The function in the LSTM implementation produces dropout multipliers 
+        # TODO: The function in the LSTM implementation produces dropout multipliers
         # to apply on the input if dropout is applied on the weights W and U. Ignoring
         # dropout for now.
         constants = []
@@ -438,15 +438,15 @@ class TreeCompositionLSTM(Recurrent):
         # This function is called to get the model configuration while serializing it
         # Essentially has all the arguments in the __init__ method as a dict.
         config = {'stack_limit': self.stack_limit,
-                  'buffer_ops_limit': self.buffer_ops_limit, 
+                  'buffer_ops_limit': self.buffer_ops_limit,
                   'output_dim': self.output_dim,
-                  'init': self.init.__name__, 
+                  'init': self.init.__name__,
                   'inner_init': self.inner_init.__name__,
-                  'forget_bias_init': self.forget_bias_init.__name__, 
+                  'forget_bias_init': self.forget_bias_init.__name__,
                   'activation':self.activation.__name__,
                   'inner_activation': self.inner_activation.__name__,
-                  'W_regularizer': self.W_regularizers[0].get_config() if self.W_regularizers else None, 
-                  'U_regularizer': self.U_regularizers[0].get_config() if self.U_regularizers else None, 
+                  'W_regularizer': self.W_regularizers[0].get_config() if self.W_regularizers else None,
+                  'U_regularizer': self.U_regularizers[0].get_config() if self.U_regularizers else None,
                   'V_regularizer': self.V_regularizer.get_config() if self.V_regularizer else None,
                   'b_regularizer': self.b_regularizers[0].get_config() if self.b_regularizers else None,
                   'dropout_W': self.dropout_W,
