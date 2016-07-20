@@ -46,8 +46,8 @@ class SentenceToLogic(
 
   val dropErrors = JsonHelper.extractWithDefault(params, "drop errors", true)
 
-  val sentencesInput = SentenceToLogic.getSentencesInput(params \ "sentences", fileUtil)
-  val sentencesFile = sentencesInput._1
+  val sentenceProducer = SentenceProducer.create(params \ "sentences", fileUtil)
+  val sentencesFile = sentenceProducer.outputFile
   val logicalFormGenerator = new LogicalFormGenerator(params \ "logical forms")
 
   val outputFile = JsonHelper.extractAsOption[String](params, "output file") match {
@@ -57,7 +57,7 @@ class SentenceToLogic(
 
   val numPartitions = 100
 
-  override val inputs: Set[(String, Option[Step])] = Set(sentencesInput)
+  override val inputs: Set[(String, Option[Step])] = Set((sentencesFile, Some(sentenceProducer)))
   override val outputs = Set(outputFile)
   override val paramFile = outputs.head.dropRight(4) + "_params.json"
   override val inProgressFile = outputs.head.dropRight(4) + "_in_progress"
@@ -140,14 +140,6 @@ object SentenceToLogic {
   type IndexedSentence = (String, Option[Int])
 
   val parser = new StanfordParser
-
-  def getSentencesInput(params: JValue, fileUtil: FileUtil): (String, Option[Step]) = {
-    val sentenceSelector = new SentenceSelectorStep(params, fileUtil)
-    // TODO(matt): I need a "type" parameter here, which says whether we get the sentences from a
-    // sentence selector, or a sentence corrupter, or somewhere else.  For now, we'll just assume
-    // our input is from a SentenceSelector.
-    (sentenceSelector.outputFile, Some(sentenceSelector))
-  }
 
   def runWithTimeout[T](milliseconds: Long, f: () => T): Option[Either[Throwable, T]] = {
     import scala.language.postfixOps
