@@ -14,14 +14,10 @@ class WordReplacer(object):
     def __init__(self):
         self.data_indexer = DataIndexer()
 
-    def process_data(self, sentences, max_length=None, factor_base=2, tokenize=True, 
-            search_space_size=5000, train_time=True):
+    def process_data(self, sentences, max_length=None, factor_base=2, tokenize=True):
         #TODO: Deal with OOV
-        # train_time is needed to know if we should update the list of frequent words.
-        # We don't want to do it at test time.
         sentence_lengths, indexed_sentences = self.data_indexer.index_data(sentences,
-                max_length, tokenize, search_space_size=search_space_size, 
-                train_time=train_time)
+                max_length, tokenize)
         # We want the inputs to be words 0..n-1 and targets to be words 1..n in all
         # sentences, so that at each time step t, p(w_{t+1} | w_{0}..w_{t}) will be
         # predicted.
@@ -32,10 +28,9 @@ class WordReplacer(object):
         return sentence_lengths, input_array, factored_target_arrays
 
     def train_model(self, sentences, word_dim=50, factor_base=2, num_epochs=20,
-                    tokenize=True, use_lstm=False, search_space_size=5000):
+                    tokenize=True, use_lstm=False):
         _, input_array, factored_target_arrays = self.process_data(sentences,
-                factor_base=factor_base, tokenize=tokenize, 
-                search_space_size=search_space_size, train_time=True)
+                factor_base=factor_base, tokenize=tokenize)
         vocab_size = self.data_indexer.get_vocab_size()
         num_factors = len(factored_target_arrays)
         model_input = Input(shape=input_array.shape[1:], dtype='int32') # (batch_size, num_words)
@@ -98,7 +93,7 @@ class WordReplacer(object):
         print >>sys.stderr, self.model.summary()
 
     def get_substitutes(self, sentences, locations, train_sequence_length,
-            num_substitutes=5, tokenize=True):
+            num_substitutes=5, tokenize=True, search_space_size=5000):
         '''
         sentences (list(str)): List of sentences with words that need to be substituted
         locations (list(int)): List of indices, the same size as sentences, containing
@@ -108,7 +103,7 @@ class WordReplacer(object):
 
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences,
                 max_length=train_sequence_length+1, # +1 because the last word would be stripped
-                tokenize=tokenize, train_time=False)
+                tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
         all_prediction_factors = self.model.predict(indexed_sentences)
         all_substitutes = []
@@ -123,7 +118,8 @@ class WordReplacer(object):
             # index=location
             word_predictions = [predictions[sentence_id][-prediction_length:][location] for
                     predictions in all_prediction_factors]
-            sorted_substitutes = self.data_indexer.unfactor_probabilities(word_predictions)
+            sorted_substitutes = self.data_indexer.unfactor_probabilities(word_predictions,
+                    search_space_size)
             all_substitutes.append(sorted_substitutes[:num_substitutes])
         return all_substitutes
 
@@ -160,8 +156,7 @@ if __name__=="__main__":
             train_sentences = train_sentences[:args.max_instances]
         word_replacer.train_model(train_sentences, factor_base=args.factor_base,
                                   word_dim=args.word_dim, num_epochs=args.num_epochs,
-                                  tokenize=tokenize, use_lstm=args.use_lstm, 
-                                  search_space_size=args.search_space_size)
+                                  tokenize=tokenize, use_lstm=args.use_lstm)
         word_replacer.save_model(args.model_serialization_prefix)
     else:
         print >>sys.stderr, "Loading saved model"
@@ -191,8 +186,10 @@ if __name__=="__main__":
             locations.append(location) 
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
+        print >>sys.stderr, "Limiting search space size to %d" % args.search_space_size
         substitutes = word_replacer.get_substitutes(test_sentences, locations,
-                train_sequence_length, tokenize=tokenize)
+                train_sequence_length, tokenize=tokenize, 
+                search_space_size=args.search_space_size)
         outfile = codecs.open(args.output_file, "w", "utf-8")
         for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, 
                 locations):
