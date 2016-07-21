@@ -40,6 +40,9 @@ class DataIndexer(object):
             max_length = max(sentence_lengths)
         all_indices_array = numpy.zeros((len(all_indices), max_length))
         for i, indices in enumerate(all_indices):
+            # Truncate indices at the beginning if needed. If len(indices) <= max_length,
+            # indices will remain unchanged.
+            indices = indices[-max_length:]
             all_indices_array[i][-len(indices):] = indices
         return sentence_lengths, all_indices_array
 

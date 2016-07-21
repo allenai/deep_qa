@@ -100,15 +100,18 @@ class WordReplacer(object):
             indices of words in sentences that need to be substituted
         train_sequence_length (int): Length of sequences the model was trained on
         '''
-
+        max_train_length = train_sequence_length+1 # +1 because the last word would be stripped
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences,
-                max_length=train_sequence_length+1, # +1 because the last word would be stripped
-                tokenize=tokenize)
+                max_length=max_train_length, tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
         all_prediction_factors = self.model.predict(indexed_sentences)
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths,
                 locations)):
+            # If sentence length is greater than the longest sentence seen during training,
+            # data indexer will truncate it anyway. So, let's not make expect the predictions
+            # to be longer than that.
+            sentence_length = min(sentence_length, max_train_length)
             prediction_length = sentence_length - 1 # Ignore the starting <s> symbol
             # Each prediction factor is of the shape
             # (num_sentences, padding_length+num_words, factor_base)
