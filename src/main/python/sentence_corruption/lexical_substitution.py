@@ -94,22 +94,25 @@ class WordReplacer(object):
         print(self.model.summary(), file=sys.stderr)
 
     def get_substitutes(self, sentences, locations, train_sequence_length,
-            num_substitutes=5, tokenize=True):
+            num_substitutes=5, tokenize=True, search_space_size=5000):
         '''
         sentences (list(str)): List of sentences with words that need to be substituted
         locations (list(int)): List of indices, the same size as sentences, containing
             indices of words in sentences that need to be substituted
         train_sequence_length (int): Length of sequences the model was trained on
         '''
-
+        max_train_length = train_sequence_length+1 # +1 because the last word would be stripped
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences,
-                max_length=train_sequence_length+1, # +1 because the last word would be stripped
-                tokenize=tokenize)
+                max_length=max_train_length, tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
         all_prediction_factors = self.model.predict(indexed_sentences)
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths,
                 locations)):
+            # If sentence length is greater than the longest sentence seen during training,
+            # data indexer will truncate it anyway. So, let's not make expect the predictions
+            # to be longer than that.
+            sentence_length = min(sentence_length, max_train_length)
             prediction_length = sentence_length - 1 # Ignore the starting <s> symbol
             # Each prediction factor is of the shape
             # (num_sentences, padding_length+num_words, factor_base)
@@ -119,7 +122,8 @@ class WordReplacer(object):
             # index=location
             word_predictions = [predictions[sentence_id][-prediction_length:][location] for
                     predictions in all_prediction_factors]
-            sorted_substitutes = self.data_indexer.unfactor_probabilities(word_predictions)
+            sorted_substitutes = self.data_indexer.unfactor_probabilities(word_predictions,
+                    search_space_size)
             all_substitutes.append(sorted_substitutes[:num_substitutes])
         return all_substitutes
 
@@ -137,6 +141,8 @@ if __name__=="__main__":
     argparser.add_argument("--use_lstm", help="Use LSTM instead of simple RNN", action='store_true')
     argparser.add_argument("--factor_base", type=int, help="Base of factored indices, \
             default=2", default=2)
+    argparser.add_argument("--search_space_size", type=int, help="Number of most frequent words \
+            to search over as replacement candidates", default=5000)
     argparser.add_argument("--num_epochs", type=int, help="Maximum number of epochs (will\
             stop early), default=20", default=20)
     argparser.add_argument("--no_tokenize", help="Do not tokenize input", action='store_true')
@@ -184,8 +190,10 @@ if __name__=="__main__":
             locations.append(location)
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
+        print >>sys.stderr, "Limiting search space size to %d" % args.search_space_size
         substitutes = word_replacer.get_substitutes(test_sentences, locations,
-                train_sequence_length, tokenize=tokenize)
+                train_sequence_length, tokenize=tokenize, 
+                search_space_size=args.search_space_size)
         outfile = codecs.open(args.output_file, "w", "utf-8")
         for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words,
                 locations):
