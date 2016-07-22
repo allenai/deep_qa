@@ -46,9 +46,9 @@ class WordReplacer(object):
         # step anyway, it is okay to project it down a bit now. So output_dim = word_dim/2
         # This minimizes the number of parameters significantly. All four Ws in LSTM
         # will now be half as big as they would be if output_dim = word_dim.
-        forward_rnn = rnn_model(output_dim=word_dim/2, return_sequences=True,
+        forward_rnn = rnn_model(output_dim=int(word_dim/2), return_sequences=True,
                 name='forward_rnn')
-        backward_rnn = rnn_model(output_dim=word_dim/2, go_backwards=True,
+        backward_rnn = rnn_model(output_dim=int(word_dim/2), go_backwards=True,
                 return_sequences=True, name='backward_rnn')
         forward_rnn_out = forward_rnn(regularized_embedded_input) # (batch_size, num_words, word_dim/2)
         backward_rnn_out = backward_rnn(regularized_embedded_input) # (batch_size, num_words, word_dim/2)
@@ -87,7 +87,7 @@ class WordReplacer(object):
         return self.model.get_input_shape_at(0)
 
     def load_model(self, model_serialization_prefix):
-        self.data_indexer = pickle.load(open("%s_di.pkl" % model_serialization_prefix))
+        self.data_indexer = pickle.load(open("%s_di.pkl" % model_serialization_prefix, "rb"))
         self.model = model_from_json(open("%s_config.json" % model_serialization_prefix).read())
         self.model.load_weights("%s_weights.h5" % model_serialization_prefix)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
