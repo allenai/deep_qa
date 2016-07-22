@@ -40,12 +40,10 @@ class DataIndexer(object):
             max_length = max(sentence_lengths)
         all_indices_array = numpy.zeros((len(all_indices), max_length))
         for i, indices in enumerate(all_indices):
+            # Truncate indices at the beginning if needed. If len(indices) <= max_length,
+            # indices will remain unchanged.
+            indices = indices[-max_length:]
             all_indices_array[i][-len(indices):] = indices
-        # Sort the vocab based on the frequencies of words in the data
-        frequency_sorted_vocab = sorted(self.word_frequencies.items(), 
-            key=lambda a: a[1], reverse=True)
-        # Update the list of frequent words (top 5000)
-        self.frequent_words = set([x[0] for x in frequency_sorted_vocab][:5000])
         return sentence_lengths, all_indices_array
 
     def _make_one_hot(self, target_indices, vector_size):
@@ -122,7 +120,7 @@ class DataIndexer(object):
                 array in all_factored_arrays]
         return all_one_hot_factored_arrays
 
-    def unfactor_probabilities(self, probabilities):
+    def unfactor_probabilities(self, probabilities, search_space_size):
         # Given probabilities at all factored digits, compute the probabilities
         # of all indices. Input shape is the same as the output format of
         # factor target_indices. But instead of one hot vectors, we have
@@ -133,7 +131,7 @@ class DataIndexer(object):
         num_digits_per_word = len(probabilities)
         base = len(probabilities[0])
         if not self.word_factored_indices:
-            self.factor_all_indices(num_digits_per_word, base)
+            self.prepare_indices_for_test(num_digits_per_word, base, search_space_size)
         word_log_probabilities = []
         for word, factored_index in self.word_factored_indices:
             log_probs = [math.log(probabilities[i][factored_index[i]]) for
@@ -143,10 +141,14 @@ class DataIndexer(object):
         # Return the probabilities and mapped words, sorted with the most prob. word first.
         return sorted(word_log_probabilities, reverse=True)
 
-    def factor_all_indices(self, num_digits_per_word, base):
+    def prepare_indices_for_test(self, num_digits_per_word, base, search_space_size):
         # This function will be called during test time on demand. This is a separate function
         # because we don't want to do this during training, so that we can avoid pickling the
-        # factored indices.
+        # factored indices and making search space size decision during training.
+        # Sort the vocab based on the frequencies of words in the data
+        frequency_sorted_vocab = sorted(self.word_frequencies.items(), 
+            key=lambda a: a[1], reverse=True)
+        self.frequent_words = set([x[0] for x in frequency_sorted_vocab][:search_space_size])
         self.word_factored_indices = []
         # Iterate over all possible combinations of indices. i.e if base is 2, and
         # number of digits 3, (0,0,0), (0,0,1), (0,1,0), (0, 1, 1), ...
