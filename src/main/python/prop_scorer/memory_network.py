@@ -1,3 +1,4 @@
+import sys
 from collections import defaultdict
 
 from keras import backend as K
@@ -7,12 +8,10 @@ from keras.models import Model
 
 from index_data import DataIndexer
 from knowledge_backed_scorers import KnowledgeBackedDense
+from nn_solver import NNSolver
 
-class MemoryNetworkSolver(object):
-    def __init__(self):
-        self.data_indexer = DataIndexer()
-
-    def index_inputs(self, inputs, for_train=True, max_length=None):
+class MemoryNetworkSolver(NNSolver):
+    def index_inputs(self, inputs, for_train=True, max_length=None, one_per_line=True):
         '''
         inputs: list((id, line)): List of index, input tuples.
             id is a identifier for each input to help link input sentences
@@ -24,8 +23,19 @@ class MemoryNetworkSolver(object):
         max_length: If not None, the inputs greater than this length will be 
             ignored. To keep the inputs aligned with ids, this will not be passed
             to DataIndexer's process_data, but instead used to postprocess the indices
+        one_per_line (bool): If set, this means there is only one data element per line.
+            If not, it is assumed that there are multiple tab separated elements, all
+            corresponding to the same id.
         '''
-        input_ids, input_lines = zip(*inputs)
+        if one_per_line:
+            input_ids, input_lines = zip(*inputs)
+        else:
+            input_ids = []
+            input_lines = []
+            for input_id, input_line in inputs:
+                for input_element in input_line.split("\t"):
+                    input_ids.append(input_id)
+                    input_lines.append(input_element)
         indexed_input_lines = self.data_indexer.process_data(input_lines, 
                 separate_propositions=False, for_train=for_train)
         assert len(input_ids) == len(indexed_input_lines)
@@ -84,7 +94,7 @@ class MemoryNetworkSolver(object):
         # scorer
         # At each step in the following loop, we take the proposition encoding,
         # or the output of the previous memory layer, merge it with the knowledge
-        # encoding and pass it to the next mem layer (KnowledgeBackedDense).
+        # encoding and pass it to the current memory layer (KnowledgeBackedDense).
         next_memory_layer_input = encoded_proposition
         for i in range(num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
@@ -111,8 +121,42 @@ class MemoryNetworkSolver(object):
         softmax = Dense(output_dim=2, activation='softmax', name='softmax')
         softmax_output = softmax(memory_layer_output)
 
+        ## Step 6: Define the model, compile and train it.
         memory_network = Model(input=[proposition_input, knowledge_input], 
                 output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
+        print >>sys.stderr, memory_network.summary()
         memory_network.fit([proposition_indices, knowledge_indices], labels)
+        self.model = memory_network
+
+    def prepare_training_data(self, positive_proposition_lines, positive_knowledge_lines, 
+            negative_proposition_lines, negative_knowledge_lines, max_length=None):
+        positive_proposition_tuples = [x.split("\t") for x in positive_proposition_lines]
+        assert all([len(proposition_tuple) == 2 for proposition_tuple in 
+            positive_proposition_tuples]), "Malformed positive proposition file"
+        negative_proposition_tuples = [x.split("\t") for x in negative_proposition_lines]
+        assert all([len(proposition_tuple) == 2 for proposition_tuple in 
+            negative_proposition_tuples]), "Malformed negative proposition file"
+        positive_knowledge_tuples = []
+        for line in positive_knowledge_lines:
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+            positive_knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
+        negative_knowledge_tuples = []
+        for line in negative_knowledge_lines:
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+            negative_knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
+        positive_proposition_indices = self.index_inputs(positive_proposition_tuples,
+               for_train=True)
+        negative_proposition_indices = self.index_inputs(negative_proposition_tuples,
+               for_train=True)
+        positive_knowledge_indices = self.index_inputs(positive_proposition_tuples,
+               for_train=True, one_per_line=False)
+        negative_knowledge_indices = self.index_inputs(negative_proposition_tuples,
+               for_train=True, one_per_line=False)
         
+
+    def prepare_test_data(self, data_lines, max_length=None):
