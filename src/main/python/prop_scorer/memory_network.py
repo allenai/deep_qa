@@ -1,6 +1,8 @@
 from collections import defaultdict
 
-from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense
+from keras import backend as K
+from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense, Dropout, merge
+from keras.regularizers import l2
 from keras.models import Model
 
 from index_data import DataIndexer
@@ -55,7 +57,7 @@ class MemoryNetworkSolver(object):
         knowledge_input = Input(shape=(knowledge_indices.shape[1:]), dtype='int32')
 
         ## Step 2: Embed the two inputs using the same embedding matrix and apply dropout
-        embedding = Embedding(input_shape=vocab_size, output_dim=embedding_size, 
+        embedding = Embedding(input_dim=vocab_size, output_dim=embedding_size, 
                 mask_zero=True, name='embedding')
         # We need a timedistributed variant of the embedding (with same weights) to pass
         # the knowledge tensor in, and get a 4D tensor out.
@@ -90,9 +92,14 @@ class MemoryNetworkSolver(object):
             # (samples, word_dim) + (samples, knowledge_len, word_dim) 
             #       -> (samples, 1 + knowledge_len, word_dim)
             # Since this is an unconventional merge, define a customized lambda merge.
+            # Keras cannot infer the shape of the output of a lambda function, so make
+            # that explicit.
+            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], 
+                        dim=1), layer_outs[1]], axis=1)
+            merged_shape = lambda layer_out_shapes: (layer_out_shapes[1][0],
+                    layer_out_shapes[1][1] + 1, layer_out_shapes[1][2])
             merged_encoded_rep = merge([next_memory_layer_input, encoded_knowledge], 
-                    mode=lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], 
-                        dim=1), layer_outs[1]], axis=1))
+                    mode=merge_mode, output_shape=merged_shape)
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
             knowledge_backed_projector = KnowledgeBackedDense(output_dim=embedding_size,
@@ -106,4 +113,6 @@ class MemoryNetworkSolver(object):
 
         memory_network = Model(input=[proposition_input, knowledge_input], 
                 output=softmax_output)
+        memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
+        memory_network.fit([proposition_indices, knowledge_indices], labels)
         
