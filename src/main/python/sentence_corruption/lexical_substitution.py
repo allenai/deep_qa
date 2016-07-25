@@ -101,10 +101,11 @@ class WordReplacer(object):
             indices of words in sentences that need to be substituted
         train_sequence_length (int): Length of sequences the model was trained on
         '''
-        max_train_length = train_sequence_length+1 # +1 because the last word would be stripped
+        max_train_length = train_sequence_length + 1  # + 1 because the last word would be stripped
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences,
                 max_length=max_train_length, tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
+        # TODO(matt): this does not handle OOV words
         all_prediction_factors = self.model.predict(indexed_sentences)
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths,
@@ -113,7 +114,7 @@ class WordReplacer(object):
             # data indexer will truncate it anyway. So, let's not make expect the predictions
             # to be longer than that.
             sentence_length = min(sentence_length, max_train_length)
-            prediction_length = sentence_length - 1 # Ignore the starting <s> symbol
+            prediction_length = sentence_length - 1  # Ignore the starting <s> symbol
             # Each prediction factor is of the shape
             # (num_sentences, padding_length+num_words, factor_base)
             # We need to take the probability of word given by "location" in sentence
@@ -190,9 +191,9 @@ if __name__=="__main__":
             locations.append(location)
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
-        print >>sys.stderr, "Limiting search space size to %d" % args.search_space_size
+        print("Limiting search space size to %d" % args.search_space_size, file=sys.stderr)
         substitutes = word_replacer.get_substitutes(test_sentences, locations,
-                train_sequence_length, tokenize=tokenize, 
+                train_sequence_length, tokenize=tokenize,
                 search_space_size=args.search_space_size)
         outfile = codecs.open(args.output_file, "w", "utf-8")
         for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words,

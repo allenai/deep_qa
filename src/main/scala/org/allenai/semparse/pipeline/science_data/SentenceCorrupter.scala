@@ -49,7 +49,7 @@ class SentenceCorruptorTrainer(
   val positiveDataFile = sentenceSelector.outputFile
   val modelPrefix = positiveDataFile.dropRight(4) + "_corruption_model"
 
-  override val binary = "python3"
+  override val binary = "python"
   override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
   override val arguments = Seq(
     "--train_file", positiveDataFile,
@@ -86,12 +86,13 @@ class SentenceCorruptor(
   val useLstm = JsonHelper.extractWithDefault(params, "use lstm", false)
   val useLstmArg = if (useLstm) Seq("--use_lstm") else Seq()
   val trainingEpochs = JsonHelper.extractWithDefault(params, "max training epochs", 20)
+  val maxSentencesArgs = maxSentences.map(max => Seq("--max_corrupted_instances", max.toString)).toSeq.flatten
 
   val sentenceSelector = new SentenceSelectorStep(params \ "positive data", fileUtil)
   val positiveDataFile = sentenceSelector.outputFile
   override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
-  override val binary = "python3"
+  override val binary = "python"
   override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
   override val arguments = Seq(
     "--test_file", positiveDataFile,
@@ -99,7 +100,7 @@ class SentenceCorruptor(
     "--word_dim", trainer.wordDimensionality.toString,
     "--factor_base", trainer.factorBase.toString,
     "--model_serialization_prefix", trainer.modelPrefix
-  ) ++ tokenizeInputArg ++ useLstmArg
+  ) ++ tokenizeInputArg ++ useLstmArg  // TODO(matt): ++ maxSentencesArgs
 
   override val inputs: Set[(String, Option[Step])] = Set(
     (positiveDataFile, Some(sentenceSelector))

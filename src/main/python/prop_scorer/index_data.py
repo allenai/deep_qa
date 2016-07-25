@@ -5,8 +5,8 @@ from constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 
 class DataIndexer(object):
     def __init__(self):
-        self.word_index = {"PADDING":0, "UNK":1}
-        self.reverse_word_index = {0:"PADDING", 1:"UNK"}
+        self.word_index = {"PADDING":0, "UNK":1, ",":2, ".":3, "(":4, ")":5}
+        self.reverse_word_index = {0:"PADDING", 1:"UNK", 2:",", 3:".", 4:"(", 5:")"}
         self.singletons = set([])
         self.non_singletons = set([])
         # differentiate between predicate and argument indices for type specific corruption
@@ -25,9 +25,13 @@ class DataIndexer(object):
             atleast twice. Singletons will always be treated as OOV.
         max_length: int. Ignore propositions greater than this length. 
             Applicable only during training.
+
+        This method does not keep track of which propositions came from which lines; if we separate
+        a line into multiple propositions, we just flatten the list.  If you need to know how many
+        propositions came from each line, change this method to return it (look in git history for
+        how).
         '''
         all_proposition_indices = []
-        num_propositions_in_lines = []
         all_proposition_words = []
         # We keep track of both predicate and argument words because some words
         # can occur in both sets
@@ -38,7 +42,6 @@ class DataIndexer(object):
                 line_propositions = line.split(";")
             else:
                 line_propositions = [line]
-            num_propositions_in_lines.append(len(line_propositions))
             for proposition in line_propositions:
                 words = word_tokenize(proposition.lower())
                 if for_train:
@@ -82,7 +85,7 @@ class DataIndexer(object):
 
         # Update the reverse index
         self.reverse_word_index = {index:word for (word, index) in self.word_index.items()}
-        return num_propositions_in_lines, all_proposition_indices
+        return all_proposition_indices
 
     def get_shift_reduce_sequences(self, all_indices):
         # This function splits sequences containing parantheses and commas into two sequences, one
