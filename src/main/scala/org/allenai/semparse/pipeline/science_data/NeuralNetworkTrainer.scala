@@ -30,6 +30,9 @@ abstract class NeuralNetworkTrainer(
   // parameters go in subclasses.
   val baseParams = Seq("model type", "model name", "validation questions", "number of epochs",
     "max training instances")
+
+  // The way these parameters work assumes some commonality between the underlying python scripts
+  // that train models.  Currently there's only one script, so that's ok...
   val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
   val maxTrainingInstances = JsonHelper.extractAsOption[Int](params, "max training instances")
   val maxTrainingInstancesArgs =
@@ -43,9 +46,15 @@ abstract class NeuralNetworkTrainer(
   val validationInput = (validationQuestionsFile, Some(questionInterpreter))
 
   override val binary = "python"
+
+  // These three outputs are written by the python code.  The config.json file is a specification
+  // of the model layers, so that keras can reconstruct the saved model object / computational
+  // graph.  The weights.h5 file is a specification of all of the neural network weights for the
+  // model specified by the config.json file.  The data_indexer.pkl file is a pickled DataIndexer,
+  // which maps words to indices.
   val modelOutputs = Seq(
     modelPrefix + "_weights.h5",
-    modelPrefix + "_di.pkl",
+    modelPrefix + "_data_indexer.pkl",
     modelPrefix + "_config.json"
   )
 
@@ -61,6 +70,14 @@ object NeuralNetworkTrainer {
   }
 }
 
+/**
+ * This NeuralNetworkTrainer is a simple LSTM.  We take good and bad sentences as input, and
+ * nothing else.  The LSTM is trained to map good sentences to "true" and bad sentences to
+ * "false".  This is mostly here as a baseline, as we expect to need additional input to actual do
+ * well at answering science questions.  At best, this kind of a model will look for word
+ * correlations to decide whether a sentence is true or false, similar to what the Salience solver
+ * does.
+ */
 class NoBackgroundKnowledgeNNSentenceTrainer(
   params: JValue,
   fileUtil: FileUtil
