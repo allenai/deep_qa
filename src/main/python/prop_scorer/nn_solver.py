@@ -33,13 +33,30 @@ class NNSolver(object):
         model_config_file.close()
         data_indexer_file.close()
 
-    def load_model(self, model_name_prefix, epoch):
+    def save_best_model(self, model_name_prefix):
+        '''Copies the weights from the best epoch to a final weight file
+
+        The point of this is so that the input/output spec of the NNSolver is simpler.  Someone
+        calling this as a subroutine doesn't have to worry about which epoch ended up being the
+        best, they can just use the final weight file.  You can still use models from other epochs
+        if you really want to.
+        '''
+        from shutil import copyfile
+        epoch_weight_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, self.best_epoch)
+        final_weight_file = "%s_weights.h5" % model_name_prefix
+        copyfile(epoch_weight_file, final_weight_file)
+
+    def load_model(self, model_name_prefix, epoch=None):
         # Loading serialized model
-        model_config_file = open("%s_config.json" % (model_name_prefix))
+        model_config_file = open("%s_config.json" % model_name_prefix)
         model_config_json = model_config_file.read()
         self.model = model_from_json(model_config_json,
                 custom_objects={"TreeCompositionLSTM": TreeCompositionLSTM})
-        self.model.load_weights("%s_weights_epoch=%d.h5" % (model_name_prefix, epoch))
+        if epoch is not None:
+            model_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, self.best_epoch)
+        else:
+            model_file = "%s_weights.h5" % model_name_prefix
+        self.model.load_weights(model_file)
         data_indexer_file = open("%s_data_indexer.pkl" % model_name_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
@@ -190,6 +207,7 @@ class NNSolver(object):
         accuracy = float(num_correct)/num_questions
         return accuracy
 
+
 class LSTMSolver(NNSolver):
     def __init__(self):
         super(LSTMSolver, self).__init__()
@@ -244,7 +262,11 @@ class LSTMSolver(NNSolver):
         self.model = model
 
         ## Step 6: Train the full model jointly
+        # TODO(matt): it would probably be a good idea to pull out the parts of this that are
+        # common to both LSTMSolver and TreeLSTMSolver into another method.  That way you don't
+        # have to duplicate all of the validation and early stopping stuff.
         best_accuracy = 0.0
+        self.best_epoch = 0
         for epoch_id in range(num_epochs):
             print("Epoch %d" % epoch_id, file=sys.stderr)
             model.fit(train_input, train_labels, nb_epoch=1)
@@ -255,7 +277,9 @@ class LSTMSolver(NNSolver):
                 break
             else:
                 best_accuracy = accuracy
+                self.best_epoch = epoch_id
                 self.save_model(model_serialization_prefix, epoch_id)
+
 
 class TreeLSTMSolver(NNSolver):
     def __init__(self):
@@ -323,6 +347,7 @@ class TreeLSTMSolver(NNSolver):
 
         ## Step 7: Train the full model jointly
         best_accuracy = 0.0
+        self.best_epoch = 0
         for epoch_id in range(num_epochs):
             print("Epoch %d" % epoch_id, file=sys.stderr)
             model.fit([transitions, elements], labels, nb_epoch=1)
@@ -333,7 +358,9 @@ class TreeLSTMSolver(NNSolver):
                 break
             else:
                 best_accuracy = accuracy
+                self.best_epoch = epoch_id
                 self.save_model(model_serialization_prefix, epoch_id)
+
 
 if __name__=="__main__":
     argparser = argparse.ArgumentParser(description="Simple proposition scorer")
@@ -349,8 +376,8 @@ if __name__=="__main__":
             help="Upper limit on the size of training data")
     argparser.add_argument('--num_epochs', type=int, default=20,
             help="Number of train epochs (20 by default)")
-    argparser.add_argument('--use_model_from_epoch', type=int, default=0,
-            help="Use the model from a particular epoch (0 by default)")
+    argparser.add_argument('--use_model_from_epoch', type=int
+            help="Use the model from a particular epoch (use the best saved model if empty)")
     argparser.add_argument("--model_serialization_prefix",
                            help="Prefix for saving and loading model files")
     args = argparser.parse_args()
@@ -359,9 +386,7 @@ if __name__=="__main__":
     if not args.positive_train_file:
         # Training file is not given. There must be a serialized model.
         print("Loading scoring model from disk", file=sys.stderr)
-        model_type = "treelstm" if args.use_tree_lstm else "lstm"
-        model_name_prefix = "%s_%s" % (args.model_serialization_prefix, model_type)
-        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch)
+        nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch)
         # input shape of scoring model is (samples, max_length)
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
@@ -392,7 +417,7 @@ if __name__=="__main__":
         print("Training model", file=sys.stderr)
         nn_solver.train(inputs, labels, validation_input, validation_labels,
                         args.model_serialization_prefix, num_epochs=args.num_epochs)
-        nn_solver.save_model(args.model_serialization_prefix)
+        nn_solver.save_best_model(args.model_serialization_prefix)
 
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
