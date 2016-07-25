@@ -1,4 +1,6 @@
 import sys
+import argparse
+import codecs
 from collections import defaultdict
 import random
 import numpy
@@ -56,23 +58,26 @@ class MemoryNetworkSolver(NNSolver):
         #return max_length, mapped_indices
         return mapped_indices
 
-    def train(self, proposition_indices, knowledge_indices, labels, embedding_size=50,
-            num_memory_layers=1, num_epochs=20, vocab_size=None):
+    def train(self, proposition_inputs, knowledge_inputs, labels, validation_input,
+            validation_labels, embedding_size=50, num_memory_layers=1, num_epochs=20,
+            vocab_size=None):
         '''
         proposition_indices: numpy_array(samples, num_words; int32): Indices of words
             in labeled propositions
         knowledge_indices: numpy_array(samples, knowledge_len, num_words; int32): Indices
             of words in background facts that correspond to the propositions.
         labels: numpy_array(samples, 2): One-hot vectors indicating true/false
+        validation_input: List containing processed proposition and knowledge inputs
+            of validation data used for early stopping
+        validation_labels: Similar to training labels, but for validation.
         num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
         '''
-        # TODO: Also do validation, and use it for early stopping
         if not vocab_size:
             vocab_size = self.data_indexer.get_vocab_size()
 
         ## Step 1: Define the two inputs (propositions and knowledge)
-        proposition_input = Input(shape=(proposition_indices.shape[1:]), dtype='int32')
-        knowledge_input = Input(shape=(knowledge_indices.shape[1:]), dtype='int32')
+        proposition_input = Input(shape=(proposition_inputs.shape[1:]), dtype='int32')
+        knowledge_input = Input(shape=(knowledge_inputs.shape[1:]), dtype='int32')
 
         ## Step 2: Embed the two inputs using the same embedding matrix and apply dropout
         embedding = Embedding(input_dim=vocab_size, output_dim=embedding_size, 
@@ -134,30 +139,39 @@ class MemoryNetworkSolver(NNSolver):
                 output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print >>sys.stderr, memory_network.summary()
-        memory_network.fit([proposition_indices, knowledge_indices], labels)
         self.model = memory_network
+        best_accuracy = 0.0
+        for epoch_id in range(num_epochs):
+            # History callback contains the losses of all training samples
+            print >>sys.stderr, "Epoch %d"%epoch_id
+            history_callback = memory_network.fit([proposition_inputs, knowledge_inputs],
+                    labels, nb_epoch=1)
+            accuracy = self.evaluate(validation_labels, validation_input)
+            print >>sys.stderr, "Validation accuracy: %.4f"%accuracy
+            if accuracy < best_accuracy:
+                print >>sys.stderr, "Stopping training"
+                break
+            else:
+                best_accuracy = accuracy
+                self.save_model("memory_network_lstm", epoch_id)
 
-    def prepare_training_data(self, positive_proposition_lines, positive_knowledge_lines, 
-            negative_proposition_lines, negative_knowledge_lines, max_length=None):
-        positive_proposition_tuples = [x.split("\t") for x in positive_proposition_lines]
+    def prepare_data(self, proposition_lines, knowledge_lines, for_train=True):
+        # Common data preparation function for both train and test data. 
+        proposition_tuples = [x.split("\t") for x in proposition_lines]
         assert all([len(proposition_tuple) == 2 for proposition_tuple in 
-            positive_proposition_tuples]), "Malformed positive proposition file"
-        negative_proposition_tuples = [x.split("\t") for x in negative_proposition_lines]
-        assert all([len(proposition_tuple) == 2 for proposition_tuple in 
-            negative_proposition_tuples]), "Malformed negative proposition file"
+            proposition_tuples]), "Malformed proposition input"
         # Keep track of maximum sentence length and number of sentences for padding
         # There are two kinds of knowledge padding coming up:
         # length padding: to make all background sentences the same length, done using 
-        #   data indexer's pad_indices function
+        #   data indexer's pad_indices function in functions specific for train and test.
         # num padding: to make the number of background sentences the same for all 
         #   propositions, done by adding required number of sentences with just padding
         #   in this function itself.
-        max_knowledge_length = 0 # for length padding
         max_num_knowledge = 0 # for num padding
         # Separate all background knowledge corresponging to a sentence into multiple 
         # elements in the list having the same id.
-        positive_knowledge_tuples = []
-        for line in positive_knowledge_lines:
+        knowledge_tuples = []
+        for line in knowledge_lines:
             parts = line.split("\t")
             # First part is the sentence index. Ignore it.
             num_knowledge = len(parts) - 1
@@ -166,76 +180,196 @@ class MemoryNetworkSolver(NNSolver):
                 continue
             if num_knowledge > max_num_knowledge:
                 max_num_knowledge = num_knowledge
-            positive_knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
-        negative_knowledge_tuples = []
-        for line in negative_knowledge_lines:
-            parts = line.split("\t")
-            num_knowledge = len(parts) - 1
-            if num_knowledge < 1:
-                continue
-            if num_knowledge > max_num_knowledge:
-                max_num_knowledge = num_knowledge
-            negative_knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
-
-        positive_proposition_indices = self.index_inputs(positive_proposition_tuples,
-                for_train=True)
-        negative_proposition_indices = self.index_inputs(negative_proposition_tuples,
-                for_train=True)
-        positive_knowledge_indices = self.index_inputs(positive_knowledge_tuples,
-                for_train=True, one_per_line=False)
-        negative_knowledge_indices = self.index_inputs(negative_knowledge_tuples,
-                for_train=True, one_per_line=False)
-        if not max_length:
-            # Find the max length of each knowledge sentence. We need this for length padding
-            for word_indices in positive_knowledge_indices.values() + negative_knowledge_indices.values():
-                knowledge_length = max([len(indices) for indices in word_indices])
-                if knowledge_length > max_knowledge_length:
-                    max_knowledge_length = knowledge_length
-            # max_length is used for padding propositions. Make sure they are the same
-            # length as knowledge sentences. This is because the same LSTM is used for
-            # encoding both, and Keras expects the length of all sequences processed by
-            # a Recurrent layer to be the same.
-            max_length = max_knowledge_length
-        else:
-            max_knowledge_length = max_length
+            knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
+        proposition_indices = self.index_inputs(proposition_tuples, for_train=for_train)
+        knowledge_indices = self.index_inputs(knowledge_tuples, for_train=for_train,
+                one_per_line=False)
         proposition_inputs = []
         knowledge_inputs = []
-        labels = []
-        def _pad_knowledge(proposition_indices, knowledge_indices, label_one_hot):
-            # label_one_hot: [0, 1] for positive, [1, 0] for negative.
-            for proposition_id, proposition_indices in proposition_indices.items():
-                # Proposition indices is a list of list of indices, but since there is only
-                # one proposition for each index, just take the first (and only) list from 
-                # the outer list.
-                proposition_inputs.append(proposition_indices[0])
-                knowledge_input = knowledge_indices[proposition_id]
-                num_knowledge = len(knowledge_input)
-                if num_knowledge < max_num_knowledge:
-                    # Num padding happening here
-                    for _ in range(max_num_knowledge - num_knowledge):
-                        knowledge_input = [[0]] + knowledge_input 
-                # Length padding happening here:
-                padded_knowledge_input = self.data_indexer.pad_indices(knowledge_input,
-                        max_length = max_knowledge_length)
-                knowledge_inputs.append(padded_knowledge_input)
-                labels.append(label_one_hot)
-        # Now use the method above to pad both positive and negative knowledge indices
-        # add them to the same knowledge_inputs array.
-        _pad_knowledge(positive_proposition_indices, positive_knowledge_indices, [0,1])
-        _pad_knowledge(negative_proposition_indices, negative_knowledge_indices, [1,0])
-        # Shuffle the two inputs, and labels array in unison
+        for proposition_id, proposition_indices in proposition_indices.items():
+            # Proposition indices is a list of list of indices, but since there is only
+            # one proposition for each index, just take the first (and only) list from 
+            # the outer list.
+            proposition_inputs.append(proposition_indices[0])
+            knowledge_input = knowledge_indices[proposition_id]
+            num_knowledge = len(knowledge_input)
+            if num_knowledge < max_num_knowledge:
+                # Num padding happening here
+                for _ in range(max_num_knowledge - num_knowledge):
+                    knowledge_input = [[0]] + knowledge_input
+            knowledge_inputs.append(knowledge_input)
+            # knowledge and proposition inputs are not length padded yet.
+        return proposition_inputs, knowledge_inputs
+
+    def prepare_training_data(self, positive_proposition_lines, positive_knowledge_lines, 
+            negative_proposition_lines, negative_knowledge_lines, max_length=None):
+        positive_proposition_inputs, positive_knowledge_inputs = self.prepare_data(
+                positive_proposition_lines, positive_knowledge_lines, for_train=True)
+        negative_proposition_inputs, negative_knowledge_inputs = self.prepare_data(
+                negative_proposition_lines, negative_knowledge_lines, for_train=True)
+        proposition_inputs = positive_proposition_inputs + negative_proposition_inputs
+        knowledge_inputs = positive_knowledge_inputs + negative_knowledge_inputs
+        num_positive_inputs = len(positive_proposition_inputs)
+        num_negative_inputs = len(negative_proposition_inputs)
+        # We're almost done. We just need to pad the inputs to be able to make them
+        # numpy arrays.
+        if not max_length:
+            # Determine maximum sentence length in propositions and knowledge. We need
+            # this to make sure all are length-padded to the same size. First find out max
+            # proposition length, and then do the same for knowledge.
+            # proposition_inputs are of shape (nb_samples, num_words)
+            max_proposition_length = max([len(proposition) for proposition in 
+                proposition_inputs])
+            max_knowledge_length = 0
+            # knowledge_inputs are of shape (nb_samples, num_sentences, num_words)
+            for knowledge_index_list in knowledge_inputs:
+                max_knowledge_length = max(max_knowledge_length, 
+                        max([len(indices) for indices in knowledge_index_list]))
+            max_length = max(max_proposition_length, max_knowledge_length)
+        # Length padding proposition indices:
+        proposition_inputs = self.data_indexer.pad_indices(proposition_inputs, max_length)
+        # Length padding knowledge indices
+        knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length) 
+                for knowledge_input in knowledge_inputs]
+        # one hot labels: [1, 0] for positive, [0, 1] for negative
+        labels = [[1,0] for _ in range(num_positive_inputs)] + \
+                [[0,1] for _ in range(num_negative_inputs)]
+        # Shuffle propositions, knowledge nad labels in unison.
         all_inputs = zip(proposition_inputs, knowledge_inputs, labels)
         random.shuffle(all_inputs)
         proposition_inputs, knowledge_inputs, labels = zip(*all_inputs)
-        # Length padding proposition_inputs:
-        padded_proposition_inputs = self.data_indexer.pad_indices(proposition_inputs,
-                max_length=max_length)
-        proposition_inputs = numpy.asarray(padded_proposition_inputs, dtype='int32')
-        knowledge_inputs = numpy.asarray(knowledge_inputs, dtype='int32')
+        # Make numpy arrays and return these.
+        proposition_inputs = numpy.asarray(proposition_inputs)
+        knowledge_inputs = numpy.asarray(knowledge_inputs)
         labels = numpy.asarray(labels)
-        return proposition_inputs, knowledge_inputs, labels
+        # Keras expects inputs as list. So returning it in a format where we can
+        # directly use the inputs.
+        return labels, [proposition_inputs, knowledge_inputs]
 
-    def prepare_test_data(self, data_lines, max_length=None):
-        # Take general parts from prepare_training data out, make is a separate function
-        # and reuse it here.
-        raise NotImplementedError
+    def prepare_test_data(self, labeled_proposition_lines, knowledge_lines, max_length):
+        '''
+        proposition_lines: list(str): List of tab-separated strings, with first column 
+            being sentence index (for knowledge mapping), second column indicating
+            true/false and the third column the sentence
+        knowledge_lines: list(str): List of tab-separated strings, first column sentence
+            index (for knowledge mapping), and second column the sentence
+        '''
+        proposition_line_parts = [line.split("\t") for line in labeled_proposition_lines]
+        # Make sure that every line has three parts
+        assert all([len(parts) == 3 for parts in proposition_line_parts])
+        test_labels = [int(parts[1]) for parts in proposition_line_parts]
+        # Putting this in the two column format that process_data expects.
+        test_proposition_lines = ["\t".join([parts[0], parts[2]]) for parts in
+                proposition_line_parts]
+        proposition_inputs, knowledge_inputs = self.prepare_data(test_proposition_lines,
+                knowledge_lines, for_train=False)
+        # Length padding proposition indices:
+        proposition_inputs = self.data_indexer.pad_indices(proposition_inputs, max_length)
+        # Length padding knowledge indices
+        knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length) 
+                for knowledge_input in knowledge_inputs]
+        # We want to return the indices of correct answers since that is what the evaluate 
+        # function in nn_solver expects.
+        num_questions = len(test_labels)/4
+        test_answers = numpy.asarray(test_labels).reshape(num_questions, 4)
+        assert numpy.all(numpy.asarray([numpy.count_nonzero(ta) for ta in 
+            test_answers]) == 1), "Some questions do not have exactly one answer"
+        test_labels = numpy.argmax(test_answers, axis=1)
+        proposition_inputs = numpy.asarray(proposition_inputs, dtype='int32')
+        knowledge_inputs = numpy.asarray(knowledge_inputs, dtype='int32')
+        # Keras expects inputs as list. So returning it in a format where we can
+        # directly use the inputs. For example, in the evaluate function in nn_solver.
+        return test_labels, [proposition_inputs, knowledge_inputs]
+        
+if __name__=="__main__":
+    argparser = argparse.ArgumentParser(description="Memory network solver")
+    argparser.add_argument('--positive_train_input', type=str)
+    argparser.add_argument('--positive_train_background', type=str)
+    argparser.add_argument('--negative_train_input', type=str)
+    argparser.add_argument('--negative_train_background', type=str)
+    argparser.add_argument('--validation_input', type=str)
+    argparser.add_argument('--validation_background', type=str)
+    argparser.add_argument('--test_input', type=str)
+    argparser.add_argument('--test_background', type=str)
+    argparser.add_argument('--num_memory_layers', type=int, 
+            help="Number of memory layers in the network. (default 1)", default=1)
+    argparser.add_argument('--length_upper_limit', type=int, 
+            help="Upper limit on length of training data. Ignored during testing.")
+    argparser.add_argument('--max_train_size', type=int, 
+            help="Upper limit on the size of training data")
+    argparser.add_argument('--num_epochs', type=int, default=20,
+            help="Number of train epochs (20 by default)")
+    argparser.add_argument('--use_model_from_epoch', type=int, default=0, 
+            help="Use the model from a particular epoch (0 by default)")
+    args = argparser.parse_args()
+    nn_solver = MemoryNetworkSolver()
+
+    if not args.positive_train_input:
+        # Training file is not given. There must be a serialized model.
+        print >>sys.stderr, "Loading scoring model from disk"
+        model_name_prefix = "memory_network_lstm"
+        custom_objects = {"KnowledgeBackedDense": KnowledgeBackedDense}
+        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, 
+                custom_objects=custom_objects)
+    else:
+        assert args.positive_train_background is not None, "Positive background data required for training"
+        assert args.negative_train_input is not None, "Negative data required for training"
+        assert args.negative_train_background is not None, "Negative background data required for training"
+        assert args.validation_input is not None, "Validation data is needed for training"
+        assert args.validation_background is not None, "Validation background is needed for training"
+        print >>sys.stderr, "Reading training data"
+        positive_proposition_lines = [x.strip() for x in codecs.open(
+            args.positive_train_input, "r", "utf-8").readlines()]
+        negative_proposition_lines = [x.strip() for x in codecs.open(
+            args.negative_train_input, "r", "utf-8").readlines()]
+        positive_knowledge_lines = [x.strip() for x in codecs.open(
+            args.positive_train_background, "r", "utf-8").readlines()]
+        negative_knowledge_lines = [x.strip() for x in codecs.open(
+            args.negative_train_background, "r", "utf-8").readlines()]
+        train_labels, train_inputs = nn_solver.prepare_training_data(
+                positive_proposition_lines, positive_knowledge_lines,
+                negative_proposition_lines, negative_knowledge_lines,
+                max_length=args.length_upper_limit)
+        if args.max_train_size is not None:
+            print >>sys.stderr, "Limiting training size to %d"%(args.max_train_size)
+            train_inputs = [input_[:args.max_train_size] for input_ in train_inputs]
+            train_labels = train_labels[:args.max_train_size]
+        train_proposition_inputs, train_knowledge_inputs = train_inputs
+        # Record max_length to use it for processing validation/text data.
+        train_sequence_length = train_proposition_inputs.shape[1]
+        print >>sys.stderr, "Reading validation data"
+        validation_proposition_lines = [x.strip() for x in codecs.open(
+            args.validation_input,'r', 'utf-8').readlines()]
+        validation_knowledge_lines = [x.strip() for x in codecs.open(
+            args.validation_background,'r', 'utf-8').readlines()]
+        validation_labels, validation_input = nn_solver.prepare_test_data(
+                validation_proposition_lines, validation_knowledge_lines,
+                train_sequence_length)
+        print >>sys.stderr, "Training model"
+        nn_solver.train(train_proposition_inputs, train_knowledge_inputs, train_labels,
+                validation_input, validation_labels,
+                num_memory_layers=args.num_memory_layers, num_epochs=args.num_epochs)
+    
+    # We need this for making sure that test sequences are not longer than what the trained model
+    # expects.
+    max_length = nn_solver.model.get_input_shape_at(0)[0][1]
+
+    if args.test_input is not None:
+        assert args.test_background is not None, "Test background file not provided"
+        test_proposition_lines = [x.strip() for x in codecs.open(args.test_input,
+            'r', 'utf-8').readlines()]
+        test_knowledge_lines = [x.strip() for x in codecs.open(args.test_background,
+            'r', 'utf-8').readlines()]
+        test_labels, test_input = nn_solver.prepare_test_data(test_proposition_lines,
+                test_knowledge_lines, max_length)
+        print >>sys.stderr, "Scoring test data"
+        test_scores = nn_solver.score(test_input)
+        accuracy = nn_solver.evaluate(test_labels, test_input)
+        print >>sys.stderr, "Test accuracy: %.4f"%accuracy
+        assert len(test_scores) == len(test_proposition_lines)
+
+        outfile = codecs.open("out.txt", "w", "utf-8")
+        for score, line in zip(test_scores, test_proposition_lines):
+            print >>outfile, score, line
+        outfile.close()
+
