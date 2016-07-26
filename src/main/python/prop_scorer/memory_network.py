@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import argparse
 import codecs
@@ -21,15 +22,21 @@ class MemoryNetworkSolver(NNSolver):
             id is a identifier for each input to help link input sentences
             with corresponding knowledge
             line can either be a sentence or a logical form, part of
-            either the propositions or the background knowledge
+            either the propositions or the background knowledge.
         for_train: We want to update the word index only if we are processing
-            training data. This flag will be passed to DataIndexer's process_data
+            training data. This flag will be passed to DataIndexer's process_data.
         length_cutoff: If not None, the inputs greater than this length will be 
             ignored. To keep the inputs aligned with ids, this will not be passed
-            to DataIndexer's process_data, but instead used to postprocess the indices
+            to DataIndexer's process_data, but instead used to postprocess the indices.
         one_per_line (bool): If set, this means there is only one data element per line.
             If not, it is assumed that there are multiple tab separated elements, all
             corresponding to the same id.
+
+        returns: dict{id: list(indices)}: A mapping from id to a list of indices, each
+            of which is a list of indices of words in a sentence.
+            If the input corresponds to input sentences, each outer list contains only
+            one element. But if it is background information, the list will most likely
+            have multiple elements.
         '''
         if one_per_line:
             input_ids, input_lines = zip(*inputs)
@@ -40,31 +47,28 @@ class MemoryNetworkSolver(NNSolver):
                 for input_element in input_line.split("\t"):
                     input_ids.append(input_id)
                     input_lines.append(input_element)
-        # Data indexer also reurns number of propositions per line. Ignore it.
+        # TODO: process_data is going to change soon, and will no longer return
+        # the number of propositions. Change this then.
+        # Data indexer also returns number of propositions per line. Ignore it.
         _, indexed_input_lines = self.data_indexer.process_data(input_lines, 
                 separate_propositions=False, for_train=for_train)
-        assert len(input_ids) == len(indexed_input_lines)
         mapped_indices = defaultdict(list)
-        #max_length = 0
         for input_id, indexed_input_line in zip(input_ids, indexed_input_lines):
             input_length = len(indexed_input_line)
-            #if input_length > max_length:
-            #    max_length = input_length
             if length_cutoff is not None:
                 if input_length <= length_cutoff:
                     mapped_indices[input_id].append(indexed_input_line)
             else:
                 mapped_indices[input_id].append(indexed_input_line)
-        #return max_length, mapped_indices
         return mapped_indices
 
     def train(self, proposition_inputs, knowledge_inputs, labels, validation_input,
             validation_labels, embedding_size=50, num_memory_layers=1, num_epochs=20,
             vocab_size=None):
         '''
-        proposition_indices: numpy_array(samples, num_words; int32): Indices of words
+        proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
             in labeled propositions
-        knowledge_indices: numpy_array(samples, knowledge_len, num_words; int32): Indices
+        knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
             of words in background facts that correspond to the propositions.
         labels: numpy_array(samples, 2): One-hot vectors indicating true/false
         validation_input: List containing processed proposition and knowledge inputs
@@ -85,8 +89,8 @@ class MemoryNetworkSolver(NNSolver):
         # We need a timedistributed variant of the embedding (with same weights) to pass
         # the knowledge tensor in, and get a 4D tensor out.
         time_distributed_embedding = TimeDistributed(embedding)
-        proposition_embed = embedding(proposition_input) # (samples, num_words, word_dim)
-        knowledge_embed = time_distributed_embedding(knowledge_input) # (samples, knowledge_len, num_words, word_dim)
+        proposition_embed = embedding(proposition_input)  # (samples, num_words, word_dim)
+        knowledge_embed = time_distributed_embedding(knowledge_input)  # (samples, knowledge_len, num_words, word_dim)
         regularized_proposition_embed = Dropout(0.5)(proposition_embed)
         regularized_knowledge_embed = Dropout(0.5)(knowledge_embed)
 
@@ -100,8 +104,8 @@ class MemoryNetworkSolver(NNSolver):
         #                       (samples, knowledge_len, word_dim)
         # TimeDistributed generally loops over the second dimension.
         knowledge_encoder = TimeDistributed(proposition_encoder, name='knowledge_encoder')
-        encoded_proposition = proposition_encoder(regularized_proposition_embed) # (samples, word_dim)
-        encoded_knowledge = knowledge_encoder(regularized_knowledge_embed) # (samples, knowledge_len, word_dim)
+        encoded_proposition = proposition_encoder(regularized_proposition_embed)  # (samples, word_dim)
+        encoded_knowledge = knowledge_encoder(regularized_knowledge_embed)  # (samples, knowledge_len, word_dim)
 
         ## Step 4: Merge the two encoded representations and pass into the knowledge backed 
         # scorer
@@ -138,18 +142,17 @@ class MemoryNetworkSolver(NNSolver):
         memory_network = Model(input=[proposition_input, knowledge_input], 
                 output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
-        print >>sys.stderr, memory_network.summary()
+        print(memory_network.summary(), file=sys.stderr)
         self.model = memory_network
         best_accuracy = 0.0
         for epoch_id in range(num_epochs):
             # History callback contains the losses of all training samples
-            print >>sys.stderr, "Epoch %d"%epoch_id
-            history_callback = memory_network.fit([proposition_inputs, knowledge_inputs],
-                    labels, nb_epoch=1)
+            print("Epoch %d" % epoch_id, file=sys.stderr)
+            memory_network.fit([proposition_inputs, knowledge_inputs], labels, nb_epoch=1)
             accuracy = self.evaluate(validation_labels, validation_input)
-            print >>sys.stderr, "Validation accuracy: %.4f"%accuracy
+            print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
             if accuracy < best_accuracy:
-                print >>sys.stderr, "Stopping training"
+                print("Stopping training", file=sys.stderr)
                 break
             else:
                 best_accuracy = accuracy
@@ -167,8 +170,8 @@ class MemoryNetworkSolver(NNSolver):
         # num padding: to make the number of background sentences the same for all 
         #   propositions, done by adding required number of sentences with just padding
         #   in this function itself.
-        max_num_knowledge = 0 # for num padding
-        # Separate all background knowledge corresponging to a sentence into multiple 
+        max_num_knowledge = 0  # for num padding
+        # Separate all background knowledge corresponding to a sentence into multiple 
         # elements in the list having the same id.
         knowledge_tuples = []
         for line in knowledge_lines:
@@ -181,20 +184,21 @@ class MemoryNetworkSolver(NNSolver):
             if num_knowledge > max_num_knowledge:
                 max_num_knowledge = num_knowledge
             knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
-        proposition_indices = self.index_inputs(proposition_tuples, for_train=for_train)
-        knowledge_indices = self.index_inputs(knowledge_tuples, for_train=for_train,
+        mapped_proposition_indices = self.index_inputs(proposition_tuples, for_train=for_train)
+        mapped_knowledge_indices = self.index_inputs(knowledge_tuples, for_train=for_train,
                 one_per_line=False)
         proposition_inputs = []
         knowledge_inputs = []
-        for proposition_id, proposition_indices in proposition_indices.items():
+        for proposition_id, proposition_indices in mapped_proposition_indices.items():
             # Proposition indices is a list of list of indices, but since there is only
             # one proposition for each index, just take the first (and only) list from 
             # the outer list.
             proposition_inputs.append(proposition_indices[0])
-            knowledge_input = knowledge_indices[proposition_id]
+            knowledge_input = mapped_knowledge_indices[proposition_id]
             num_knowledge = len(knowledge_input)
             if num_knowledge < max_num_knowledge:
-                # Num padding happening here
+                # Num padding happening here. Since we will do length padding later,
+                # we will add padding of length 1 each.
                 for _ in range(max_num_knowledge - num_knowledge):
                     knowledge_input = [[0]] + knowledge_input
             knowledge_inputs.append(knowledge_input)
@@ -217,11 +221,11 @@ class MemoryNetworkSolver(NNSolver):
             # Determine maximum sentence length in propositions and knowledge. We need
             # this to make sure all are length-padded to the same size. First find out max
             # proposition length, and then do the same for knowledge.
-            # proposition_inputs are of shape (nb_samples, num_words)
+            # proposition_inputs are of shape (num_samples, num_words)
             max_proposition_length = max([len(proposition) for proposition in 
                 proposition_inputs])
             max_knowledge_length = 0
-            # knowledge_inputs are of shape (nb_samples, num_sentences, num_words)
+            # knowledge_inputs are of shape (num_samples, num_sentences, num_words)
             for knowledge_index_list in knowledge_inputs:
                 max_knowledge_length = max(max_knowledge_length, 
                         max([len(indices) for indices in knowledge_index_list]))
@@ -234,7 +238,7 @@ class MemoryNetworkSolver(NNSolver):
         # one hot labels: [1, 0] for positive, [0, 1] for negative
         labels = [[1,0] for _ in range(num_positive_inputs)] + \
                 [[0,1] for _ in range(num_negative_inputs)]
-        # Shuffle propositions, knowledge nad labels in unison.
+        # Shuffle propositions, knowledge and labels in unison.
         all_inputs = zip(proposition_inputs, knowledge_inputs, labels)
         random.shuffle(all_inputs)
         proposition_inputs, knowledge_inputs, labels = zip(*all_inputs)
@@ -301,12 +305,14 @@ if __name__=="__main__":
             help="Number of train epochs (20 by default)")
     argparser.add_argument('--use_model_from_epoch', type=int, default=0, 
             help="Use the model from a particular epoch (0 by default)")
+    argparser.add_argument('--output_file', type=str, default="out.txt", 
+            help="Name of the file to print the test output. out.txt by default")
     args = argparser.parse_args()
     nn_solver = MemoryNetworkSolver()
 
     if not args.positive_train_input:
         # Training file is not given. There must be a serialized model.
-        print >>sys.stderr, "Loading scoring model from disk"
+        print("Loading scoring model from disk", file=sys.stderr)
         model_name_prefix = "memory_network_lstm"
         custom_objects = {"KnowledgeBackedDense": KnowledgeBackedDense}
         nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, 
@@ -317,7 +323,7 @@ if __name__=="__main__":
         assert args.negative_train_background is not None, "Negative background data required for training"
         assert args.validation_input is not None, "Validation data is needed for training"
         assert args.validation_background is not None, "Validation background is needed for training"
-        print >>sys.stderr, "Reading training data"
+        print("Reading training data", file=sys.stderr)
         positive_proposition_lines = [x.strip() for x in codecs.open(
             args.positive_train_input, "r", "utf-8").readlines()]
         negative_proposition_lines = [x.strip() for x in codecs.open(
@@ -331,13 +337,13 @@ if __name__=="__main__":
                 negative_proposition_lines, negative_knowledge_lines,
                 max_length=args.length_upper_limit)
         if args.max_train_size is not None:
-            print >>sys.stderr, "Limiting training size to %d"%(args.max_train_size)
+            print("Limiting training size to %d" % (args.max_train_size), file=sys.stderr)
             train_inputs = [input_[:args.max_train_size] for input_ in train_inputs]
             train_labels = train_labels[:args.max_train_size]
         train_proposition_inputs, train_knowledge_inputs = train_inputs
-        # Record max_length to use it for processing validation/text data.
+        # Record max_length to use it for processing validation data.
         train_sequence_length = train_proposition_inputs.shape[1]
-        print >>sys.stderr, "Reading validation data"
+        print("Reading validation data", file=sys.stderr)
         validation_proposition_lines = [x.strip() for x in codecs.open(
             args.validation_input,'r', 'utf-8').readlines()]
         validation_knowledge_lines = [x.strip() for x in codecs.open(
@@ -345,7 +351,7 @@ if __name__=="__main__":
         validation_labels, validation_input = nn_solver.prepare_test_data(
                 validation_proposition_lines, validation_knowledge_lines,
                 train_sequence_length)
-        print >>sys.stderr, "Training model"
+        print("Training model", file=sys.stderr)
         nn_solver.train(train_proposition_inputs, train_knowledge_inputs, train_labels,
                 validation_input, validation_labels,
                 num_memory_layers=args.num_memory_layers, num_epochs=args.num_epochs)
@@ -362,14 +368,13 @@ if __name__=="__main__":
             'r', 'utf-8').readlines()]
         test_labels, test_input = nn_solver.prepare_test_data(test_proposition_lines,
                 test_knowledge_lines, max_length)
-        print >>sys.stderr, "Scoring test data"
+        print("Scoring test data", file=sys.stderr)
         test_scores = nn_solver.score(test_input)
         accuracy = nn_solver.evaluate(test_labels, test_input)
-        print >>sys.stderr, "Test accuracy: %.4f"%accuracy
-        assert len(test_scores) == len(test_proposition_lines)
+        print("Test accuracy: %.4f" % accuracy, file=sys.stderr)
 
-        outfile = codecs.open("out.txt", "w", "utf-8")
+        outfile = codecs.open(args.output_file, "w", "utf-8")
         for score, line in zip(test_scores, test_proposition_lines):
-            print >>outfile, score, line
+            print(score, line, file=outfile)
         outfile.close()
 
