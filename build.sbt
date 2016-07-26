@@ -21,10 +21,11 @@ javaOptions ++= Seq("-Xmx140g", "-Xms140g")
 libraryDependencies ++= Seq(
   //"org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",
   "org.apache.spark" %% "spark-core" % "1.6.0",
+  "org.elasticsearch" % "elasticsearch" % "2.3.4",
   "org.json4s" %% "json4s-native" % "3.2.11",
   "com.jayantkrish.jklol" % "jklol" % "1.1",
   "edu.cmu.ml.rtw" %%  "pra" % "3.4-SNAPSHOT",
-  "edu.cmu.ml.rtw" %%  "matt-util" % "2.3",
+  "edu.cmu.ml.rtw" %%  "matt-util" % "2.3.1",
   "edu.stanford.nlp" %  "stanford-corenlp" % "3.4.1",
   "edu.stanford.nlp" %  "stanford-corenlp" % "3.4.1" classifier "models",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",

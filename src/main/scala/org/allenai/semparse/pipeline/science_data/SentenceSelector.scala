@@ -23,20 +23,18 @@ import org.allenai.semparse.parse.Parser
  * parameter.
  */
 class SentenceSelectorStep(
-  params: JValue,
-  fileUtil: FileUtil
-) extends Step(Some(params), fileUtil) {
+  val params: JValue,
+  val fileUtil: FileUtil
+) extends Step(Some(params), fileUtil) with SentenceProducer {
   implicit val formats = DefaultFormats
   override val name = "Sentence Selector Step"
-  val validParams = Seq("sentence selector", "data directory", "data name", "create sentence indices")
-  println(params)
+  val validParams = baseParams ++ Seq("sentence selector", "data directory", "data name")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val dataName = (params \ "data name").extract[String]
   val dataDir = (params \ "data directory").extract[String]
-  val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
 
-  val outputFile = s"data/science/$dataName/training_data.tsv"
+  override val outputFile = s"data/science/$dataName/training_data.tsv"
   val numPartitions = 1
 
   override val inputs: Set[(String, Option[Step])] = Set((dataDir, None))
@@ -55,7 +53,8 @@ class SentenceSelectorStep(
 
     val sc = new SparkContext(conf)
 
-    processCorpus(sc, dataDir, numPartitions, indexSentences, sentenceSelector)
+    val sentences = processCorpus(sc, dataDir, numPartitions, sentenceSelector)
+    outputSentences(sentences)
     sc.stop()
   }
 
@@ -63,20 +62,14 @@ class SentenceSelectorStep(
     sc: SparkContext,
     dataDir: String,
     numPartitions: Int,
-    indexSentences: Boolean,
     sentenceSelector: SentenceSelector
-  ) {
+  ): Seq[String] = {
     val sentences = sc.textFile(dataDir, numPartitions).flatMap(line => {
       val tagsRemoved = line.replace("<SENT>", "").replace("</SENT>", "")
       val sentences = Parser.stanford.splitSentences(tagsRemoved)
       sentences.filter(sentenceSelector.shouldKeepSentence)
     }).distinct()
-    val outputSentences = sentences.collect()
-    val outputLines = outputSentences.zipWithIndex.map(sentenceWithIndex => {
-      val (sentence, index) = sentenceWithIndex
-      if (indexSentences) s"${index}\t${sentence}" else s"${sentence}"
-    })
-    fileUtil.writeLinesToFile(outputFile, outputLines)
+    sentences.collect()
   }
 }
 
@@ -106,8 +99,9 @@ class SentenceSelector(params: JValue) extends Serializable {
     for (pronoun <- pronouns) {
       if (lower.startsWith(pronoun + " ") ||
           lower.contains(" " + pronoun + " ") ||
-          lower.endsWith(" " + pronoun + "."))
-        return true
+          lower.endsWith(" " + pronoun + ".")) {
+            return true
+      }
     }
     return false
   }

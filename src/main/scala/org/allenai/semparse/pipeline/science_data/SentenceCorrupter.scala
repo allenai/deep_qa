@@ -21,8 +21,8 @@ import com.mattg.util.JsonHelper
  * are not guaranteed to match between input good statement and output bad statement.  If we
  * actually need that at some point, I'll add it.
  * TODO(matt): the python code doesn't actually match this input or output spec yet.  There are
- * no indices.  Also, this is the input/output spec for the combination of SentenceCorruptorTrainer
- * and SentenceCorrupter...
+ * no indices.  Also, this is the input/output spec for SentenceCorrupter, not
+ * SentenceCorruptorTrainer...
  */
 class SentenceCorruptorTrainer(
   params: JValue,
@@ -35,7 +35,6 @@ class SentenceCorruptorTrainer(
     "factor base", "tokenize input", "use lstm", "max training epochs")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
   val maxSentences = JsonHelper.extractAsOption[Int](params, "maximum training sentences")
   val maxSentencesArgs = maxSentences.map(max => Seq("--max_instances", max.toString)).toSeq.flatten
   val wordDimensionality = JsonHelper.extractWithDefault(params, "word dimensionality", 50)
@@ -50,7 +49,7 @@ class SentenceCorruptorTrainer(
   val positiveDataFile = sentenceSelector.outputFile
   val modelPrefix = positiveDataFile.dropRight(4) + "_corruption_model"
 
-  override val binary = "python"
+  override val binary = "python3"
   override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
   override val arguments = Seq(
     "--train_file", positiveDataFile,
@@ -71,16 +70,14 @@ class SentenceCorruptorTrainer(
 }
 
 class SentenceCorruptor(
-  params: JValue,
-  fileUtil: FileUtil
-) extends SubprocessStep(Some(params), fileUtil) {
+  val params: JValue,
+  val fileUtil: FileUtil
+) extends SubprocessStep(Some(params), fileUtil) with SentenceProducer {
   implicit val formats = DefaultFormats
   override val name = "Sentence Corruptor"
 
-  val validParams = Seq("positive data", "trainer", "create sentence indices")
+  val validParams = baseParams ++ Seq("positive data", "trainer")
   JsonHelper.ensureNoExtras(params, name, validParams)
-
-  val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
 
   val trainer = new SentenceCorruptorTrainer(params \ "trainer", fileUtil)
   val factorBase = JsonHelper.extractWithDefault(params, "factor base", 2)
@@ -92,9 +89,9 @@ class SentenceCorruptor(
 
   val sentenceSelector = new SentenceSelectorStep(params \ "positive data", fileUtil)
   val positiveDataFile = sentenceSelector.outputFile
-  val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
+  override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
-  override val binary = "python"
+  override val binary = "python3"
   override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
   override val arguments = Seq(
     "--test_file", positiveDataFile,

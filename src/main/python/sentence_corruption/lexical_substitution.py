@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import pickle
 import codecs
@@ -45,9 +46,9 @@ class WordReplacer(object):
         # step anyway, it is okay to project it down a bit now. So output_dim = word_dim/2
         # This minimizes the number of parameters significantly. All four Ws in LSTM
         # will now be half as big as they would be if output_dim = word_dim.
-        forward_rnn = rnn_model(output_dim=word_dim/2, return_sequences=True,
+        forward_rnn = rnn_model(output_dim=int(word_dim/2), return_sequences=True,
                 name='forward_rnn')
-        backward_rnn = rnn_model(output_dim=word_dim/2, go_backwards=True,
+        backward_rnn = rnn_model(output_dim=int(word_dim/2), go_backwards=True,
                 return_sequences=True, name='backward_rnn')
         forward_rnn_out = forward_rnn(regularized_embedded_input) # (batch_size, num_words, word_dim/2)
         backward_rnn_out = backward_rnn(regularized_embedded_input) # (batch_size, num_words, word_dim/2)
@@ -68,7 +69,7 @@ class WordReplacer(object):
         # [(batch_size, num_words, factor_base)] * num_factors
         model = Model(input=model_input, output=model_outputs)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
-        print >>sys.stderr, model.summary()
+        print(model.summary(), file=sys.stderr)
         early_stopping = EarlyStopping()
         model.fit(input_array, factored_target_arrays, nb_epoch=num_epochs,
                 validation_split=0.1, callbacks=[early_stopping])
@@ -79,18 +80,18 @@ class WordReplacer(object):
         pickle.dump(self.data_indexer, data_indexer_pickle_file)
         model_config = self.model.to_json()
         model_config_file = open("%s_config.json" % model_serialization_prefix, "w")
-        print >>model_config_file, model_config
+        print(model_config, file=model_config_file)
         self.model.save_weights("%s_weights.h5" % model_serialization_prefix, overwrite=True)
 
     def get_model_input_shape(self):
         return self.model.get_input_shape_at(0)
 
     def load_model(self, model_serialization_prefix):
-        self.data_indexer = pickle.load(open("%s_di.pkl" % model_serialization_prefix))
+        self.data_indexer = pickle.load(open("%s_di.pkl" % model_serialization_prefix, "rb"))
         self.model = model_from_json(open("%s_config.json" % model_serialization_prefix).read())
         self.model.load_weights("%s_weights.h5" % model_serialization_prefix)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
-        print >>sys.stderr, self.model.summary()
+        print(self.model.summary(), file=sys.stderr)
 
     def get_substitutes(self, sentences, locations, train_sequence_length,
             num_substitutes=5, tokenize=True, search_space_size=5000):
@@ -100,15 +101,18 @@ class WordReplacer(object):
             indices of words in sentences that need to be substituted
         train_sequence_length (int): Length of sequences the model was trained on
         '''
-
+        max_train_length = train_sequence_length+1 # +1 because the last word would be stripped
         sentence_lengths, indexed_sentences, _ = self.process_data(sentences,
-                max_length=train_sequence_length+1, # +1 because the last word would be stripped
-                tokenize=tokenize)
+                max_length=max_train_length, tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
         all_prediction_factors = self.model.predict(indexed_sentences)
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths,
                 locations)):
+            # If sentence length is greater than the longest sentence seen during training,
+            # data indexer will truncate it anyway. So, let's not make expect the predictions
+            # to be longer than that.
+            sentence_length = min(sentence_length, max_train_length)
             prediction_length = sentence_length - 1 # Ignore the starting <s> symbol
             # Each prediction factor is of the shape
             # (num_sentences, padding_length+num_words, factor_base)
@@ -149,7 +153,7 @@ if __name__=="__main__":
     tokenize = False if args.no_tokenize else True
     word_replacer = WordReplacer()
     if args.train_file is not None:
-        print >>sys.stderr, "Reading training data"
+        print("Reading training data", file=sys.stderr)
         train_sentences = [x.strip() for x in codecs.open(args.train_file, "r", "utf-8")]
         random.shuffle(train_sentences)
         if args.max_instances is not None:
@@ -159,31 +163,31 @@ if __name__=="__main__":
                                   tokenize=tokenize, use_lstm=args.use_lstm)
         word_replacer.save_model(args.model_serialization_prefix)
     else:
-        print >>sys.stderr, "Loading saved model"
+        print("Loading saved model", file=sys.stderr)
         word_replacer.load_model(args.model_serialization_prefix)
 
     if args.test_file is not None:
         if args.output_file is None:
-            print >>sys.stderr, "Need to specify where to save output with --output_file"
+            print("Need to specify where to save output with --output_file", file=sys.stderr)
             sys.exit(-1)
-        print >>sys.stderr, "Reading test data"
+        print("Reading test data", file=sys.stderr)
         test_sentence_words = [word_tokenize(x.strip()) for x in codecs.open(args.test_file,
             "r", "utf-8")]
         test_sentences = []
         locations = []
         # Stop words. Do not replace these or let them be replacements.
-        words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the", 
+        words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the",
                  "to", "and", "is", "a"])
         for words in test_sentence_words:
             if len(set(words).difference(words_to_ignore)) == 0:
                 # This means that there are no non-stop words in the input. Ignore it.
                 continue
-            # Generate a random location, between 0 and the second last position 
+            # Generate a random location, between 0 and the second last position
             # because the last position is usually a period
             location = random.randint(0, len(words) - 2)
             while words[location] in words_to_ignore:
                 location = random.randint(0, len(words) - 2)
-            locations.append(location) 
+            locations.append(location)
             test_sentences.append(" ".join(words))
         train_sequence_length = word_replacer.get_model_input_shape()[1]
         print >>sys.stderr, "Limiting search space size to %d" % args.search_space_size
@@ -191,13 +195,13 @@ if __name__=="__main__":
                 train_sequence_length, tokenize=tokenize, 
                 search_space_size=args.search_space_size)
         outfile = codecs.open(args.output_file, "w", "utf-8")
-        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, 
+        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words,
                 locations):
             word_being_replaced = words[location]
             for _, substitute in logprob_substitute_list:
                 if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
                     corrupted_words = list(words)
                     corrupted_words[location] = substitute
-                    print >>outfile, "%s\t%s" % (" ".join(words), " ".join(corrupted_words))
+                    print("%s\t%s" % (" ".join(words), " ".join(corrupted_words)), file=outfile)
                     break
         outfile.close()
