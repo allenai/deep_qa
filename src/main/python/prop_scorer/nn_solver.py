@@ -33,12 +33,11 @@ class NNSolver(object):
         model_config_file.close()
         data_indexer_file.close()
 
-    def load_model(self, model_name_prefix, epoch):
+    def load_model(self, model_name_prefix, epoch, custom_objects=None):
         # Loading serialized model
         model_config_file = open("%s_config.json" % (model_name_prefix))
         model_config_json = model_config_file.read()
-        self.model = model_from_json(model_config_json,
-                custom_objects={"TreeCompositionLSTM": TreeCompositionLSTM})
+        self.model = model_from_json(model_config_json, custom_objects=custom_objects)
         self.model.load_weights("%s_weights_epoch=%d.h5" % (model_name_prefix, epoch))
         data_indexer_file = open("%s_data_indexer.pkl" % model_name_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
@@ -371,7 +370,10 @@ if __name__=="__main__":
         print("Loading scoring model from disk", file=sys.stderr)
         model_type = "treelstm" if args.use_tree_lstm else "lstm"
         model_name_prefix = "propscorer_%s" % model_type
-        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch)
+        custom_objects = {"TreeCompositionLSTM": 
+                TreeCompositionLSTM} if model_type == "treelstm" else None
+        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, 
+                custom_objects=custom_objects)
         # input shape of scoring model is (samples, max_length)
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
