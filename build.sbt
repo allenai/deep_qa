@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0",
   "ch.qos.logback" %  "logback-classic" % "1.1.7"  // backend for scala-logging
-)
+).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
 resolvers ++= Seq(
   Resolver.bintrayRepo("allenai", "private"),
