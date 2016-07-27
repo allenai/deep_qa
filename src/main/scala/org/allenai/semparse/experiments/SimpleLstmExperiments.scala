@@ -16,7 +16,9 @@ object SimpleLstmExperiments {
   //////////////////////////////////////////////////////////
 
   val sentenceSelectorParams: JValue =
+    ("type" -> "sentence selector") ~
     ("sentence selector" -> ("max word count per sentence" -> 10)) ~
+    ("max sentences" -> 1000) ~
     ("data name" -> "abstracts_testing") ~
     ("data directory" -> "/home/mattg/data/vu_data/abstracts.txt")
 
@@ -34,39 +36,45 @@ object SimpleLstmExperiments {
 
   // Step 2b: actually corrupt the data
   val sentenceCorruptorParams: JValue =
+    ("type" -> "sentence corruptor") ~
     ("positive data" -> sentenceSelectorParams) ~
     ("trainer" -> sentenceCorruptorTrainerParams)
 
-  // STUFF BELOW HERE STILL TODO
+  ///////////////////////////////////////////////////////////////////////////
+  // Step 3: Convert question-answer pairs into sentences for validation data
+  ///////////////////////////////////////////////////////////////////////////
+
+  val validationQuestionParams: JValue =
+    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
+    ("output file" -> "data/science/monarch_questions/processed_questions.txt") ~
+    ("wh-movement" -> "matt's")
 
   ////////////////////////////////////////////////////////////////
-  // Step 3: Train a model
+  // Step 4: Train a model
   ////////////////////////////////////////////////////////////////
 
   val modelParams: JValue =
-    ("model type" -> "combined")
+    ("model type" -> "simple lstm") ~
+    ("model name" -> "abstracts_testing/simple_lstm") ~
+    ("validation questions" -> validationQuestionParams) ~
+    ("number of epochs" -> 1) ~
+    ("max training instances" -> 1000) ~
+    ("positive data" -> sentenceSelectorParams)
 
-  ////////////////////////////////////////////////////////////////
-  // Step 4: Convert question-answer pairs into sentences
-  ////////////////////////////////////////////////////////////////
-
-  val questionInterpreterParams: JValue =
-    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
-    ("output file" -> "data/science/monarch_questions/processed_questions.txt") ~
-    ("wh-movement" -> "mark's")
+  // STUFF BELOW HERE STILL TODO
 
   /////////////////////////////////////////////////////////////////////
   // Step 7: Score the answer options for each question using the model
   /////////////////////////////////////////////////////////////////////
 
   val questionScorerParams: JValue =
-    ("questions" -> questionInterpreterParams) ~
+    ("questions" -> validationQuestionParams) ~
     ("model" -> modelParams)
 
   def main(args: Array[String]) {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
 }

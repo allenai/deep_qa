@@ -11,7 +11,6 @@ from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense, Dropout
 from keras.regularizers import l2
 from keras.models import Model
 
-from index_data import DataIndexer
 from knowledge_backed_scorers import KnowledgeBackedDense
 from nn_solver import NNSolver
 
@@ -27,17 +26,17 @@ class MemoryNetworkSolver(NNSolver):
             either the propositions or the background knowledge.
         for_train: We want to update the word index only if we are processing
             training data. This flag will be passed to DataIndexer's process_data.
-        length_cutoff: If not None, the inputs greater than this length will be 
+        length_cutoff: If not None, the inputs greater than this length will be
             ignored. To keep the inputs aligned with ids, this will not be passed
             to DataIndexer's process_data, but instead used to postprocess the indices.
         one_per_line (bool): If set, this means there is only one data element per line.
             If not, it is assumed that there are multiple tab separated elements, all
             corresponding to the same id.
 
-        returns: dict{id: list(sentence_indices)}: A mapping from id to a list of sentence indices, 
+        returns: dict{id: list(sentence_indices)}: A mapping from id to a list of sentence indices,
             each of which is a list of indices of words in the sentence.
             If the input corresponds to input sentences, each sentence indices list contains only
-            one element, because there's only one sentence per a given id. But if it is background 
+            one element, because there's only one sentence per a given id. But if it is background
             information, the list will most likely have multiple elements.
         '''
         if one_per_line:
@@ -49,11 +48,7 @@ class MemoryNetworkSolver(NNSolver):
                 for input_element in input_line.split("\t"):
                     input_ids.append(input_id)
                     input_lines.append(input_element)
-        # TODO(pradeep): process_data is going to change soon, and will no longer return
-        # the number of propositions. Change this then.
-        # Data indexer also returns number of propositions per line. Ignore it.
-        _, indexed_input_lines = self.data_indexer.process_data(input_lines, 
-                separate_propositions=False, for_train=for_train)
+        indexed_input_lines = self.data_indexer.process_data(input_lines, for_train=for_train)
         mapped_indices = defaultdict(list)
         for input_id, indexed_input_line in zip(input_ids, indexed_input_lines):
             input_length = len(indexed_input_line)
@@ -86,8 +81,8 @@ class MemoryNetworkSolver(NNSolver):
         knowledge_input = Input(shape=(knowledge_inputs.shape[1:]), dtype='int32')
 
         ## Step 2: Embed the two inputs using the same embedding matrix and apply dropout
-        embedding = Embedding(input_dim=vocab_size, output_dim=embedding_size, 
-                mask_zero=True, name='embedding')
+        embedding = Embedding(input_dim=vocab_size, output_dim=embedding_size,
+                              mask_zero=True, name='embedding')
         # We need a timedistributed variant of the embedding (with same weights) to pass
         # the knowledge tensor in, and get a 4D tensor out.
         time_distributed_embedding = TimeDistributed(embedding)
@@ -98,18 +93,18 @@ class MemoryNetworkSolver(NNSolver):
 
         ## Step 3: Encode the two embedded inputs using the same encoder
         # Can replace the LSTM below with fancier encoders depending on the input.
-        proposition_encoder = LSTM(output_dim=embedding_size, W_regularizer=l2(0.01), 
+        proposition_encoder = LSTM(output_dim=embedding_size, W_regularizer=l2(0.01),
                 U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='encoder')
         # Knowledge encoder will have the same encoder running on a higher order tensor.
         # i.e., proposition_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
-        # and knowledge_encoder: (samples, knowledge_len, num_words, word_dim) -> 
+        # and knowledge_encoder: (samples, knowledge_len, num_words, word_dim) ->
         #                       (samples, knowledge_len, word_dim)
         # TimeDistributed generally loops over the second dimension.
         knowledge_encoder = TimeDistributed(proposition_encoder, name='knowledge_encoder')
         encoded_proposition = proposition_encoder(regularized_proposition_embed)  # (samples, word_dim)
         encoded_knowledge = knowledge_encoder(regularized_knowledge_embed)  # (samples, knowledge_len, word_dim)
 
-        ## Step 4: Merge the two encoded representations and pass into the knowledge backed 
+        ## Step 4: Merge the two encoded representations and pass into the knowledge backed
         # scorer
         # At each step in the following loop, we take the proposition encoding,
         # or the output of the previous memory layer, merge it with the knowledge
@@ -118,22 +113,22 @@ class MemoryNetworkSolver(NNSolver):
         for i in range(num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
             # additional row (at the beginning) in all slices.
-            # (samples, word_dim) + (samples, knowledge_len, word_dim) 
+            # (samples, word_dim) + (samples, knowledge_len, word_dim)
             #       -> (samples, 1 + knowledge_len, word_dim)
             # Since this is an unconventional merge, define a customized lambda merge.
             # Keras cannot infer the shape of the output of a lambda function, so make
             # that explicit.
-            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], 
+            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0],
                         dim=1), layer_outs[1]], axis=1)
             merged_shape = lambda layer_out_shapes: (layer_out_shapes[1][0],
                     layer_out_shapes[1][1] + 1, layer_out_shapes[1][2])
-            merged_encoded_rep = merge([next_memory_layer_input, encoded_knowledge], 
+            merged_encoded_rep = merge([next_memory_layer_input, encoded_knowledge],
                     mode=merge_mode, output_shape=merged_shape)
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
             knowledge_backed_projector = KnowledgeBackedDense(output_dim=embedding_size,
                     name='memory_layer_%d' % i)
-            memory_layer_output = knowledge_backed_projector(merged_encoded_rep)
+            memory_layer_output = knowledge_backed_projector(regularized_merged_rep)
             next_memory_layer_input = memory_layer_output
 
         ## Step 5: Finally score the projection.
@@ -141,7 +136,7 @@ class MemoryNetworkSolver(NNSolver):
         softmax_output = softmax(memory_layer_output)
 
         ## Step 6: Define the model, compile and train it.
-        memory_network = Model(input=[proposition_input, knowledge_input], 
+        memory_network = Model(input=[proposition_input, knowledge_input],
                 output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print(memory_network.summary(), file=sys.stderr)
@@ -161,19 +156,19 @@ class MemoryNetworkSolver(NNSolver):
                 self.save_model("memory_network_lstm", epoch_id)
 
     def prepare_data(self, proposition_lines, knowledge_lines, for_train=True):
-        # Common data preparation function for both train and test data. 
+        # Common data preparation function for both train and test data.
         proposition_tuples = [x.split("\t") for x in proposition_lines]
-        assert all([len(proposition_tuple) == 2 for proposition_tuple in 
+        assert all([len(proposition_tuple) == 2 for proposition_tuple in
             proposition_tuples]), "Malformed proposition input"
         # Keep track of maximum sentence length and number of sentences for padding
         # There are two kinds of knowledge padding coming up:
-        # length padding: to make all background sentences the same length, done using 
+        # length padding: to make all background sentences the same length, done using
         #   data indexer's pad_indices function in functions specific for train and test.
-        # num padding: to make the number of background sentences the same for all 
+        # num padding: to make the number of background sentences the same for all
         #   propositions, done by adding required number of sentences with just padding
         #   in this function itself.
-        
-        # Separate all background knowledge corresponding to a sentence into multiple 
+
+        # Separate all background knowledge corresponding to a sentence into multiple
         # elements in the list having the same id.
         knowledge_tuples = []
         for line in knowledge_lines:
@@ -194,7 +189,7 @@ class MemoryNetworkSolver(NNSolver):
         knowledge_inputs = []
         for proposition_id, proposition_indices in mapped_proposition_indices.items():
             # Proposition indices is a list of list of indices, but since there is only
-            # one proposition for each index, just take the first (and only) word indices list 
+            # one proposition for each index, just take the first (and only) word indices list
             # from the sentence indices list.
             proposition_inputs.append(proposition_indices[0])
             knowledge_input = mapped_knowledge_indices[proposition_id]
@@ -208,7 +203,7 @@ class MemoryNetworkSolver(NNSolver):
             # knowledge and proposition inputs are not length padded yet.
         return proposition_inputs, knowledge_inputs
 
-    def prepare_training_data(self, positive_proposition_lines, positive_knowledge_lines, 
+    def prepare_training_data(self, positive_proposition_lines, positive_knowledge_lines,
             negative_proposition_lines, negative_knowledge_lines, max_length=None):
         positive_proposition_inputs, positive_knowledge_inputs = self.prepare_data(
                 positive_proposition_lines, positive_knowledge_lines, for_train=True)
@@ -225,18 +220,18 @@ class MemoryNetworkSolver(NNSolver):
             # this to make sure all are length-padded to the same size. First find out max
             # proposition length, and then do the same for knowledge.
             # proposition_inputs are of shape (num_samples, num_words)
-            max_proposition_length = max([len(proposition) for proposition in 
+            max_proposition_length = max([len(proposition) for proposition in
                 proposition_inputs])
             max_knowledge_length = 0
             # knowledge_inputs are of shape (num_samples, num_sentences, num_words)
             for knowledge_index_list in knowledge_inputs:
-                max_knowledge_length = max(max_knowledge_length, 
+                max_knowledge_length = max(max_knowledge_length,
                         max([len(indices) for indices in knowledge_index_list]))
             max_length = max(max_proposition_length, max_knowledge_length)
         # Length padding proposition indices:
         proposition_inputs = self.data_indexer.pad_indices(proposition_inputs, max_length)
         # Length padding knowledge indices
-        knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length) 
+        knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length)
                 for knowledge_input in knowledge_inputs]
         # one hot labels: [1, 0] for positive, [0, 1] for negative
         labels = [[1,0] for _ in range(num_positive_inputs)] + \
@@ -255,7 +250,7 @@ class MemoryNetworkSolver(NNSolver):
 
     def prepare_test_data(self, labeled_proposition_lines, knowledge_lines, max_length):
         '''
-        proposition_lines: list(str): List of tab-separated strings, with first column 
+        proposition_lines: list(str): List of tab-separated strings, with first column
             being sentence index (for knowledge mapping), second column indicating
             true/false and the third column the sentence
         knowledge_lines: list(str): List of tab-separated strings, first column sentence
@@ -273,13 +268,13 @@ class MemoryNetworkSolver(NNSolver):
         # Length padding proposition indices:
         proposition_inputs = self.data_indexer.pad_indices(proposition_inputs, max_length)
         # Length padding knowledge indices
-        knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length) 
+        knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length)
                 for knowledge_input in knowledge_inputs]
-        # We want to return the indices of correct answers since that is what the evaluate 
+        # We want to return the indices of correct answers since that is what the evaluate
         # function in nn_solver expects.
         num_questions = len(test_labels)/4
         test_answers = numpy.asarray(test_labels).reshape(num_questions, 4)
-        assert numpy.all(numpy.asarray([numpy.count_nonzero(ta) for ta in 
+        assert numpy.all(numpy.asarray([numpy.count_nonzero(ta) for ta in
             test_answers]) == 1), "Some questions do not have exactly one answer"
         test_labels = numpy.argmax(test_answers, axis=1)
         proposition_inputs = numpy.asarray(proposition_inputs, dtype='int32')
@@ -299,17 +294,17 @@ if __name__=="__main__":
     argparser.add_argument('--validation_background', type=str)
     argparser.add_argument('--test_input', type=str)
     argparser.add_argument('--test_background', type=str)
-    argparser.add_argument('--num_memory_layers', type=int, 
+    argparser.add_argument('--num_memory_layers', type=int,
             help="Number of memory layers in the network. (default 1)", default=1)
-    argparser.add_argument('--length_upper_limit', type=int, 
+    argparser.add_argument('--length_upper_limit', type=int,
             help="Upper limit on length of training data. Ignored during testing.")
-    argparser.add_argument('--max_train_size', type=int, 
+    argparser.add_argument('--max_train_size', type=int,
             help="Upper limit on the size of training data")
     argparser.add_argument('--num_epochs', type=int, default=20,
             help="Number of train epochs (20 by default)")
-    argparser.add_argument('--use_model_from_epoch', type=int, default=0, 
+    argparser.add_argument('--use_model_from_epoch', type=int, default=0,
             help="Use the model from a particular epoch (0 by default)")
-    argparser.add_argument('--output_file', type=str, default="out.txt", 
+    argparser.add_argument('--output_file', type=str, default="out.txt",
             help="Name of the file to print the test output. out.txt by default")
     args = argparser.parse_args()
     nn_solver = MemoryNetworkSolver()
@@ -319,7 +314,7 @@ if __name__=="__main__":
         print("Loading scoring model from disk", file=sys.stderr)
         model_name_prefix = "memory_network_lstm"
         custom_objects = {"KnowledgeBackedDense": KnowledgeBackedDense}
-        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, 
+        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch,
                 custom_objects=custom_objects)
     else:
         assert args.positive_train_background is not None, "Positive background data required for training"
@@ -359,7 +354,7 @@ if __name__=="__main__":
         nn_solver.train(train_proposition_inputs, train_knowledge_inputs, train_labels,
                 validation_input, validation_labels,
                 num_memory_layers=args.num_memory_layers, num_epochs=args.num_epochs)
-    
+
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
     max_length = nn_solver.model.get_input_shape_at(0)[0][1]

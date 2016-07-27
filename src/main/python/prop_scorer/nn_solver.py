@@ -33,61 +33,67 @@ class NNSolver(object):
         model_config_file.close()
         data_indexer_file.close()
 
-    def load_model(self, model_name_prefix, epoch, custom_objects=None):
+    def save_best_model(self, model_name_prefix):
+        '''Copies the weights from the best epoch to a final weight file
+
+        The point of this is so that the input/output spec of the NNSolver is simpler.  Someone
+        calling this as a subroutine doesn't have to worry about which epoch ended up being the
+        best, they can just use the final weight file.  You can still use models from other epochs
+        if you really want to.
+        '''
+        from shutil import copyfile
+        epoch_weight_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, self.best_epoch)
+        final_weight_file = "%s_weights.h5" % model_name_prefix
+        copyfile(epoch_weight_file, final_weight_file)
+
+    def load_model(self, model_name_prefix, epoch=None, custom_objects=None):
         # Loading serialized model
-        model_config_file = open("%s_config.json" % (model_name_prefix))
+        model_config_file = open("%s_config.json" % model_name_prefix)
         model_config_json = model_config_file.read()
         self.model = model_from_json(model_config_json, custom_objects=custom_objects)
-        self.model.load_weights("%s_weights_epoch=%d.h5" % (model_name_prefix, epoch))
+        if epoch is not None:
+            model_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, epoch)
+        else:
+            model_file = "%s_weights.h5" % model_name_prefix
+        self.model.load_weights(model_file)
         data_indexer_file = open("%s_data_indexer.pkl" % model_name_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         model_config_file.close()
         data_indexer_file.close()
 
-    def prepare_training_data(self, data_lines, max_length=None,
+    def prepare_training_data(self, good_lines, bad_lines, max_length=None,
             in_shift_reduce_format=False):
         # max_length is used for ignoring long training instances
         # and also padding all instances to make them of the same
         # length
 
-        negative_samples_given = False
-        # If the the input file has two columns, we assume the second column has
-        # negative samples.
-        # TODO: This seems fragile. More checks needed.
-        if "\t" in data_lines[0]:
-            good_lines, bad_lines = zip(*[line.split("\t") for line in data_lines])
-            negative_samples_given = True
-            print("Negative training data provided.", file=sys.stderr)
-        else:
-            good_lines = data_lines
-        train_data_size = len(data_lines)
+        negative_samples_given = len(bad_lines) != 0
 
         # Indexing training data
         print("Indexing training data", file=sys.stderr)
-        num_train_propositions, good_input = self.data_indexer.process_data(good_lines,
-                separate_propositions=False, for_train=True, max_length=max_length)
+        good_input = self.data_indexer.process_data(
+                good_lines, separate_propositions=False, for_train=True, max_length=max_length)
         if negative_samples_given:
-            _, bad_input = self.data_indexer.process_data(bad_lines,
-                    separate_propositions=False, for_train=True, max_length=max_length)
+            bad_input = self.data_indexer.process_data(
+                    bad_lines, separate_propositions=False, for_train=True, max_length=max_length)
         else:
             # Corrupting train indices to get "bad" data
             print("Corrupting training data", file=sys.stderr)
             bad_input = self.data_indexer.corrupt_indices(good_input)
+
+        # Prepare the input data for Keras (padding, computing transition sequences, etc.).
         if in_shift_reduce_format:
-            transitions, good_elements = self.data_indexer.get_shift_reduce_sequences(
-                    good_input)
-            # Assuming the transitions will be the same for both good and bad inputs
-            # because the structure is not different.
-            _, bad_elements = self.data_indexer.get_shift_reduce_sequences(
-                    bad_input)
-            transitions = self.data_indexer.pad_indices(transitions)
+            good_transitions, good_elements = self.data_indexer.get_shift_reduce_sequences(good_input)
+            bad_transitions, bad_elements = self.data_indexer.get_shift_reduce_sequences(bad_input)
+            good_transitions = self.data_indexer.pad_indices(good_transitions)
+            bad_transitions = self.data_indexer.pad_indices(bad_transitions)
             # Insight: Transition sequences are strictly longer than element sequences
             # because there will be exactly as many shifts as there are elements, and
             # then some reduce operations on top of that
             # So we can safely use transitions' max length for elements as well. TreeLSTM
             # implementation requires them to be of the same length for concatenation.
-            max_transition_length = len(transitions[0])
+            max_transition_length = max(len(good_transitions[0]), len(bad_transitions[0]))
             good_elements = self.data_indexer.pad_indices(good_elements,
                     max_length=max_transition_length)
             bad_elements = self.data_indexer.pad_indices(bad_elements,
@@ -109,7 +115,7 @@ class NNSolver(object):
             # one dominating label.
             # Since transition sequences will not change for bad input, reusing those from
             # good input.
-            zipped_input_labels = zip(numpy.concatenate([transitions, transitions]),
+            zipped_input_labels = zip(numpy.concatenate([good_transitions, bad_transitions]),
                     numpy.concatenate([good_elements, bad_elements]), labels)
             random.shuffle(zipped_input_labels)
             shuffled_transitions, shuffled_elements, labels = [numpy.asarray(array) for
@@ -127,7 +133,6 @@ class NNSolver(object):
             inputs = numpy.concatenate([good_input, bad_input])
             num_good_inputs = good_input.shape[0]
             num_bad_inputs = bad_input.shape[0]
-            print(num_good_inputs, num_bad_inputs, train_data_size)
             # Labels will represent true statements as [0,1] and false statements as [1,0]
             labels = numpy.zeros((num_good_inputs+num_bad_inputs, 2))
             labels[:num_good_inputs, 1] = 1 # true statements
@@ -145,25 +150,24 @@ class NNSolver(object):
                                  self.data_indexer.get_words_from_indices(bad_prop_indices)),
                   file=sys.stderr)
 
-        return num_train_propositions, (inputs, labels)
+        return (inputs, labels)
 
     def prepare_test_data(self, data_lines, max_length=None,
             in_shift_reduce_format=False):
-        # data_lines expected to be in tab separated format with first column being
-        # 1 or 0 indicatind correct answers and the second column being the logical form
-        test_answer_strings, test_lines = zip(*[line.split("\t") for line in data_lines])
-        assert len(test_answer_strings)%4 == 0, "Not enough lines per question"
-        num_questions = len(test_answer_strings) / 4
+        # data_lines expected to be in tab separated format with first column being the input and
+        # the second column the label (1 if true, 0 if false).
+        test_lines, test_label_strings = zip(*[line.split("\t") for line in data_lines])
+        assert len(test_label_strings)%4 == 0, "Not enough lines per question"
+        num_questions = len(test_label_strings) / 4
         print("Read %d questions" % num_questions, file=sys.stderr)
-        test_answers = numpy.asarray([int(x) for x in test_answer_strings]).reshape(num_questions, 4)
+        test_answers = numpy.asarray([int(x) for x in test_label_strings]).reshape(num_questions, 4)
         assert numpy.all(numpy.asarray([numpy.count_nonzero(ta) for ta in
             test_answers]) == 1), "Some questions do not have exactly one correct answer"
         test_labels = numpy.argmax(test_answers, axis=1)
 
         # Indexing test data
         print("Indexing test data", file=sys.stderr)
-        num_test_propositions, test_indices = self.data_indexer.process_data(test_lines,
-                for_train=False)
+        test_indices = self.data_indexer.process_data(test_lines, for_train=False)
         if in_shift_reduce_format:
             test_transitions, test_elements = self.data_indexer.get_shift_reduce_sequences(
                     test_indices)
@@ -202,12 +206,13 @@ class NNSolver(object):
         accuracy = float(num_correct)/num_questions
         return accuracy
 
+
 class LSTMSolver(NNSolver):
     def __init__(self):
         super(LSTMSolver, self).__init__()
 
     def train(self, train_input, train_labels, validation_input, validation_labels,
-            embedding_size=50, vocab_size=None, num_epochs=20):
+              model_serialization_prefix, embedding_size=50, vocab_size=None, num_epochs=20):
         '''
         train_input: numpy array: int32 (samples, num_words). Left padded arrays of word indices
             from sentences in training data
@@ -256,7 +261,11 @@ class LSTMSolver(NNSolver):
         self.model = model
 
         ## Step 6: Train the full model jointly
+        # TODO(matt): it would probably be a good idea to pull out the parts of this that are
+        # common to both LSTMSolver and TreeLSTMSolver into another method.  That way you don't
+        # have to duplicate all of the validation and early stopping stuff.
         best_accuracy = 0.0
+        self.best_epoch = 0
         for epoch_id in range(num_epochs):
             print("Epoch %d" % epoch_id, file=sys.stderr)
             model.fit(train_input, train_labels, nb_epoch=1)
@@ -267,14 +276,16 @@ class LSTMSolver(NNSolver):
                 break
             else:
                 best_accuracy = accuracy
-                self.save_model("propscorer_lstm", epoch_id)
+                self.best_epoch = epoch_id
+                self.save_model(model_serialization_prefix, epoch_id)
+
 
 class TreeLSTMSolver(NNSolver):
     def __init__(self):
         super(TreeLSTMSolver, self).__init__()
 
     def train(self, train_input, train_labels, validation_input, validation_labels,
-            embedding_size=50, vocab_size=None, num_epochs=20):
+              model_serialization_prefix, embedding_size=50, vocab_size=None, num_epochs=20):
         '''
         train_input: List of two numpy arrays: transitions and initial buffer
         train_labels: numpy array (samples, 2): One hot label indices
@@ -335,6 +346,7 @@ class TreeLSTMSolver(NNSolver):
 
         ## Step 7: Train the full model jointly
         best_accuracy = 0.0
+        self.best_epoch = 0
         for epoch_id in range(num_epochs):
             print("Epoch %d" % epoch_id, file=sys.stderr)
             model.fit([transitions, elements], labels, nb_epoch=1)
@@ -345,11 +357,14 @@ class TreeLSTMSolver(NNSolver):
                 break
             else:
                 best_accuracy = accuracy
-                self.save_model("propscorer_treelstm", epoch_id)
+                self.best_epoch = epoch_id
+                self.save_model(model_serialization_prefix, epoch_id)
+
 
 if __name__=="__main__":
     argparser = argparse.ArgumentParser(description="Simple proposition scorer")
-    argparser.add_argument('--train_file', type=str)
+    argparser.add_argument('--positive_train_file', type=str)
+    argparser.add_argument('--negative_train_file', type=str)
     argparser.add_argument('--validation_file', type=str)
     argparser.add_argument('--test_file', type=str)
     argparser.add_argument('--use_tree_lstm', help="Use TreeLSTM composition",
@@ -360,26 +375,30 @@ if __name__=="__main__":
             help="Upper limit on the size of training data")
     argparser.add_argument('--num_epochs', type=int, default=20,
             help="Number of train epochs (20 by default)")
-    argparser.add_argument('--use_model_from_epoch', type=int, default=0,
-            help="Use the model from a particular epoch (0 by default)")
+    argparser.add_argument('--use_model_from_epoch', type=int,
+            help="Use the model from a particular epoch (use the best saved model if empty)")
+    argparser.add_argument("--model_serialization_prefix",
+                           help="Prefix for saving and loading model files")
     args = argparser.parse_args()
     nn_solver = TreeLSTMSolver() if args.use_tree_lstm else LSTMSolver()
 
-    if not args.train_file:
+    if not args.positive_train_file:
         # Training file is not given. There must be a serialized model.
         print("Loading scoring model from disk", file=sys.stderr)
-        model_type = "treelstm" if args.use_tree_lstm else "lstm"
-        model_name_prefix = "propscorer_%s" % model_type
-        custom_objects = {"TreeCompositionLSTM": 
-                TreeCompositionLSTM} if model_type == "treelstm" else None
-        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, 
+        custom_objects = {"TreeCompositionLSTM": TreeCompositionLSTM} if args.use_tree_lstm else None
+        nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch,
                 custom_objects=custom_objects)
         # input shape of scoring model is (samples, max_length)
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
         print("Reading training data", file=sys.stderr)
-        lines = [x.strip() for x in open(args.train_file).readlines()]
-        _, (inputs, labels) = nn_solver.prepare_training_data(lines,
+        positive_lines = [x.strip() for x in open(args.positive_train_file).readlines()]
+        if args.negative_train_file:
+            negative_lines = [x.strip() for x in open(args.negative_train_file).readlines()]
+        else:
+            negative_lines = []
+        (inputs, labels) = nn_solver.prepare_training_data(
+                positive_lines, negative_lines,
                 max_length=args.length_upper_limit,
                 in_shift_reduce_format=args.use_tree_lstm)
 
@@ -398,7 +417,8 @@ if __name__=="__main__":
             labels = labels[:args.max_train_size]
         print("Training model", file=sys.stderr)
         nn_solver.train(inputs, labels, validation_input, validation_labels,
-                num_epochs=args.num_epochs)
+                        args.model_serialization_prefix, num_epochs=args.num_epochs)
+        nn_solver.save_best_model(args.model_serialization_prefix)
 
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.

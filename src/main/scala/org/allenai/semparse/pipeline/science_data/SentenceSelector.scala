@@ -34,7 +34,8 @@ class SentenceSelectorStep(
   val dataName = (params \ "data name").extract[String]
   val dataDir = (params \ "data directory").extract[String]
 
-  override val outputFile = s"data/science/$dataName/training_data.tsv"
+  val filename = if (indexSentences) "indexed_training_data.tsv" else "training_data.tsv"
+  override val outputFile = s"data/science/$dataName/$filename"
   val numPartitions = 1
 
   override val inputs: Set[(String, Option[Step])] = Set((dataDir, None))

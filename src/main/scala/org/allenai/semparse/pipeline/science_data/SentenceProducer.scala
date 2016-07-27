@@ -6,6 +6,8 @@ import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
 
+import scala.util.Random
+
 /**
  * This is a grouping of Steps that produce sentences as output.  They can take varying input, but
  * they must produce as output a file that contains one sentence per line, possibly with an index.
@@ -28,8 +30,9 @@ import com.mattg.util.JsonHelper
 trait SentenceProducer {
   def params: JValue
   def fileUtil: FileUtil
-  val baseParams = Seq("type", "create sentence indices")
+  val baseParams = Seq("type", "create sentence indices", "max sentences")
   val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
+  val maxSentences = JsonHelper.extractAsOption[Int](params, "max sentences")
 
   def outputFile: String
 
@@ -38,7 +41,14 @@ trait SentenceProducer {
       val (sentence, index) = sentenceWithIndex
       if (indexSentences) s"${index}\t${sentence}" else s"${sentence}"
     })
-    fileUtil.writeLinesToFile(outputFile, outputLines)
+    val finalLines = maxSentences match {
+      case None => outputLines
+      case Some(max) => {
+        val random = new Random
+        random.shuffle(outputLines).take(max)
+      }
+    }
+    fileUtil.writeLinesToFile(outputFile, finalLines)
   }
 }
 

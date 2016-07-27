@@ -24,47 +24,99 @@ abstract class NeuralNetworkTrainer(
   params: JValue,
   fileUtil: FileUtil
 ) extends SubprocessStep(Some(params), fileUtil) {
+  implicit val formats = DefaultFormats
+
+  // Anything that is common to training _all_ neural network models should go here.  Data-specific
+  // parameters go in subclasses.
+  val baseParams = Seq("model type", "model name", "validation questions", "number of epochs",
+    "max training instances")
+
+  // The way these parameters work assumes some commonality between the underlying python scripts
+  // that train models.  Currently there's only one script, so that's ok...
+  val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
+  val maxTrainingInstances = JsonHelper.extractAsOption[Int](params, "max training instances")
+  val maxTrainingInstancesArgs =
+    maxTrainingInstances.map(max => Seq("--max_train_size", max.toString)).toSeq.flatten
+
+  val modelName = (params \ "model name").extract[String]
+  val modelPrefix = s"models/$modelName"
+
+  val questionInterpreter = new QuestionInterpreter(params \ "validation questions", fileUtil)
+  val validationQuestionsFile = questionInterpreter.outputFile
+  val validationInput = (validationQuestionsFile, Some(questionInterpreter))
+
   override val binary = "python"
+
+  // These three outputs are written by the python code.  The config.json file is a specification
+  // of the model layers, so that keras can reconstruct the saved model object / computational
+  // graph.  The weights.h5 file is a specification of all of the neural network weights for the
+  // model specified by the config.json file.  The data_indexer.pkl file is a pickled DataIndexer,
+  // which maps words to indices.
+  val modelOutputs = Seq(
+    modelPrefix + "_weights.h5",
+    modelPrefix + "_data_indexer.pkl",
+    modelPrefix + "_config.json"
+  )
+
 }
 
 object NeuralNetworkTrainer {
   def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
-    // TODO(matt): actually have a type parameter, and use it here.
-    new NoBackgroundKnowledgeNNSentenceTrainer(params, fileUtil)
+    implicit val formats = DefaultFormats
+    (params \ "model type").extract[String] match {
+      case "simple lstm" => new NoBackgroundKnowledgeNNSentenceTrainer(params, fileUtil)
+      case t => throw new IllegalStateException(s"Unrecognized neural network model type: $t")
+    }
   }
 }
 
+/**
+ * This NeuralNetworkTrainer is a simple LSTM.  We take good and bad sentences as input, and
+ * nothing else.  The LSTM is trained to map good sentences to "true" and bad sentences to
+ * "false".  This is mostly here as a baseline, as we expect to need additional input to actual do
+ * well at answering science questions.  At best, this kind of a model will look for word
+ * correlations to decide whether a sentence is true or false, similar to what the Salience solver
+ * does.
+ */
 class NoBackgroundKnowledgeNNSentenceTrainer(
   params: JValue,
   fileUtil: FileUtil
 ) extends NeuralNetworkTrainer(params, fileUtil) {
-  override val name = "Neural Network Trainer, no background knowledge input"
+  override val name = "Neural Network Trainer, on sentences, no background knowledge input"
 
-  val validParams = Seq("positive data", "negative data", "validataion questions",
-    "number of epochs")
+  val validParams = baseParams ++ Seq("positive data", "negative data", "max sentence length")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
-  val trainingFile = ""  // TODO(matt)
-  val validationFile = ""  // TODO(matt)
+  val maxSentenceLength = JsonHelper.extractAsOption[Int](params, "max sentence length")
+  val maxSentenceLengthArgs =
+    maxSentenceLength.map(max => Seq("--length_upper_limit", max.toString)).toSeq.flatten
+
+  val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveTrainingFile = positiveDataProducer.outputFile
+  val positiveDataInput = (positiveTrainingFile, Some(positiveDataProducer))
+
+  val negativeDataProducer = (params \ "negative data") match {
+    case JNothing => None
+    case jval => Some(SentenceProducer.create(jval, fileUtil))
+  }
+  val negativeDataArgs =
+    negativeDataProducer.map(p => Seq("--negative_train_file", p.outputFile)).toSeq.flatten
+  val negativeDataInput = negativeDataProducer.map(p => (p.outputFile, Some(p))).toSet
 
   override val scriptFile = Some("src/main/python/prop_scorer/nn_solver.py")
   override val arguments = Seq[String](
-    "--train_file", trainingFile,  // TODO(matt): change nn_solver.py to take two separate input files
-    "--validation_file", validationFile,
-    "--use_tree_lstm", false.toString,  // TODO(matt): make this like in SentenceCorruptor.scala
-    "--length-upper-limit", 100.toString,  // TODO(matt)
-    "--max_train_size", 1000000.toString,  // TODO(matt)
-    "--num_epochs", numEpochs.toString
-  )
+    "--positive_train_file", positiveTrainingFile,
+    "--validation_file", validationQuestionsFile,
+    "--num_epochs", numEpochs.toString,
+    "--model_serialization_prefix", modelPrefix
+  ) ++ negativeDataArgs ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs
 
-  // TODO(matt): positive training data, negative training data, validation questions
-  override val inputs: Set[(String, Option[Step])] = Set()
+  override val inputs: Set[(String, Option[Step])] = Set(
+    positiveDataInput,
+    validationInput
+  ) ++ negativeDataInput
+  override val outputs = modelOutputs.toSet
 
-  // TODO(matt): model file, other things that get saved
-  override val outputs: Set[String] = Set()
-
-  // TODO(matt): base these off of the model file
-  override val inProgressFile = ""  // TODO(matt)
-  override val paramFile = ""  // TODO(matt)
+  override val inProgressFile = modelPrefix + "_in_progress"
+  override val paramFile = modelPrefix + "_params.json"
 }

@@ -48,7 +48,7 @@ class QuestionInterpreter(
 
   override def _runStep() {
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
-    val outputLines = rawQuestions.take(10).seq.flatMap(questionLine => {
+    val outputLines = rawQuestions.flatMap(questionLine => {
       val question = parseQuestionLine(questionLine)
       val sentenceStrings = fillInAnswerOptions(question)
       sentenceStrings match {
@@ -59,7 +59,12 @@ class QuestionInterpreter(
             val correctString = if (correct) "1" else "0"
             s"$text\t$correctString"
           })
-          Seq(question.sentences.mkString(" ")) ++ answerStrings ++ Seq("")
+          // TODO(matt): figure out output formats.  You probably want some options here, so that
+          // you have a version that retains the original question for visual inspection, but also
+          // a version that doesn't keep around the original question, for easier processing later
+          // in the pipeline.
+          //Seq(question.sentences.mkString(" ")) ++ answerStrings ++ Seq("")
+          answerStrings
         }
       }
     }).seq
