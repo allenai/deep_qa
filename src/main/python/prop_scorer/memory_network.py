@@ -15,13 +15,15 @@ from index_data import DataIndexer
 from knowledge_backed_scorers import KnowledgeBackedDense
 from nn_solver import NNSolver
 
+
 class MemoryNetworkSolver(NNSolver):
+
     def index_inputs(self, inputs, for_train=True, length_cutoff=None, one_per_line=True):
         '''
         inputs: list((id, line)): List of index, input tuples.
             id is a identifier for each input to help link input sentences
-            with corresponding knowledge
-            line can either be a sentence or a logical form, part of
+            with corresponding knowledge.
+            Line can either be a sentence or a logical form, part of
             either the propositions or the background knowledge.
         for_train: We want to update the word index only if we are processing
             training data. This flag will be passed to DataIndexer's process_data.
@@ -32,11 +34,11 @@ class MemoryNetworkSolver(NNSolver):
             If not, it is assumed that there are multiple tab separated elements, all
             corresponding to the same id.
 
-        returns: dict{id: list(indices)}: A mapping from id to a list of indices, each
-            of which is a list of indices of words in a sentence.
-            If the input corresponds to input sentences, each outer list contains only
-            one element. But if it is background information, the list will most likely
-            have multiple elements.
+        returns: dict{id: list(sentence_indices)}: A mapping from id to a list of sentence indices, 
+            each of which is a list of indices of words in the sentence.
+            If the input corresponds to input sentences, each sentence indices list contains only
+            one element, because there's only one sentence per a given id. But if it is background 
+            information, the list will most likely have multiple elements.
         '''
         if one_per_line:
             input_ids, input_lines = zip(*inputs)
@@ -47,7 +49,7 @@ class MemoryNetworkSolver(NNSolver):
                 for input_element in input_line.split("\t"):
                     input_ids.append(input_id)
                     input_lines.append(input_element)
-        # TODO: process_data is going to change soon, and will no longer return
+        # TODO (pradeep): process_data is going to change soon, and will no longer return
         # the number of propositions. Change this then.
         # Data indexer also returns number of propositions per line. Ignore it.
         _, indexed_input_lines = self.data_indexer.process_data(input_lines, 
@@ -170,29 +172,30 @@ class MemoryNetworkSolver(NNSolver):
         # num padding: to make the number of background sentences the same for all 
         #   propositions, done by adding required number of sentences with just padding
         #   in this function itself.
-        max_num_knowledge = 0  # for num padding
+        
         # Separate all background knowledge corresponding to a sentence into multiple 
         # elements in the list having the same id.
         knowledge_tuples = []
         for line in knowledge_lines:
             parts = line.split("\t")
-            # First part is the sentence index. Ignore it.
+            # First part is the sentence index, and the remaining parts are knowledge sentences.
             num_knowledge = len(parts) - 1
             # Ignore the line if it is blank.
             if num_knowledge < 1:
                 continue
-            if num_knowledge > max_num_knowledge:
-                max_num_knowledge = num_knowledge
             knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
         mapped_proposition_indices = self.index_inputs(proposition_tuples, for_train=for_train)
         mapped_knowledge_indices = self.index_inputs(knowledge_tuples, for_train=for_train,
                 one_per_line=False)
+        # Compute the maximum number of background sentences for num_padding the shorter sets of
+        # sentences.
+        max_num_knowledge = max([len(knowledge_input) for knowledge_input in mapped_knowledge_indices.values()])
         proposition_inputs = []
         knowledge_inputs = []
         for proposition_id, proposition_indices in mapped_proposition_indices.items():
             # Proposition indices is a list of list of indices, but since there is only
-            # one proposition for each index, just take the first (and only) list from 
-            # the outer list.
+            # one proposition for each index, just take the first (and only) word indices list 
+            # from the sentence indices list.
             proposition_inputs.append(proposition_indices[0])
             knowledge_input = mapped_knowledge_indices[proposition_id]
             num_knowledge = len(knowledge_input)
@@ -284,7 +287,8 @@ class MemoryNetworkSolver(NNSolver):
         # Keras expects inputs as list. So returning it in a format where we can
         # directly use the inputs. For example, in the evaluate function in nn_solver.
         return test_labels, [proposition_inputs, knowledge_inputs]
-        
+
+
 if __name__=="__main__":
     argparser = argparse.ArgumentParser(description="Memory network solver")
     argparser.add_argument('--positive_train_input', type=str)

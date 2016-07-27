@@ -2,6 +2,8 @@ from keras import initializations, activations
 from keras.engine import InputSpec
 from keras import backend as K
 from keras.layers import Dense
+
+
 '''
 Knowledge backed scorers take an encoded sentence (or logical form) representation
 and encoded representations of background facts related to the sentence, and summarize
@@ -23,6 +25,7 @@ class KnowledgeBackedDense(Dense):
     But this can be more complex. If using an MLP for attention, we can 
     try other operations instead of a simple dot product.
     """
+
     def __init__(self, output_dim, **kwargs):
         # Assuming encoded knowledge and encoded input sentence are of the same 
         # dimensionality. So we will not change the input_dim, and rely on the 
