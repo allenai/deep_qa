@@ -45,8 +45,8 @@ class SentenceCorruptorTrainer(
   val useLstmArg = if (useLstm) Seq("--use_lstm") else Seq()
   val trainingEpochs = JsonHelper.extractWithDefault(params, "max training epochs", 20)
 
-  val sentenceSelector = new SentenceSelectorStep(params \ "positive data", fileUtil)
-  val positiveDataFile = sentenceSelector.outputFile
+  val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveDataFile = sentenceProducer.outputFile
   val modelPrefix = positiveDataFile.dropRight(4) + "_corruption_model"
 
   override val binary = "python"
@@ -59,7 +59,7 @@ class SentenceCorruptorTrainer(
     "--model_serialization_prefix", modelPrefix
   ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs
 
-  override val inputs: Set[(String, Option[Step])] = Set((positiveDataFile, Some(sentenceSelector)))
+  override val inputs: Set[(String, Option[Step])] = Set((positiveDataFile, Some(sentenceProducer)))
   override val outputs = Set(
     modelPrefix + "_di.pkl",
     modelPrefix + "_config.json",
@@ -88,8 +88,8 @@ class SentenceCorruptor(
   val trainingEpochs = JsonHelper.extractWithDefault(params, "max training epochs", 20)
   val maxSentencesArgs = maxSentences.map(max => Seq("--max_corrupted_instances", max.toString)).toSeq.flatten
 
-  val sentenceSelector = new SentenceSelectorStep(params \ "positive data", fileUtil)
-  val positiveDataFile = sentenceSelector.outputFile
+  val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveDataFile = sentenceProducer.outputFile
   override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
   override val binary = "python"
@@ -103,7 +103,7 @@ class SentenceCorruptor(
   ) ++ tokenizeInputArg ++ useLstmArg  // TODO(matt): ++ maxSentencesArgs
 
   override val inputs: Set[(String, Option[Step])] = Set(
-    (positiveDataFile, Some(sentenceSelector))
+    (positiveDataFile, Some(sentenceProducer))
   ) ++ trainer.outputs.map(file => (file, Some(trainer)))
   override val outputs = Set(outputFile)
   override val paramFile = outputFile.dropRight(4) + "_params.json"
