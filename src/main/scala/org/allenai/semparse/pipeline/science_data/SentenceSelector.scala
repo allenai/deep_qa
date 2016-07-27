@@ -22,7 +22,7 @@ import org.allenai.semparse.parse.Parser
  * "[sentence index][tab][sentence]", or just "[sentence]", depending on the `use sentence indices`
  * parameter.
  */
-class SentenceSelectorStep(
+class SentenceSelector(
   val params: JValue,
   val fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) with SentenceProducer {
@@ -47,7 +47,7 @@ class SentenceSelectorStep(
   override val paramFile = outputs.head.dropRight(4) + "_params.json"
   override val inProgressFile = outputs.head.dropRight(4) + "_in_progress"
 
-  val sentenceSelector = new SentenceSelector(params \ "sentence selector")
+  val sentenceSelector = new Selector(params \ "sentence selector")
 
   override def _runStep() {
     val conf = new SparkConf().setAppName(s"Sentence to Logic")
@@ -67,7 +67,7 @@ class SentenceSelectorStep(
     sc: SparkContext,
     dataDir: String,
     numPartitions: Int,
-    sentenceSelector: SentenceSelector
+    sentenceSelector: Selector
   ): Seq[String] = {
     val sentences = sc.textFile(dataDir, numPartitions).flatMap(line => {
       val tagsRemoved = line.replace("<SENT>", "").replace("</SENT>", "")
@@ -78,7 +78,12 @@ class SentenceSelectorStep(
   }
 }
 
-class SentenceSelector(params: JValue) extends Serializable {
+/**
+ * This class actually does the work of selecting sentences from a corpus.  I separated this out so
+ * that it could be overriden with different selection algorithms, because I anticipate
+ * experimenting with that soon.
+ */
+class Selector(params: JValue) extends Serializable {
   val validParams = Seq("min word count per sentence", "max word count per sentence")
   val minWordCount = JsonHelper.extractWithDefault(params, "min word count per sentence", 4)
   val maxWordCount = JsonHelper.extractWithDefault(params, "max word count per sentence", 20)

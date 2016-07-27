@@ -55,7 +55,7 @@ trait SentenceProducer {
 object SentenceProducer {
   def create(params: JValue, fileUtil: FileUtil): Step with SentenceProducer = {
     (params \ "type") match {
-      case JString("sentence selector") => new SentenceSelectorStep(params, fileUtil)
+      case JString("sentence selector") => new SentenceSelector(params, fileUtil)
       case JString("sentence corruptor") => new SentenceCorruptor(params, fileUtil)
       case _ => throw new IllegalStateException("unrecognized SentenceProducer parameters")
     }
