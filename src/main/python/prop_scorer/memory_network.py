@@ -87,11 +87,13 @@ class MemoryNetworkSolver(NNSolver):
         vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
             if not provided.
         num_epochs: int. Number of training epochs (default 20).
+        patience: int.
         '''
         vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
         embedding_size = kwargs.get('embedding_size', 50)
         num_epochs = kwargs.get('num_epochs', 20)
         num_memory_layers = kwargs.get('num_memory_layers', 1)
+        patience = kwargs.get('patience', 1)
 
         ## Step 1: Define the two inputs (propositions and knowledge)
         proposition_inputs, knowledge_inputs = train_input
@@ -163,6 +165,7 @@ class MemoryNetworkSolver(NNSolver):
         print(memory_network.summary(), file=sys.stderr)
         self.model = memory_network
         best_accuracy = 0.0
+        num_worse_epochs = 0
         for epoch_id in range(num_epochs):
             # History callback contains the losses of all training samples
             print("Epoch %d" % epoch_id, file=sys.stderr)
@@ -172,9 +175,12 @@ class MemoryNetworkSolver(NNSolver):
             # TODO(matt): add the best_epoch stuff here, or, better yet, move this validation code
             # input the super class.
             if accuracy < best_accuracy:
-                print("Stopping training", file=sys.stderr)
-                break
+                num_worse_epochs += 1
+                if num_worse_epochs >= patience:
+                    print("Stopping training", file=sys.stderr)
+                    break
             else:
+                num_worse_epochs = 0
                 best_accuracy = accuracy
                 self.save_model(model_serialization_prefix, epoch_id)
 
@@ -325,6 +331,8 @@ def main():
                            help="Upper limit on the size of training data")
     argparser.add_argument('--num_epochs', type=int, default=20,
                            help="Number of train epochs (20 by default)")
+    argparser.add_argument('--patience', type=int, default=3,
+                           help="Number of worse epochs to allow before stopping training (default 3)")
     argparser.add_argument('--use_model_from_epoch', type=int, default=0,
                            help="Use the model from a particular epoch (0 by default)")
     argparser.add_argument('--output_file', type=str, default="out.txt",
@@ -375,8 +383,7 @@ def main():
         print("Training model", file=sys.stderr)
         nn_solver.train(train_inputs, train_labels, validation_input, validation_labels,
                         args.model_serialization_prefix, num_memory_layers=args.num_memory_layers,
-                        num_epochs=args.num_epochs)
-
+                        num_epochs=args.num_epochs, patience=args.patience)
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
     max_length = nn_solver.model.get_input_shape_at(0)[0][1]
