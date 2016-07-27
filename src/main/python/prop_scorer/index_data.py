@@ -9,33 +9,27 @@ class DataIndexer(object):
         self.reverse_word_index = {0:"PADDING", 1:"UNK", 2:",", 3:".", 4:"(", 5:")"}
         self.singletons = set([])
         self.non_singletons = set([])
-        # differentiate between predicate and argument indices for type specific corruption
+        # We differentiate between predicate and argument indices for type specific corruption.  If
+        # the corruption code ever gets removed from this class, these variables can go away (along
+        # with the corresponding logic in process_data).
         self.predicate_indices = set([])
         self.argument_indices = set([])
 
     def process_data(self, lines, for_train=True, max_length=None):
         '''
-        lines: list(str). Sequence of proposition strings. If propositions
-            have to be grouped (to keep track of which sentences they come
-            from), separate props in a line with ';'
-        separate_propositions: bool. Use ';' as a proposition delimiter?
+        lines: list(str). Sequence of proposition strings, one per line.
         for_train: bool. Setting this to False will treat new words as OOV.
             Setting it to True will add them to the index if they occur
             atleast twice. Singletons will always be treated as OOV.
         max_length: int. Ignore propositions greater than this length.
             Applicable only during training.
-
-        This method does not keep track of which propositions came from which lines; if we separate
-        a line into multiple propositions, we just flatten the list.  If you need to know how many
-        propositions came from each line, change this method to return it (look in git history for
-        how).
         '''
         all_proposition_indices = []
         all_proposition_words = []
         # We keep track of both predicate and argument words because some words
         # can occur in both sets
-        predicate_words = set([])
-        argument_words = set([])
+        predicate_words = set()
+        argument_words = set()
         for proposition in lines:
             words = word_tokenize(proposition.lower())
             if for_train:
