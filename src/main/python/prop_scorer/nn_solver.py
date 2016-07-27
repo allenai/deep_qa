@@ -46,14 +46,13 @@ class NNSolver(object):
         final_weight_file = "%s_weights.h5" % model_name_prefix
         copyfile(epoch_weight_file, final_weight_file)
 
-    def load_model(self, model_name_prefix, epoch=None):
+    def load_model(self, model_name_prefix, epoch=None, custom_objects=None):
         # Loading serialized model
         model_config_file = open("%s_config.json" % model_name_prefix)
         model_config_json = model_config_file.read()
-        self.model = model_from_json(model_config_json,
-                custom_objects={"TreeCompositionLSTM": TreeCompositionLSTM})
+        self.model = model_from_json(model_config_json, custom_objects=custom_objects)
         if epoch is not None:
-            model_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, self.best_epoch)
+            model_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, epoch)
         else:
             model_file = "%s_weights.h5" % model_name_prefix
         self.model.load_weights(model_file)
@@ -386,7 +385,9 @@ if __name__=="__main__":
     if not args.positive_train_file:
         # Training file is not given. There must be a serialized model.
         print("Loading scoring model from disk", file=sys.stderr)
-        nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch)
+        custom_objects = {"TreeCompositionLSTM": TreeCompositionLSTM} if args.use_tree_lstm else None
+        nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch,
+                custom_objects=custom_objects)
         # input shape of scoring model is (samples, max_length)
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
