@@ -375,7 +375,7 @@ if __name__=="__main__":
             help="Upper limit on the size of training data")
     argparser.add_argument('--num_epochs', type=int, default=20,
             help="Number of train epochs (20 by default)")
-    argparser.add_argument('--use_model_from_epoch', type=int
+    argparser.add_argument('--use_model_from_epoch', type=int,
             help="Use the model from a particular epoch (use the best saved model if empty)")
     argparser.add_argument("--model_serialization_prefix",
                            help="Prefix for saving and loading model files")

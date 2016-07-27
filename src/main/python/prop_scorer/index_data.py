@@ -13,17 +13,16 @@ class DataIndexer(object):
         self.predicate_indices = set([])
         self.argument_indices = set([])
 
-    def process_data(self, lines, separate_propositions=True, 
-            for_train=True, max_length=None):
+    def process_data(self, lines, for_train=True, max_length=None):
         '''
-        lines: list(str). Sequence of proposition strings. If propositions 
-            have to be grouped (to keep track of which sentences they come 
+        lines: list(str). Sequence of proposition strings. If propositions
+            have to be grouped (to keep track of which sentences they come
             from), separate props in a line with ';'
         separate_propositions: bool. Use ';' as a proposition delimiter?
-        for_train: bool. Setting this to False will treat new words as OOV. 
-            Setting it to True will add them to the index if they occur 
+        for_train: bool. Setting this to False will treat new words as OOV.
+            Setting it to True will add them to the index if they occur
             atleast twice. Singletons will always be treated as OOV.
-        max_length: int. Ignore propositions greater than this length. 
+        max_length: int. Ignore propositions greater than this length.
             Applicable only during training.
 
         This method does not keep track of which propositions came from which lines; if we separate
@@ -37,37 +36,32 @@ class DataIndexer(object):
         # can occur in both sets
         predicate_words = set([])
         argument_words = set([])
-        for line in lines:
-            if separate_propositions:
-                line_propositions = line.split(";")
-            else:
-                line_propositions = [line]
-            for proposition in line_propositions:
-                words = word_tokenize(proposition.lower())
-                if for_train:
-                    if max_length is not None:
-                        if len(words) > max_length:
-                            continue
-                    for i, word in enumerate(words):
-                        if i < len(words)-1:
-                            next_word = words[i+1]
-                            if next_word == "(":
-                                # If the next token is an opening paren,
-                                # this token is a predicate.
-                                predicate_words.add(word)
-                            elif (next_word == "," or next_word == ")") and word != ")":
-                                argument_words.add(word)
-                        if word not in self.non_singletons:
-                            if word in self.singletons:
-                                # Since we are seeing the word again, 
-                                #it is not a singleton
-                                self.singletons.remove(word)
-                                self.non_singletons.add(word)
-                            else:
-                                # We have not seen this word. It is 
-                                #a singleton (atleast for now)
-                                self.singletons.add(word)
-                all_proposition_words.append(words)
+        for proposition in lines:
+            words = word_tokenize(proposition.lower())
+            if for_train:
+                if max_length is not None:
+                    if len(words) > max_length:
+                        continue
+                for i, word in enumerate(words):
+                    if i < len(words)-1:
+                        next_word = words[i+1]
+                        if next_word == "(":
+                            # If the next token is an opening paren,
+                            # this token is a predicate.
+                            predicate_words.add(word)
+                        elif (next_word == "," or next_word == ")") and word != ")":
+                            argument_words.add(word)
+                    if word not in self.non_singletons:
+                        if word in self.singletons:
+                            # Since we are seeing the word again,
+                            #it is not a singleton
+                            self.singletons.remove(word)
+                            self.non_singletons.add(word)
+                        else:
+                            # We have not seen this word. It is
+                            #a singleton (atleast for now)
+                            self.singletons.add(word)
+            all_proposition_words.append(words)
         if for_train:
             # Add non-singletons to index. The singletons will remain unknown.
             for word in self.non_singletons:
@@ -79,7 +73,7 @@ class DataIndexer(object):
                     self.argument_indices.add(self.word_index[word])
 
         for words in all_proposition_words:
-            proposition_indices = [self.word_index[word] if word in 
+            proposition_indices = [self.word_index[word] if word in
                     self.word_index else self.word_index["UNK"] for word in words]
             all_proposition_indices.append(proposition_indices)
 
@@ -91,8 +85,8 @@ class DataIndexer(object):
         # This function splits sequences containing parantheses and commas into two sequences, one
         # containing only elements (predicates and arguments) and the other containing
         # shift and reduce operations.
-        # Example: 
-        # Input: ['a', '(', 'b', '(', 'c', ')', ',', 'd', '(', 'e', ',', 'f', ')', ')'] 
+        # Example:
+        # Input: ['a', '(', 'b', '(', 'c', ')', ',', 'd', '(', 'e', ',', 'f', ')', ')']
         # Outputs: ['a', 'b', 'c', 'd', 'e', 'f']; [S, S, S, R2, S, S, S, R3, R3]
         # Note: This function operates on the indices instead of the actual strings
         all_transitions = []
@@ -129,7 +123,7 @@ class DataIndexer(object):
                     transitions.append(SHIFT_OP)
                     elements.append(ind)
             if len(last_symbols) != 0 or is_malformed:
-                # We either have more opening parens than closing parens, or we 
+                # We either have more opening parens than closing parens, or we
                 # ignored the parse earlier. Throw a warning, and ignore this parse.
                 parse = self.get_words_from_indices(indices)
                 warnings.warn("Malformed binary semantic parse: %s"%parse, RuntimeWarning)
@@ -152,7 +146,7 @@ class DataIndexer(object):
 
     def corrupt_indices(self, all_indices, num_locations_to_corrupt=1):
         all_corrupted_indices = []
-        # We would want to ignore the padding token, parentheses and commas 
+        # We would want to ignore the padding token, parentheses and commas
         # while corrputing data
         indices_to_ignore = set([0])
         for token in [",", "(", ")", "."]:
@@ -179,7 +173,7 @@ class DataIndexer(object):
                 # Since predicate and argument indices sets contain non-singleton
                 # words that are not "(", ")" and ",", we do not need to do other checks.
                 next_word_index = -1
-                # It is possible the proposition is just one word. In that case, 
+                # It is possible the proposition is just one word. In that case,
                 # rand_location is the index of that word itself, and we assume
                 # the word is a predicate.
                 if rand_location < len(corrupted_indices)-1:
