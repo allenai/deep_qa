@@ -23,7 +23,7 @@ class MemoryNetworkSolver(NNSolver):
         inputs: list((id, line)): List of index, input tuples.
             id is a identifier for each input to help link input sentences
             with corresponding knowledge.
-            Line can either be a sentence or a logical form, part of
+            Each 'line' can either be a sentence or a logical form, part of
             either the propositions or the background knowledge.
         for_train: We want to update the word index only if we are processing
             training data. This flag will be passed to DataIndexer's process_data.
@@ -49,7 +49,7 @@ class MemoryNetworkSolver(NNSolver):
                 for input_element in input_line.split("\t"):
                     input_ids.append(input_id)
                     input_lines.append(input_element)
-        # TODO (pradeep): process_data is going to change soon, and will no longer return
+        # TODO(pradeep): process_data is going to change soon, and will no longer return
         # the number of propositions. Change this then.
         # Data indexer also returns number of propositions per line. Ignore it.
         _, indexed_input_lines = self.data_indexer.process_data(input_lines, 
