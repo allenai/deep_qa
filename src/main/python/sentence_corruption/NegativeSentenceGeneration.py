@@ -1,209 +1,151 @@
-###Make a false sentence using a true sentence through querying a tensor KB
-#!/usr/bin/env python
 
-import pickle
 from collections import defaultdict as ddict
-import numpy as np
-import ast
 import nltk
-import sys
-import os
 from nltk.stem.wordnet import WordNetLemmatizer
 
-k = int(sys.argv[1])
-input_file = "data/sample-positive-sentences.txt"
-tensor_truetriples = "data/animals-tensor-july10-yesonly-wo-thing.csv"
-out_file = "data/animals-july10-schemadicts.bin"
-candidatesfilename = "data/candidatesentences.txt"
 
 
-class Dictionary(object):
-    def __init__(self):
-        self.strings = dict()
-        self.array = [-1]
-        self.current_index = 1
 
-    def getIndex(self, string, _force_add=False):
-        if not _force_add:
-            index = self.strings.get(string, None)
-            if index:
-                return index
-        self.strings[string] = self.current_index
-        self.array.append(string)
-        self.current_index += 1
-        return self.current_index
-
-    def getString(self, index):
-        return self.array[index]
-
-    def getAllStrings(self):
-        return self.array[1:]
-
-def getTriplesFromFile(filename, entityDict, relDict):
+def getTriplesFromFile(filename):
+    entity_pair_relations = ddict(set)
     triples = []
     for line in open(filename):
         fields = line.split(',')
         source = fields[0]
         relation = fields[1]
         target = fields[2]
-        sourceIndex = entityDict.getIndex(source)
-        targetIndex = entityDict.getIndex(target)
-        relationIndex = relDict.getIndex(relation)
-        triple = (sourceIndex, relationIndex, targetIndex)
+        triple = (source, relation, target)
         triples.append(triple)
+        entity_pair_relations[(source, target)].add(relation)
 
-    return triples
+    return entity_pair_relations
 
 
 
-def makeTypedict(filenameall,entityDict):
+def maketype_dict(filename_all):
     #Note that this depends on form of the given tensor and where each column is.
-    targets = []
-    sources = []
-    typelists = ddict(list)
-    typedict = ddict(list)
-    entitytypedict = ddict(list)
-    schematriples=[]
-    for line in open(filenameall):
-        fields = line.split(',')
+    #The format of input CSV file is source,relation,target, in column 0,1,2 and source_type,target_type in columns
+    # 8,9, respectively.
+    targets = set()
+    sources = set()
+    type_dict = ddict(set)
+    entity_type_dict = dict()
+    schema_triples = set()
+    for line in open(filename_all):
+        fields = line.strip().split(',')
         source = fields[0]
-        relation= fields[1]
+        relation = fields[1]
         target = fields[2]
-        stype = fields[8]
-        ttype = fields[9].replace('\n', '')
-        codeditem = entityDict.getIndex(source)
-        schematriple = (stype, relation, ttype)
-        if schematriple not in schematriples:
-           schematriples.append(schematriple)
-        if stype not in typelists:
-            typelists.update({stype:codeditem})
-        if codeditem not in typedict[stype]:
-            typedict[stype].append(codeditem)
-            entitytypedict[codeditem]= stype
+        source_type = fields[8]
+        target_type = fields[9]
+        schema_triple = (source_type, relation, target_type)
+        schema_triples.add(schema_triple)
+        type_dict[source_type].add(source)
+        entity_type_dict[source] = source_type
+        type_dict[target_type].add(target)
+        entity_type_dict[target] = target_type
+        sources.add(source)
+        targets.add(target)
+    return type_dict , entity_type_dict, schema_triples, sources, targets
 
-        codeditem = entityDict.getIndex(target)
-        if ttype not in typelists:
-            typelists.update({ttype:codeditem})
-        if codeditem not in typedict[ttype]:
-            typedict[ttype].append(codeditem)
-            entitytypedict[codeditem] = ttype
-        if source not in sources:
-            sources.append(source)
-        if target not in targets:
-            targets.append(target)
-    return typedict , entitytypedict, schematriples, sources, targets
-
-def Findreplacement(location1, location2, words, typedict, entitytypedict,entityDict, relDict, allTriples, inputsentence):
-    codeditem1 = entityDict.getIndex(words[location1])
-    type1 = entitytypedict[codeditem1]
-    codeditem2 = entityDict.getIndex(words[location2])
-    type2 = entitytypedict[codeditem2]
+def Findreplacement(location1, location2, words, type_dict, entity_type_dict, entity_pair_relations, input_sentence):
+    #The method receives the sentence in words list and takes the location of the two words that we want to consider
+    #Given these two words, the goal is to generate two sets of perturbations, by replacing one of these words at a time
+    #Let us call these two, as word1, word2.
+    #We look into triple KB and find a list of predicates->predicate_list that connect word1,word2.
+    # note that we consider both orders
+    #Then, given word1, we look into all the words that have the same type(type1) and make a list of the words
+    # that have type1  but never appeared with word2 and any of the predicates in the KB. These are our candidate replacements.
+    # The same approach is repeated for replacing word2.
+    replacementlist_firstitem = []
+    replacementlist_seconditem = []
+    new_sentences_per_sentence = []
+    type1 = entity_type_dict[words[location1]]
+    type2 = entity_type_dict[words[location2]]
 
 
-    #get predicatelist
-    predicatelist = []
-    for relationIndex in range(len(relDict.getAllStrings())):
-        if (codeditem1, relationIndex , codeditem2) in allTriples:
-            predicatelist.append(relationIndex)
+    predicate_list = entity_pair_relations[(words[location1], words[location2])]
 
-    replacementlist_firstitem=[]
-    replacementlist_seconditem=[]
-    flag = 0
-    for candidateitem in typedict[type1]:
-        for predicate in predicatelist:
-            if (candidateitem, predicate, codeditem2) in allTriples:
-                flag=1
-                break
-        if not flag:
+
+
+    for candidateitem in type_dict[type1]:
+        if len(entity_pair_relations[(candidateitem, words[location2])].intersection(predicate_list)) == 0:
             replacementlist_firstitem.append(candidateitem)
-            replacementlist_seconditem.append(codeditem2)
+            replacementlist_seconditem.append(words[location2])
 
-        else:
-            flag = 0
-    flag = 0
-    for candidateitem in typedict[type2]:
-        for predicate in predicatelist:
-            if (codeditem1, predicate, candidateitem) in allTriples:
-                flag = 1
-                break
-        if not flag:
-            replacementlist_firstitem.append(codeditem1)
+    for candidateitem in type_dict[type2]:
+        if len(entity_pair_relations[(words[location1], candidateitem)].intersection(predicate_list)) == 0:
+            replacementlist_firstitem.append(words[location1])
             replacementlist_seconditem.append(candidateitem)
-        else:
-            flag = 0
-    if not replacementlist_firstitem:
-        return -1
 
-    else:
-        with open(candidatesfilename,'a') as f:
-            num_lines = sum(1 for line in open(candidatesfilename))
-            if os.stat(candidatesfilename).st_size == 0:
-                num_lines = 0
-            for i in range(k):
-                newsentence = inputsentence.replace(words[location1], entityDict.getString(replacementlist_firstitem[i]))
-                newsentence = newsentence.replace(words[location2], entityDict.getString(replacementlist_seconditem[i]))
-                f.write(str(num_lines+i) + ' '+ newsentence )
-        f.close()
-        return 1
+    for i in range(max(len(replacementlist_firstitem), no_perturb)):
+        new_sentence = input_sentence.replace(words[location1], replacementlist_firstitem[i])
+        new_sentence = new_sentence.replace(words[location2], replacementlist_seconditem[i])
+        new_sentences_per_sentence.append(new_sentence)
+    return new_sentences_per_sentence
 
-def MakeNegativeSentence(inputsentence, sources, targets, typedict, entitytypedict, entityDict, relDict, allTriples):
+def MakeNegativeSentence(input_sentence, sources, targets, type_dict, entity_type_dict, entity_pair_relations):
     lmtzr = WordNetLemmatizer()
-    words = inputsentence.split(' ')
-    words = [word.replace(".", "") for word in words]
-    words = [word.replace("\n", "") for word in words]
+    words = nltk.word_tokenize(input_sentence)
     words = [lmtzr.lemmatize(word) for word in words]
 
+    new_sentences = []
     for i in range(len(words)):
         if words[i] in sources:
             for j in range(i + 1, len(words)):
                 if words[j] in targets:
                     location1 = i
                     location2 = j
-                    Findreplacement(location1, location2, words, typedict, entitytypedict, entityDict, relDict,
-                                    allTriples, inputsentence)
-                    Findreplacement(location2, location1, words, typedict, entitytypedict, entityDict, relDict,
-                                    allTriples, inputsentence)
+                    new_sentences.extend(Findreplacement(location1, location2, words, type_dict, entity_type_dict,
+                                                         entity_pair_relations, input_sentence))
+                    new_sentences.extend(Findreplacement(location2, location1, words, type_dict, entity_type_dict,
+                                                         entity_pair_relations, input_sentence))
     for i in range(len(words)):
         if words[i] in targets:
             for j in range(i + 1, len(words)):
                 if words[j] in sources:
                     location1 = j
                     location2 = i
-                    Findreplacement(location1, location2, words, typedict, entitytypedict, entityDict, relDict,
-                                    allTriples, inputsentence)
-                    Findreplacement(location2, location1, words, typedict, entitytypedict, entityDict, relDict,
-                                    allTriples, inputsentence)
+                    new_sentences.extend(Findreplacement(location1, location2, words, type_dict, entity_type_dict,
+                                                         entity_pair_relations, input_sentence))
+                    new_sentences.extend(Findreplacement(location2, location1, words, type_dict, entity_type_dict,
+                                                         entity_pair_relations, input_sentence))
 
-
+    with open(candidates_file, 'a') as f:
+        for i in range(len(new_sentences)):
+            f.write(str(i) + ' ' + new_sentences[i])
+    f.close()
     return
 
 
 def main():
-    entityDict = Dictionary()
-    relDict = Dictionary()
-    allTriples = getTriplesFromFile(tensor_truetriples, entityDict, relDict)
-    typedict , entitytypedict, schematriples,sources, targets = makeTypedict(tensor_truetriples, entityDict)
+    entity_pair_relations = getTriplesFromFile(KBtensor_file)
+    type_dict, entity_type_dict, schema_triples, sources, targets = maketype_dict(KBtensor_file)
 
-    '''
-    data = {}
-    data['entities'] = entityDict.getAllStrings()
-    data['relations'] = relDict.getAllStrings()
-    data['typedict'] = typedict
-    data['entitytypedict'] = entitytypedict
-    data['schematriples'] = schematriples
-
-    with open(out_file, 'wb') as out:
-       pickle.dump(data, out, protocol=2)
-    '''
 
     for line in open(input_file):
-        inputsentence = line
-        inputsentence = inputsentence.lower()
-        MakeNegativeSentence(inputsentence,sources, targets, typedict, entitytypedict,entityDict, relDict, allTriples)
+        input_sentence = line
+        input_sentence = input_sentence.lower()
+        MakeNegativeSentence(input_sentence, sources, targets, type_dict, entity_type_dict, entity_pair_relations)
+
 
 
 
 if __name__ == '__main__':
     main()
+
+
+    argparser = argparse.ArgumentParser(description="Perturb sentences using KB and type information")
+    argparser.add_argument("--input_file", type=str, help="File with sentences to perturb,\
+            one per line.")
+    argparser.add_argument("--candidates_file", type=str, help="File with purturbed sentences along with an id,\
+            one per line.")
+    argparser.add_argument("--KBtensor_file", type=str, help="File with sentences to replace words,\
+        one per line.")
+    argparser.add_argument("--no_perturb", type=int, help="no. of word replacements per word combination in sentence, default=20",
+                       default=20)
+
+    args = argparser.parse_args()
+
 
 # vim: et sw=4 sts=4
