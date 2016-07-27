@@ -1,9 +1,3 @@
-from keras import initializations, activations
-from keras.engine import InputSpec
-from keras import backend as K
-from keras.layers import Dense
-
-
 '''
 Knowledge backed scorers take an encoded sentence (or logical form) representation
 and encoded representations of background facts related to the sentence, and summarize
@@ -11,6 +5,13 @@ the background information as a weighted average of the representations of backg
 facts, conditioned on the encoded sentence. For example, KnowledgeBackedDense can be
 used as the first layer in an MLP to make a memory network.
 '''
+
+from keras import initializations, activations
+from keras.engine import InputSpec
+from keras import backend as K
+from keras.layers import Dense
+
+
 class KnowledgeBackedDense(Dense):
     """
     Input Shape: num_samples, (knowledge_length + 1), input_dim
