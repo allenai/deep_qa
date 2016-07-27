@@ -38,7 +38,11 @@ class SentenceSelectorStep(
   override val outputFile = s"data/science/$dataName/$filename"
   val numPartitions = 1
 
-  override val inputs: Set[(String, Option[Step])] = Set((dataDir, None))
+  // The check for required inputs can't handle files on S3, so if the given data directory is on
+  // S3, we just tell the pipeline code that there is no input, and we'll fail in another way if
+  // the S3 file doesn't actually exist.
+  override val inputs: Set[(String, Option[Step])] =
+    if (dataDir.startsWith("s3n://")) Set() else Set((dataDir, None))
   override val outputs = Set(outputFile)
   override val paramFile = outputs.head.dropRight(4) + "_params.json"
   override val inProgressFile = outputs.head.dropRight(4) + "_in_progress"

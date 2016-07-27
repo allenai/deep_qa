@@ -18,9 +18,9 @@ object SimpleLstmExperiments {
   val sentenceSelectorParams: JValue =
     ("type" -> "sentence selector") ~
     ("sentence selector" -> ("max word count per sentence" -> 10)) ~
-    ("max sentences" -> 1000) ~
-    ("data name" -> "abstracts_testing") ~
-    ("data directory" -> "/home/mattg/data/vu_data/abstracts.txt")
+    ("max sentences" -> 10000) ~
+    ("data name" -> "busc_testing") ~
+    ("data directory" -> "s3n://private.store.dev.allenai.org/org.allenai.corpora.busc/extractedDocuments/science_templates")
 
   //////////////////////////////////////////////////////////////////
   // Step 2: Corrupt the positive sentences to get negative data
@@ -72,9 +72,10 @@ object SimpleLstmExperiments {
     ("model" -> modelParams)
 
   def main(args: Array[String]) {
+    new SentenceSelector(sentenceSelectorParams, fileUtil).runPipeline()
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
+    //NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
 }
