@@ -1,8 +1,9 @@
-from nltk.tokenize import word_tokenize
-import numpy
-import math
 from collections import defaultdict
 import itertools
+import math
+
+from nltk.tokenize import word_tokenize
+import numpy
 
 class DataIndexer(object):
     def __init__(self):
@@ -46,7 +47,8 @@ class DataIndexer(object):
             all_indices_array[i][-len(indices):] = indices
         return sentence_lengths, all_indices_array
 
-    def _make_one_hot(self, target_indices, vector_size):
+    @staticmethod
+    def _make_one_hot(target_indices, vector_size):
         # Convert integer indices to one-hot vectors
         one_hot_vectors = numpy.zeros(target_indices.shape + (vector_size,))
         # Each index in the loop below is of a vector in the one-hot array
@@ -116,8 +118,7 @@ class DataIndexer(object):
             temp_target_indices = numpy.copy(temp_target_indices / base)
         # Note: Most significant digit first.
         # Now get one hot vectors of the factored arrays
-        all_one_hot_factored_arrays = [self._make_one_hot(array, base) for
-                array in all_factored_arrays]
+        all_one_hot_factored_arrays = [self._make_one_hot(array, base) for array in all_factored_arrays]
         return all_one_hot_factored_arrays
 
     def unfactor_probabilities(self, probabilities, search_space_size):
@@ -134,8 +135,7 @@ class DataIndexer(object):
             self.prepare_indices_for_test(num_digits_per_word, base, search_space_size)
         word_log_probabilities = []
         for word, factored_index in self.word_factored_indices:
-            log_probs = [math.log(probabilities[i][factored_index[i]]) for
-                    i in range(num_digits_per_word)]
+            log_probs = [math.log(probabilities[i][factored_index[i]]) for i in range(num_digits_per_word)]
             log_probability = sum(log_probs)
             word_log_probabilities.append((log_probability, word))
         # Return the probabilities and mapped words, sorted with the most prob. word first.
@@ -146,8 +146,7 @@ class DataIndexer(object):
         # because we don't want to do this during training, so that we can avoid pickling the
         # factored indices and making search space size decision during training.
         # Sort the vocab based on the frequencies of words in the data
-        frequency_sorted_vocab = sorted(self.word_frequencies.items(), 
-            key=lambda a: a[1], reverse=True)
+        frequency_sorted_vocab = sorted(self.word_frequencies.items(), key=lambda a: a[1], reverse=True)
         self.frequent_words = set([x[0] for x in frequency_sorted_vocab][:search_space_size])
         self.word_factored_indices = []
         # Iterate over all possible combinations of indices. i.e if base is 2, and
@@ -162,7 +161,7 @@ class DataIndexer(object):
                 self.word_factored_indices.append((word, factored_index))
 
     def get_word_from_index(self, index, only_if_frequent=False):
-        word_from_index =  self.reverse_word_index[index] if index in self.reverse_word_index else None
+        word_from_index = self.reverse_word_index[index] if index in self.reverse_word_index else None
         if only_if_frequent:
             # Return this word only if we know that it is a frequent word. See index_data
             # for definition of frequent words
