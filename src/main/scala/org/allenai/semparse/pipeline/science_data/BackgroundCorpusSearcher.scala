@@ -11,6 +11,10 @@ import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.index.query.QueryBuilders
 
+import org.apache.commons.lang3.StringUtils
+
+import scala.collection.mutable
+
 import java.net.InetSocketAddress
 
 /**
@@ -79,6 +83,10 @@ class LuceneBackgroundCorpusSearcher(
   val esClusterName = JsonHelper.extractWithDefault(params, "elastic search cluster name", "aristo-es")
   val esIndexName = JsonHelper.extractWithDefault(params, "elastic search index name", "busc")
 
+  // We get this many times as many results from Lucene as we're looking for, so we can filter
+  // through them and discard duplicates, ones that are too short, or other filtering.
+  val hitMultiplier = 5
+
   override val inputs: Set[(String, Option[Step])] = Set(sentencesInput)
   override val outputs: Set[String] = Set(outputFile)
   override val paramFile = outputFile.dropRight(4) + "_params.json"
@@ -90,7 +98,7 @@ class LuceneBackgroundCorpusSearcher(
     val esClient = TransportClient.builder().settings(settings).build().addTransportAddress(address)
 
     // TODO(matt): might want to make this streaming, for large input files
-    val lines = fileUtil.readLinesFromFile(sentencesFile).take(100)  // TODO(matt): REMOVE THE TAKE!
+    val lines = fileUtil.readLinesFromFile(sentencesFile)
     val indexedSentences = lines.map(line => {
       val fields = line.split("\t")
       (fields(0).toInt, fields(1))
@@ -99,14 +107,39 @@ class LuceneBackgroundCorpusSearcher(
       val (index, sentence) = indexedSentence
       val response = esClient.prepareSearch(esIndexName)
         .setQuery(QueryBuilders.matchQuery("text", sentence))
-        .setFrom(0).setSize(numPassagePerSentence).setExplain(true)
+        .setFrom(0).setSize(numPassagePerSentence * hitMultiplier).setExplain(true)
         .execute()
         .actionGet()
       val passages = response.getHits().getHits().map(hit => {
         hit.sourceAsMap().get("text").asInstanceOf[String]
       })
-      (index, passages.toSeq)
+      val keptPassages = LuceneBackgroundCorpusSearcher.consolidateHits(passages, numPassagePerSentence)
+      (index, keptPassages)
     }).seq
     outputBackground(backgroundPassages)
+  }
+}
+
+object LuceneBackgroundCorpusSearcher {
+  def consolidateHits(hits: Seq[String], maxToKeep: Int): Seq[String] = {
+    val kept = new mutable.ArrayBuffer[String]
+    var i = 0
+    while (kept.size < maxToKeep && i < hits.size) {
+      val hit = hits(i)
+      if (shouldKeep(hit, kept)) {
+        kept += hit
+      }
+      i += 1
+    }
+    kept
+  }
+
+  private def shouldKeep(hit: String, keptSoFar: Seq[String]): Boolean = {
+    if (hit.split(" ").length < 3) return false
+    if (keptSoFar.contains(hit)) return false
+
+    // Jaro-Winkler distance is essentially edit distance / number of characters.
+    if (keptSoFar.exists(kept => StringUtils.getJaroWinklerDistance(kept, hit) > .8)) return false
+    return true
   }
 }
