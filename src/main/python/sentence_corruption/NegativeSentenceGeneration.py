@@ -1,8 +1,8 @@
-import argparse #imports the argparse module so it can be used
+import argparse
 from collections import defaultdict as ddict
 import nltk
 from nltk.stem.wordnet import WordNetLemmatizer
-lemmatizer = WordNetLemmatizer()
+
 
 
 def getTriplesFromFile(filename):
@@ -55,39 +55,42 @@ def find_replacement(location1, location2, words, type_entity_dict, entity_type_
     # Then, given word1, we look into all the words that have the same type(type1) and make a list of the words
     # that have type1  but never appeared with word2 and any of the predicates in the KB. These are our candidate replacements.
     # The same approach is repeated for replacing word2.
+    lemmatizer = WordNetLemmatizer()
     replacement_list = []
 
     negative_sentences_per_sentence = []
+    lemma1 = lemmatizer.lemmatize(words[location1])
+    lemma2 = lemmatizer.lemmatize(words[location2])
 
-    for type1 in entity_type_dict[lemmatizer.lemmatize(words[location1])]:
-        for type2 in entity_type_dict[lemmatizer.lemmatize(words[location2])]:
-            predicate_list = entity_pair_relations[(lemmatizer.lemmatize(words[location1]), lemmatizer.lemmatize(words[location2]))]
+    for type1 in entity_type_dict[lemma1]:
+        for type2 in entity_type_dict[lemma2]:
+            predicate_list = entity_pair_relations[(lemma1, lemma2)]
 
             for candidate_item in type_entity_dict[type1]:
-                if len(entity_pair_relations[(candidate_item, words[location2])].intersection(predicate_list)) == 0:
-                    replacement_list.append((candidate_item, words[location2]))
+                if len(entity_pair_relations[(candidate_item, lemma2)].intersection(predicate_list)) == 0:
+                    replacement_list.append((candidate_item, lemma2))
 
             for candidate_item in type_entity_dict[type2]:
-                if len(entity_pair_relations[(words[location1], candidate_item)].intersection(predicate_list)) == 0:
-                    replacement_list.append((words[location1], candidate_item))
+                if len(entity_pair_relations[(lemma1, candidate_item)].intersection(predicate_list)) == 0:
+                    replacement_list.append((lemma1, candidate_item))
 
 
-    num_replacements = min(len(replacement_list), num_perturbation)
-    for (replacement1, replacement2) in replacement_list[:num_replacements]:
+
+    for (replacement1, replacement2) in replacement_list[:num_perturbation]:
         new_sentence = input_sentence.replace(words[location1], replacement1).replace(words[location2], replacement2)
         negative_sentences_per_sentence.append(new_sentence)
     return negative_sentences_per_sentence
 
-def create_negative_sentence(input_sentence, entities, type_entity_dict, entity_type_dict, entity_pair_relations
-                             , num_perturbation):
-
+def create_negative_sentence(input_sentence, entities, type_entity_dict, entity_type_dict, entity_pair_relations,
+                              num_perturbation):
+    lemmatizer = WordNetLemmatizer()
     words = nltk.word_tokenize(input_sentence)
     negative_sentences = []
 
     for i in range(len(words)):
         if lemmatizer.lemmatize(words[i]) in entities:
             for j in range(i + 1, len(words)):
-                if words[j] in entities:
+                if lemmatizer.lemmatize(words[j]) in entities:
                     location1 = i
                     location2 = j
 
@@ -109,14 +112,14 @@ def main():
                             default=20)
     args = argparser.parse_args()
 
-    entity_pair_relations = getTriplesFromFile(filename = args.kb_tensor_file)
-    type_entity_dict, entity_type_dict, schema_triples, entities = create_type_dict(filename = args.kb_tensor_file)
+    entity_pair_relations = getTriplesFromFile(args.kb_tensor_file)
+    type_entity_dict, entity_type_dict, schema_triples, entities = create_type_dict(args.kb_tensor_file)
 
     negative_sentences = []
     for line in open(args.input_file):
         input_sentence = line
         input_sentence = input_sentence.lower()
-        negative_sentences.extend(create_negative_sentence(input_sentence, entities, type_entity_dict, entity_type_dict, entity_pair_relations, num_perturbation = args.num_perturbation))
+        negative_sentences.extend(create_negative_sentence(input_sentence, entities, type_entity_dict, entity_type_dict, entity_pair_relations, args.num_perturbation))
     with open(args.output_file, 'a') as f:
         for i, sentence in enumerate(negative_sentences):
             f.write(str(i) + ' ' + sentence)
