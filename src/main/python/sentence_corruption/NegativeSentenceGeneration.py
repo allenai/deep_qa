@@ -68,11 +68,11 @@ def find_replacement(location1, location2, words, type_entity_dict, entity_type_
 
             for candidate_item in type_entity_dict[type1]:
                 if len(entity_pair_relations[(candidate_item, lemma2)].intersection(predicate_list)) == 0:
-                    replacement_list.append((candidate_item, lemma2))
+                    replacement_list.append((candidate_item, words[location2]))
 
             for candidate_item in type_entity_dict[type2]:
                 if len(entity_pair_relations[(lemma1, candidate_item)].intersection(predicate_list)) == 0:
-                    replacement_list.append((lemma1, candidate_item))
+                    replacement_list.append((words[location1], candidate_item))
 
 
 
