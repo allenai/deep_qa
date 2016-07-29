@@ -30,7 +30,7 @@ class WordReplacer(object):
     def train_model(self, sentences, word_dim=50, factor_base=2, num_epochs=20,
                     tokenize=True, use_lstm=False):
         _, input_array, factored_target_arrays = self.process_data(
-                sentences, True, factor_base=factor_base, tokenize=tokenize)
+                sentences, is_training=True, factor_base=factor_base, tokenize=tokenize)
         vocab_size = self.data_indexer.get_vocab_size()
         num_factors = len(factored_target_arrays)
         model_input = Input(shape=input_array.shape[1:], dtype='int32') # (batch_size, num_words)
@@ -106,7 +106,7 @@ class WordReplacer(object):
         '''
         max_train_length = train_sequence_length + 1  # + 1 because the last word would be stripped
         sentence_lengths, indexed_sentences, _ = self.process_data(
-                sentences, False, max_length=max_train_length, tokenize=tokenize)
+                sentences, is_training=False, max_length=max_train_length, tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
         all_prediction_factors = self.model.predict(indexed_sentences)
 
