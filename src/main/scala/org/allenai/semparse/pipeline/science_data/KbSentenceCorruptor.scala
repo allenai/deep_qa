@@ -79,7 +79,8 @@ class CorruptedSentenceSelector(
 
 /**
  * This Step takes sentences and uses a KB to generate corruptions that are plausible but false.
- * See comments on CorruptedSentenceSelector for a little more detail.
+ * See comments on CorruptedSentenceSelector (and the comments in the python code this calls) for a
+ * little more detail.
  *
  * INPUTS: (1) positive sentences generated from some SentenceProducer (possibly with sentence
  * indices), (2) a KB file (TODO(matt): document the expected KB file format)
