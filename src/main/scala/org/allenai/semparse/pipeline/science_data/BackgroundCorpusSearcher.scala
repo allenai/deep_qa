@@ -125,7 +125,7 @@ object LuceneBackgroundCorpusSearcher {
     val kept = new mutable.ArrayBuffer[String]
     var i = 0
     while (kept.size < maxToKeep && i < hits.size) {
-      val hit = hits(i)
+      val hit = hits(i).replace("\n", " ")
       if (shouldKeep(hit, kept)) {
         kept += hit
       }

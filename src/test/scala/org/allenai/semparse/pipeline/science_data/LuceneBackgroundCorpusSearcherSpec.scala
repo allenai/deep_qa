@@ -19,18 +19,23 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
     LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq(sentence))
   }
 
-  "consolidateHits" should "remove near duplicates" in {
+  it should "remove near duplicates" in {
     val hits = Seq(sentence, sentence2, sentence3, different)
     LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq(sentence, different))
   }
 
-  "consolidateHits" should "keep only the top k" in {
+  it should "keep only the top k" in {
     val hits = Seq(sentence, different, different2)
     LuceneBackgroundCorpusSearcher.consolidateHits(hits, 2) should be(Seq(sentence, different))
   }
 
-  "consolidateHits" should "remove short results" in {
+  it should "remove short results" in {
     val hits = Seq("short", "also short", "too short", "three is ok", sentence)
     LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq("three is ok", sentence))
+  }
+
+  it should "remove newlines in results" in {
+    val hits = Seq("has a\nnewline in it")
+    LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq("has a newline in it"))
   }
 }
