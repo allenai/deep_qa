@@ -151,6 +151,8 @@ class MemoryNetworkSolver(NNSolver):
             memory_network.fit([proposition_inputs, knowledge_inputs], labels, nb_epoch=1)
             accuracy = self.evaluate(validation_labels, validation_input)
             print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
+            # TODO(matt): add the best_epoch stuff here, or, better yet, move this validation code
+            # input the super class.
             if accuracy < best_accuracy:
                 print("Stopping training", file=sys.stderr)
                 break
@@ -251,18 +253,18 @@ class MemoryNetworkSolver(NNSolver):
 
     def prepare_test_data(self, labeled_proposition_lines, knowledge_lines, max_length):
         '''
-        proposition_lines: list(str): List of tab-separated strings, with first column
-            being sentence index (for knowledge mapping), second column indicating
-            true/false and the third column the sentence
+        proposition_lines: list(str): List of tab-separated strings, with first column being
+            sentence index (for knowledge mapping), second column being the sentence, and the third
+            column being 0/1 indicating false/true.
         knowledge_lines: list(str): List of tab-separated strings, first column sentence
-            index (for knowledge mapping), and second column the sentence
+            index (for knowledge mapping), and second column the sentence.
         '''
         proposition_line_parts = [line.split("\t") for line in labeled_proposition_lines]
         # Make sure that every line has three parts
         assert all([len(parts) == 3 for parts in proposition_line_parts])
-        test_labels = [int(parts[1]) for parts in proposition_line_parts]
+        test_labels = [int(parts[2]) for parts in proposition_line_parts]
         # Putting this in the two column format that process_data expects.
-        test_proposition_lines = ["\t".join([parts[0], parts[2]]) for parts in proposition_line_parts]
+        test_proposition_lines = ["\t".join([parts[0], parts[1]]) for parts in proposition_line_parts]
         proposition_inputs, knowledge_inputs = self.prepare_data(
                 test_proposition_lines, knowledge_lines, for_train=False)
         # Length padding proposition indices:
@@ -306,15 +308,16 @@ def main():
                            help="Use the model from a particular epoch (0 by default)")
     argparser.add_argument('--output_file', type=str, default="out.txt",
                            help="Name of the file to print the test output. out.txt by default")
+    argparser.add_argument("--model_serialization_prefix", default="models/testing_memory_network",
+                           help="Prefix for saving and loading model files")
     args = argparser.parse_args()
     nn_solver = MemoryNetworkSolver()
 
     if not args.positive_train_input:
         # Training file is not given. There must be a serialized model.
         print("Loading scoring model from disk", file=sys.stderr)
-        model_name_prefix = "memory_network_lstm"
         custom_objects = {"KnowledgeBackedDense": KnowledgeBackedDense}
-        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, custom_objects)
+        nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch, custom_objects)
     else:
         assert args.positive_train_background is not None, "Positive background data required for training"
         assert args.negative_train_input is not None, "Negative data required for training"

@@ -16,10 +16,9 @@ class WordReplacer(object):
         self.data_indexer = DataIndexer()
         self.model = None
 
-    def process_data(self, sentences, max_length=None, factor_base=2, tokenize=True):
-        #TODO: Deal with OOV
-        sentence_lengths, indexed_sentences = self.data_indexer.index_data(sentences, max_length, tokenize)
-
+    def process_data(self, sentences, is_training, max_length=None, factor_base=2, tokenize=True):
+        sentence_lengths, indexed_sentences = self.data_indexer.index_data(
+                sentences, max_length, tokenize, is_training)
         # We want the inputs to be words 0..n-1 and targets to be words 1..n in all
         # sentences, so that at each time step t, p(w_{t+1} | w_{0}..w_{t}) will be
         # predicted.
@@ -31,7 +30,7 @@ class WordReplacer(object):
     def train_model(self, sentences, word_dim=50, factor_base=2, num_epochs=20,
                     tokenize=True, use_lstm=False):
         _, input_array, factored_target_arrays = self.process_data(
-                sentences, factor_base=factor_base, tokenize=tokenize)
+                sentences, is_training=True, factor_base=factor_base, tokenize=tokenize)
         vocab_size = self.data_indexer.get_vocab_size()
         num_factors = len(factored_target_arrays)
         model_input = Input(shape=input_array.shape[1:], dtype='int32') # (batch_size, num_words)
@@ -106,13 +105,11 @@ class WordReplacer(object):
         train_sequence_length (int): Length of sequences the model was trained on
         '''
         max_train_length = train_sequence_length + 1  # + 1 because the last word would be stripped
-        sentence_lengths, indexed_sentences, _ = self.process_data(sentences,
-                                                                   max_length=max_train_length,
-                                                                   tokenize=tokenize)
-
+        sentence_lengths, indexed_sentences, _ = self.process_data(
+                sentences, is_training=False, max_length=max_train_length, tokenize=tokenize)
         # All prediction factors shape: [(batch_size, num_words, factor_base)] * num_factors
-        # TODO(matt): this does not handle OOV words
         all_prediction_factors = self.model.predict(indexed_sentences)
+
         all_substitutes = []
         for sentence_id, (sentence_length, location) in enumerate(zip(sentence_lengths, locations)):
             # If sentence length is greater than the longest sentence seen during training,
@@ -157,12 +154,20 @@ def main():
                            help="Prefix for saving and loading model files")
     argparser.add_argument("--output_file",
                            help="Place to save corrupted test file")
+    argparser.add_argument("--max_corrupted_instances", type=int,
+                           help="If set, limit output to this many corrupted sentences")
+    argparser.add_argument("--create_sentence_indices", action="store_true",
+                           help="If true, output will be [sentence id][tab][sentence]")
     args = argparser.parse_args()
     tokenize = False if args.no_tokenize else True
     word_replacer = WordReplacer()
     if args.train_file is not None:
         print("Reading training data", file=sys.stderr)
-        train_sentences = [x.strip() for x in codecs.open(args.train_file, "r", "utf-8")]
+        train_lines = [x.strip() for x in codecs.open(args.train_file, "r", "utf-8")]
+        if '\t' in train_lines[0]:
+            train_sentences = [x.split('\t')[1] for x in train_lines]
+        else:
+            train_sentences = train_lines
         random.shuffle(train_sentences)
         if args.max_instances is not None:
             train_sentences = train_sentences[:args.max_instances]
@@ -179,8 +184,12 @@ def main():
             print("Need to specify where to save output with --output_file", file=sys.stderr)
             sys.exit(-1)
         print("Reading test data", file=sys.stderr)
-        test_sentence_words = [word_tokenize(x.strip())
-                               for x in codecs.open(args.test_file, "r", "utf-8")]
+        test_lines = [x.strip() for x in codecs.open(args.test_file, "r", "utf-8")]
+        if '\t' in test_lines[0]:
+            test_sentence_strings = [x.split('\t')[1] for x in test_lines]
+        else:
+            test_sentence_strings = test_lines
+        test_sentence_words = [word_tokenize(x) for x in test_sentence_strings]
         test_sentences = []
         locations = []
         # Stop words. Do not replace these or let them be replacements.
@@ -203,13 +212,20 @@ def main():
                                                     train_sequence_length, tokenize=tokenize,
                                                     search_space_size=args.search_space_size)
         outfile = codecs.open(args.output_file, "w", "utf-8")
+        index = 0
         for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, locations):
             word_being_replaced = words[location]
             for _, substitute in logprob_substitute_list:
                 if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
                     corrupted_words = list(words)
                     corrupted_words[location] = substitute
-                    print("%s\t%s" % (" ".join(words), " ".join(corrupted_words)), file=outfile)
+                    corrupted_sentence = " ".join(corrupted_words)
+                    if args.create_sentence_indices:
+                        output_string = '%d\t%s' % (index, corrupted_sentence)
+                    else:
+                        output_string = corrupted_sentence
+                    print(output_string, file=outfile)
+                    index += 1
                     break
         outfile.close()
 

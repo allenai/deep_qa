@@ -7,33 +7,36 @@ import numpy
 
 class DataIndexer(object):
     def __init__(self):
-        self.word_index = {"PADDING":0}
-        self.reverse_word_index = {0: "PADDING"}
+        self.word_index = {"PADDING": 0, "OOV": 1}
+        self.reverse_word_index = {0: "PADDING", 1: "OOV"}
         self.word_factored_indices = None
         self.word_frequencies = defaultdict(int)
         self.frequent_words = set([])
 
-    def index_sentence(self, sentence, tokenize):
+    def index_sentence(self, sentence, tokenize, add_to_index):
         words = word_tokenize(sentence.lower()) if tokenize else sentence.split()
         # Adding start and end tags after tokenization to avoid tokenizing those symbols
         words = ['<s>'] + words + ['</s>']
         indices = []
         for word in words:
             if word not in self.word_index:
-                index = len(self.word_index)
-                # Note the input is lowercased. So the padding string "PADDING",
-                # does not occur in the input.
-                self.word_index[word] = index
-                self.reverse_word_index[index] = word
+                if add_to_index:
+                    index = len(self.word_index)
+                    # Note the input is lowercased. So the padding string "PADDING",
+                    # does not occur in the input.
+                    self.word_index[word] = index
+                    self.reverse_word_index[index] = word
+                else:
+                    word = "OOV"
             else:
                 self.word_frequencies[word] += 1
             indices.append(self.word_index[word])
         return indices
 
-    def index_data(self, sentences, max_length=None, tokenize=True):
+    def index_data(self, sentences, max_length=None, tokenize=True, add_to_index=True):
         all_indices = []
         for sentence in sentences:
-            sentence_indices = self.index_sentence(sentence, tokenize=tokenize)
+            sentence_indices = self.index_sentence(sentence, tokenize, add_to_index)
             all_indices.append(sentence_indices)
         # Note: sentence_length includes start and end symbols as well.
         sentence_lengths = [len(indices) for indices in all_indices]

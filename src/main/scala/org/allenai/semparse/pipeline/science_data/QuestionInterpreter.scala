@@ -26,17 +26,17 @@ case class Answer(text: String, isCorrect: Boolean)
 case class ScienceQuestion(sentences: Seq[String], answers: Seq[Answer])
 
 class QuestionInterpreter(
-  params: JValue,
-  fileUtil: FileUtil
-) extends Step(Some(params), fileUtil) {
+  val params: JValue,
+  val fileUtil: FileUtil
+) extends Step(Some(params), fileUtil) with SentenceProducer {
   implicit val formats = DefaultFormats
   override val name = "Question Interpreter"
 
-  val validParams = Seq("question file", "wh-movement", "output file")
+  val validParams = baseParams ++ Seq("question file", "wh-movement", "output file")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   val questionFile = (params \ "question file").extract[String]
-  val outputFile = (params \ "output file").extract[String]
+  override val outputFile = (params \ "output file").extract[String]
   val whMover = WhMover.create(params \ "wh-movement")
 
   override val inputs: Set[(String, Option[Step])] = Set((questionFile, None))
@@ -68,7 +68,7 @@ class QuestionInterpreter(
         }
       }
     }).seq
-    fileUtil.writeLinesToFile(outputFile, outputLines)
+    outputSentences(outputLines)
   }
 
   /**

@@ -120,3 +120,66 @@ class NoBackgroundKnowledgeNNSentenceTrainer(
   override val inProgressFile = modelPrefix + "_in_progress"
   override val paramFile = modelPrefix + "_params.json"
 }
+
+/**
+ * This NeuralNetworkTrainer is a memory network.  We take good and bad sentences as input, as well
+ * as a collection of background sentences for each input.
+ */
+class MemoryNetworkTrainer(
+  params: JValue,
+  fileUtil: FileUtil
+) extends NeuralNetworkTrainer(params, fileUtil) {
+  override val name = "Neural Network Trainer, on sentences, no background knowledge input"
+
+  val validParams = baseParams ++ Seq(
+    "positive data",
+    "positive background",
+    "negative data",
+    "negative background",
+    "validation background",
+    "max sentence length"
+  )
+  JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val maxSentenceLength = JsonHelper.extractAsOption[Int](params, "max sentence length")
+  val maxSentenceLengthArgs =
+    maxSentenceLength.map(max => Seq("--length_upper_limit", max.toString)).toSeq.flatten
+
+  val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveTrainingFile = positiveDataProducer.outputFile
+  val positiveBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "positive background", fileUtil)
+  val positiveBackgroundFile = positiveBackgroundSearcher.outputFile
+
+  val negativeDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val negativeTrainingFile = negativeDataProducer.outputFile
+  val negativeBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "negative background", fileUtil)
+  val negativeBackgroundFile = negativeBackgroundSearcher.outputFile
+
+  val validationBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "validation background", fileUtil)
+  val validationBackgroundFile = validationBackgroundSearcher.outputFile
+
+  override val scriptFile = Some("src/main/python/prop_scorer/memory_network.py")
+  override val arguments = Seq[String](
+    "--positive_train_input", positiveTrainingFile,
+    "--positive_train_background", positiveBackgroundFile,
+    "--negative_train_input", negativeTrainingFile,
+    "--negative_train_background", negativeBackgroundFile,
+    "--validation_input", validationQuestionsFile,
+    "--validation_background", validationBackgroundFile,
+    "--num_epochs", numEpochs.toString,
+    "--model_serialization_prefix", modelPrefix
+  ) ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs
+
+  override val inputs: Set[(String, Option[Step])] = Set(
+    (positiveTrainingFile, Some(positiveDataProducer)),
+    (positiveBackgroundFile, Some(positiveBackgroundSearcher)),
+    (negativeTrainingFile, Some(negativeDataProducer)),
+    (negativeBackgroundFile, Some(negativeBackgroundSearcher)),
+    validationInput,
+    (validationBackgroundFile, Some(validationBackgroundSearcher))
+  )
+  override val outputs = modelOutputs.toSet
+
+  override val inProgressFile = modelPrefix + "_in_progress"
+  override val paramFile = modelPrefix + "_params.json"
+}
