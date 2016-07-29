@@ -1,0 +1,113 @@
+package org.allenai.semparse.pipeline.science_data
+
+import org.json4s._
+
+import com.mattg.pipeline.Step
+import com.mattg.pipeline.SubprocessStep
+import com.mattg.util.FileUtil
+import com.mattg.util.JsonHelper
+
+/**
+ * The goal of this series of Steps is to take some positive training data as input, then produce a
+ * set of corrupted data for each positive instance, so we can train a model using noise
+ * contrastive estimation.
+ *
+ * The way that we do this is a three step process:
+ *   1. Given a bunch of positive sentences, we use a KB-backed method to generate similar
+ *      sentences that we believe to be false.
+ *   2. We train a language model on the positive sentences.
+ *   3. We use the language model to select the most plausible of the false sentences, and return
+ *      that.
+ *
+ * The input/output spec for these three steps, then, matches that of the SentenceCorruptor:
+ *
+ * INPUTS: a file containing good sentences, one sentence per line.  The input can optionally have
+ * indices for each sentence.  The expected file format is either "[sentence]" or
+ * "[index][tab][sentence]".
+ *
+ * OUTPUTS: a file containing corrupted sentences, one sentence per line.  Output format is the
+ * same as input format: either "[sentence]" or "[index][tab][sentence]".  Note that the indices
+ * are not guaranteed to match between input good statement and output bad statement.  If we
+ * actually need that at some point, I'll add it.
+ *
+ * These inputs and outputs are actually spread across the three steps, though.
+ * KbSentenceCorruptor takes the input, as does the LanguageModelTrainer.
+ * CorruptedSentenceSelector then takes the outputs from those two steps and gives the output
+ * listed above; CorruptedSentenceSelector is the SentenceProducer Step that actually gets
+ * integrated with other parts of the pipeline code.
+ */
+class CorruptedSentenceSelector(
+  val params: JValue,
+  val fileUtil: FileUtil
+) extends SubprocessStep(Some(params), fileUtil) with SentenceProducer {
+  implicit val formats = DefaultFormats
+  override val name = "Corrupted Sentence Selector"
+
+  val validParams = baseParams ++ Seq("language model", "corruptor")
+  JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val trainer = new LanguageModelTrainer(params \ "language model", fileUtil)
+  val tokenizeInputArg = if (trainer.tokenizeInput) Seq() else Seq("--no_tokenize")
+  val useLstmArg = if (trainer.useLstm) Seq("--use_lstm") else Seq()
+
+  // These two arguments are defined and extracted in SentenceProducer.
+  val maxSentencesArgs = maxSentences.map(max => Seq("--max_corrupted_instances", max.toString)).toSeq.flatten
+  val indexSentencesArg = if (indexSentences) Seq("--create_sentence_indices") else Seq()
+
+  val kbSentenceCorruptor = new KbSentenceCorruptor(params \ "corruptor", fileUtil)
+  val possibleCorruptions = kbSentenceCorruptor.outputFile
+  override val outputFile = kbSentenceCorruptor.positiveDataFile.dropRight(4) + "_corrupted.tsv"
+
+  // TODO(matt): This use of the language model isn't implemented yet, so this code is wrong.
+  override val binary = "python"
+  override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
+  override val arguments = Seq(
+    "--test_file", possibleCorruptions,
+    "--output_file", outputFile,
+    "--word_dim", trainer.wordDimensionality.toString,
+    "--factor_base", trainer.factorBase.toString,
+    "--model_serialization_prefix", trainer.modelPrefix
+  ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs ++ indexSentencesArg
+
+  override val inputs: Set[(String, Option[Step])] = Set(
+    (possibleCorruptions, Some(kbSentenceCorruptor))
+  ) ++ trainer.outputs.map(file => (file, Some(trainer)))
+  override val outputs = Set(outputFile)
+  override val paramFile = outputFile.dropRight(4) + "_params.json"
+  override val inProgressFile = outputFile.dropRight(4) + "_in_progress"
+}
+
+class KbSentenceCorruptor(
+  val params: JValue,
+  val fileUtil: FileUtil
+) extends SubprocessStep(Some(params), fileUtil) {
+  implicit val formats = DefaultFormats
+  override val name = "KB Sentence Corruptor"
+
+  val validParams = Seq("positive data", "kb tensor file", "num corruptions")
+  JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val kbTensorFile = (params \ "kb tensor file").extract[String]
+  val numCorruptions = JsonHelper.extractWithDefault(params, "num corruptions", 10)
+
+  val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveDataFile = sentenceProducer.outputFile
+  override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
+
+  override val binary = "python"
+  override val scriptFile = Some("src/main/python/sentence_corruption/kb_sentence_corruptor.py")
+  override val arguments = Seq(
+    "--input_file", positiveDataFile,
+    "--output_file", outputFile,
+    "--kb_tensor_file", kbTensorFile,
+    "--num_perturbation", numCorruptions.toString
+  )
+
+  override val inputs: Set[(String, Option[Step])] = Set(
+    (positiveDataFile, Some(sentenceProducer)),
+    (kbTensorFile, None)
+  )
+  override val outputs = Set(outputFile)
+  override val paramFile = outputFile.dropRight(4) + "_params.json"
+  override val inProgressFile = outputFile.dropRight(4) + "_in_progress"
+}
