@@ -60,8 +60,8 @@ class MemoryNetworkSolver(NNSolver):
         return mapped_indices
 
     def train(self, proposition_inputs, knowledge_inputs, labels, validation_input,
-            validation_labels, embedding_size=50, num_memory_layers=1, num_epochs=20,
-            vocab_size=None):
+              validation_labels, embedding_size=50, num_memory_layers=1, num_epochs=20,
+              vocab_size=None):
         '''
         proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
             in labeled propositions
@@ -94,7 +94,8 @@ class MemoryNetworkSolver(NNSolver):
         ## Step 3: Encode the two embedded inputs using the same encoder
         # Can replace the LSTM below with fancier encoders depending on the input.
         proposition_encoder = LSTM(output_dim=embedding_size, W_regularizer=l2(0.01),
-                U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='encoder')
+                                   U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='encoder')
+
         # Knowledge encoder will have the same encoder running on a higher order tensor.
         # i.e., proposition_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
         # and knowledge_encoder: (samples, knowledge_len, num_words, word_dim) ->
@@ -115,19 +116,22 @@ class MemoryNetworkSolver(NNSolver):
             # additional row (at the beginning) in all slices.
             # (samples, word_dim) + (samples, knowledge_len, word_dim)
             #       -> (samples, 1 + knowledge_len, word_dim)
-            # Since this is an unconventional merge, define a customized lambda merge.
-            # Keras cannot infer the shape of the output of a lambda function, so make
+            # Since this is an unconventional merge, we define a customized lambda merge.
+            # Keras cannot infer the shape of the output of a lambda function, so we make
             # that explicit.
-            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0],
-                        dim=1), layer_outs[1]], axis=1)
-            merged_shape = lambda layer_out_shapes: (layer_out_shapes[1][0],
-                    layer_out_shapes[1][1] + 1, layer_out_shapes[1][2])
+            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=1),
+                                                           layer_outs[1]],
+                                                          axis=1)
+            merged_shape = lambda layer_out_shapes: \
+                (layer_out_shapes[1][0], layer_out_shapes[1][1] + 1, layer_out_shapes[1][2])
             merged_encoded_rep = merge([next_memory_layer_input, encoded_knowledge],
-                    mode=merge_mode, output_shape=merged_shape)
+                                       mode=merge_mode,
+                                       output_shape=merged_shape)
+
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
             knowledge_backed_projector = KnowledgeBackedDense(output_dim=embedding_size,
-                    name='memory_layer_%d' % i)
+                                                              name='memory_layer_%d' % i)
             memory_layer_output = knowledge_backed_projector(regularized_merged_rep)
             next_memory_layer_input = memory_layer_output
 
@@ -136,8 +140,7 @@ class MemoryNetworkSolver(NNSolver):
         softmax_output = softmax(memory_layer_output)
 
         ## Step 6: Define the model, compile and train it.
-        memory_network = Model(input=[proposition_input, knowledge_input],
-                output=softmax_output)
+        memory_network = Model(input=[proposition_input, knowledge_input], output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print(memory_network.summary(), file=sys.stderr)
         self.model = memory_network
@@ -158,8 +161,8 @@ class MemoryNetworkSolver(NNSolver):
     def prepare_data(self, proposition_lines, knowledge_lines, for_train=True):
         # Common data preparation function for both train and test data.
         proposition_tuples = [x.split("\t") for x in proposition_lines]
-        assert all([len(proposition_tuple) == 2 for proposition_tuple in
-            proposition_tuples]), "Malformed proposition input"
+        assert all([len(proposition_tuple) == 2
+                    for proposition_tuple in proposition_tuples]), "Malformed proposition input"
         # Keep track of maximum sentence length and number of sentences for padding
         # There are two kinds of knowledge padding coming up:
         # length padding: to make all background sentences the same length, done using
@@ -180,8 +183,7 @@ class MemoryNetworkSolver(NNSolver):
                 continue
             knowledge_tuples.append((parts[0], "\t".join(parts[1:])))
         mapped_proposition_indices = self.index_inputs(proposition_tuples, for_train=for_train)
-        mapped_knowledge_indices = self.index_inputs(knowledge_tuples, for_train=for_train,
-                one_per_line=False)
+        mapped_knowledge_indices = self.index_inputs(knowledge_tuples, for_train=for_train, one_per_line=False)
         # Compute the maximum number of background sentences for num_padding the shorter sets of
         # sentences.
         max_num_knowledge = max([len(knowledge_input) for knowledge_input in mapped_knowledge_indices.values()])
@@ -204,7 +206,7 @@ class MemoryNetworkSolver(NNSolver):
         return proposition_inputs, knowledge_inputs
 
     def prepare_training_data(self, positive_proposition_lines, positive_knowledge_lines,
-            negative_proposition_lines, negative_knowledge_lines, max_length=None):
+                              negative_proposition_lines, negative_knowledge_lines, max_length=None):
         positive_proposition_inputs, positive_knowledge_inputs = self.prepare_data(
                 positive_proposition_lines, positive_knowledge_lines, for_train=True)
         negative_proposition_inputs, negative_knowledge_inputs = self.prepare_data(
@@ -220,22 +222,21 @@ class MemoryNetworkSolver(NNSolver):
             # this to make sure all are length-padded to the same size. First find out max
             # proposition length, and then do the same for knowledge.
             # proposition_inputs are of shape (num_samples, num_words)
-            max_proposition_length = max([len(proposition) for proposition in
-                proposition_inputs])
+            max_proposition_length = max([len(proposition) for proposition in proposition_inputs])
             max_knowledge_length = 0
             # knowledge_inputs are of shape (num_samples, num_sentences, num_words)
             for knowledge_index_list in knowledge_inputs:
                 max_knowledge_length = max(max_knowledge_length,
-                        max([len(indices) for indices in knowledge_index_list]))
+                                           max([len(indices) for indices in knowledge_index_list]))
             max_length = max(max_proposition_length, max_knowledge_length)
         # Length padding proposition indices:
         proposition_inputs = self.data_indexer.pad_indices(proposition_inputs, max_length)
         # Length padding knowledge indices
         knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length)
-                for knowledge_input in knowledge_inputs]
+                            for knowledge_input in knowledge_inputs]
         # one hot labels: [1, 0] for positive, [0, 1] for negative
-        labels = [[1,0] for _ in range(num_positive_inputs)] + \
-                [[0,1] for _ in range(num_negative_inputs)]
+        labels = [[1, 0] for _ in range(num_positive_inputs)] + \
+                [[0, 1] for _ in range(num_negative_inputs)]
         # Shuffle propositions, knowledge and labels in unison.
         all_inputs = zip(proposition_inputs, knowledge_inputs, labels)
         random.shuffle(all_inputs)
@@ -261,21 +262,20 @@ class MemoryNetworkSolver(NNSolver):
         assert all([len(parts) == 3 for parts in proposition_line_parts])
         test_labels = [int(parts[1]) for parts in proposition_line_parts]
         # Putting this in the two column format that process_data expects.
-        test_proposition_lines = ["\t".join([parts[0], parts[2]]) for parts in
-                proposition_line_parts]
-        proposition_inputs, knowledge_inputs = self.prepare_data(test_proposition_lines,
-                knowledge_lines, for_train=False)
+        test_proposition_lines = ["\t".join([parts[0], parts[2]]) for parts in proposition_line_parts]
+        proposition_inputs, knowledge_inputs = self.prepare_data(
+                test_proposition_lines, knowledge_lines, for_train=False)
         # Length padding proposition indices:
         proposition_inputs = self.data_indexer.pad_indices(proposition_inputs, max_length)
         # Length padding knowledge indices
         knowledge_inputs = [self.data_indexer.pad_indices(knowledge_input, max_length)
-                for knowledge_input in knowledge_inputs]
+                            for knowledge_input in knowledge_inputs]
         # We want to return the indices of correct answers since that is what the evaluate
         # function in nn_solver expects.
         num_questions = len(test_labels)/4
         test_answers = numpy.asarray(test_labels).reshape(num_questions, 4)
-        assert numpy.all(numpy.asarray([numpy.count_nonzero(ta) for ta in
-            test_answers]) == 1), "Some questions do not have exactly one answer"
+        num_answers = numpy.asarray([numpy.count_nonzero(ta) for ta in test_answers])
+        assert numpy.all(num_answers == 1), "Some questions do not have exactly one answer"
         test_labels = numpy.argmax(test_answers, axis=1)
         proposition_inputs = numpy.asarray(proposition_inputs, dtype='int32')
         knowledge_inputs = numpy.asarray(knowledge_inputs, dtype='int32')
@@ -284,7 +284,7 @@ class MemoryNetworkSolver(NNSolver):
         return test_labels, [proposition_inputs, knowledge_inputs]
 
 
-if __name__=="__main__":
+def main():
     argparser = argparse.ArgumentParser(description="Memory network solver")
     argparser.add_argument('--positive_train_input', type=str)
     argparser.add_argument('--positive_train_background', type=str)
@@ -295,17 +295,17 @@ if __name__=="__main__":
     argparser.add_argument('--test_input', type=str)
     argparser.add_argument('--test_background', type=str)
     argparser.add_argument('--num_memory_layers', type=int,
-            help="Number of memory layers in the network. (default 1)", default=1)
+                           help="Number of memory layers in the network. (default 1)", default=1)
     argparser.add_argument('--length_upper_limit', type=int,
-            help="Upper limit on length of training data. Ignored during testing.")
+                           help="Upper limit on length of training data. Ignored during testing.")
     argparser.add_argument('--max_train_size', type=int,
-            help="Upper limit on the size of training data")
+                           help="Upper limit on the size of training data")
     argparser.add_argument('--num_epochs', type=int, default=20,
-            help="Number of train epochs (20 by default)")
+                           help="Number of train epochs (20 by default)")
     argparser.add_argument('--use_model_from_epoch', type=int, default=0,
-            help="Use the model from a particular epoch (0 by default)")
+                           help="Use the model from a particular epoch (0 by default)")
     argparser.add_argument('--output_file', type=str, default="out.txt",
-            help="Name of the file to print the test output. out.txt by default")
+                           help="Name of the file to print the test output. out.txt by default")
     args = argparser.parse_args()
     nn_solver = MemoryNetworkSolver()
 
@@ -314,8 +314,7 @@ if __name__=="__main__":
         print("Loading scoring model from disk", file=sys.stderr)
         model_name_prefix = "memory_network_lstm"
         custom_objects = {"KnowledgeBackedDense": KnowledgeBackedDense}
-        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch,
-                custom_objects=custom_objects)
+        nn_solver.load_model(model_name_prefix, args.use_model_from_epoch, custom_objects)
     else:
         assert args.positive_train_background is not None, "Positive background data required for training"
         assert args.negative_train_input is not None, "Negative data required for training"
@@ -324,13 +323,13 @@ if __name__=="__main__":
         assert args.validation_background is not None, "Validation background is needed for training"
         print("Reading training data", file=sys.stderr)
         positive_proposition_lines = [x.strip() for x in codecs.open(
-            args.positive_train_input, "r", "utf-8").readlines()]
+                args.positive_train_input, "r", "utf-8").readlines()]
         negative_proposition_lines = [x.strip() for x in codecs.open(
-            args.negative_train_input, "r", "utf-8").readlines()]
+                args.negative_train_input, "r", "utf-8").readlines()]
         positive_knowledge_lines = [x.strip() for x in codecs.open(
-            args.positive_train_background, "r", "utf-8").readlines()]
+                args.positive_train_background, "r", "utf-8").readlines()]
         negative_knowledge_lines = [x.strip() for x in codecs.open(
-            args.negative_train_background, "r", "utf-8").readlines()]
+                args.negative_train_background, "r", "utf-8").readlines()]
         train_labels, train_inputs = nn_solver.prepare_training_data(
                 positive_proposition_lines, positive_knowledge_lines,
                 negative_proposition_lines, negative_knowledge_lines,
@@ -344,16 +343,16 @@ if __name__=="__main__":
         train_sequence_length = train_proposition_inputs.shape[1]
         print("Reading validation data", file=sys.stderr)
         validation_proposition_lines = [x.strip() for x in codecs.open(
-            args.validation_input,'r', 'utf-8').readlines()]
+                args.validation_input, 'r', 'utf-8').readlines()]
         validation_knowledge_lines = [x.strip() for x in codecs.open(
-            args.validation_background,'r', 'utf-8').readlines()]
+                args.validation_background, 'r', 'utf-8').readlines()]
         validation_labels, validation_input = nn_solver.prepare_test_data(
                 validation_proposition_lines, validation_knowledge_lines,
                 train_sequence_length)
         print("Training model", file=sys.stderr)
         nn_solver.train(train_proposition_inputs, train_knowledge_inputs, train_labels,
-                validation_input, validation_labels,
-                num_memory_layers=args.num_memory_layers, num_epochs=args.num_epochs)
+                        validation_input, validation_labels,
+                        num_memory_layers=args.num_memory_layers, num_epochs=args.num_epochs)
 
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
@@ -361,12 +360,12 @@ if __name__=="__main__":
 
     if args.test_input is not None:
         assert args.test_background is not None, "Test background file not provided"
-        test_proposition_lines = [x.strip() for x in codecs.open(args.test_input,
-            'r', 'utf-8').readlines()]
-        test_knowledge_lines = [x.strip() for x in codecs.open(args.test_background,
-            'r', 'utf-8').readlines()]
-        test_labels, test_input = nn_solver.prepare_test_data(test_proposition_lines,
-                test_knowledge_lines, max_length)
+        test_proposition_lines = [x.strip() for x in codecs.open(
+                args.test_input, 'r', 'utf-8').readlines()]
+        test_knowledge_lines = [x.strip() for x in codecs.open(
+                args.test_background, 'r', 'utf-8').readlines()]
+        test_labels, test_input = nn_solver.prepare_test_data(
+                test_proposition_lines, test_knowledge_lines, max_length)
         print("Scoring test data", file=sys.stderr)
         test_scores = nn_solver.score(test_input)
         accuracy = nn_solver.evaluate(test_labels, test_input)
@@ -377,3 +376,6 @@ if __name__=="__main__":
             print(score, line, file=outfile)
         outfile.close()
 
+
+if __name__ == "__main__":
+    main()

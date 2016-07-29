@@ -67,8 +67,10 @@ class DataIndexer(object):
                     self.argument_indices.add(self.word_index[word])
 
         for words in all_proposition_words:
-            proposition_indices = [self.word_index[word] if word in
-                    self.word_index else self.word_index["UNK"] for word in words]
+            proposition_indices = [self.word_index[word]
+                                   if word in self.word_index
+                                   else self.word_index["UNK"]
+                                   for word in words]
             all_proposition_indices.append(proposition_indices)
 
         # Update the reverse index
@@ -126,7 +128,8 @@ class DataIndexer(object):
             all_elements.append(elements)
         return all_transitions, all_elements
 
-    def pad_indices(self, all_indices, max_length=None):
+    @staticmethod
+    def pad_indices(all_indices, max_length=None):
         if max_length is None:
             max_length = max([len(ind) for ind in all_indices])
         all_padded_indices = []
