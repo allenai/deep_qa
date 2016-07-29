@@ -125,7 +125,7 @@ object LuceneBackgroundCorpusSearcher {
     val kept = new mutable.ArrayBuffer[String]
     var i = 0
     while (kept.size < maxToKeep && i < hits.size) {
-      val hit = hits(i).replace("\n", " ")
+      val hit = replaceNewlines(hits(i))
       if (shouldKeep(hit, kept)) {
         kept += hit
       }
@@ -141,5 +141,12 @@ object LuceneBackgroundCorpusSearcher {
     // Jaro-Winkler distance is essentially edit distance / number of characters.
     if (keptSoFar.exists(kept => StringUtils.getJaroWinklerDistance(kept, hit) > .8)) return false
     return true
+  }
+
+  private def replaceNewlines(line: String, replaceWith: String = " "): String = {
+    line.replace("\u0085", replaceWith)
+      .replace("\r\n", replaceWith)
+      .replace("\r", replaceWith)
+      .replace("\n", replaceWith)
   }
 }

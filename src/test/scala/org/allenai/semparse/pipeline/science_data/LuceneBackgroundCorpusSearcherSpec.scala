@@ -38,4 +38,9 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
     val hits = Seq("has a\nnewline in it")
     LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq("has a newline in it"))
   }
+
+  it should "remove other newline variants" in {
+    val hits = Seq("a\u0085b\rc\r\nd")
+    LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq("a b c d"))
+  }
 }
