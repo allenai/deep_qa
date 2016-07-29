@@ -43,4 +43,9 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
     val hits = Seq("a\u0085b\rc\r\nd")
     LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq("a b c d"))
   }
+
+  it should "shorten whitespace" in {
+    val hits = Seq("a      b              c                        d")
+    LuceneBackgroundCorpusSearcher.consolidateHits(hits, 10) should be(Seq("a b c d"))
+  }
 }
