@@ -77,6 +77,18 @@ class CorruptedSentenceSelector(
   override val inProgressFile = outputFile.dropRight(4) + "_in_progress"
 }
 
+/**
+ * This Step takes sentences and uses a KB to generate corruptions that are plausible but false.
+ * See comments on CorruptedSentenceSelector for a little more detail.
+ *
+ * INPUTS: (1) positive sentences generated from some SentenceProducer (possibly with sentence
+ * indices), (2) a KB file (TODO(matt): document the expected KB file format)
+ *
+ * OUTPUTS: a file containing possible corruptions of the positive sentences.  For each sentence,
+ * we group all possible corruptions onto the same line, separated by tabs.  This is so that the
+ * CorruptedSentenceSelector can pick one (or several) of the alternatives from each line using a
+ * language model.
+ */
 class KbSentenceCorruptor(
   val params: JValue,
   val fileUtil: FileUtil
@@ -92,7 +104,7 @@ class KbSentenceCorruptor(
 
   val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
   val positiveDataFile = sentenceProducer.outputFile
-  override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
+  val outputFile = positiveDataFile.dropRight(4) + "_potential_corruptions.tsv"
 
   override val binary = "python"
   override val scriptFile = Some("src/main/python/sentence_corruption/kb_sentence_corruptor.py")

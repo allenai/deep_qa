@@ -19,11 +19,11 @@ class LanguageModelTrainer(
   implicit val formats = DefaultFormats
   override val name = "Language Model Trainer"
 
-  val validParams = Seq("positive data", "maximum training sentences", "word dimensionality",
+  val validParams = Seq("sentences", "num sentences to use", "word dimensionality",
     "factor base", "tokenize input", "use lstm", "max training epochs")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val maxSentences = JsonHelper.extractAsOption[Int](params, "maximum training sentences")
+  val maxSentences = JsonHelper.extractAsOption[Int](params, "num sentences to use")
   val maxSentencesArgs = maxSentences.map(max => Seq("--max_instances", max.toString)).toSeq.flatten
   val wordDimensionality = JsonHelper.extractWithDefault(params, "word dimensionality", 50)
   val factorBase = JsonHelper.extractWithDefault(params, "factor base", 2)
