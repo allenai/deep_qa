@@ -73,19 +73,38 @@ class LuceneBackgroundCorpusSearcher(
   implicit val formats = DefaultFormats
   override val name = "Lucene Background Knowledge Searcher"
 
-  val validParams = baseParams ++ Seq("num passages per sentence", "elastic search index url",
-    "elastic search index name", "elastic search cluster name", "elastic search index port")
+  val validParams = baseParams ++ Seq(
+    "num passages per sentence",
+    "max sentence length",
+    "min sentence length",
+    "hit multiplier",
+    "remove query from results",
+    "elastic search index url",
+    "elastic search index name",
+    "elastic search cluster name",
+    "elastic search index port"
+  )
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val numPassagePerSentence = JsonHelper.extractWithDefault(params, "num passages per sentence", 10)
+  val numPassagesPerSentence = JsonHelper.extractWithDefault(params, "num passages per sentence", 10)
+  val maxSentenceLength = JsonHelper.extractWithDefault(params, "max sentence length", 100)
+  val minSentenceLength = JsonHelper.extractWithDefault(params, "min sentence length", 3)
+
+  // We get this many times as many results from Lucene as we're looking for, so we can filter
+  // through them and discard duplicates, ones that are too short, or other filtering.
+  val hitMultiplier = JsonHelper.extractWithDefault(params, "hit multiplier", 5)
+
+  // If the sentences we're querying with are drawn from the same corpus as we are querying with
+  // Lucene, the query sentence will always be returned when we do a search.  This is pretty bad
+  // for producing training data, so we remove the query from the returned results.  However, at
+  // test time, if you happen to have the query sentence in the results, that's not a problem, so
+  // we make this a parameter.
+  val removeQuery = JsonHelper.extractWithDefault(params, "remove query from results", true)
+
   val esUrl = JsonHelper.extractWithDefault(params, "elastic search index url", "aristo-es1.dev.ai2")
   val esPort = JsonHelper.extractWithDefault(params, "elastic search index port", 9300)
   val esClusterName = JsonHelper.extractWithDefault(params, "elastic search cluster name", "aristo-es")
   val esIndexName = JsonHelper.extractWithDefault(params, "elastic search index name", "busc")
-
-  // We get this many times as many results from Lucene as we're looking for, so we can filter
-  // through them and discard duplicates, ones that are too short, or other filtering.
-  val hitMultiplier = 5
 
   override val inputs: Set[(String, Option[Step])] = Set(sentencesInput)
   override val outputs: Set[String] = Set(outputFile)
@@ -107,26 +126,24 @@ class LuceneBackgroundCorpusSearcher(
       val (index, sentence) = indexedSentence
       val response = esClient.prepareSearch(esIndexName)
         .setQuery(QueryBuilders.matchQuery("text", sentence))
-        .setFrom(0).setSize(numPassagePerSentence * hitMultiplier).setExplain(true)
+        .setFrom(0).setSize(numPassagesPerSentence * hitMultiplier).setExplain(true)
         .execute()
         .actionGet()
       val passages = response.getHits().getHits().map(hit => {
         hit.sourceAsMap().get("text").asInstanceOf[String]
       })
-      val keptPassages = LuceneBackgroundCorpusSearcher.consolidateHits(passages, numPassagePerSentence)
+      val keptPassages = consolidateHits(sentence, passages, numPassagesPerSentence)
       (index, keptPassages)
     }).seq
     outputBackground(backgroundPassages)
   }
-}
 
-object LuceneBackgroundCorpusSearcher {
-  def consolidateHits(hits: Seq[String], maxToKeep: Int): Seq[String] = {
+  def consolidateHits(query: String, hits: Seq[String], maxToKeep: Int): Seq[String] = {
     val kept = new mutable.ArrayBuffer[String]
     var i = 0
     while (kept.size < maxToKeep && i < hits.size) {
       val hit = hits(i).replaceAll("\\s+", " ").replace("\u0085", " ")
-      if (shouldKeep(hit, kept)) {
+      if (shouldKeep(query, hit, kept)) {
         kept += hit
       }
       i += 1
@@ -134,9 +151,12 @@ object LuceneBackgroundCorpusSearcher {
     kept
   }
 
-  private def shouldKeep(hit: String, keptSoFar: Seq[String]): Boolean = {
-    if (hit.split(" ").length < 3) return false
+  private def shouldKeep(query: String, hit: String, keptSoFar: Seq[String]): Boolean = {
+    if (removeQuery && hit == query) return false
     if (keptSoFar.contains(hit)) return false
+    val sentenceLength = hit.split(" ").length
+    if (sentenceLength < minSentenceLength) return false
+    if (sentenceLength > maxSentenceLength) return false
 
     // Jaro-Winkler distance is essentially edit distance / number of characters.
     if (keptSoFar.exists(kept => StringUtils.getJaroWinklerDistance(kept, hit) > .8)) return false
