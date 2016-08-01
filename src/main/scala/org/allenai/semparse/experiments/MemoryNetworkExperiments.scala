@@ -18,18 +18,19 @@ object MemoryNetworkExperiments {
     ("elastic search index url" -> "aristo-es1.dev.ai2") ~
     ("elastic search index port" -> 9300) ~
     ("elastic search cluster name" -> "aristo-es") ~
-    ("elastic search index name" -> "busc")
+    ("elastic search index name" -> "science_templates")
 
   //////////////////////////////////////////////////////////
   // Step 1: Take a corpus and select sentences to use
   //////////////////////////////////////////////////////////
 
+  val corpus = "s3n://private.store.dev.allenai.org/org.allenai.corpora.busc/extractedDocuments/science_templates"
   val sentenceSelectorParams: JValue =
     ("type" -> "sentence selector") ~
     ("create sentence indices" -> true) ~
     ("sentence selector" -> ("max word count per sentence" -> 10)) ~
-    ("data name" -> "abstracts_testing") ~
-    ("data directory" -> "/home/mattg/data/vu_data/abstracts.txt") ~
+    ("data name" -> "busc_testing") ~
+    ("data directory" -> corpus) ~
     ("max sentences" -> 100)
 
   //////////////////////////////////////////////////////////////////
@@ -107,7 +108,7 @@ object MemoryNetworkExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    new MemoryNetworkTrainer(modelParams, fileUtil).runPipeline()
+    new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
+    //new MemoryNetworkTrainer(modelParams, fileUtil).runPipeline()
   }
 }
