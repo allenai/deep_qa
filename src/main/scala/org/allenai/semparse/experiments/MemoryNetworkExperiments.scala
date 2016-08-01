@@ -108,7 +108,7 @@ object MemoryNetworkExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    //new MemoryNetworkTrainer(modelParams, fileUtil).runPipeline()
+    //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
+    new MemoryNetworkTrainer(modelParams, fileUtil).runPipeline()
   }
 }
