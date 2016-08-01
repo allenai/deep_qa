@@ -20,7 +20,8 @@ import java.net.InetSocketAddress
 /**
  * A BackgroundCorpusSearcher takes as input a list of sentences and some kind of background
  * corpus, then produces as output (for each sentence) a list of passages from the background
- * corpus that are relevant to the input sentence.
+ * corpus that are relevant to the input sentence.  We say "passages" here, because the retrieved
+ * background information could be sentences, paragraphs, snippets, or something else.
  *
  * Basic input/output spec for subclasses: sentences should be encoded one sentence per line as
  * "[sentence index][tab][sentence]"; output should be encoded one sentence per line as
@@ -34,7 +35,10 @@ trait BackgroundCorpusSearcher {
   def params: JValue
   def fileUtil: FileUtil
 
-  val baseParams = Seq("sentences")
+  val baseParams = Seq("sentences", "num passages per sentence")
+
+  val numPassagesPerSentence = JsonHelper.extractWithDefault(params, "num passages per sentence", 10)
+
   val sentenceProducer = SentenceProducer.create(params \ "sentences", fileUtil)
   if (!sentenceProducer.indexSentences) {
     throw new IllegalStateException("background corpus search needs indexed sentences!")
@@ -65,6 +69,10 @@ object BackgroundCorpusSearcher {
  * This is a BackgroundCorpusSearcher that uses Lucene to find relevant sentences from the
  * background corpus.  In addition to the basic input sentence file, we need to know where the
  * Elastic Search index is that we should send queries to.
+ *
+ * In this implementation, all background passages are sentences.  To change that while still using
+ * Lucene, use a different document type (see the `setType("sentence")` line below).  Note that
+ * you'll have to create that document type when you generate the index.
  */
 class LuceneBackgroundCorpusSearcher(
   val params: JValue,
@@ -74,7 +82,6 @@ class LuceneBackgroundCorpusSearcher(
   override val name = "Lucene Background Knowledge Searcher"
 
   val validParams = baseParams ++ Seq(
-    "num passages per sentence",
     "max sentence length",
     "min sentence length",
     "hit multiplier",
@@ -86,11 +93,10 @@ class LuceneBackgroundCorpusSearcher(
   )
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val numPassagesPerSentence = JsonHelper.extractWithDefault(params, "num passages per sentence", 10)
   val maxSentenceLength = JsonHelper.extractWithDefault(params, "max sentence length", 100)
   val minSentenceLength = JsonHelper.extractWithDefault(params, "min sentence length", 3)
 
-  // We get this many times as many results from Lucene as we're looking for, so we can filter
+  // We get hitMultiplier times as many results from Lucene as we're looking for, so we can filter
   // through them and discard duplicates, ones that are too short, or other filtering.
   val hitMultiplier = JsonHelper.extractWithDefault(params, "hit multiplier", 5)
 
@@ -125,6 +131,7 @@ class LuceneBackgroundCorpusSearcher(
     val backgroundPassages = indexedSentences.par.map(indexedSentence => {
       val (index, sentence) = indexedSentence
       val response = esClient.prepareSearch(esIndexName)
+        .setTypes("sentence")
         .setQuery(QueryBuilders.matchQuery("text", sentence))
         .setFrom(0).setSize(numPassagesPerSentence * hitMultiplier).setExplain(true)
         .execute()
@@ -142,6 +149,7 @@ class LuceneBackgroundCorpusSearcher(
     val kept = new mutable.ArrayBuffer[String]
     var i = 0
     while (kept.size < maxToKeep && i < hits.size) {
+      // Unicode character 0085 is a "next line" character that isn't caught by \s for some reason.
       val hit = hits(i).replaceAll("\\s+", " ").replace("\u0085", " ")
       if (shouldKeep(query, hit, kept)) {
         kept += hit
