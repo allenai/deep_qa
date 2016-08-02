@@ -16,7 +16,7 @@ object SimpleLstmExperiments {
   //////////////////////////////////////////////////////////
 
   val sentenceSelectorParams: JValue =
-    ("type" -> "sentence selector") ~
+    ("sentence producer type" -> "sentence selector") ~
     ("sentence selector" -> ("max word count per sentence" -> 10)) ~
     ("max sentences" -> 10000) ~
     ("data name" -> "busc_testing") ~
@@ -34,13 +34,14 @@ object SimpleLstmExperiments {
     ("max training epochs" -> 1) ~
     ("num sentences to use" -> 1000)
 
-  // Step 2b: actually corrupt the data
+  // Step 2b: generate candidate corruptions using the KB
   val kbSentenceCorruptorParams: JValue =
     ("positive data" -> sentenceSelectorParams) ~
     ("kb tensor file" -> "/home/mattg/data/aristo_kb/animals-tensor-july10-yesonly-wo-thing.csv")
 
+  // Step 2c: use the language model to select among the candidates
   val corruptedSentenceSelectorParams: JValue =
-    ("type" -> "kb sentence corruptor") ~
+    ("sentence producer type" -> "kb sentence corruptor") ~
     ("corruptor" -> kbSentenceCorruptorParams) ~
     ("language model" -> languageModelParams)
 
@@ -78,7 +79,7 @@ object SimpleLstmExperiments {
   def main(args: Array[String]) {
     //new SentenceSelector(sentenceSelectorParams, fileUtil).runPipeline()
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
-    new KbSentenceCorruptor(kbSentenceCorruptorParams, fileUtil).runPipeline()
+    new CorruptedSentenceSelector(corruptedSentenceSelectorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
