@@ -34,7 +34,7 @@ import com.mattg.util.JsonHelper
  * KbSentenceCorruptor takes the input, as does the LanguageModelTrainer.
  * CorruptedSentenceSelector then takes the outputs from those two steps and gives the output
  * listed above; CorruptedSentenceSelector is the SentenceProducer Step that actually gets
- * integrated with other parts of the pipeline code.
+ * called by other parts of the pipeline code.
  */
 class CorruptedSentenceSelector(
   val params: JValue,
@@ -43,31 +43,33 @@ class CorruptedSentenceSelector(
   implicit val formats = DefaultFormats
   override val name = "Corrupted Sentence Selector"
 
-  val validParams = baseParams ++ Seq("language model", "corruptor")
+  val validParams = baseParams ++ Seq("language model", "corruptor", "candidates per set")
   JsonHelper.ensureNoExtras(params, name, validParams)
+
+  // The input file is tab-separated, with multiple candidates per line.  We keep this many of the
+  // candidates per line.
+  val candidatesToKeepPerSet = JsonHelper.extractWithDefault(params, "candidates per set", 1)
 
   val trainer = new LanguageModelTrainer(params \ "language model", fileUtil)
   val tokenizeInputArg = if (trainer.tokenizeInput) Seq() else Seq("--no_tokenize")
-  val useLstmArg = if (trainer.useLstm) Seq("--use_lstm") else Seq()
 
   // These two arguments are defined and extracted in SentenceProducer.
-  val maxSentencesArgs = maxSentences.map(max => Seq("--max_corrupted_instances", max.toString)).toSeq.flatten
+  val maxSentencesArgs = maxSentences.map(max => Seq("--max_output_sentences", max.toString)).toSeq.flatten
   val indexSentencesArg = if (indexSentences) Seq("--create_sentence_indices") else Seq()
 
   val kbSentenceCorruptor = new KbSentenceCorruptor(params \ "corruptor", fileUtil)
   val possibleCorruptions = kbSentenceCorruptor.outputFile
   override val outputFile = kbSentenceCorruptor.positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
-  // TODO(matt): This use of the language model isn't implemented yet, so this code is wrong.
   override val binary = "python"
   override val scriptFile = Some("src/main/python/sentence_corruption/language_model.py")
   override val arguments = Seq(
-    "--test_file", possibleCorruptions,
+    "--candidates_file", possibleCorruptions,
     "--output_file", outputFile,
-    "--word_dim", trainer.wordDimensionality.toString,
+    "--keep_top_k", candidatesToKeepPerSet.toString,
     "--factor_base", trainer.factorBase.toString,
     "--model_serialization_prefix", trainer.modelPrefix
-  ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs ++ indexSentencesArg
+  ) ++ tokenizeInputArg ++ maxSentencesArgs ++ indexSentencesArg
 
   override val inputs: Set[(String, Option[Step])] = Set(
     (possibleCorruptions, Some(kbSentenceCorruptor))
