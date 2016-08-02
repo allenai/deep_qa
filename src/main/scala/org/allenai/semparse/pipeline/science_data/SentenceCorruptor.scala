@@ -33,10 +33,9 @@ class SentenceCorruptor(
 
   val trainer = new LanguageModelTrainer(params \ "language model", fileUtil)
   val tokenizeInputArg = if (trainer.tokenizeInput) Seq() else Seq("--no_tokenize")
-  val useLstmArg = if (trainer.useLstm) Seq("--use_lstm") else Seq()
 
   // These two arguments are defined and extracted in SentenceProducer.
-  val maxSentencesArgs = maxSentences.map(max => Seq("--max_corrupted_instances", max.toString)).toSeq.flatten
+  val maxSentencesArgs = maxSentences.map(max => Seq("--max_output_sentences", max.toString)).toSeq.flatten
   val indexSentencesArg = if (indexSentences) Seq("--create_sentence_indices") else Seq()
 
   val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
@@ -51,7 +50,7 @@ class SentenceCorruptor(
     "--word_dim", trainer.wordDimensionality.toString,
     "--factor_base", trainer.factorBase.toString,
     "--model_serialization_prefix", trainer.modelPrefix
-  ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs ++ indexSentencesArg
+  ) ++ tokenizeInputArg ++ maxSentencesArgs ++ indexSentencesArg
 
   override val inputs: Set[(String, Option[Step])] = Set(
     (positiveDataFile, Some(positiveDataProducer))
