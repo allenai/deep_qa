@@ -30,7 +30,7 @@ import scala.util.Random
 trait SentenceProducer {
   def params: JValue
   def fileUtil: FileUtil
-  val baseParams = Seq("type", "create sentence indices", "max sentences")
+  val baseParams = Seq("sentence producer type", "create sentence indices", "max sentences")
   val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
   val maxSentences = JsonHelper.extractAsOption[Int](params, "max sentences")
 
@@ -54,11 +54,29 @@ trait SentenceProducer {
 
 object SentenceProducer {
   def create(params: JValue, fileUtil: FileUtil): Step with SentenceProducer = {
-    (params \ "type") match {
+    (params \ "sentence producer type") match {
       case JString("sentence selector") => new SentenceSelector(params, fileUtil)
       case JString("sentence corruptor") => new SentenceCorruptor(params, fileUtil)
       case JString("question interpreter") => new QuestionInterpreter(params, fileUtil)
+      case JString("manually provided") => new ManuallyProvidedSentences(params, fileUtil)
       case _ => throw new IllegalStateException("unrecognized SentenceProducer parameters")
     }
   }
+}
+
+class ManuallyProvidedSentences(
+  val params: JValue,
+  val fileUtil: FileUtil
+) extends Step(None, fileUtil) with SentenceProducer {
+  implicit val formats = DefaultFormats
+  override val name = "Manually Provided Sentences"
+
+  val validParams = baseParams ++ Seq("filename")
+
+  override val outputFile = (params \ "filename").extract[String]
+  override val inputs: Set[(String, Option[Step])] = Set((outputFile, None))
+  override val outputs = Set(outputFile)
+  override val inProgressFile = outputFile.dropRight(4) + "_in_progress"
+
+  override def _runStep() { }
 }
