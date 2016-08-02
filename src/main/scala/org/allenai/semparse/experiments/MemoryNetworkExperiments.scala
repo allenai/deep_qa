@@ -26,7 +26,7 @@ object MemoryNetworkExperiments {
 
   val corpus = "s3n://private.store.dev.allenai.org/org.allenai.corpora.busc/extractedDocuments/science_templates"
   val sentenceSelectorParams: JValue =
-    ("type" -> "sentence selector") ~
+    ("sentence producer type" -> "sentence selector") ~
     ("create sentence indices" -> true) ~
     ("sentence selector" -> ("max word count per sentence" -> 10)) ~
     ("data name" -> "busc_testing") ~
@@ -38,18 +38,18 @@ object MemoryNetworkExperiments {
   //////////////////////////////////////////////////////////////////
 
   // Step 2a: train a language model on the positive data.
-  val sentenceCorruptorTrainerParams: JValue =
-    ("positive data" -> sentenceSelectorParams) ~
+  val languageModelTrainerParams: JValue =
+    ("sentences" -> sentenceSelectorParams) ~
     ("tokenize input" -> false) ~
     ("word dimensionality" -> 10) ~
     ("max training epochs" -> 1)
 
   // Step 2b: actually corrupt the data
   val sentenceCorruptorParams: JValue =
-    ("type" -> "sentence corruptor") ~
+    ("sentence producer type" -> "sentence corruptor") ~
     ("create sentence indices" -> true) ~
     ("positive data" -> sentenceSelectorParams) ~
-    ("trainer" -> sentenceCorruptorTrainerParams)
+    ("language model" -> languageModelTrainerParams)
 
   /////////////////////////////////////////////////////////////////////
   // Step 3: Get background passages for the positive and negative data
@@ -66,10 +66,11 @@ object MemoryNetworkExperiments {
   ///////////////////////////////////////////////////////////////////////////
 
   val validationQuestionParams: JValue =
-    ("type" -> "question interpreter") ~
+    ("sentence producer type" -> "question interpreter") ~
     ("create sentence indices" -> true) ~
-    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
-    ("output file" -> "data/science/monarch_questions/processed_questions.txt") ~
+    ("question file" -> "/home/mattg/data/questions/omnibus_train_raw.tsv") ~
+    ("output file" -> "data/science/omnibus_questions/processed_questions.tsv") ~
+    ("last sentence only" -> false) ~
     ("wh-movement" -> "matt's")
 
   //////////////////////////////////////////////////////////

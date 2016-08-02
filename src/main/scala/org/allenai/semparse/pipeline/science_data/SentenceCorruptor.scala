@@ -44,7 +44,7 @@ class SentenceCorruptor(
   override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
   override val binary = "python"
-  override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
+  override val scriptFile = Some("src/main/python/sentence_corruption/language_model.py")
   override val arguments = Seq(
     "--test_file", positiveDataFile,
     "--output_file", outputFile,

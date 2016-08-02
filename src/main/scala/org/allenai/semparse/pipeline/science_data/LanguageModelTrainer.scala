@@ -33,7 +33,7 @@ class LanguageModelTrainer(
   val useLstmArg = if (useLstm) Seq("--use_lstm") else Seq()
   val trainingEpochs = JsonHelper.extractWithDefault(params, "max training epochs", 20)
 
-  val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val sentenceProducer = SentenceProducer.create(params \ "sentences", fileUtil)
   val positiveDataFile = sentenceProducer.outputFile
   val modelPrefix = positiveDataFile.dropRight(4) + "_corruption_model"
 
@@ -41,7 +41,7 @@ class LanguageModelTrainer(
 
   // TODO(matt): might want to change the name of this file to something more general, if we're
   // using this to train general language models.
-  override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
+  override val scriptFile = Some("src/main/python/sentence_corruption/language_model.py")
   override val arguments = Seq(
     "--train_file", positiveDataFile,
     "--word_dim", wordDimensionality.toString,

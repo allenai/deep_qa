@@ -130,6 +130,26 @@ class WordReplacer(object):
             all_substitutes.append(sorted_substitutes[:num_substitutes])
         return all_substitutes
 
+
+def train(train_file, max_instances, factor_base, word_dim, num_epochs, tokenize, use_lstm,
+          model_serialization_prefix):
+    word_replacer = WordReplacer()
+    print("Reading training data", file=sys.stderr)
+    train_lines = [x.strip() for x in codecs.open(train_file, "r", "utf-8")]
+    if '\t' in train_lines[0]:
+        train_sentences = [x.split('\t')[1] for x in train_lines]
+    else:
+        train_sentences = train_lines
+    random.shuffle(train_sentences)
+    if max_instances is not None:
+        train_sentences = train_sentences[:max_instances]
+    word_replacer.train_model(train_sentences, factor_base=factor_base,
+                              word_dim=word_dim, num_epochs=num_epochs,
+                              tokenize=tokenize, use_lstm=use_lstm)
+    word_replacer.save_model(model_serialization_prefix)
+    return word_replacer
+
+
 def main():
     argparser = argparse.ArgumentParser(description="Generate lexical substitutes using a bidirectional RNN")
     argparser.add_argument("--train_file", type=str,
@@ -160,23 +180,18 @@ def main():
                            help="If true, output will be [sentence id][tab][sentence]")
     args = argparser.parse_args()
     tokenize = False if args.no_tokenize else True
-    word_replacer = WordReplacer()
     if args.train_file is not None:
-        print("Reading training data", file=sys.stderr)
-        train_lines = [x.strip() for x in codecs.open(args.train_file, "r", "utf-8")]
-        if '\t' in train_lines[0]:
-            train_sentences = [x.split('\t')[1] for x in train_lines]
-        else:
-            train_sentences = train_lines
-        random.shuffle(train_sentences)
-        if args.max_instances is not None:
-            train_sentences = train_sentences[:args.max_instances]
-        word_replacer.train_model(train_sentences, factor_base=args.factor_base,
-                                  word_dim=args.word_dim, num_epochs=args.num_epochs,
-                                  tokenize=tokenize, use_lstm=args.use_lstm)
-        word_replacer.save_model(args.model_serialization_prefix)
+        word_replacer = train(args.train_file,
+                              args.max_instances,
+                              args.factor_base,
+                              args.word_dim,
+                              args.num_epochs,
+                              not args.no_tokenize,
+                              args.use_lstm,
+                              args.model_serialization_prefix)
     else:
         print("Loading saved model", file=sys.stderr)
+        word_replacer = WordReplacer()
         word_replacer.load_model(args.model_serialization_prefix)
 
     if args.test_file is not None:

@@ -60,7 +60,7 @@ class CorruptedSentenceSelector(
 
   // TODO(matt): This use of the language model isn't implemented yet, so this code is wrong.
   override val binary = "python"
-  override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
+  override val scriptFile = Some("src/main/python/sentence_corruption/language_model.py")
   override val arguments = Seq(
     "--test_file", possibleCorruptions,
     "--output_file", outputFile,
