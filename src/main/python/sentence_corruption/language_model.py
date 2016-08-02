@@ -16,6 +16,9 @@ class WordReplacer(object):
         self.data_indexer = DataIndexer()
         self.model = None
 
+    # TODO(matt): factor_base and tokenize should not have default values.  get_substitutes and
+    # score_sentences would currently crash if factor_base is trained with anything but 2, because
+    # they don't pass in a factor_base.
     def process_data(self, sentences, is_training, max_length=None, factor_base=2, tokenize=True):
         sentence_lengths, indexed_sentences = self.data_indexer.index_data(
                 sentences, max_length, tokenize, is_training)
@@ -130,6 +133,19 @@ class WordReplacer(object):
             all_substitutes.append(sorted_substitutes[:num_substitutes])
         return all_substitutes
 
+    def score_sentences(self, sentences, train_sequence_length, tokenize=True):
+        """
+        Assigns each input sentence a score using self.model.evaluate().
+        """
+        max_train_length = train_sequence_length + 1  # + 1 because the last word would be stripped
+        scores = []
+        for sentence in sentences:
+            _, indexed_sentence, factored_target_array = self.process_data(
+                    [sentence], is_training=False, max_length=max_train_length, tokenize=tokenize)
+            score_and_metrics = self.model.evaluate(indexed_sentence, factored_target_array, verbose=0)
+            scores.append(score_and_metrics[0])
+        return zip(scores, sentences)
+
 
 def train(train_file, max_instances, factor_base, word_dim, num_epochs, tokenize, use_lstm,
           model_serialization_prefix):
@@ -150,36 +166,133 @@ def train(train_file, max_instances, factor_base, word_dim, num_epochs, tokenize
     return word_replacer
 
 
+def corrupt_sentences(word_replacer, file_to_corrupt, search_space_size, tokenize,
+                      create_sentence_indices, output_file):
+    print("Reading test data", file=sys.stderr)
+    test_lines = [x.strip() for x in codecs.open(file_to_corrupt, "r", "utf-8")]
+    if '\t' in test_lines[0]:
+        test_sentence_strings = [x.split('\t')[1] for x in test_lines]
+    else:
+        test_sentence_strings = test_lines
+    test_sentence_words = [word_tokenize(x) for x in test_sentence_strings]
+    test_sentences = []
+    locations = []
+    # Stop words. Do not replace these or let them be replacements.
+    words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the", "to",
+                           "and", "is", "a"])
+    for words in test_sentence_words:
+        if len(set(words).difference(words_to_ignore)) == 0:
+            # This means that there are no non-stop words in the input. Ignore it.
+            continue
+        # Generate a random location, between 0 and the second last position
+        # because the last position is usually a period
+        location = random.randint(0, len(words) - 2)
+        while words[location] in words_to_ignore:
+            location = random.randint(0, len(words) - 2)
+        locations.append(location)
+        test_sentences.append(" ".join(words))
+    train_sequence_length = word_replacer.get_model_input_shape()[1]
+    print("Limiting search space size to %d" % search_space_size, file=sys.stderr)
+    substitutes = word_replacer.get_substitutes(test_sentences, locations,
+                                                train_sequence_length, tokenize=tokenize,
+                                                search_space_size=search_space_size)
+    outfile = codecs.open(output_file, "w", "utf-8")
+    index = 0
+    for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, locations):
+        word_being_replaced = words[location]
+        for _, substitute in logprob_substitute_list:
+            if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
+                corrupted_words = list(words)
+                corrupted_words[location] = substitute
+                corrupted_sentence = " ".join(corrupted_words)
+                if create_sentence_indices:
+                    output_string = '%d\t%s' % (index, corrupted_sentence)
+                else:
+                    output_string = corrupted_sentence
+                print(output_string, file=outfile)
+                index += 1
+                break
+    outfile.close()
+
+
+def select_mostly_likely_candidates(word_replacer, candidates_file, top_k, tokenize,
+                                    create_sentence_indices, output_file):
+    index = 0
+    train_sequence_length = word_replacer.get_model_input_shape()[1]
+    outfile = codecs.open(output_file, "w", "utf-8")
+    for line in codecs.open(candidates_file, "r", "utf-8"):
+        candidates = line.strip().split("\t")
+        candidate_scores = word_replacer.score_sentences(candidates, train_sequence_length, tokenize)
+        candidate_scores.sort(reverse=True)
+        for _, candidate in candidate_scores[:top_k]:
+            if create_sentence_indices:
+                output_string = '%d\t%s' % (index, candidate)
+            else:
+                output_string = candidate
+            print(output_string, file=outfile)
+            index += 1
+    outfile.close()
+
+
 def main():
-    argparser = argparse.ArgumentParser(description="Generate lexical substitutes using a bidirectional RNN")
+    description = """Trains and tests a language model using Keras.
+
+    There are currently three kinds of operations performed by this code:
+        (1) train a language model using input sentences
+        (2) randomly corrupt sentences using the language model to propose replacement words
+        (3) use a language model to select the most likely sentence out of several candidates
+
+    To do (1), input the --train_file argument, along with all relevant training parameters.
+
+    To do (2), use the --file_to_corrupt option.
+
+    To do (3), use the --candidates_file option.
+
+    These are not mutually exclusive; you could train a model, then use it to do either (2) or (3),
+    by providing two of the above command-line arguments (passing all three would result in writing
+    two different outputs to the same file, currently...).
+
+    If you try to use a language model without supplying a training input, we will try to load one
+    using the --model_serialization_prefix option.
+
+    The help text for the arguments below are all prefixed with the task number they are applicable
+    to.  If you pass an argument for a task that is not requested, the argument will be silently
+    ignored.
+    """
+    argparser = argparse.ArgumentParser(description=description)
     argparser.add_argument("--train_file", type=str,
-                           help="File with sentences to train on, one per line.")
-    argparser.add_argument("--test_file", type=str,
-                           help="File with sentences to replace words, one per line.")
+                           help="(1) File with sentences to train on, one per line.")
+    argparser.add_argument("--file_to_corrupt", type=str,
+                           help="(2) File with sentences to replace words, one per line.")
+    argparser.add_argument("--candidates_file", type=str,
+                           help="(3) File with candidate sentences to select among, tab-separated.")
     argparser.add_argument("--word_dim", type=int, default=50,
-                           help="Word dimensionality, default=50")
+                           help="(1) Word dimensionality, default=50")
     argparser.add_argument("--max_instances", type=int,
-                           help="Maximum number of training examples to use")
+                           help="(1) Maximum number of training examples to use")
     argparser.add_argument("--use_lstm", action='store_true',
-                           help="Use LSTM instead of simple RNN")
-    argparser.add_argument("--factor_base", type=int, default=2,
-                           help="Base of factored indices, default=2")
-    argparser.add_argument("--search_space_size", type=int, default=5000,
-                           help="Number of most frequent words to search over as replacement candidates")
+                           help="(1) Use LSTM instead of simple RNN")
     argparser.add_argument("--num_epochs", type=int, default=20,
-                           help="Maximum number of epochs (will stop early), default=20")
+                           help="(1) Maximum number of epochs (will stop early), default=20")
+    argparser.add_argument("--factor_base", type=int, default=2,
+                           help="(1,2,3) Base of factored indices, default=2")
     argparser.add_argument("--no_tokenize", action='store_true',
-                           help="Do not tokenize input")
+                           help="(1,2,3) Do not tokenize input")
     argparser.add_argument("--model_serialization_prefix", default="lexsub",
-                           help="Prefix for saving and loading model files")
-    argparser.add_argument("--output_file",
-                           help="Place to save corrupted test file")
-    argparser.add_argument("--max_corrupted_instances", type=int,
-                           help="If set, limit output to this many corrupted sentences")
+                           help="(1,2,3) Prefix for saving and loading model files")
+    argparser.add_argument("--search_space_size", type=int, default=5000,
+                           help="(2) Number of most frequent words to search over as replacement candidates")
     argparser.add_argument("--create_sentence_indices", action="store_true",
-                           help="If true, output will be [sentence id][tab][sentence]")
+                           help="(2,3) If true, output will be [sentence id][tab][sentence]")
+    argparser.add_argument("--max_output_sentences", type=int,  # TODO(matt): this is currently ignored
+                           help="(2,3) If set, limit output to this many corrupted sentences")
+    argparser.add_argument("--output_file",
+                           help="(2,3) Place to save requested output file")
+    argparser.add_argument("--keep_top_k", type=int, default=1,
+                           help="(3) Select the top k candidates out of the given alternatives, per line")
     args = argparser.parse_args()
-    tokenize = False if args.no_tokenize else True
+
+    # Either train or load a model.
     if args.train_file is not None:
         word_replacer = train(args.train_file,
                               args.max_instances,
@@ -194,55 +307,28 @@ def main():
         word_replacer = WordReplacer()
         word_replacer.load_model(args.model_serialization_prefix)
 
-    if args.test_file is not None:
+    # Sentence corruption, if we were asked to do that.
+    if args.file_to_corrupt is not None:
         if args.output_file is None:
             print("Need to specify where to save output with --output_file", file=sys.stderr)
             sys.exit(-1)
-        print("Reading test data", file=sys.stderr)
-        test_lines = [x.strip() for x in codecs.open(args.test_file, "r", "utf-8")]
-        if '\t' in test_lines[0]:
-            test_sentence_strings = [x.split('\t')[1] for x in test_lines]
-        else:
-            test_sentence_strings = test_lines
-        test_sentence_words = [word_tokenize(x) for x in test_sentence_strings]
-        test_sentences = []
-        locations = []
-        # Stop words. Do not replace these or let them be replacements.
-        words_to_ignore = set(["<s>", "</s>", "PADDING", ".", ",", "of", "in", "by", "the", "to",
-                               "and", "is", "a"])
-        for words in test_sentence_words:
-            if len(set(words).difference(words_to_ignore)) == 0:
-                # This means that there are no non-stop words in the input. Ignore it.
-                continue
-            # Generate a random location, between 0 and the second last position
-            # because the last position is usually a period
-            location = random.randint(0, len(words) - 2)
-            while words[location] in words_to_ignore:
-                location = random.randint(0, len(words) - 2)
-            locations.append(location)
-            test_sentences.append(" ".join(words))
-        train_sequence_length = word_replacer.get_model_input_shape()[1]
-        print("Limiting search space size to %d" % args.search_space_size, file=sys.stderr)
-        substitutes = word_replacer.get_substitutes(test_sentences, locations,
-                                                    train_sequence_length, tokenize=tokenize,
-                                                    search_space_size=args.search_space_size)
-        outfile = codecs.open(args.output_file, "w", "utf-8")
-        index = 0
-        for logprob_substitute_list, words, location in zip(substitutes, test_sentence_words, locations):
-            word_being_replaced = words[location]
-            for _, substitute in logprob_substitute_list:
-                if substitute not in set(list(words_to_ignore) + [word_being_replaced]):
-                    corrupted_words = list(words)
-                    corrupted_words[location] = substitute
-                    corrupted_sentence = " ".join(corrupted_words)
-                    if args.create_sentence_indices:
-                        output_string = '%d\t%s' % (index, corrupted_sentence)
-                    else:
-                        output_string = corrupted_sentence
-                    print(output_string, file=outfile)
-                    index += 1
-                    break
-        outfile.close()
+        corrupt_sentences(word_replacer,
+                          args.file_to_corrupt,
+                          args.search_space_size,
+                          not args.no_tokenize,
+                          args.create_sentence_indices,
+                          args.output_file)
+
+    # Selecting most likely candidates, if we were asked to do that.
+    if args.candidates_file is not None:
+        select_mostly_likely_candidates(word_replacer,
+                                        args.candidates_file,
+                                        args.keep_top_k,
+                                        not args.no_tokenize,
+                                        args.create_sentence_indices,
+                                        args.output_file)
+
+
 
 if __name__ == "__main__":
     main()
