@@ -35,7 +35,7 @@ class LanguageModelTrainer(
 
   val sentenceProducer = SentenceProducer.create(params \ "sentences", fileUtil)
   val positiveDataFile = sentenceProducer.outputFile
-  val modelPrefix = positiveDataFile.dropRight(4) + "_corruption_model"
+  val modelPrefix = positiveDataFile.dropRight(4) + "_language_model"
 
   override val binary = "python"
 
