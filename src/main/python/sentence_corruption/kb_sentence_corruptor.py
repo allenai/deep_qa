@@ -94,6 +94,18 @@ def create_negative_sentence(input_sentence, entities, type_entity_dict, entity_
 
 
 def main():
+    '''Takes as input a list of sentences and a KB, and produces as output a collection of
+    corrupted sentences.
+
+    The input sentences are assumed formatted as one sentence per line, possibly with an index:
+    either "[sentence]" or "[sentence id][tab][sentence".
+
+    The input KB format is described in the comment to create_type_dict.
+
+    The output format is a tab-separated list of corruptions per sentence.  For every sentence for
+    which we found a corruption, we output a line formatted as "[sentence][tab][sentence][tab]...".
+    Sentences for which we found no corruption are just skipped.
+    '''
     argparser = argparse.ArgumentParser(description="Perturb sentences using KB and type information")
     argparser.add_argument("--input_file", type=str, help="File with sentences to perturb, one per line.")
     argparser.add_argument("--output_file", type=str, help="File with purturbed sentences along with an id, one per line.")
