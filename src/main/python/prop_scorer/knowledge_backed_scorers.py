@@ -209,8 +209,10 @@ class AttentiveReaderLayer(Dense):
         # (1b) Result of this is (num_samples, knowledge_length, input_dim)
         concatenated_activation = self.activation(K.dot(concatenated_encodings, self.W1))
 
-        # (2) Result of this is (num_samples, knowledge_length, 1)?  I think?
-        unnormalized_attention = K.dot(concatenated_activation, self.v)
+        # (2) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
+        # after the dot product with K.squeeze, otherwise this would be (num_samples,
+        # knowledge_length, 1), which is not a valid input to K.softmax.
+        unnormalized_attention = K.squeeze(K.dot(concatenated_activation, self.v), axis=-1)
 
         # (3) Result is (num_samples, knowledge_length)
         knowledge_attention = K.softmax(unnormalized_attention)
