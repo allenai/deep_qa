@@ -32,9 +32,15 @@ class QuestionInterpreter(
   implicit val formats = DefaultFormats
   override val name = "Question Interpreter"
 
-  val validParams = baseParams ++ Seq("question file", "wh-movement", "output file")
+  val validParams = baseParams ++ Seq(
+    "question file",
+    "wh-movement",
+    "last sentence only",
+    "output file"
+  )
   JsonHelper.ensureNoExtras(params, name, validParams)
 
+  val lastSentenceOnly = JsonHelper.extractWithDefault(params, "last sentence only", true)
   val questionFile = (params \ "question file").extract[String]
   override val outputFile = (params \ "output file").extract[String]
   val whMover = WhMover.create(params \ "wh-movement")
@@ -114,7 +120,15 @@ class QuestionInterpreter(
         case Some(sentence) => sentence
       }
     }
-    val answerSentences = question.answers.map(a => (sentenceWithBlank.replace("___", a.text.toLowerCase), a.isCorrect))
+    val answerSentences = question.answers.map(a => {
+      val replacedLastSentence = sentenceWithBlank.replace("___", a.text.toLowerCase)
+      val answerSentence = if (lastSentenceOnly) {
+        replacedLastSentence
+      } else {
+        question.sentences.dropRight(1).mkString(" ") + " " + replacedLastSentence
+      }
+      (answerSentence, a.isCorrect)
+    })
     Some(answerSentences.map(makeAnswerUpperCase))
   }
 
