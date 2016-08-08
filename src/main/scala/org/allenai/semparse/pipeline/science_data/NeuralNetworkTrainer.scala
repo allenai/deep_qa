@@ -39,7 +39,7 @@ abstract class NeuralNetworkTrainer(
     maxTrainingInstances.map(max => Seq("--max_train_size", max.toString)).toSeq.flatten
 
   val modelName = (params \ "model name").extract[String]
-  val modelPrefix = s"models/$modelName"
+  val modelPrefix = s"models/$modelName"  // TODO(matt): make this a function of the arguments?
 
   val questionInterpreter = new QuestionInterpreter(params \ "validation questions", fileUtil)
   val validationQuestionsFile = questionInterpreter.outputFile
@@ -64,7 +64,7 @@ object NeuralNetworkTrainer {
   def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
     implicit val formats = DefaultFormats
     (params \ "model type").extract[String] match {
-      case "simple lstm" => new NoBackgroundKnowledgeNNSentenceTrainer(params, fileUtil)
+      case "simple lstm" => new SimpleLstmTrainer(params, fileUtil)
       case t => throw new IllegalStateException(s"Unrecognized neural network model type: $t")
     }
   }
@@ -78,7 +78,7 @@ object NeuralNetworkTrainer {
  * correlations to decide whether a sentence is true or false, similar to what the Salience solver
  * does.
  */
-class NoBackgroundKnowledgeNNSentenceTrainer(
+class SimpleLstmTrainer(
   params: JValue,
   fileUtil: FileUtil
 ) extends NeuralNetworkTrainer(params, fileUtil) {
@@ -137,6 +137,8 @@ class MemoryNetworkTrainer(
     "negative data",
     "negative background",
     "validation background",
+    "memory layer type",
+    "num memory layers",
     "max sentence length"
   )
   JsonHelper.ensureNoExtras(params, name, validParams)
@@ -158,6 +160,12 @@ class MemoryNetworkTrainer(
   val validationBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "validation background", fileUtil)
   val validationBackgroundFile = validationBackgroundSearcher.outputFile
 
+  val numMemoryLayers = JsonHelper.extractWithDefault(params, "num memory layers", 1)
+
+  val choices = Seq("attentive", "memory")
+  val defaultChoice = choices(0)
+  val memoryLayerType = JsonHelper.extractChoiceWithDefault(params, "memory layer type", choices, defaultChoice)
+
   override val scriptFile = Some("src/main/python/prop_scorer/memory_network.py")
   override val arguments = Seq[String](
     "--positive_train_input", positiveTrainingFile,
@@ -166,7 +174,9 @@ class MemoryNetworkTrainer(
     "--negative_train_background", negativeBackgroundFile,
     "--validation_input", validationQuestionsFile,
     "--validation_background", validationBackgroundFile,
+    "--memory_layer", memoryLayerType,
     "--num_epochs", numEpochs.toString,
+    "--num_memory_layers", numMemoryLayers.toString,
     "--model_serialization_prefix", modelPrefix
   ) ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs
 
