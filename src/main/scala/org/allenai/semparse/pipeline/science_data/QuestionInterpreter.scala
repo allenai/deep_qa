@@ -81,7 +81,7 @@ class QuestionInterpreter(
           }
         }
       } catch {
-        case e: NoSuchElementException => { println(s"Error processing $questionLine"); Seq() }
+        case e: NoSuchElementException => { logger.error(s"Error processing $questionLine"); Seq() }
       }
     }).seq
     outputSentences(outputLines)
