@@ -56,22 +56,32 @@ class QuestionInterpreter(
     val rawQuestions = fileUtil.readLinesFromFile(questionFile).par
     val outputLines = rawQuestions.flatMap(questionLine => {
       val question = parseQuestionLine(questionLine)
-      val sentenceStrings = fillInAnswerOptions(question)
-      sentenceStrings match {
-        case None => Seq()
-        case Some(filledInAnswers) => {
-          val answerStrings = filledInAnswers.map(answerSentence => {
-            val (text, correct) = answerSentence
-            val correctString = if (correct) "1" else "0"
-            s"$text\t$correctString"
-          })
-          // TODO(matt): figure out output formats.  You probably want some options here, so that
-          // you have a version that retains the original question for visual inspection, but also
-          // a version that doesn't keep around the original question, for easier processing later
-          // in the pipeline.
-          //Seq(question.sentences.mkString(" ")) ++ answerStrings ++ Seq("")
-          answerStrings
+      try {
+        val sentenceStrings = fillInAnswerOptions(question)
+        sentenceStrings match {
+          case None => Seq()
+          case Some(filledInAnswers) => {
+            if (filledInAnswers.size != 4) {
+              // We'll punt on handling this for now, as some downstream code relies on having 4
+              // options for each question. TODO(matt)
+              Seq()
+            } else {
+              val answerStrings = filledInAnswers.map(answerSentence => {
+                val (text, correct) = answerSentence
+                val correctString = if (correct) "1" else "0"
+                s"$text\t$correctString"
+              })
+              // TODO(matt): figure out output formats.  You probably want some options here, so that
+              // you have a version that retains the original question for visual inspection, but also
+              // a version that doesn't keep around the original question, for easier processing later
+              // in the pipeline.
+              //Seq(question.sentences.mkString(" ")) ++ answerStrings ++ Seq("")
+              answerStrings
+            }
+          }
         }
+      } catch {
+        case e: NoSuchElementException => { logger.error(s"Error processing $questionLine"); Seq() }
       }
     }).seq
     outputSentences(outputLines)

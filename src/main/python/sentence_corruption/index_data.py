@@ -105,7 +105,7 @@ class DataIndexer(object):
         # ]
         # Each vector in the output corresponds to a bit in the factored input.
         # That is, each 0 -> [1, 0] and 1 -> [0, 1]
-        vocab_size = target_indices.max() + 1
+        vocab_size = self.get_vocab_size() + 1
         num_digits_per_word = int(math.ceil(math.log(vocab_size) / math.log(base)))
         all_factored_arrays = []
         # We'll keep dividing target_indices by base and storing the remainders as

@@ -16,8 +16,9 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
   val longSentence = "a b c " * 100
 
   val params: JValue =
+    ("remove query near duplicates" -> true) ~
     ("sentences" ->
-      ("type" -> "sentence selector") ~
+      ("sentence producer type" -> "sentence selector") ~
       ("create sentence indices" -> true) ~
       ("data name" -> "fake") ~
       ("data directory" -> "also fake"))
@@ -31,6 +32,13 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
   it should "remove near duplicates" in {
     val hits = Seq(sentence, sentence2, sentence3, different)
     searcher.consolidateHits("", hits, 10) should be(Seq(sentence, different))
+  }
+
+  it should "remove near duplicates with the query" in {
+    val positive = "Tiger sharks and killer whales eat adult sea turtles."
+    val negative = "elephant sharks and killer whales eat adult sea turtles."
+    val hits = Seq(positive, sentence)
+    searcher.consolidateHits(negative, hits, 10) should be(Seq(sentence))
   }
 
   it should "keep only the top k" in {

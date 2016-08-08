@@ -86,6 +86,7 @@ class LuceneBackgroundCorpusSearcher(
     "min sentence length",
     "hit multiplier",
     "remove query from results",
+    "remove query near duplicates",
     "elastic search index url",
     "elastic search index name",
     "elastic search cluster name",
@@ -106,6 +107,10 @@ class LuceneBackgroundCorpusSearcher(
   // test time, if you happen to have the query sentence in the results, that's not a problem, so
   // we make this a parameter.
   val removeQuery = JsonHelper.extractWithDefault(params, "remove query from results", true)
+
+  // When you've created negative data from positive data in the corpus we're querying, you don't
+  // really want the positive sentence to be returned for the negative sentence query.
+  val removeQueryNearDuplicates = JsonHelper.extractWithDefault(params, "remove query near duplicates", false)
 
   val esUrl = JsonHelper.extractWithDefault(params, "elastic search index url", "aristo-es1.dev.ai2")
   val esPort = JsonHelper.extractWithDefault(params, "elastic search index port", 9300)
@@ -161,6 +166,11 @@ class LuceneBackgroundCorpusSearcher(
 
   private def shouldKeep(query: String, hit: String, keptSoFar: Seq[String]): Boolean = {
     if (removeQuery && hit == query) return false
+    if (removeQueryNearDuplicates) {
+      val queryWords = query.split(" ").map(_.toLowerCase).toSet
+      val hitWords = hit.split(" ").map(_.toLowerCase).toSet
+      if ((hitWords -- queryWords).size <= 1) return false
+    }
     if (keptSoFar.contains(hit)) return false
     val sentenceLength = hit.split(" ").length
     if (sentenceLength < minSentenceLength) return false
