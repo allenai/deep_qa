@@ -28,28 +28,36 @@ object MemoryNetworkExperiments {
   val sentenceSelectorParams: JValue =
     ("sentence producer type" -> "sentence selector") ~
     ("create sentence indices" -> true) ~
-    ("sentence selector" -> ("max word count per sentence" -> 10)) ~
-    ("data name" -> "busc_testing") ~
+    ("sentence selector" -> ("max word count per sentence" -> 20) ~
+                            ("min word count per sentence" -> 8)) ~
+    ("data name" -> "busc_with_better_negatives") ~
     ("data directory" -> corpus) ~
-    ("max sentences" -> 100)
+    ("max sentences" -> 10000)
 
   //////////////////////////////////////////////////////////////////
   // Step 2: Corrupt the positive sentences to get negative data
   //////////////////////////////////////////////////////////////////
 
   // Step 2a: train a language model on the positive data.
-  val languageModelTrainerParams: JValue =
+  val languageModelParams: JValue =
     ("sentences" -> sentenceSelectorParams) ~
     ("tokenize input" -> false) ~
-    ("word dimensionality" -> 10) ~
-    ("max training epochs" -> 1)
+    ("use lstm" -> true) ~
+    ("word dimensionality" -> 50) ~
+    ("max training epochs" -> 2)
 
-  // Step 2b: actually corrupt the data
-  val sentenceCorruptorParams: JValue =
-    ("sentence producer type" -> "sentence corruptor") ~
-    ("create sentence indices" -> true) ~
+  // Step 2b: generate candidate corruptions using the KB
+  val kbSentenceCorruptorParams: JValue =
     ("positive data" -> sentenceSelectorParams) ~
-    ("language model" -> languageModelTrainerParams)
+    ("kb tensor file" -> "/home/mattg/data/aristo_kb/animals-tensor-july10-yesonly-wo-thing.csv")
+
+  // Step 2c: use the language model to select among the candidates
+  val corruptedSentenceSelectorParams: JValue =
+    ("sentence producer type" -> "kb sentence corruptor") ~
+    ("create sentence indices" -> true) ~
+    ("candidates per set" -> 5) ~
+    ("corruptor" -> kbSentenceCorruptorParams) ~
+    ("language model" -> languageModelParams)
 
   /////////////////////////////////////////////////////////////////////
   // Step 3: Get background passages for the positive and negative data
@@ -59,7 +67,8 @@ object MemoryNetworkExperiments {
     (("sentences" -> sentenceSelectorParams): JValue)
 
   val negativeBackgroundParams: JValue = baseElasticSearchParams merge
-    (("sentences" -> sentenceCorruptorParams): JValue)
+    ("sentences" -> corruptedSentenceSelectorParams) ~
+    ("remove query near duplicates" -> true)
 
   ///////////////////////////////////////////////////////////////////////////
   // Step 4: Convert question-answer pairs into sentences for validation data
@@ -89,7 +98,7 @@ object MemoryNetworkExperiments {
     ("model name" -> "abstracts_testing/memory_network") ~
     ("positive data" -> sentenceSelectorParams) ~
     ("positive background" -> positiveBackgroundParams) ~
-    ("negative data" -> sentenceCorruptorParams) ~
+    ("negative data" -> corruptedSentenceSelectorParams) ~
     ("negative background" -> negativeBackgroundParams) ~
     ("validation questions" -> validationQuestionParams) ~
     ("validation background" -> validationBackgroundParams) ~
