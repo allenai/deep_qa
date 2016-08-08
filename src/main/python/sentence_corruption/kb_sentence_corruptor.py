@@ -1,4 +1,7 @@
+from __future__ import print_function
 import argparse
+import codecs
+import random
 from collections import defaultdict as ddict
 
 import nltk
@@ -7,7 +10,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 def get_triples_from_file(filename):
     entity_pair_relations = ddict(set)
-    for line in open(filename):
+    for line in codecs.open(filename, "r", "utf-8"):
         fields = line.split(',')
         source = fields[0]
         relation = fields[1]
@@ -23,7 +26,7 @@ def create_type_dict(filename):
     entities = set()
     type_entity_dict = ddict(set)
     entity_type_dict = ddict(set)
-    for line in open(filename):
+    for line in codecs.open(filename, "r", "utf-8"):
         fields = line.strip().split(',')
         source = fields[0]
         target = fields[2]
@@ -39,7 +42,7 @@ def create_type_dict(filename):
 
 
 def find_replacement(location1, location2, words, type_entity_dict, entity_type_dict,
-                     entity_pair_relations, input_sentence, num_perturbation):
+                     entity_pair_relations, input_sentence):
     # The method receives the sentence in words list and takes the location of the two words that we want to consider
     # Given these two words, the goal is to generate two sets of perturbations, by replacing one of these words at a time
     # Let us call these two, as word1, word2.
@@ -65,14 +68,14 @@ def find_replacement(location1, location2, words, type_entity_dict, entity_type_
                 if len(entity_pair_relations[(lemma1, candidate_item)].intersection(predicate_list)) == 0:
                     replacement_list.append((words[location1], candidate_item))
 
-    for (replacement1, replacement2) in replacement_list[:num_perturbation]:
+    for (replacement1, replacement2) in replacement_list:
         new_sentence = input_sentence.replace(words[location1], replacement1).replace(words[location2], replacement2)
         negative_sentences_per_sentence.append(new_sentence)
     return negative_sentences_per_sentence
 
 
 def create_negative_sentence(input_sentence, entities, type_entity_dict, entity_type_dict,
-                             entity_pair_relations, num_perturbation):
+                             entity_pair_relations):
     lemmatizer = WordNetLemmatizer()
     words = nltk.word_tokenize(input_sentence)
     negative_sentences = []
@@ -83,14 +86,26 @@ def create_negative_sentence(input_sentence, entities, type_entity_dict, entity_
                 if lemmatizer.lemmatize(words[j]) in entities:
                     negative_sentences.extend(
                             find_replacement(i, j, words, type_entity_dict, entity_type_dict,
-                                             entity_pair_relations, input_sentence, num_perturbation))
+                                             entity_pair_relations, input_sentence))
                     negative_sentences.extend(
                             find_replacement(j, i, words, type_entity_dict, entity_type_dict,
-                                             entity_pair_relations, input_sentence, num_perturbation))
+                                             entity_pair_relations, input_sentence))
     return negative_sentences
 
 
 def main():
+    '''Takes as input a list of sentences and a KB, and produces as output a collection of
+    corrupted sentences.
+
+    The input sentences are assumed formatted as one sentence per line, possibly with an index:
+    either "[sentence]" or "[sentence id][tab][sentence".
+
+    The input KB format is described in the comment to create_type_dict.
+
+    The output format is a tab-separated list of corruptions per sentence.  For every sentence for
+    which we found a corruption, we output a line formatted as "[sentence][tab][sentence][tab]...".
+    Sentences for which we found no corruption are just skipped.
+    '''
     argparser = argparse.ArgumentParser(description="Perturb sentences using KB and type information")
     argparser.add_argument("--input_file", type=str, help="File with sentences to perturb, one per line.")
     argparser.add_argument("--output_file", type=str, help="File with purturbed sentences along with an id, one per line.")
@@ -104,16 +119,20 @@ def main():
     type_entity_dict, entity_type_dict, entities = create_type_dict(args.kb_tensor_file)
 
     negative_sentences = []
-    for line in open(args.input_file):
-        input_sentence = line
+    for line in codecs.open(args.input_file, "r", "utf-8"):
+        if '\t' in line:
+            input_sentence = line.strip().split('\t')[1]
+        else:
+            input_sentence = line.strip()
         input_sentence = input_sentence.lower()
-        negative_sentences.extend(
-                create_negative_sentence(input_sentence, entities, type_entity_dict,
-                                         entity_type_dict, entity_pair_relations, args.num_perturbation))
-    with open(args.output_file, 'a') as out_file:
-        for i, sentence in enumerate(negative_sentences):
-            out_file.write(str(i) + ' ' + sentence)
-    out_file.close()
+        negatives = create_negative_sentence(input_sentence, entities, type_entity_dict,
+                                             entity_type_dict, entity_pair_relations)
+        if negatives:
+            random.shuffle(negatives)
+            negative_sentences.append(negatives[:args.num_perturbation])
+    with codecs.open(args.output_file, 'w', 'utf-8') as out_file:
+        for sentences in negative_sentences:
+            out_file.write('\t'.join(sentences) + '\n')
 
 
 if __name__ == '__main__':

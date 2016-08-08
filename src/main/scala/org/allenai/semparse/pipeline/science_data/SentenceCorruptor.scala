@@ -28,21 +28,19 @@ class SentenceCorruptor(
   implicit val formats = DefaultFormats
   override val name = "Sentence Corruptor"
 
-  val validParams = baseParams ++ Seq("positive data", "trainer")
+  val validParams = baseParams ++ Seq("positive data", "language model")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val trainer = new SentenceCorruptorTrainer(params \ "trainer", fileUtil)
-  val factorBase = JsonHelper.extractWithDefault(params, "factor base", 2)
-  val tokenizeInput = JsonHelper.extractWithDefault(params, "tokenize input", true)
-  val tokenizeInputArg = if (tokenizeInput) Seq() else Seq("--no_tokenize")
-  val useLstm = JsonHelper.extractWithDefault(params, "use lstm", false)
-  val useLstmArg = if (useLstm) Seq("--use_lstm") else Seq()
-  val trainingEpochs = JsonHelper.extractWithDefault(params, "max training epochs", 20)
+  val trainer = new LanguageModelTrainer(params \ "language model", fileUtil)
+  val tokenizeInputArg = if (trainer.tokenizeInput) Seq() else Seq("--no_tokenize")
+  val useLstmArg = if (trainer.useLstm) Seq("--use_lstm") else Seq()
+
+  // These two arguments are defined and extracted in SentenceProducer.
   val maxSentencesArgs = maxSentences.map(max => Seq("--max_corrupted_instances", max.toString)).toSeq.flatten
   val indexSentencesArg = if (indexSentences) Seq("--create_sentence_indices") else Seq()
 
-  val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
-  val positiveDataFile = sentenceProducer.outputFile
+  val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveDataFile = positiveDataProducer.outputFile
   override val outputFile = positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
   override val binary = "python"
@@ -56,54 +54,9 @@ class SentenceCorruptor(
   ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs ++ indexSentencesArg
 
   override val inputs: Set[(String, Option[Step])] = Set(
-    (positiveDataFile, Some(sentenceProducer))
+    (positiveDataFile, Some(positiveDataProducer))
   ) ++ trainer.outputs.map(file => (file, Some(trainer)))
   override val outputs = Set(outputFile)
   override val paramFile = outputFile.dropRight(4) + "_params.json"
   override val inProgressFile = outputFile.dropRight(4) + "_in_progress"
-}
-
-class SentenceCorruptorTrainer(
-  params: JValue,
-  fileUtil: FileUtil
-) extends SubprocessStep(Some(params), fileUtil) {
-  implicit val formats = DefaultFormats
-  override val name = "Sentence Corruptor Trainer"
-
-  val validParams = Seq("positive data", "maximum training sentences", "word dimensionality",
-    "factor base", "tokenize input", "use lstm", "max training epochs")
-  JsonHelper.ensureNoExtras(params, name, validParams)
-
-  val maxSentences = JsonHelper.extractAsOption[Int](params, "maximum training sentences")
-  val maxSentencesArgs = maxSentences.map(max => Seq("--max_instances", max.toString)).toSeq.flatten
-  val wordDimensionality = JsonHelper.extractWithDefault(params, "word dimensionality", 50)
-  val factorBase = JsonHelper.extractWithDefault(params, "factor base", 2)
-  val tokenizeInput = JsonHelper.extractWithDefault(params, "tokenize input", true)
-  val tokenizeInputArg = if (tokenizeInput) Seq() else Seq("--no_tokenize")
-  val useLstm = JsonHelper.extractWithDefault(params, "use lstm", false)
-  val useLstmArg = if (useLstm) Seq("--use_lstm") else Seq()
-  val trainingEpochs = JsonHelper.extractWithDefault(params, "max training epochs", 20)
-
-  val sentenceProducer = SentenceProducer.create(params \ "positive data", fileUtil)
-  val positiveDataFile = sentenceProducer.outputFile
-  val modelPrefix = positiveDataFile.dropRight(4) + "_corruption_model"
-
-  override val binary = "python"
-  override val scriptFile = Some("src/main/python/sentence_corruption/lexical_substitution.py")
-  override val arguments = Seq(
-    "--train_file", positiveDataFile,
-    "--word_dim", wordDimensionality.toString,
-    "--factor_base", factorBase.toString,
-    "--num_epochs", trainingEpochs.toString,
-    "--model_serialization_prefix", modelPrefix
-  ) ++ tokenizeInputArg ++ useLstmArg ++ maxSentencesArgs
-
-  override val inputs: Set[(String, Option[Step])] = Set((positiveDataFile, Some(sentenceProducer)))
-  override val outputs = Set(
-    modelPrefix + "_di.pkl",
-    modelPrefix + "_config.json",
-    modelPrefix + "_weights.h5"
-  )
-  override val paramFile = modelPrefix + "_params.json"
-  override val inProgressFile = modelPrefix + "_in_progress"
 }

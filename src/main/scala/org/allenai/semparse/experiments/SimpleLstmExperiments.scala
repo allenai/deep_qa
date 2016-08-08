@@ -27,18 +27,22 @@ object SimpleLstmExperiments {
   //////////////////////////////////////////////////////////////////
 
   // Step 2a: train a language model on the positive data.
-  val sentenceCorruptorTrainerParams: JValue =
-    ("positive data" -> sentenceSelectorParams) ~
+  val languageModelParams: JValue =
+    ("sentences" -> sentenceSelectorParams) ~
     ("tokenize input" -> false) ~
     ("word dimensionality" -> 10) ~
     ("max training epochs" -> 1) ~
-    ("maximum training sentences" -> 1000)
+    ("num sentences to use" -> 1000)
 
   // Step 2b: actually corrupt the data
-  val sentenceCorruptorParams: JValue =
-    ("type" -> "sentence corruptor") ~
+  val kbSentenceCorruptorParams: JValue =
     ("positive data" -> sentenceSelectorParams) ~
-    ("trainer" -> sentenceCorruptorTrainerParams)
+    ("kb tensor file" -> "/home/mattg/data/aristo_kb/animals-tensor-july10-yesonly-wo-thing.csv")
+
+  val corruptedSentenceSelectorParams: JValue =
+    ("type" -> "kb sentence corruptor") ~
+    ("corruptor" -> kbSentenceCorruptorParams) ~
+    ("language model" -> languageModelParams)
 
   ///////////////////////////////////////////////////////////////////////////
   // Step 3: Convert question-answer pairs into sentences for validation data
@@ -72,9 +76,9 @@ object SimpleLstmExperiments {
     ("model" -> modelParams)
 
   def main(args: Array[String]) {
-    new SentenceSelector(sentenceSelectorParams, fileUtil).runPipeline()
+    //new SentenceSelector(sentenceSelectorParams, fileUtil).runPipeline()
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
-    //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
+    new KbSentenceCorruptor(kbSentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
