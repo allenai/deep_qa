@@ -140,7 +140,8 @@ class AttentiveReaderLayer(Dense):
 
         TODO(matt): there are a bunch of things that Keras's Dense layer has that we don't
         implement here yet: regularizers, biases, etc.  We'll not worry about those for now, but
-        might want to in the future.
+        might want to in the future.  But note that Keras adds a bias by default, which will go in
+        the computation of y, and any regularizer passed into __init__ will apply to W2.
         '''
         # If any initial weights were passed to the constructor, we have to set them here. Keras's
         # build methods need to be called so that all the trainable weight variables get
@@ -161,8 +162,8 @@ class AttentiveReaderLayer(Dense):
         self.input_spec = [InputSpec(shape=input_shape)]
 
         input_dim = input_shape[2]
-        self.W1 = self.init((input_dim * 2, input_dim))
-        self.v = self.init((input_dim, 1))
+        self.W1 = self.init((input_dim * 2, input_dim), name='{}_inner_dense'.format(self.name))
+        self.v = self.init((input_dim, 1), name='{}_inner_dot_bias'.format(self.name))
         self.trainable_weights.extend([self.W1, self.v])
 
         # Now that trainable_weights is complete, we set weights if needed.
@@ -177,18 +178,19 @@ class AttentiveReaderLayer(Dense):
         Weights: W_1, v, W_2
         Output: y
 
-        (1) m_t = tanh(W_1 * concat(z_t, u))
-        (2) q_t = dot(v, m_t)
-        (3) a_t = softmax(q_t)
-        (4) r = sum_t(a_t * z_t)
-        (5) y = tanh(W_2 * concat(r, u))
+        (1) zu_t = concat(z_t, u)
+        (2) m_t = tanh(dot(W1, zu_t))
+        (3) q_t = dot(v, m_t)
+        (4) a_t = softmax(q_t)
+        (5) r = sum_t(a_t * z_t)
+        (6) y = tanh(W_2 * concat(r, u))
 
-        Here we actually implement the logic of these equations.  The implementation looks more
-        complex than these equations because we have to unpack the input, then use tiling instead
-        of loops to make this more efficient.  Also, recall from above that we're leaving the last
-        equation to the Dense layer that we're subclassing.  So this method does the math for the
-        attention specified in the earlier equations, then passes the resultant vector off to
-        super.call().
+        Here we actually implement the logic of these equations.  We label each step with its
+        number and the variable above that it's computing.  The implementation looks more complex
+        than these equations because we have to unpack the input, then use tiling instead of loops
+        to make this more efficient.  Also, recall from above that we're leaving the last equation
+        to the Dense layer that we're subclassing.  So this method does the math for the attention
+        specified in the earlier equations, then passes the resultant vector off to super.call().
         '''
         # Remember that the first row in each slice corresponds to the encoding of the input and
         # the remaining rows to those of the background knowledge.
@@ -203,29 +205,29 @@ class AttentiveReaderLayer(Dense):
                 K.tile(sentence_encoding, (knowledge_length, 1, 1)),
                 (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
 
-        # (1a) Result of this is (num_samples, knowledge_length, input_dim * 2)
+        # (1: zu_t) Result of this is (num_samples, knowledge_length, input_dim * 2)
         concatenated_encodings = K.concatenate([knowledge_encoding, tiled_sentence_encoding])
 
-        # (1b) Result of this is (num_samples, knowledge_length, input_dim)
+        # (2: m_t) Result of this is (num_samples, knowledge_length, input_dim)
         concatenated_activation = self.activation(K.dot(concatenated_encodings, self.W1))
 
-        # (2) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
+        # (3: q_t) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
         # after the dot product with K.squeeze, otherwise this would be (num_samples,
         # knowledge_length, 1), which is not a valid input to K.softmax.
         unnormalized_attention = K.squeeze(K.dot(concatenated_activation, self.v), axis=2)
 
-        # (3) Result is (num_samples, knowledge_length)
+        # (4: a_t) Result is (num_samples, knowledge_length)
         knowledge_attention = K.softmax(unnormalized_attention)
 
         # Here we expand the attention matrix to make it a tensor with last dim of length 1 so that
         # we can do an element wise multiplication with knowledge, and then we sum out the
         # knowledge dimension to make it a weighted average.
-        # (4) Result is (num_samples, input_dim)
+        # (5: r) Result is (num_samples, input_dim)
         attended_knowledge = K.sum(knowledge_encoding * K.expand_dims(knowledge_attention, dim=-1), axis=1)
 
         # Finally, we concatenate the attended knowledge vector with the input sentence encoding,
         # and pass it to the dense layer.
-        # (5) Output is (num_samples, input_dim)
+        # (6: y) Output is (num_samples, input_dim)
         dense_layer_input = K.concatenate([attended_knowledge, sentence_encoding])
         output = super(AttentiveReaderLayer, self).call(dense_layer_input)
         return output
