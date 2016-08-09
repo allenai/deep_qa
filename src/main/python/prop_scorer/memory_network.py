@@ -71,7 +71,7 @@ class MemoryNetworkSolver(NNSolver):
     def train(self, train_input, train_labels, validation_input, validation_labels,
               model_serialization_prefix, **kwargs):
         '''
-        train_input: a tuploe of (proposition_inputs, knowledge_inputs), each described below:
+        train_input: a tuple of (proposition_inputs, knowledge_inputs), each described below:
             proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
                 in labeled propositions
             knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
