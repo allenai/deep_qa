@@ -14,7 +14,7 @@ object MemoryNetworkExperiments {
   // These parameters define where the elastic search index is that we'll get background data from,
   // and how many results to request from the index per query.
   val baseElasticSearchParams: JValue =
-    ("num passages per sentence" -> 10) ~
+    ("num passages per sentence" -> 4) ~
     ("elastic search index url" -> "aristo-es1.dev.ai2") ~
     ("elastic search index port" -> 9300) ~
     ("elastic search cluster name" -> "aristo-es") ~
@@ -28,11 +28,11 @@ object MemoryNetworkExperiments {
   val sentenceSelectorParams: JValue =
     ("sentence producer type" -> "sentence selector") ~
     ("create sentence indices" -> true) ~
-    ("sentence selector" -> ("max word count per sentence" -> 20) ~
-                            ("min word count per sentence" -> 8)) ~
-    ("data name" -> "busc_with_better_negatives") ~
+    ("sentence selector" -> ("max word count per sentence" -> 8) ~
+                            ("min word count per sentence" -> 6)) ~
+    ("data name" -> "busc_testing2") ~
     ("data directory" -> corpus) ~
-    ("max sentences" -> 10000)
+    ("max sentences" -> 100)
 
   //////////////////////////////////////////////////////////////////
   // Step 2: Corrupt the positive sentences to get negative data
@@ -43,8 +43,8 @@ object MemoryNetworkExperiments {
     ("sentences" -> sentenceSelectorParams) ~
     ("tokenize input" -> false) ~
     ("use lstm" -> true) ~
-    ("word dimensionality" -> 50) ~
-    ("max training epochs" -> 2)
+    ("word dimensionality" -> 10) ~
+    ("max training epochs" -> 1)
 
   // Step 2b: generate candidate corruptions using the KB
   val kbSentenceCorruptorParams: JValue =
@@ -55,7 +55,7 @@ object MemoryNetworkExperiments {
   val corruptedSentenceSelectorParams: JValue =
     ("sentence producer type" -> "kb sentence corruptor") ~
     ("create sentence indices" -> true) ~
-    ("candidates per set" -> 5) ~
+    ("candidates per set" -> 1) ~
     ("corruptor" -> kbSentenceCorruptorParams) ~
     ("language model" -> languageModelParams)
 
@@ -95,7 +95,7 @@ object MemoryNetworkExperiments {
 
   val modelParams: JValue =
     ("model type" -> "memory network") ~
-    ("model name" -> "abstracts_testing/memory_network") ~
+    ("model name" -> "busc/attentive_memory_network") ~
     ("positive data" -> sentenceSelectorParams) ~
     ("positive background" -> positiveBackgroundParams) ~
     ("negative data" -> corruptedSentenceSelectorParams) ~

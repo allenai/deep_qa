@@ -11,11 +11,20 @@ from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense, Dropout
 from keras.regularizers import l2
 from keras.models import Model
 
-from knowledge_backed_scorers import KnowledgeBackedDense
+from knowledge_backed_scorers import AttentiveReaderLayer, MemoryLayer
 from nn_solver import NNSolver
 
 
 class MemoryNetworkSolver(NNSolver):
+
+    def __init__(self, memory_layer_type):
+        super(MemoryNetworkSolver, self).__init__()
+        if memory_layer_type == 'attentive':
+            self.memory_layer = AttentiveReaderLayer
+        elif memory_layer_type == 'memory':
+            self.memory_layer = MemoryLayer
+        else:
+            raise RuntimeError("Unrecognized memory layer type: " + memory_layer_type)
 
     def index_inputs(self, inputs, for_train=True, length_cutoff=None, one_per_line=True):
         '''
@@ -59,24 +68,33 @@ class MemoryNetworkSolver(NNSolver):
                 mapped_indices[input_id].append(indexed_input_line)
         return mapped_indices
 
-    def train(self, proposition_inputs, knowledge_inputs, labels, validation_input,
-              validation_labels, embedding_size=50, num_memory_layers=1, num_epochs=20,
-              vocab_size=None):
+    def train(self, train_input, train_labels, validation_input, validation_labels,
+              model_serialization_prefix, **kwargs):
         '''
-        proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
-            in labeled propositions
-        knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
-            of words in background facts that correspond to the propositions.
-        labels: numpy_array(samples, 2): One-hot vectors indicating true/false
-        validation_input: List containing processed proposition and knowledge inputs
-            of validation data used for early stopping
+        train_input: a tuple of (proposition_inputs, knowledge_inputs), each described below:
+            proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
+                in labeled propositions
+            knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
+                of words in background facts that correspond to the propositions.
+        train_labels: numpy_array(samples, 2): One-hot vectors indicating true/false
+        validation_input: List containing processed proposition and knowledge inputs of validation
+            data used for early stopping
         validation_labels: Similar to training labels, but for validation.
+
+        Allowed kwargs:
         num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
+        embedding_size: int. Size of word vectors (default 50).
+        vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
+            if not provided.
+        num_epochs: int. Number of training epochs (default 20).
         '''
-        if not vocab_size:
-            vocab_size = self.data_indexer.get_vocab_size()
+        vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
+        embedding_size = kwargs.get('embedding_size', 50)
+        num_epochs = kwargs.get('num_epochs', 20)
+        num_memory_layers = kwargs.get('num_memory_layers', 1)
 
         ## Step 1: Define the two inputs (propositions and knowledge)
+        proposition_inputs, knowledge_inputs = train_input
         proposition_input = Input(shape=(proposition_inputs.shape[1:]), dtype='int32')
         knowledge_input = Input(shape=(knowledge_inputs.shape[1:]), dtype='int32')
 
@@ -109,7 +127,7 @@ class MemoryNetworkSolver(NNSolver):
         # scorer
         # At each step in the following loop, we take the proposition encoding,
         # or the output of the previous memory layer, merge it with the knowledge
-        # encoding and pass it to the current memory layer (KnowledgeBackedDense).
+        # encoding and pass it to the current memory layer.
         next_memory_layer_input = encoded_proposition
         for i in range(num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
@@ -130,8 +148,8 @@ class MemoryNetworkSolver(NNSolver):
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_backed_projector = KnowledgeBackedDense(output_dim=embedding_size,
-                                                              name='memory_layer_%d' % i)
+            knowledge_backed_projector = self.memory_layer(output_dim=embedding_size,
+                                                           name='memory_layer_%d' % i)
             memory_layer_output = knowledge_backed_projector(regularized_merged_rep)
             next_memory_layer_input = memory_layer_output
 
@@ -148,7 +166,7 @@ class MemoryNetworkSolver(NNSolver):
         for epoch_id in range(num_epochs):
             # History callback contains the losses of all training samples
             print("Epoch %d" % epoch_id, file=sys.stderr)
-            memory_network.fit([proposition_inputs, knowledge_inputs], labels, nb_epoch=1)
+            memory_network.fit([proposition_inputs, knowledge_inputs], train_labels, nb_epoch=1)
             accuracy = self.evaluate(validation_labels, validation_input)
             print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
             # TODO(matt): add the best_epoch stuff here, or, better yet, move this validation code
@@ -158,7 +176,7 @@ class MemoryNetworkSolver(NNSolver):
                 break
             else:
                 best_accuracy = accuracy
-                self.save_model("memory_network_lstm", epoch_id)
+                self.save_model(model_serialization_prefix, epoch_id)
 
     def prepare_data(self, proposition_lines, knowledge_lines, for_train=True):
         # Common data preparation function for both train and test data.
@@ -296,6 +314,9 @@ def main():
     argparser.add_argument('--validation_background', type=str)
     argparser.add_argument('--test_input', type=str)
     argparser.add_argument('--test_background', type=str)
+    argparser.add_argument('--memory_layer', type=str, default='attentive',
+                           help='The kind of memory layer to use.  Options are "memory" and '
+                           '"attentive".  See knowledge_backed_scorers.py for details.')
     argparser.add_argument('--num_memory_layers', type=int,
                            help="Number of memory layers in the network. (default 1)", default=1)
     argparser.add_argument('--length_upper_limit', type=int,
@@ -311,12 +332,12 @@ def main():
     argparser.add_argument("--model_serialization_prefix", default="models/testing_memory_network",
                            help="Prefix for saving and loading model files")
     args = argparser.parse_args()
-    nn_solver = MemoryNetworkSolver()
+    nn_solver = MemoryNetworkSolver(args.memory_layer)
 
     if not args.positive_train_input:
         # Training file is not given. There must be a serialized model.
         print("Loading scoring model from disk", file=sys.stderr)
-        custom_objects = {"KnowledgeBackedDense": KnowledgeBackedDense}
+        custom_objects = {"MemoryLayer": MemoryLayer, "AttentiveReaderLayer": AttentiveReaderLayer}
         nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch, custom_objects)
     else:
         assert args.positive_train_background is not None, "Positive background data required for training"
@@ -341,9 +362,8 @@ def main():
             print("Limiting training size to %d" % (args.max_train_size), file=sys.stderr)
             train_inputs = [input_[:args.max_train_size] for input_ in train_inputs]
             train_labels = train_labels[:args.max_train_size]
-        train_proposition_inputs, train_knowledge_inputs = train_inputs
         # Record max_length to use it for processing validation data.
-        train_sequence_length = train_proposition_inputs.shape[1]
+        train_sequence_length = train_inputs[0].shape[1]
         print("Reading validation data", file=sys.stderr)
         validation_proposition_lines = [x.strip() for x in codecs.open(
                 args.validation_input, 'r', 'utf-8').readlines()]
@@ -353,9 +373,9 @@ def main():
                 validation_proposition_lines, validation_knowledge_lines,
                 train_sequence_length)
         print("Training model", file=sys.stderr)
-        nn_solver.train(train_proposition_inputs, train_knowledge_inputs, train_labels,
-                        validation_input, validation_labels,
-                        num_memory_layers=args.num_memory_layers, num_epochs=args.num_epochs)
+        nn_solver.train(train_inputs, train_labels, validation_input, validation_labels,
+                        args.model_serialization_prefix, num_memory_layers=args.num_memory_layers,
+                        num_epochs=args.num_epochs)
 
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
