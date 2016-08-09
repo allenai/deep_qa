@@ -24,9 +24,14 @@ class MemoryLayer(Dense):
     dot product, and a sum at the end to combine the aggregated memory with the input.
     """
 
-    def __init__(self, output_dim, **kwargs):
+    def __init__(self, output_dim, return_attention=False, **kwargs):
+        """
+        return_attention: makes the call method below return the attention values instead
+        of the actual output. This is useful for debugging the training process.
+        """
         # Assuming encoded knowledge and encoded input sentence are of the same dimensionality. So
         # we will not change the input_dim, and rely on the underlying Dense layer to specify it.
+        self.return_attention = return_attention
         kwargs['output_dim'] = output_dim
         super(MemoryLayer, self).__init__(**kwargs)
         # Now that the constructor of Dense is called, ndim will have been set to 2. Change it to
@@ -60,22 +65,29 @@ class MemoryLayer(Dense):
                 (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
         knowledge_attention = K.softmax(K.sum(knowledge_encoding * tiled_sentence_encoding,
                                               axis=2))  # (num_samples, knowledge_length)
+        if self.return_attention:
+            return knowledge_attention
+        else:
+            # Expand attention matrix to make it a tensor with last dim of length 1 so that
+            # we can do an element wise multiplication with knowledge, and then sum out the
+            # knowledge dimension to make it a weighted average
+            attended_knowledge = K.sum(knowledge_encoding * K.expand_dims(knowledge_attention, dim=-1),
+                                       axis=1)  # (num_samples, input_dim)
 
-        # Expand attention matrix to make it a tensor with last dim of length 1 so that we can do
-        # an element wise multiplication with knowledge, and then sum out the knowledge dimension
-        # to make it a weighted average
-        attended_knowledge = K.sum(knowledge_encoding * K.expand_dims(knowledge_attention, dim=-1),
-                                   axis=1)  # (num_samples, input_dim)
-
-        # Summing the sentences and attended knowledge vectors, following the End to End Memory
-        # networks paper (Sukhbaatar et al.,'15).
-        dense_layer_input = sentence_encoding + attended_knowledge
-        output = super(MemoryLayer, self).call(dense_layer_input)
-        return output
+            # Summing the sentences and attended knowledge vectors, following the End to End
+            # Memory networks paper (Sukhbaatar et al.,'15).
+            dense_layer_input = sentence_encoding + attended_knowledge
+            output = super(MemoryLayer, self).call(dense_layer_input)
+            return output
 
     def get_output_shape_for(self, input_shape):
-        dense_input_shape = (input_shape[0], input_shape[2],)  # Eliminating second dim.
-        return super(MemoryLayer, self).get_output_shape_for(dense_input_shape)
+        if self.return_attention:
+            # In this case, the output_dim does not matter, for each sample we return a vector of
+            # size knowledge_length, indicating the weights over background information.
+            return (input_shape[0], input_shape[1])  # (num_samples, knowledge_length)
+        else:
+            dense_input_shape = (input_shape[0], input_shape[2],)  # Eliminating second dim.
+            return super(MemoryLayer, self).get_output_shape_for(dense_input_shape)
 
 
 class AttentiveReaderLayer(Dense):

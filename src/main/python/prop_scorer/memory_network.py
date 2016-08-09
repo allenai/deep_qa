@@ -101,7 +101,6 @@ class MemoryNetworkSolver(NNSolver):
         # Can replace the LSTM below with fancier encoders depending on the input.
         proposition_encoder = LSTM(output_dim=embedding_size, W_regularizer=l2(0.01),
                                    U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='encoder')
-
         # Knowledge encoder will have the same encoder running on a higher order tensor.
         # i.e., proposition_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
         # and knowledge_encoder: (samples, knowledge_len, num_words, word_dim) ->
