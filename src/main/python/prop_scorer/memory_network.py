@@ -350,6 +350,7 @@ def main():
         nn_solver.train(train_inputs, train_labels, validation_input, validation_labels,
                         args.model_serialization_prefix, num_memory_layers=args.num_memory_layers,
                         num_epochs=args.num_epochs, patience=args.patience)
+
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.
     max_length = nn_solver.model.get_input_shape_at(0)[0][1]
