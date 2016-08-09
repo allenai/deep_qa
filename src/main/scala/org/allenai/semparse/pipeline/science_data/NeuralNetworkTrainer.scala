@@ -65,6 +65,7 @@ object NeuralNetworkTrainer {
     implicit val formats = DefaultFormats
     (params \ "model type").extract[String] match {
       case "simple lstm" => new SimpleLstmTrainer(params, fileUtil)
+      case "memory network" => new MemoryNetworkTrainer(params, fileUtil)
       case t => throw new IllegalStateException(s"Unrecognized neural network model type: $t")
     }
   }
