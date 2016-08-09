@@ -96,7 +96,7 @@ class AttentiveReaderLayer(Dense):
 
     Equations:
     Inputs: u is the sentence encoding, z_t are the background sentence encodings
-    Weights: W_1, v, W_2
+    Weights: W_1 (called self.dense_weights), v (called self.dot_bias), W_2
     Output: y
 
     m_t = tanh(W_1 * concat(z_t, u))
@@ -126,7 +126,7 @@ class AttentiveReaderLayer(Dense):
         '''
         Equations repeated from above:
         Inputs: u is the sentence encoding, z_t are the background sentence encodings
-        Weights: W_1, v, W_2
+        Weights: W_1 (called self.dense_weights), v (called self.dot_bias), W_2
         Output: y
 
         m_t = tanh(W_1 * concat(z_t, u))
@@ -162,9 +162,9 @@ class AttentiveReaderLayer(Dense):
         self.input_spec = [InputSpec(shape=input_shape)]
 
         input_dim = input_shape[2]
-        self.W1 = self.init((input_dim * 2, input_dim), name='{}_inner_dense'.format(self.name))
-        self.v = self.init((input_dim, 1), name='{}_inner_dot_bias'.format(self.name))
-        self.trainable_weights.extend([self.W1, self.v])
+        self.dense_weights = self.init((input_dim * 2, input_dim), name='{}_inner_dense'.format(self.name))
+        self.dot_bias = self.init((input_dim, 1), name='{}_inner_dot_bias'.format(self.name))
+        self.trainable_weights.extend([self.dense_weights, self.dot_bias])
 
         # Now that trainable_weights is complete, we set weights if needed.
         if self.initial_attentive_reader_weights is not None:
@@ -175,11 +175,11 @@ class AttentiveReaderLayer(Dense):
         '''
         Equations repeated from above (last time):
         Inputs: u is the sentence encoding, z_t are the background sentence encodings
-        Weights: W_1, v, W_2
+        Weights: W_1 (called self.dense_weights), v (called self.dot_bias), W_2
         Output: y
 
         (1) zu_t = concat(z_t, u)
-        (2) m_t = tanh(dot(W1, zu_t))
+        (2) m_t = tanh(dot(W_1, zu_t))
         (3) q_t = dot(v, m_t)
         (4) a_t = softmax(q_t)
         (5) r = sum_t(a_t * z_t)
@@ -209,12 +209,12 @@ class AttentiveReaderLayer(Dense):
         concatenated_encodings = K.concatenate([knowledge_encoding, tiled_sentence_encoding])
 
         # (2: m_t) Result of this is (num_samples, knowledge_length, input_dim)
-        concatenated_activation = self.activation(K.dot(concatenated_encodings, self.W1))
+        concatenated_activation = self.activation(K.dot(concatenated_encodings, self.dense_weights))
 
         # (3: q_t) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
         # after the dot product with K.squeeze, otherwise this would be (num_samples,
         # knowledge_length, 1), which is not a valid input to K.softmax.
-        unnormalized_attention = K.squeeze(K.dot(concatenated_activation, self.v), axis=2)
+        unnormalized_attention = K.squeeze(K.dot(concatenated_activation, self.dot_bias), axis=2)
 
         # (4: a_t) Result is (num_samples, knowledge_length)
         knowledge_attention = K.softmax(unnormalized_attention)
