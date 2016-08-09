@@ -14,6 +14,20 @@ from keras.models import Model
 from knowledge_backed_scorers import AttentiveReaderLayer, MemoryLayer
 from nn_solver import NNSolver
 
+'''
+TODO(pradeep): Replace memory layers in the following implementation, with a combination
+of a KnowledgeSelector and the logic for updating memory given below.
+
+Insight: Memory Networks and Attentive Readers have the following steps:
+    0. Take knowledge input (z), query input (q)
+    1. Knowledge Selection (returns knowledge weights)
+    2. Knowledge Aggregation (returns weighted average)
+    3. Memory Update (returns a memory representation to replace input)
+    4. Optionally repeat 1-3 with output from 3 replacing q
+    5. Pass aggregated knowledge from 2, and q to an entailment function.
+Memory Network: Selector = SimpleKnowledgeSelector; Updater = merge layer with mode = sum
+AttentiveReader: Selector = ParameterizedKnowledgeSelector; Updater = merge with mode = concat, followed by a dense layer.
+'''
 
 class MemoryNetworkSolver(NNSolver):
 

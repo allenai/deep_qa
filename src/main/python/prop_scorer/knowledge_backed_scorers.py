@@ -146,16 +146,6 @@ class ParameterizedKnowledgeSelector(Layer):
         return knowledge_attention
 
 
-class SimpleMemoryUpdater(Layer):
-    def __init__(self):  # pylint: disable=super-init-not-called
-        raise NotImplementedError
-
-
-class ParameterizedMemoryUpdater(Dense):
-    def __init__(self):  # pylint: disable=super-init-not-called
-        raise NotImplementedError
-
-
 class MemoryLayer(Dense):
     """
     Input Shape: num_samples, (knowledge_length + 1), input_dim
