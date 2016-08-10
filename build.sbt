@@ -1,6 +1,6 @@
 organization := "org.allenai"
 
-name := "semparse"
+name := "deep-learning-for-aristo"
 
 version := "1.0"
 
@@ -16,7 +16,7 @@ connectInput := true
 
 cancelable in Global := true
 
-javaOptions ++= Seq("-Xmx140g", "-Xms140g")
+javaOptions ++= Seq("-Xmx14g", "-Xms14g")
 
 libraryDependencies ++= Seq(
   //"org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",

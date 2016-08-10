@@ -10,8 +10,6 @@ import com.mattg.util.JsonHelper
 import edu.cmu.ml.rtw.pra.experiments.Outputter
 import edu.cmu.ml.rtw.pra.graphs.GraphCreator
 
-import org.allenai.semparse.pipeline.jklol.KbGenerator
-
 // This is mostly just a class to create a set of params and hand off to the GraphCreator in the
 // PRA code.  Because of this, we don't pass our params to the base Step object.
 class KbGraphCreator(
@@ -28,9 +26,15 @@ class KbGraphCreator(
   val corpusRelationSet: Option[(JValue, (String, Option[Step]))] = (params \ "corpus triples") match {
     case JNothing => None
     case jval => {
+      /*  TODO(matt): Fix this, if we ever need to use this again.  The KbGenerator went to a
+       *  different repository.
+      import org.allenai.semparse.pipeline.jklol.KbGenerator
+
       val kbGenerator = new KbGenerator(jval, fileUtil)
       val paramsForGraph: JValue = ("is kb" -> true) ~ ("relation file" -> kbGenerator.tripleFile)
       Some((paramsForGraph, (kbGenerator.tripleFile, Some(kbGenerator))))
+      */
+      None
     }
   }
   val suppliedRelationSetFiles = JsonHelper.extractWithDefault(params, "relation sets", Seq[String]())

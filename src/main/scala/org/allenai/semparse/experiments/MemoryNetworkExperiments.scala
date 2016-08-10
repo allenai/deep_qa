@@ -5,7 +5,6 @@ import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
-import org.allenai.semparse.pipeline.common._
 import org.allenai.semparse.pipeline.science_data._
 
 object MemoryNetworkExperiments {
