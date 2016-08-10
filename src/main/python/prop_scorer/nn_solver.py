@@ -72,8 +72,11 @@ class NNSolver(object):
         self.save_best_model(model_serialization_prefix)
 
     def build_model(self, train_input, vocab_size, embedding_size):
-        # This function has to be implemented by the classes that inherit from
-        # this abstract class
+        """Constructs and returns a Keras model that will take train_input as input, and produce as
+        output a true/false decision for each input.
+
+        The returned model will be used to call model.fit(train_input, train_labels).
+        """
         raise NotImplementedError
 
     def save_model(self, model_name_prefix, epoch):
