@@ -21,8 +21,62 @@ class NNSolver(object):
 
     def train(self, train_input, train_labels, validation_input, validation_labels,
               model_serialization_prefix, **kwargs):
-        # This function has to be implemented by the classes that inherit from
-        # this abstract class
+        # TODO(matt): make methods that create train_input, train_labels, validation_input, and
+        # validation_labels, so that each subclass can do this on its own.  This is basically just
+        # cleaning up the API of the prepare_data methods that already exist.
+        # TODO(matt): as part of that API, make an "embed_word_sequence_inputs" method, that either
+        # adds an Embedding layer, or uses a fixed word2vec embedding then a projection, etc.
+        '''
+        train_input: Exact format depends on subclass, but this will be passed directly to
+            model.fit().
+        train_labels: numpy array: int32 (samples, 2). One hot representations of labels for
+            training
+        validation_input: Similar to train_input, except it must have length that is a multiple of
+            four.   Every set of four rows correspond to the statements formed from four options of
+            a question.
+        validation_labels: numpy array: int32 (num_valid_questions,). Indices of correct
+            answers
+
+        Allowed kwargs:
+        embedding_size: int. Size of word vectors (default 50).
+        vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
+            if not provided.
+        num_epochs: int. Number of training epochs (default 20).
+        patience: int. Number of patience epochs for deciding on early stopping (default 1).
+        '''
+        vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
+        embedding_size = kwargs.get('embedding_size', 50)
+        num_epochs = kwargs.get('num_epochs', 20)
+        patience = kwargs.get('patience', 1)
+
+        self.model = self.build_model(train_input, vocab_size, embedding_size)
+
+        ## Step 6: Train the full model jointly
+        best_accuracy = 0.0
+        self.best_epoch = 0
+        num_worse_epochs = 0
+        for epoch_id in range(num_epochs):
+            print("Epoch %d" % epoch_id, file=sys.stderr)
+            self.model.fit(train_input, train_labels, nb_epoch=1)
+            accuracy = self.evaluate(validation_labels, validation_input)
+            print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
+            if accuracy < best_accuracy:
+                num_worse_epochs += 1
+                if num_worse_epochs >= patience:
+                    print("Stopping training", file=sys.stderr)
+                    break
+            else:
+                best_accuracy = accuracy
+                self.best_epoch = epoch_id
+                self.save_model(model_serialization_prefix, epoch_id)
+        self.save_best_model(model_serialization_prefix)
+
+    def build_model(self, train_input, vocab_size, embedding_size):
+        """Constructs and returns a Keras model that will take train_input as input, and produce as
+        output a true/false decision for each input.
+
+        The returned model will be used to call model.fit(train_input, train_labels).
+        """
         raise NotImplementedError
 
     def save_model(self, model_name_prefix, epoch):
@@ -74,11 +128,9 @@ class NNSolver(object):
 
         # Indexing training data
         print("Indexing training data", file=sys.stderr)
-        good_input = self.data_indexer.process_data(
-                good_lines, separate_propositions=False, for_train=True, max_length=max_length)
+        good_input = self.data_indexer.process_data(good_lines, for_train=True, max_length=max_length)
         if negative_samples_given:
-            bad_input = self.data_indexer.process_data(
-                    bad_lines, separate_propositions=False, for_train=True, max_length=max_length)
+            bad_input = self.data_indexer.process_data(bad_lines, for_train=True, max_length=max_length)
         else:
             # Corrupting train indices to get "bad" data
             print("Corrupting training data", file=sys.stderr)
@@ -100,7 +152,6 @@ class NNSolver(object):
             max_transition_length = max(len(good_transitions[0]), len(bad_transitions[0]))
             good_elements = self.data_indexer.pad_indices(good_elements, max_length=max_transition_length)
             bad_elements = self.data_indexer.pad_indices(bad_elements, max_length=max_transition_length)
-            training_sample = zip(good_elements, bad_elements)[:10]
 
             # Make int32 array so that Keras will view them as indices.
             good_elements = numpy.asarray(good_elements, dtype='int32')
@@ -132,8 +183,6 @@ class NNSolver(object):
             # Padding to prespecified length
             good_input = self.data_indexer.pad_indices(good_input, max_length=max_length)
             bad_input = self.data_indexer.pad_indices(bad_input, max_length=max_length)
-            #bad_input = self.data_indexer.corrupt_indices(good_input)
-            training_sample = zip(good_input, bad_input)[:10]
             # Make int32 array so that Keras will view them as indices.
             good_input = numpy.asarray(good_input, dtype='int32')
             bad_input = numpy.asarray(bad_input, dtype='int32')
@@ -149,20 +198,17 @@ class NNSolver(object):
             zipped_input_labels = zip(numpy.concatenate([good_input, bad_input]), labels)
             random.shuffle(zipped_input_labels)
             inputs, labels = [numpy.asarray(array) for array in zip(*zipped_input_labels)]
-
-        # Print a training sample
-        print("Sample training pairs:", file=sys.stderr)
-        for good_prop_indices, bad_prop_indices in training_sample:
-            print("%s vs. %s" % (self.data_indexer.get_words_from_indices(good_prop_indices),
-                                 self.data_indexer.get_words_from_indices(bad_prop_indices)),
-                  file=sys.stderr)
-
         return (inputs, labels)
 
     def prepare_test_data(self, data_lines, max_length=None, in_shift_reduce_format=False):
-        # data_lines expected to be in tab separated format with first column being the input and
-        # the second column the label (1 if true, 0 if false).
-        test_lines, test_label_strings = zip(*[line.split("\t") for line in data_lines])
+        # data_lines expected to be in tab separated format, either two or three columns, formatted
+        # as: "[sentence][tab][label]" or "[sentence index][tab][sentence][tab][label]".  Label is
+        # either 0 or 1.
+        num_fields = len(data_lines[0].split("\t"))
+        if num_fields == 2:
+            test_lines, test_label_strings = zip(*[line.split("\t") for line in data_lines])
+        else:
+            _, test_lines, test_label_strings = zip(*[line.split("\t") for line in data_lines])
         assert len(test_label_strings)%4 == 0, "Not enough lines per question"
         num_questions = len(test_label_strings) / 4
         print("Read %d questions" % num_questions, file=sys.stderr)
@@ -212,29 +258,11 @@ class LSTMSolver(NNSolver):
     def __init__(self):
         super(LSTMSolver, self).__init__()
 
-    def train(self, train_input, train_labels, validation_input, validation_labels,
-              model_serialization_prefix, **kwargs):
+    def build_model(self, train_input, vocab_size, embedding_size):
         '''
         train_input: numpy array: int32 (samples, num_words). Left padded arrays of word indices
             from sentences in training data
-        train_labels: numpy array: int32 (samples, 2). One hot representations of labels for
-            training
-        validation_input: numpy array: int32 (4*num_valid_questions, num_words). Array
-            similar to good and bad inputs. Every set of rows correspond to the statements
-            formed from four options of a question.
-        validation_labels: numpy array: int32 (num_valid_questions,). Indices of correct
-            answers
-
-        Allowed kwargs:
-        embedding_size: int. Size of word vectors (default 50).
-        vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
-            if not provided.
-        num_epochs: int. Number of training epochs (default 20).
         '''
-        vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
-        embedding_size = kwargs.get('embedding_size', 50)
-        num_epochs = kwargs.get('num_epochs', 20)
-
         ## STEP 1: Initialze the input layer
         input_layer = Input(shape=train_input.shape[1:], dtype='int32')
 
@@ -263,54 +291,19 @@ class LSTMSolver(NNSolver):
         model = Model(input=input_layer, output=output_probabilities)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
         print(model.summary(), file=sys.stderr)
-        self.model = model
-
-        ## Step 6: Train the full model jointly
-        # TODO(matt): it would probably be a good idea to pull out the parts of this that are
-        # common to both LSTMSolver and TreeLSTMSolver into another method.  That way you don't
-        # have to duplicate all of the validation and early stopping stuff.
-        best_accuracy = 0.0
-        self.best_epoch = 0
-        for epoch_id in range(num_epochs):
-            print("Epoch %d" % epoch_id, file=sys.stderr)
-            model.fit(train_input, train_labels, nb_epoch=1)
-            accuracy = self.evaluate(validation_labels, validation_input)
-            print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
-            if accuracy < best_accuracy:
-                print("Stopping training", file=sys.stderr)
-                break
-            else:
-                best_accuracy = accuracy
-                self.best_epoch = epoch_id
-                self.save_model(model_serialization_prefix, epoch_id)
+        return model
 
 
 class TreeLSTMSolver(NNSolver):
     def __init__(self):
         super(TreeLSTMSolver, self).__init__()
 
-    def train(self, train_input, train_labels, validation_input, validation_labels,
-              model_serialization_prefix, **kwargs):
+    def build_model(self, train_input, vocab_size, embedding_size):
         '''
         train_input: List of two numpy arrays: transitions and initial buffer
-        train_labels: numpy array (samples, 2): One hot label indices
-        validation_input: List similar to good and bad inputs. Every set of rows in
-            both arrays correspond to the statements formed from four options of a question.
-        validation_labels: numpy array: int32 (num_valid_questions,). Indices of correct
-            answers
-
-        Allowed kwargs:
-        embedding_size: int. Size of word vectors (default 50).
-        vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
-            if not provided.
-        num_epochs: int. Number of training epochs (default 20).
         '''
-        vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
-        embedding_size = kwargs.get('embedding_size', 50)
-        num_epochs = kwargs.get('num_epochs', 20)
-
         ## STEP 1: Initialze the two inputs
-        transitions, elements = train_input
+        transitions, _ = train_input
         # Length of transitions (ops) is an upper limit on the stack and buffer
         # sizes. So use that to initialize the stack and buffer in the LSTM
         buffer_ops_limit = transitions.shape[1]
@@ -350,23 +343,7 @@ class TreeLSTMSolver(NNSolver):
         model = Model(input=[transitions_input, buffer_input], output=output_probabilities)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
         print(model.summary(), file=sys.stderr)
-        self.model = model
-
-        ## Step 7: Train the full model jointly
-        best_accuracy = 0.0
-        self.best_epoch = 0
-        for epoch_id in range(num_epochs):
-            print("Epoch %d" % epoch_id, file=sys.stderr)
-            model.fit([transitions, elements], train_labels, nb_epoch=1)
-            accuracy = self.evaluate(validation_labels, validation_input)
-            print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
-            if accuracy < best_accuracy:
-                print("Stopping training", file=sys.stderr)
-                break
-            else:
-                best_accuracy = accuracy
-                self.best_epoch = epoch_id
-                self.save_model(model_serialization_prefix, epoch_id)
+        return model
 
 
 def main():
@@ -398,9 +375,9 @@ def main():
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
         print("Reading training data", file=sys.stderr)
-        positive_lines = [x.strip() for x in open(args.positive_train_file).readlines()]
+        positive_lines = [x.strip() for x in codecs.open(args.positive_train_file, "r", "utf-8").readlines()]
         if args.negative_train_file:
-            negative_lines = [x.strip() for x in open(args.negative_train_file).readlines()]
+            negative_lines = [x.strip() for x in codecs.open(args.negative_train_file, "r", "utf-8").readlines()]
         else:
             negative_lines = []
         (inputs, labels) = nn_solver.prepare_training_data(
@@ -423,7 +400,6 @@ def main():
         print("Training model", file=sys.stderr)
         nn_solver.train(inputs, labels, validation_input, validation_labels,
                         args.model_serialization_prefix, num_epochs=args.num_epochs)
-        nn_solver.save_best_model(args.model_serialization_prefix)
 
     # We need this for making sure that test sequences are not longer than what the trained model
     # expects.

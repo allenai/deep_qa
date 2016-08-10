@@ -104,6 +104,14 @@ object MemoryNetworkExperiments {
     ("validation background" -> validationBackgroundParams) ~
     ("number of epochs" -> 1)
 
+  val simpleLstmModelParams: JValue =
+    ("model type" -> "simple lstm") ~
+    ("model name" -> "busc/simple_lstm") ~
+    ("positive data" -> sentenceSelectorParams) ~
+    ("negative data" -> corruptedSentenceSelectorParams) ~
+    ("validation questions" -> validationQuestionParams) ~
+    ("number of epochs" -> 1)
+
   // STUFF BELOW HERE STILL TODO
 
   /////////////////////////////////////////////////////////////////////
@@ -119,6 +127,6 @@ object MemoryNetworkExperiments {
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    new MemoryNetworkTrainer(modelParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
   }
 }

@@ -17,7 +17,10 @@ from nn_solver import NNSolver
 
 class MemoryNetworkSolver(NNSolver):
 
-    def __init__(self, memory_layer_type):
+    def __init__(self, memory_layer_type, num_memory_layers=1):
+        '''
+        num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
+        '''
         super(MemoryNetworkSolver, self).__init__()
         if memory_layer_type == 'attentive':
             self.memory_layer = AttentiveReaderLayer
@@ -25,6 +28,7 @@ class MemoryNetworkSolver(NNSolver):
             self.memory_layer = MemoryLayer
         else:
             raise RuntimeError("Unrecognized memory layer type: " + memory_layer_type)
+        self.num_memory_layers = num_memory_layers
 
     def index_inputs(self, inputs, for_train=True, length_cutoff=None, one_per_line=True):
         '''
@@ -68,32 +72,14 @@ class MemoryNetworkSolver(NNSolver):
                 mapped_indices[input_id].append(indexed_input_line)
         return mapped_indices
 
-    def train(self, train_input, train_labels, validation_input, validation_labels,
-              model_serialization_prefix, **kwargs):
+    def build_model(self, train_input, vocab_size, embedding_size):
         '''
         train_input: a tuple of (proposition_inputs, knowledge_inputs), each described below:
             proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
                 in labeled propositions
             knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
                 of words in background facts that correspond to the propositions.
-        train_labels: numpy_array(samples, 2): One-hot vectors indicating true/false
-        validation_input: List containing processed proposition and knowledge inputs of validation
-            data used for early stopping
-        validation_labels: Similar to training labels, but for validation.
-
-        Allowed kwargs:
-        num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
-        embedding_size: int. Size of word vectors (default 50).
-        vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
-            if not provided.
-        num_epochs: int. Number of training epochs (default 20).
-        patience: int.
         '''
-        vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
-        embedding_size = kwargs.get('embedding_size', 50)
-        num_epochs = kwargs.get('num_epochs', 20)
-        num_memory_layers = kwargs.get('num_memory_layers', 1)
-        patience = kwargs.get('patience', 1)
 
         ## Step 1: Define the two inputs (propositions and knowledge)
         proposition_inputs, knowledge_inputs = train_input
@@ -131,7 +117,7 @@ class MemoryNetworkSolver(NNSolver):
         # or the output of the previous memory layer, merge it with the knowledge
         # encoding and pass it to the current memory layer.
         next_memory_layer_input = encoded_proposition
-        for i in range(num_memory_layers):
+        for i in range(self.num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
             # additional row (at the beginning) in all slices.
             # (samples, word_dim) + (samples, knowledge_len, word_dim)
@@ -163,26 +149,7 @@ class MemoryNetworkSolver(NNSolver):
         memory_network = Model(input=[proposition_input, knowledge_input], output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print(memory_network.summary(), file=sys.stderr)
-        self.model = memory_network
-        best_accuracy = 0.0
-        num_worse_epochs = 0
-        for epoch_id in range(num_epochs):
-            # History callback contains the losses of all training samples
-            print("Epoch %d" % epoch_id, file=sys.stderr)
-            memory_network.fit([proposition_inputs, knowledge_inputs], train_labels, nb_epoch=1)
-            accuracy = self.evaluate(validation_labels, validation_input)
-            print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
-            # TODO(matt): add the best_epoch stuff here, or, better yet, move this validation code
-            # input the super class.
-            if accuracy < best_accuracy:
-                num_worse_epochs += 1
-                if num_worse_epochs >= patience:
-                    print("Stopping training", file=sys.stderr)
-                    break
-            else:
-                num_worse_epochs = 0
-                best_accuracy = accuracy
-                self.save_model(model_serialization_prefix, epoch_id)
+        return memory_network
 
     def prepare_data(self, proposition_lines, knowledge_lines, for_train=True):
         # Common data preparation function for both train and test data.
