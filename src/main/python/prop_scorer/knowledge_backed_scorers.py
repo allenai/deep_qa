@@ -1,4 +1,8 @@
 '''
+TODO(matt): update this comment to reflect the redesign.
+
+Knowledge backed scorers take an encoded sentence (or logical form) representation
+and encoded representations of background facts related to the sentence, and summarize
 the background information as a weighted average of the representations of background
 facts, conditioned on the encoded sentence. For example, MemoryLayer can be
 used as the first layer in an MLP to make a memory network.
@@ -9,11 +13,20 @@ from keras import backend as K
 from keras import activations, initializations
 from keras.layers import Dense, Layer
 
-class SimpleKnowledgeSelector(Layer):
-    def __init__(self, input_dim, **kwargs):
-        self.input_dim = input_dim
+class DotProductKnowledgeSelector(Layer):
+    """
+    Input Shape: num_samples, (knowledge_length + 1), input_dim
+
+    Take the input as a tensor i, such that i[:, 0, :] is the encoding of the sentence, i[:, 1:, :]
+    are the encodings of the background facts.  There is no need to specify knowledge length here.
+
+    Attend to facts conditioned on the input sentence, just using a dot product between the input
+    vector and the background vectors (i.e., there are no parameters here).  This layer is a
+    reimplementation of the memory layer in "End-to-End Memory Networks", Sukhbaatar et al. 2015.
+    """
+    def __init__(self, **kwargs):
         self.input_spec = [InputSpec(ndim=3)]
-        super(SimpleKnowledgeSelector, self).__init__(**kwargs)
+        super(DotProductKnowledgeSelector, self).__init__(**kwargs)
 
     def call(self, x, mask=None):
         # Assumption: The first row in each slice corresponds to the encoding of the input and the
@@ -22,7 +35,7 @@ class SimpleKnowledgeSelector(Layer):
         sentence_encoding = x[:, 0, :]  # (num_samples, input_dim)
         knowledge_encoding = x[:, 1:, :]  # (num_samples, knowledge_length, input_dim)
 
-        # We want to take a dotproduct of the knowledge matrix and the sentence vector from each
+        # We want to take a dot product of the knowledge matrix and the sentence vector from each
         # sample. Instead of looping over all samples (inefficient), let's tile the sentence
         # encoding to make it the same size as knowledge encoding, take an element wise product and
         # sum over the last dimension (dim = 2).
@@ -35,7 +48,8 @@ class SimpleKnowledgeSelector(Layer):
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
-        # For each sample, the output is a vector of size knowledge_length, indicating the weights over background information.
+        # For each sample, the output is a vector of size knowledge_length, indicating the weights
+        # over background information.
         return (input_shape[0], input_shape[1])  # (num_samples, knowledge_length)
 
 
@@ -67,29 +81,12 @@ class ParameterizedKnowledgeSelector(Layer):
         self.init = initializations.get(initialization)
         self.input_spec = [InputSpec(ndim=3)]
         self.initial_weights = weights
+        self.dense_weights = None
+        self.dot_bias = None
         super(ParameterizedKnowledgeSelector, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        # pylint: disable=attribute-defined-outside-init,invalid-name
-        '''
-        Equations repeated from above:
-        Inputs: u is the sentence encoding, z_t are the background sentence encodings
-        Weights: W_1 (called self.dense_weights), v (called self.dot_bias)
-        Output: a_t
-
-        m_t = tanh(W_1 * concat(z_t, u))
-        q_t = dot(v, m_t)
-        a_t = softmax(q_t)
-
-        Because we're subclassing Dense, the Dense layer will handle W_1 and the tanh with
-        its own weights.  So we need to build v here.
-
-        TODO(matt): We have not implemented regularizer for v yet. We'll not worry about that for now, but
-        might want to in the future.  But note that Keras adds a bias by default, which will go in
-        the computation of m_t, and any regularizer passed into __init__ will apply to W1.
-        '''
         self.input_spec = [InputSpec(shape=input_shape)]
-
         input_dim = input_shape[2]
         self.dense_weights = self.init((input_dim * 2, input_dim), name='{}_dense'.format(self.name))
         self.dot_bias = self.init((input_dim, 1), name='{}_dot_bias'.format(self.name))
@@ -102,7 +99,7 @@ class ParameterizedKnowledgeSelector(Layer):
 
     def call(self, x, mask=None):
         '''
-        Equations repeated from above (last time):
+        Equations repeated from above:
         Inputs: u is the sentence encoding, z_t are the background sentence encodings
         Weights: W_1 (called self.dense_weights), v (called self.dot_bias)
         Output: a_t
@@ -111,11 +108,11 @@ class ParameterizedKnowledgeSelector(Layer):
         (2) m_t = tanh(dot(W_1, zu_t))
         (3) q_t = dot(v, m_t)
         (4) a_t = softmax(q_t)
-        (6) y = tanh(W_2 * concat(r, u))
 
         Here we actually implement the logic of these equations.  We label each step with its
         number and the variable above that it's computing.  The implementation looks more complex
         than these equations because we have to unpack the input, then use tiling instead of loops
+        to make this more efficient.
         '''
         # Remember that the first row in each slice corresponds to the encoding of the input and
         # the remaining rows to those of the background knowledge.
@@ -159,12 +156,7 @@ class MemoryLayer(Dense):
     dot product, and a sum at the end to combine the aggregated memory with the input.
     """
 
-    def __init__(self, output_dim, return_attention=False, **kwargs):
-        """
-        return_attention: makes the call method below return the attention values instead
-        of the actual output. This is useful for debugging the training process.
-        """
-        self.return_attention = return_attention
+    def __init__(self, output_dim, **kwargs):
         # Assuming encoded knowledge and encoded input sentence are of the same dimensionality. So
         # we will not change the input_dim, and rely on the underlying Dense layer to specify it.
         kwargs['output_dim'] = output_dim
@@ -200,29 +192,22 @@ class MemoryLayer(Dense):
                 (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
         knowledge_attention = K.softmax(K.sum(knowledge_encoding * tiled_sentence_encoding,
                                               axis=2))  # (num_samples, knowledge_length)
-        if self.return_attention:
-            return knowledge_attention
-        else:
-            # Expand attention matrix to make it a tensor with last dim of length 1 so that we can do
-            # an element wise multiplication with knowledge, and then sum out the knowledge dimension
-            # to make it a weighted average
-            attended_knowledge = K.sum(knowledge_encoding * K.expand_dims(knowledge_attention, dim=-1),
-                                       axis=1)  # (num_samples, input_dim)
 
-            # Summing the sentences and attended knowledge vectors, following the End to End Memory
-            # networks paper (Sukhbaatar et al.,'15).
-            dense_layer_input = sentence_encoding + attended_knowledge
-            output = super(MemoryLayer, self).call(dense_layer_input)
-            return output
+        # Expand attention matrix to make it a tensor with last dim of length 1 so that we can do
+        # an element wise multiplication with knowledge, and then sum out the knowledge dimension
+        # to make it a weighted average
+        attended_knowledge = K.sum(knowledge_encoding * K.expand_dims(knowledge_attention, dim=-1),
+                                   axis=1)  # (num_samples, input_dim)
+
+        # Summing the sentences and attended knowledge vectors, following the End to End Memory
+        # networks paper (Sukhbaatar et al.,'15).
+        dense_layer_input = sentence_encoding + attended_knowledge
+        output = super(MemoryLayer, self).call(dense_layer_input)
+        return output
 
     def get_output_shape_for(self, input_shape):
-        if self.return_attention:
-            # In this case, the output_dim does not matter, for each sample we return a vector of
-            # size knowledge_length, indicating the weights over background information.
-            return (input_shape[0], input_shape[1])  # (num_samples, knowledge_length)
-        else:
-            dense_input_shape = (input_shape[0], input_shape[2],)  # Eliminating second dim.
-            return super(MemoryLayer, self).get_output_shape_for(dense_input_shape)
+        dense_input_shape = (input_shape[0], input_shape[2],)  # Eliminating second dim.
+        return super(MemoryLayer, self).get_output_shape_for(dense_input_shape)
 
 
 class AttentiveReaderLayer(Dense):
