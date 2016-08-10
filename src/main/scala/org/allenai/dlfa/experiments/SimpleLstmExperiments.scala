@@ -5,7 +5,7 @@ import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
-import org.allenai.dlfa.pipeline.science_data._
+import org.allenai.dlfa.pipeline._
 
 object SimpleLstmExperiments {
   val fileUtil = new FileUtil
