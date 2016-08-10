@@ -14,13 +14,45 @@ from index_data import DataIndexer
 from encoders import TreeCompositionLSTM
 
 class NNSolver(object):
-    def __init__(self):
-        self.model = None
+    def __init__(self, model_prefix, **kwargs):
+        """
+        model_prefix: specifies where to save or load model files.
+
+        Allowed kwargs:
+
+        embedding_size: int. Size of word vectors (default 50).
+        """
+        self.model_prefix = model_prefix
         self.data_indexer = DataIndexer()
+        self.embedding_size = kwargs.get('embedding_size', 50)
+
+        self.model = None
+
         self.best_epoch = -1
 
-    def train(self, train_input, train_labels, validation_input, validation_labels,
-              model_serialization_prefix, **kwargs):
+    def get_training_data(self):
+        """Loads training data and converts it into a format suitable for input to Keras.  This
+        method must return a tuple of (train_input, train_labels).
+
+        This method takes no arguments; any necessary arguments (e.g., a path for where to find the
+        training data) must have been passed to the constructor of this object.
+        """
+        raise NotImplementedError
+
+    def get_validation_data(self):
+        """Like get_training_data, but for validation data.
+        """
+        raise NotImplementedError
+
+    def build_model(self, train_input, vocab_size):
+        """Constructs and returns a Keras model that will take train_input as input, and produce as
+        output a true/false decision for each input.
+
+        The returned model will be used to call model.fit(train_input, train_labels).
+        """
+        raise NotImplementedError
+
+    def train(self, **kwargs):
         # TODO(matt): make methods that create train_input, train_labels, validation_input, and
         # validation_labels, so that each subclass can do this on its own.  This is basically just
         # cleaning up the API of the prepare_data methods that already exist.
@@ -38,20 +70,24 @@ class NNSolver(object):
             answers
 
         Allowed kwargs:
-        embedding_size: int. Size of word vectors (default 50).
-        vocab_size: int. Input dimensionality of embedding layer. Will be inferred from inputs
-            if not provided.
         num_epochs: int. Number of training epochs (default 20).
         patience: int. Number of patience epochs for deciding on early stopping (default 1).
         '''
-        vocab_size = kwargs.get('vocab_size', self.data_indexer.get_vocab_size())
-        embedding_size = kwargs.get('embedding_size', 50)
         num_epochs = kwargs.get('num_epochs', 20)
         patience = kwargs.get('patience', 1)
 
-        self.model = self.build_model(train_input, vocab_size, embedding_size)
+        # First we need to prepare the data that we'll use for training.
+        train_input, train_labels = self.get_training_data()
+        validation_input, validation_labels = self.get_validation_data()
 
-        ## Step 6: Train the full model jointly
+        # This must be called after self.get_training_data(), because that's where we determine the
+        # vocabulary size.
+        vocab_size = self.data_indexer.get_vocab_size()
+
+        # Then we build the model.  This creates a compiled Keras Model.
+        self.model = self.build_model(train_input, vocab_size)
+
+        # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
         self.best_epoch = 0
         num_worse_epochs = 0
@@ -68,29 +104,21 @@ class NNSolver(object):
             else:
                 best_accuracy = accuracy
                 self.best_epoch = epoch_id
-                self.save_model(model_serialization_prefix, epoch_id)
-        self.save_best_model(model_serialization_prefix)
+                self.save_model(epoch_id)
+        self.save_best_model()
 
-    def build_model(self, train_input, vocab_size, embedding_size):
-        """Constructs and returns a Keras model that will take train_input as input, and produce as
-        output a true/false decision for each input.
-
-        The returned model will be used to call model.fit(train_input, train_labels).
-        """
-        raise NotImplementedError
-
-    def save_model(self, model_name_prefix, epoch):
+    def save_model(self, epoch):
         # Serializing the model for future use.
         model_config = self.model.to_json()
-        model_config_file = open("%s_config.json" % (model_name_prefix), "w")
+        model_config_file = open("%s_config.json" % (self.model_prefix), "w")
         print(model_config, file=model_config_file)
-        self.model.save_weights("%s_weights_epoch=%d.h5" % (model_name_prefix, epoch), overwrite=True)
-        data_indexer_file = open("%s_data_indexer.pkl" % model_name_prefix, "wb")
+        self.model.save_weights("%s_weights_epoch=%d.h5" % (self.model_prefix, epoch), overwrite=True)
+        data_indexer_file = open("%s_data_indexer.pkl" % self.model_prefix, "wb")
         pickle.dump(self.data_indexer, data_indexer_file)
         model_config_file.close()
         data_indexer_file.close()
 
-    def save_best_model(self, model_name_prefix):
+    def save_best_model(self):
         '''Copies the weights from the best epoch to a final weight file
 
         The point of this is so that the input/output spec of the NNSolver is simpler.  Someone
@@ -99,21 +127,21 @@ class NNSolver(object):
         if you really want to.
         '''
         from shutil import copyfile
-        epoch_weight_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, self.best_epoch)
-        final_weight_file = "%s_weights.h5" % model_name_prefix
+        epoch_weight_file = "%s_weights_epoch=%d.h5" % (self.model_prefix, self.best_epoch)
+        final_weight_file = "%s_weights.h5" % self.model_prefix
         copyfile(epoch_weight_file, final_weight_file)
 
-    def load_model(self, model_name_prefix, epoch=None, custom_objects=None):
+    def load_model(self, epoch=None, custom_objects=None):
         # Loading serialized model
-        model_config_file = open("%s_config.json" % model_name_prefix)
+        model_config_file = open("%s_config.json" % self.model_prefix)
         model_config_json = model_config_file.read()
         self.model = model_from_json(model_config_json, custom_objects=custom_objects)
         if epoch is not None:
-            model_file = "%s_weights_epoch=%d.h5" % (model_name_prefix, epoch)
+            model_file = "%s_weights_epoch=%d.h5" % (self.model_prefix, epoch)
         else:
-            model_file = "%s_weights.h5" % model_name_prefix
+            model_file = "%s_weights.h5" % self.model_prefix
         self.model.load_weights(model_file)
-        data_indexer_file = open("%s_data_indexer.pkl" % model_name_prefix, "rb")
+        data_indexer_file = open("%s_data_indexer.pkl" % self.model_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         model_config_file.close()
@@ -255,10 +283,10 @@ class NNSolver(object):
 
 
 class LSTMSolver(NNSolver):
-    def __init__(self):
-        super(LSTMSolver, self).__init__()
+    def __init__(self, model_prefix):
+        super(LSTMSolver, self).__init__(model_prefix)
 
-    def build_model(self, train_input, vocab_size, embedding_size):
+    def build_model(self, train_input, vocab_size):
         '''
         train_input: numpy array: int32 (samples, num_words). Left padded arrays of word indices
             from sentences in training data
@@ -268,14 +296,14 @@ class LSTMSolver(NNSolver):
 
         ## STEP 2: Embed the propositions by changing word indices to word vectors
         # Mask zero ensures that padding is not a parameter in the entire model.
-        embed_layer = Embedding(input_dim=vocab_size, output_dim=embedding_size, mask_zero=True,
+        embed_layer = Embedding(input_dim=vocab_size, output_dim=self.embedding_size, mask_zero=True,
                                 name='embedding')
         embed = embed_layer(input_layer)
         # Add a dropout to regularize the input representations
         regularized_embed = Dropout(0.5)(embed)
 
         ## STEP 3: Pass the sequences of word vectors through LSTM
-        lstm_layer = LSTM(output_dim=embedding_size, W_regularizer=l2(0.01), U_regularizer=l2(0.01),
+        lstm_layer = LSTM(output_dim=self.embedding_size, W_regularizer=l2(0.01), U_regularizer=l2(0.01),
                           b_regularizer=l2(0.01), name='lstm')
         lstm_out = lstm_layer(regularized_embed)
         # Add a dropout after LSTM
@@ -283,7 +311,7 @@ class LSTMSolver(NNSolver):
 
         ## STEP 4: Find p(true | proposition) by passing the outputs from LSTM through
         # an MLP with ReLU layers
-        projection_layer = Dense(embedding_size/2, activation='relu', name='projector')
+        projection_layer = Dense(self.embedding_size/2, activation='relu', name='projector')
         softmax_layer = Dense(2, activation='softmax', name='softmax')
         output_probabilities = softmax_layer(projection_layer(regularized_lstm_out))
 
@@ -295,10 +323,10 @@ class LSTMSolver(NNSolver):
 
 
 class TreeLSTMSolver(NNSolver):
-    def __init__(self):
-        super(TreeLSTMSolver, self).__init__()
+    def __init__(self, model_prefix):
+        super(TreeLSTMSolver, self).__init__(model_prefix)
 
-    def build_model(self, train_input, vocab_size, embedding_size):
+    def build_model(self, train_input, vocab_size):
         '''
         train_input: List of two numpy arrays: transitions and initial buffer
         '''
@@ -316,7 +344,7 @@ class TreeLSTMSolver(NNSolver):
         ## STEP 2: Embed the propositions by changing word indices to word vectors
         # If merge in step 3 complains that input is masked, Keras needs to be updated.
         # Merge supports masked input as of Keras 1.0.5
-        embed_layer = Embedding(input_dim=vocab_size, output_dim=embedding_size, mask_zero=True,
+        embed_layer = Embedding(input_dim=vocab_size, output_dim=self.embedding_size, mask_zero=True,
                                 name='embedding')
         embed = embed_layer(buffer_input)
         # Add a dropout to regularize the input representations
@@ -327,7 +355,7 @@ class TreeLSTMSolver(NNSolver):
 
         ## STEP 4: Pass the sequences of word vectors through TreeLSTM
         lstm_layer = TreeCompositionLSTM(stack_limit, buffer_ops_limit,
-                                         output_dim=embedding_size, W_regularizer=l2(0.01),
+                                         output_dim=self.embedding_size, W_regularizer=l2(0.01),
                                          U_regularizer=l2(0.01), V_regularizer=l2(0.01),
                                          b_regularizer=l2(0.01), name='treelstm')
         lstm_out = lstm_layer(lstm_input)
@@ -335,7 +363,7 @@ class TreeLSTMSolver(NNSolver):
 
         ## STEP 5: Find p(true | proposition) by passing the encoded proposition through
         # MLP with ReLU followed by softmax
-        projection_layer = Dense(embedding_size/2, activation='relu', name='projector')
+        projection_layer = Dense(self.embedding_size/2, activation='relu', name='projector')
         softmax_layer = Dense(2, activation='softmax', name='softmax')
         output_probabilities = softmax_layer(projection_layer(regularized_lstm_out))
 
@@ -364,7 +392,8 @@ def main():
     argparser.add_argument("--model_serialization_prefix",
                            help="Prefix for saving and loading model files")
     args = argparser.parse_args()
-    nn_solver = TreeLSTMSolver() if args.use_tree_lstm else LSTMSolver()
+    solver_class = TreeLSTMSolver if args.use_tree_lstm else LSTMSolver
+    nn_solver = solver_class(args.model_serialization_prefix)
 
     if not args.positive_train_file:
         # Training file is not given. There must be a serialized model.
@@ -420,6 +449,7 @@ def main():
         for score, line in zip(test_scores, test_lines):
             print(score, line, file=outfile)
         outfile.close()
+
 
 if __name__ == "__main__":
     main()
