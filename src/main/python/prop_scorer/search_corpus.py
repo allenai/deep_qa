@@ -14,7 +14,19 @@ from knowledge_backed_scorers import MemoryLayer
 
 
 class CorpusSearcher(object):
+    """Encodes a corpus of sentences using a sentence encoder (e.g., as LSTM), then allows for
+    nearest-neighbor search on the sentence encodings.
+
+    We perform the nearest-neighbor search using a scikit-learn's locality sensitive hash (LSH).
+    All variable names involving "lsh" in this class refer to "locality sensitive hash".
+
+    TODO(matt): this should be a subclass of MemoryNetworkSolver, where get_nearest_neighbors
+    returns a list in memory, instead of writing to a file.
+    """
     def __init__(self, corpus_path):
+        """
+        corpus_path: path to a gzipped file containing sentences, one sentence per line.
+        """
         self.corpus_path = corpus_path
         self.encoder_model = None
         self.nn_solver = None
@@ -51,11 +63,15 @@ class CorpusSearcher(object):
         # to be compiled to use it for prediction.
         self.encoder_model.compile(loss="mse", optimizer="adam")
 
-    def train_lsh(self, batch_size=100):
-        file_ptr = gzip.open(self.corpus_path)
+    def initialize_lsh(self, batch_size=100):
+        """
+        This method encodes the corpus in batches, using encoder_model initialized above.  After
+        the whole corpus is encoded, we pass the vectors off to sklearn's LSHForest.fit() method.
+        """
+        corpus_file = gzip.open(self.corpus_path)
         def _get_generator():
             while True:
-                sentences = [file_ptr.readline().decode("utf-8") for _ in range(batch_size)]
+                sentences = [corpus_file.readline().decode("utf-8") for _ in range(batch_size)]
                 if not sentences[-1]:
                     # Readline keeps returning '' (no newline at the end) after the end of file is reached.
                     break
@@ -64,6 +80,9 @@ class CorpusSearcher(object):
         encoded_sentences = []
         for lines in generator:
             indexed_lines = [(i, line.strip()) for i, line in enumerate(lines)]
+
+            # index_inputs returns a dictionary mapping sentence indices to lists of sentences.  In
+            # this case, each list will have a single sentence.
             mapped_indices = self.nn_solver.index_inputs(indexed_lines, for_train=False)
             assert len(mapped_indices) == len(indexed_lines)
             # Indices of the current batch of sentences from the generator.
@@ -132,8 +151,8 @@ class CorpusSearcher(object):
 
 def main():
     argparser = argparse.ArgumentParser(description="Regenerate background data using trained encoder")
-    argparser.add_argument('model_serialization_prefix', type=str)
-    argparser.add_argument('encoder_prefix', type=str)
+    argparser.add_argument('model_serialization_prefix', type=str, help="Path to save/load LSH")
+    argparser.add_argument('encoder_prefix', type=str, help="Path to load saved encoder model")
     argparser.add_argument('--corpus_path', type=str, help="Location of corpus to index")
     argparser.add_argument('--query_file', type=str, help="Query file, tsv (index, sentence)")
     argparser.add_argument('--output_file', type=str, default="out.txt")
@@ -142,7 +161,7 @@ def main():
     corpus_searcher = CorpusSearcher(args.corpus_path)
     corpus_searcher.load_encoder(args.encoder_prefix)
     if args.corpus_path:
-        corpus_searcher.train_lsh()
+        corpus_searcher.initialize_lsh()
         corpus_searcher.save_lsh(args.model_serialization_prefix)
     else:
         print("Loading saved LSH", file=sys.stderr)
