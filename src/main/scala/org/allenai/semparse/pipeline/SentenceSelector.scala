@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline.science_data
+package org.allenai.semparse.pipeline
 
 import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil

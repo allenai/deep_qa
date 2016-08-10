@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline.science_data
+package org.allenai.semparse.pipeline
 
 import org.json4s._
 import org.json4s.JsonDSL._

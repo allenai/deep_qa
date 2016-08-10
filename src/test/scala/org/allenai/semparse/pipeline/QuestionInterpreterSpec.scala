@@ -1,4 +1,4 @@
-package org.allenai.semparse.pipeline.science_data
+package org.allenai.semparse.pipeline
 
 import org.scalatest._
 
