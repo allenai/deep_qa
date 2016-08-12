@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 import argparse
-import random
 import codecs
 import pickle
 
@@ -10,8 +9,9 @@ from keras.layers import Embedding, Input, LSTM, Dense, Dropout, merge
 from keras.models import Model, model_from_json
 from keras.regularizers import l2
 
-from index_data import DataIndexer
-from encoders import TreeCompositionLSTM
+from ..data.dataset import Dataset, IndexedDataset
+from ..data.index_data import DataIndexer
+from ..layers.encoders import TreeCompositionLSTM
 
 class NNSolver(object):
     def __init__(self, model_prefix, **kwargs):
@@ -21,14 +21,60 @@ class NNSolver(object):
         Allowed kwargs:
 
         embedding_size: int. Size of word vectors (default 50).
+        max_sentence_length: max length of training sentences (ignored at test time).
+
+        train_file: path to training data.
+        positive_train_file: path to positive training data.
+        negative_train_file: path to negative training data.
+        validation_file: path to validation data.
+
+        NOTE on train file arguments: if `train_file` is given, the other two arguments are
+        ignored, and the file is assumed to have instance labels.  If `positive_train_file` is
+        given, it is assumed to not have labels (or all labels must be "1").  Similarly for
+        `negative_train_file`, except label must be "0" if present.  If `positive_train_file` is
+        given and `negative_train_file` isn't, we will try to generate negative data, but the
+        method to do so is poor and won't work for all subclasses.
         """
         self.model_prefix = model_prefix
-        self.data_indexer = DataIndexer()
         self.embedding_size = kwargs.get('embedding_size', 50)
+        self.max_sentence_length = kwargs.get('max_sentence_length', None)
+        self.train_file = kwargs.get('train_file', None)
+        self.positive_train_file = kwargs.get('positive_train_file', None)
+        self.negative_train_file = kwargs.get('negative_train_file', None)
+        self.validation_file = kwargs.get('validation_file', None)
 
+        self.data_indexer = DataIndexer()
         self.model = None
-
         self.best_epoch = -1
+
+    def set_max_sentence_length_from_model(self):
+        """
+        Given a loaded model, set the max_sentence_length, so we know what length to pad data to
+        when using this loaded model.
+        """
+        raise NotImplementedError
+
+    def get_simple_training_input(self) -> IndexedDataset:
+        """
+        If your NNSolver subclass only has sentence/logical form files as input (i.e., no
+        background or other metadata associated with inputs in other files), and that you
+        instantiated the NNSolver by passing the filenames in kwargs, we will try to load the data
+        here.  If you need something more complicated (like with the memory network), you'll have
+        to write code to load the data yourself (or use this and then do extra stuff too).
+        """
+        if self.train_file:
+            dataset = Dataset.read_from_file(self.train_file)
+        else:
+            positive_dataset = Dataset.read_from_file(self.positive_train_file, label=True)
+            if self.negative_train_file:
+                negative_dataset = Dataset.read_from_file(self.negative_train_file, label=False)
+                dataset = positive_dataset.merge(negative_dataset)
+        self.data_indexer.fit_word_dictionary(dataset)
+        indexed_dataset = self.data_indexer.index_dataset(dataset)
+        if self.positive_train_file and not self.negative_train_file:
+            corrupted_dataset = self.data_indexer.corrupt_dataset(indexed_dataset)
+            indexed_dataset = indexed_dataset.merge(corrupted_dataset)
+        return indexed_dataset
 
     def get_training_data(self):
         """Loads training data and converts it into a format suitable for input to Keras.  This
@@ -146,87 +192,7 @@ class NNSolver(object):
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         model_config_file.close()
         data_indexer_file.close()
-
-    def prepare_training_data(self, good_lines, bad_lines, max_length=None, in_shift_reduce_format=False):
-        # max_length is used for ignoring long training instances
-        # and also padding all instances to make them of the same
-        # length
-
-        negative_samples_given = len(bad_lines) != 0
-
-        # Indexing training data
-        print("Indexing training data", file=sys.stderr)
-        good_input = self.data_indexer.process_data(good_lines, for_train=True, max_length=max_length)
-        if negative_samples_given:
-            bad_input = self.data_indexer.process_data(bad_lines, for_train=True, max_length=max_length)
-        else:
-            # Corrupting train indices to get "bad" data
-            print("Corrupting training data", file=sys.stderr)
-            bad_input = self.data_indexer.corrupt_indices(good_input)
-
-        # Prepare the input data for Keras (padding, computing transition sequences, etc.).
-        if in_shift_reduce_format:
-            good_transitions, good_elements = self.data_indexer.get_shift_reduce_sequences(good_input)
-            bad_transitions, bad_elements = self.data_indexer.get_shift_reduce_sequences(bad_input)
-            good_transitions = self.data_indexer.pad_indices(good_transitions)
-            bad_transitions = self.data_indexer.pad_indices(bad_transitions)
-
-            # Insight: Transition sequences are strictly longer than element sequences
-            # because there will be exactly as many shifts as there are elements, and
-            # then some reduce operations on top of that
-            # So we can safely use transitions' max length for elements as well. TreeLSTM
-            # implementation requires them to be of the same length for concatenation.
-
-            max_transition_length = max(len(good_transitions[0]), len(bad_transitions[0]))
-            good_elements = self.data_indexer.pad_indices(good_elements, max_length=max_transition_length)
-            bad_elements = self.data_indexer.pad_indices(bad_elements, max_length=max_transition_length)
-
-            # Make int32 array so that Keras will view them as indices.
-            good_elements = numpy.asarray(good_elements, dtype='int32')
-            bad_elements = numpy.asarray(bad_elements, dtype='int32')
-
-            # TreeLSTM's transitions input has an extra trailing dimension for
-            # concatenation. This has to match.
-            good_transitions = numpy.expand_dims(good_transitions, axis=-1)
-            bad_transitions = numpy.expand_dims(bad_transitions, axis=-1)
-            num_good_inputs = good_elements.shape[0]
-            num_bad_inputs = bad_elements.shape[0]
-
-            # Labels will represent true statements as [0,1] and false statements as [1,0]
-            labels = numpy.zeros((num_good_inputs+num_bad_inputs, 2))
-            labels[:num_good_inputs, 1] = 1 # true statements
-            labels[num_good_inputs:, 0] = 1 # false statements
-
-            # Let's shuffle so that any sample taken from input-label combination will not have
-            # one dominating label.
-            # Since transition sequences will not change for bad input, reusing those from
-            # good input.
-            zipped_input_labels = zip(numpy.concatenate([good_transitions, bad_transitions]),
-                                      numpy.concatenate([good_elements, bad_elements]), labels)
-            random.shuffle(zipped_input_labels)
-            shuffled_transitions, shuffled_elements, labels = [numpy.asarray(array)
-                                                               for array in zip(*zipped_input_labels)]
-            inputs = (shuffled_transitions, shuffled_elements)
-        else:
-            # Padding to prespecified length
-            good_input = self.data_indexer.pad_indices(good_input, max_length=max_length)
-            bad_input = self.data_indexer.pad_indices(bad_input, max_length=max_length)
-            # Make int32 array so that Keras will view them as indices.
-            good_input = numpy.asarray(good_input, dtype='int32')
-            bad_input = numpy.asarray(bad_input, dtype='int32')
-            inputs = numpy.concatenate([good_input, bad_input])
-            num_good_inputs = good_input.shape[0]
-            num_bad_inputs = bad_input.shape[0]
-            # Labels will represent true statements as [0,1] and false statements as [1,0]
-            labels = numpy.zeros((num_good_inputs+num_bad_inputs, 2))
-            labels[:num_good_inputs, 1] = 1 # true statements
-            labels[num_good_inputs:, 0] = 1 # false statements
-            # Let's shuffle so that any sample taken from input-label combination will not have
-            # one dominating label.
-            zipped_input_labels = zip(numpy.concatenate([good_input, bad_input]), labels)
-            random.shuffle(zipped_input_labels)
-            inputs, labels = [numpy.asarray(array) for array in zip(*zipped_input_labels)]
-        return (inputs, labels)
+        self.set_max_sentence_length_from_model()
 
     def prepare_test_data(self, data_lines, max_length=None, in_shift_reduce_format=False):
         # data_lines expected to be in tab separated format, either two or three columns, formatted
@@ -283,8 +249,8 @@ class NNSolver(object):
 
 
 class LSTMSolver(NNSolver):
-    def __init__(self, model_prefix):
-        super(LSTMSolver, self).__init__(model_prefix)
+    def __init__(self, model_prefix, **kwargs):
+        super(LSTMSolver, self).__init__(model_prefix, **kwargs)
 
     def build_model(self, train_input, vocab_size):
         '''
@@ -321,10 +287,23 @@ class LSTMSolver(NNSolver):
         print(model.summary(), file=sys.stderr)
         return model
 
+    def set_max_sentence_length_from_model(self):
+        self.max_sentence_length = self.model.get_input_shape_at(0)[1]
+
+    def get_training_data(self):
+        dataset = self.get_simple_training_input()
+        dataset.pad_instances(self.max_sentence_length)
+        self.max_sentence_length = dataset.max_length()
+        return dataset.as_training_data()
+
+    def get_validation_data(self):
+        dataset = Dataset.read_from_file(self.validation_file)
+        self.data_indexer.index_dataset(dataset)
+
 
 class TreeLSTMSolver(NNSolver):
-    def __init__(self, model_prefix):
-        super(TreeLSTMSolver, self).__init__(model_prefix)
+    def __init__(self, model_prefix, **kwargs):
+        super(TreeLSTMSolver, self).__init__(model_prefix, **kwargs)
 
     def build_model(self, train_input, vocab_size):
         '''
@@ -373,6 +352,30 @@ class TreeLSTMSolver(NNSolver):
         print(model.summary(), file=sys.stderr)
         return model
 
+    def set_max_sentence_length_from_model(self):
+        self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
+
+    def get_training_data(self):
+        dataset = self.get_simple_training_input()
+        dataset.pad_instances()
+        train_input, labels = dataset.as_training_data()
+
+        transitions, elements = self.data_indexer.get_shift_reduce_sequences(train_input)
+
+        # TODO(matt): we need to pad the transitions / element sequences to the same length.  We
+        # can probably remove the dataset.pad_instances() call above, and do a different kind of
+        # padding here.  As it is, this code probably does not work.
+        self.max_sentence_length = max(len(t) for t in transitions)
+
+        # Make int32 array so that Keras will view them as indices.
+        elements = numpy.asarray(elements, dtype='int32')
+
+        # TreeLSTM's transitions input has an extra trailing dimension for
+        # concatenation. This has to match.
+        transitions = numpy.expand_dims(transitions, axis=-1)
+
+        return (transitions, elements), labels
+
 
 def main():
     argparser = argparse.ArgumentParser(description="Simple proposition scorer")
@@ -393,13 +396,14 @@ def main():
                            help="Prefix for saving and loading model files")
     args = argparser.parse_args()
     solver_class = TreeLSTMSolver if args.use_tree_lstm else LSTMSolver
-    nn_solver = solver_class(args.model_serialization_prefix)
+    nn_solver = solver_class(args.model_serialization_prefix,
+                             max_sentence_length=args.length_upper_limit)
 
     if not args.positive_train_file:
         # Training file is not given. There must be a serialized model.
         print("Loading scoring model from disk", file=sys.stderr)
-        custom_objects = {"TreeCompositionLSTM": TreeCompositionLSTM} if args.use_tree_lstm else None
-        nn_solver.load_model(args.model_serialization_prefix, args.use_model_from_epoch, custom_objects)
+        custom_objects = {"TreeCompositionLSTM": TreeCompositionLSTM}
+        nn_solver.load_model(args.use_model_from_epoch, custom_objects)
         # input shape of scoring model is (samples, max_length)
     else:
         assert args.validation_file is not None, "Validation data is needed for training"
@@ -414,8 +418,7 @@ def main():
                 max_length=args.length_upper_limit,
                 in_shift_reduce_format=args.use_tree_lstm)
 
-        train_sequence_length = inputs[0].shape[1] if args.use_tree_lstm \
-                else inputs.shape[1]
+        train_sequence_length = inputs[0].shape[1] if args.use_tree_lstm  else inputs.shape[1]
         print("Reading validation data", file=sys.stderr)
         validation_lines = [x.strip() for x in codecs.open(args.validation_file, 'r', 'utf-8').readlines()]
         validation_labels, validation_input = nn_solver.prepare_test_data(
@@ -430,10 +433,6 @@ def main():
         nn_solver.train(inputs, labels, validation_input, validation_labels,
                         args.model_serialization_prefix, num_epochs=args.num_epochs)
 
-    # We need this for making sure that test sequences are not longer than what the trained model
-    # expects.
-    max_length = nn_solver.model.get_input_shape_at(0)[0][1] \
-            if args.use_tree_lstm else nn_solver.model.get_input_shape_at(0)[1]
 
     if args.test_file is not None:
         test_lines = [x.strip() for x in codecs.open(args.test_file, 'r', 'utf-8').readlines()]
