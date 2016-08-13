@@ -6,7 +6,7 @@ from keras.layers import Recurrent
 from keras.engine import InputSpec
 import numpy as np
 
-from constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
+from ..data.constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 
 class TreeCompositionLSTM(Recurrent):
     '''

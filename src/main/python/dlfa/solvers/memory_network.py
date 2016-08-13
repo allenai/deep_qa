@@ -11,8 +11,8 @@ from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense, Dropout
 from keras.regularizers import l2
 from keras.models import Model
 
-from knowledge_backed_scorers import AttentiveReaderLayer, MemoryLayer
-from nn_solver import NNSolver
+from ..layers.knowledge_backed_scorers import AttentiveReaderLayer, MemoryLayer
+from .nn_solver import NNSolver
 
 '''
 TODO(pradeep): Replace memory layers in the following implementation, with a combination

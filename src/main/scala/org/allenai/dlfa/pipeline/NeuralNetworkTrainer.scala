@@ -36,7 +36,7 @@ abstract class NeuralNetworkTrainer(
   val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
   val maxTrainingInstances = JsonHelper.extractAsOption[Int](params, "max training instances")
   val maxTrainingInstancesArgs =
-    maxTrainingInstances.map(max => Seq("--max_train_size", max.toString)).toSeq.flatten
+    maxTrainingInstances.map(max => Seq("--max_training_instances", max.toString)).toSeq.flatten
 
   val modelName = (params \ "model name").extract[String]
   val modelPrefix = s"models/$modelName"  // TODO(matt): make this a function of the arguments?
@@ -104,8 +104,9 @@ class SimpleLstmTrainer(
     negativeDataProducer.map(p => Seq("--negative_train_file", p.outputFile)).toSeq.flatten
   val negativeDataInput = negativeDataProducer.map(p => (p.outputFile, Some(p))).toSet
 
-  override val scriptFile = Some("src/main/python/prop_scorer/nn_solver.py")
+  override val scriptFile = Some("src/main/python/run_solver.py")
   override val arguments = Seq[String](
+    "LSTMSolver",
     "--positive_train_file", positiveTrainingFile,
     "--validation_file", validationQuestionsFile,
     "--num_epochs", numEpochs.toString,

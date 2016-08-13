@@ -12,7 +12,7 @@ from keras import backend as K
 from keras import initializations, activations
 from keras.engine import InputSpec
 from keras.layers import LSTM
-from encoders import TreeCompositionLSTM
+from .encoders import TreeCompositionLSTM
 
 class KnowledgeBackedLSTM(LSTM):
     def __init__(self, output_dim, token_dim, knowledge_dim, knowledge_length,

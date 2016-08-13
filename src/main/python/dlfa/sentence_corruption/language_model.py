@@ -144,7 +144,7 @@ class WordReplacer(object):
                     [sentence], is_training=False, max_length=max_train_length, tokenize=tokenize)
             score_and_metrics = self.model.evaluate(indexed_sentence, factored_target_array, verbose=0)
             scores.append(score_and_metrics[0])
-        return zip(scores, sentences)
+        return list(zip(scores, sentences))
 
 
 def train(train_file, max_instances, factor_base, word_dim, num_epochs, tokenize, use_lstm,
