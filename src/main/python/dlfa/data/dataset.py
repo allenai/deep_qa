@@ -84,7 +84,7 @@ class Dataset(object):
                 instance = new_instances[index]
                 for sequence in fields[1:]:
                     instance.background.append(sequence)
-        return Dataset(new_instances)
+        return Dataset(list(new_instances.values()))
 
 
 class IndexedDataset(object):

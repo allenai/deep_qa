@@ -31,18 +31,18 @@ class MemoryNetworkSolver(NNSolver):
 
     memory_layer_choices = ['attentive', 'memory']
 
-    def __init__(self, memory_layer_type, num_memory_layers=1, **kwargs):
+    def __init__(self, **kwargs):
         '''
         num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
         '''
         super(MemoryNetworkSolver, self).__init__(**kwargs)
-        if memory_layer_type == 'attentive':
+        if kwargs['memory_layer'] == 'attentive':
             self.memory_layer = AttentiveReaderLayer
-        elif memory_layer_type == 'memory':
+        elif kwargs['memory_layer'] == 'memory':
             self.memory_layer = MemoryLayer
         else:
-            raise RuntimeError("Unrecognized memory layer type: " + memory_layer_type)
-        self.num_memory_layers = num_memory_layers
+            raise RuntimeError("Unrecognized memory layer type: " + kwargs['memory_layer'])
+        self.num_memory_layers = kwargs['num_memory_layers']
 
         self.train_background = kwargs['train_background']
         self.positive_train_background = kwargs['positive_train_background']
@@ -104,6 +104,8 @@ class MemoryNetworkSolver(NNSolver):
 
         ## Step 1: Define the two inputs (propositions and knowledge)
         proposition_inputs, knowledge_inputs = train_input
+        print("SHAPES:")
+        print(proposition_inputs.shape, knowledge_inputs.shape)
         proposition_input = Input(shape=(proposition_inputs.shape[1:]), dtype='int32')
         knowledge_input = Input(shape=(knowledge_inputs.shape[1:]), dtype='int32')
 

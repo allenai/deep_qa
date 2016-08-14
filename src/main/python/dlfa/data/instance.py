@@ -168,9 +168,10 @@ class IndexedBackgroundInstance(IndexedInstance):
         too.
         """
         lengths = super(IndexedBackgroundInstance, self).get_lengths()
-        lengths.extend(len(self.background_indices))
-        max_background_length = max(len(background) for background in self.background_indices)
-        lengths[0] = max(lengths[0], max_background_length)
+        lengths.extend([len(self.background_indices)])
+        if self.background_indices:
+            max_background_length = max(len(background) for background in self.background_indices)
+            lengths[0] = max(lengths[0], max_background_length)
         return lengths
 
     def pad(self, max_lengths: List[int]):
@@ -206,6 +207,7 @@ class IndexedBackgroundInstance(IndexedInstance):
 
     def as_training_data(self):
         word_array = numpy.asarray(self.word_indices, dtype='int32')
+        background_array = numpy.asarray(self.background_indices, dtype='int32')
         label = numpy.zeros((2))
         if self.label is True:
             label[1] = 1
@@ -213,4 +215,4 @@ class IndexedBackgroundInstance(IndexedInstance):
             label[0] = 1
         else:
             raise RuntimeError("Cannot make training data out of instances without labels!")
-        return word_array, label
+        return (word_array, background_array), label
