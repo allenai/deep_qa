@@ -193,7 +193,7 @@ class IndexedBackgroundInstance(IndexedInstance):
 
         # Padding (1): making sure we have the right number of background sentences.
         for _ in range(background_length - len(self.background_indices)):
-            self.background_indices.append([[0]])
+            self.background_indices.append([0])
 
         # Padding (2): making sure all background sentences have the right length.
         padded_background = []

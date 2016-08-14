@@ -79,7 +79,7 @@ class Dataset(object):
             new_instances[instance.index] = background_instance
         for line in codecs.open(filename, "r", "utf-8"):
             fields = line.strip().split("\t")
-            index = fields[0]
+            index = int(fields[0])
             if index in new_instances:
                 instance = new_instances[index]
                 for sequence in fields[1:]:

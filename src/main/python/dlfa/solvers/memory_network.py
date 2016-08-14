@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys
 
 import numpy
@@ -104,8 +103,6 @@ class MemoryNetworkSolver(NNSolver):
 
         ## Step 1: Define the two inputs (propositions and knowledge)
         proposition_inputs, knowledge_inputs = train_input
-        print("SHAPES:")
-        print(proposition_inputs.shape, knowledge_inputs.shape)
         proposition_input = Input(shape=(proposition_inputs.shape[1:]), dtype='int32')
         knowledge_input = Input(shape=(knowledge_inputs.shape[1:]), dtype='int32')
 
@@ -218,4 +215,4 @@ class MemoryNetworkSolver(NNSolver):
         sentences, background = zip(*inputs)
         sentences = numpy.asarray(sentences)
         background = numpy.asarray(background)
-        return (sentences, background), numpy.asarray(labels)
+        return [sentences, background], numpy.asarray(labels)
