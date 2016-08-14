@@ -3,7 +3,7 @@
 /bin/
 target/
 *.pyc
-data/
+/data/
 output/
 models/
 *results*/
