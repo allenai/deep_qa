@@ -78,6 +78,10 @@ class DataIndexer(object):
         Outputs: ['a', 'b', 'c', 'd', 'e', 'f']; [S, S, S, R2, S, S, S, R3, R3]
 
         Note that this function operates on the output of IndexedDataset.as_training_data.
+
+        TODO(matt): this code belongs in the as_training_data method of a new type of Instance, not
+        in the DataIndexer.  When we start working with the TreeLSTMs again, this code should be
+        moved.
         """
         all_transitions = []
         all_elements = []
