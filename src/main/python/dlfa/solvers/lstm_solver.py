@@ -1,5 +1,7 @@
 import sys
 
+import numpy
+
 from keras.layers import Embedding, Input, LSTM, Dense, Dropout
 from keras.models import Model
 from keras.regularizers import l2
@@ -21,11 +23,13 @@ class LSTMSolver(NNSolver):
     def __init__(self, **kwargs):
         super(LSTMSolver, self).__init__(**kwargs)
 
-    def _build_model(self, train_input, vocab_size):
+    def _build_model(self, train_input):
         '''
         train_input: numpy array: int32 (samples, num_words). Left padded arrays of word indices
             from sentences in training data
         '''
+        vocab_size = self.data_indexer.get_vocab_size()
+
         ## STEP 1: Initialze the input layer
         input_layer = Input(shape=train_input.shape[1:], dtype='int32')
 
@@ -56,12 +60,13 @@ class LSTMSolver(NNSolver):
         print(model.summary(), file=sys.stderr)
         return model
 
-    def _set_max_sentence_length_from_model(self):
+    def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[1]
 
     def prep_labeled_data(self, dataset: Dataset, for_train: bool):
-        indexed_dataset = self.data_indexer.index_dataset(dataset)
-        indexed_dataset.pad_instances(self.max_sentence_length)
+        indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
+        indexed_dataset.pad_instances([self.max_sentence_length])
         if for_train:
-            self.max_sentence_length = indexed_dataset.max_length()
-        return indexed_dataset.as_training_data()
+            self.max_sentence_length = indexed_dataset.max_lengths()[0]
+        inputs, labels = indexed_dataset.as_training_data()
+        return numpy.asarray(inputs), numpy.asarray(labels)

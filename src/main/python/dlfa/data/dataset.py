@@ -9,6 +9,9 @@ from .index_data import DataIndexer
 class Dataset(object):
     """
     A collection of Instances, with some helper methods.
+
+    I was originally thinking I'd have several kinds of Dataset subclasses, but in the end decided
+    that subclassing Instance made more sense.
     """
     def __init__(self, instances: List[Instance]):
         """
@@ -19,7 +22,7 @@ class Dataset(object):
         """
         self.instances = instances
 
-    def index_dataset(self, data_indexer: DataIndexer):
+    def to_indexed_dataset(self, data_indexer: DataIndexer) -> 'IndexedDataset':
         '''
         Converts the Dataset into an IndexedDataset, given a DataIndexer.
         '''
@@ -48,7 +51,7 @@ class Dataset(object):
             return self
         new_instances = [i for i in self.instances]
         random.shuffle(new_instances)
-        return self.__class__(new_instances)
+        return self.__class__(new_instances[:max_instances])
 
     @staticmethod
     def read_from_file(filename: str, label: bool=None):
@@ -57,7 +60,7 @@ class Dataset(object):
         return Dataset(instances)
 
     @staticmethod
-    def read_background_from_file(dataset: Dataset, filename: str):
+    def read_background_from_file(dataset: 'Dataset', filename: str) -> 'Dataset':
         """
         Reads a file formatted as background information and matches the background to the
         sentences in the given dataset.  The given dataset must have instance indices, so we can
@@ -84,37 +87,45 @@ class Dataset(object):
         return Dataset(new_instances)
 
 
-class IndexedDataset(Dataset):
+class IndexedDataset(object):
     """
     A collection of IndexedInstances, with some helper methods.
     """
     def __init__(self, instances: List[IndexedInstance]):
-        super(IndexedDataset, self).__init__(instances)
+        self.instances = instances
 
-    def max_length(self):
-        return max(len(instance.word_indices) for instance in self.instances)
+    def max_lengths(self):
+        lengths = [instance.get_lengths() for instance in self.instances]
+        return [max(dimension_lengths) for dimension_lengths in zip(*lengths)]
 
-    def pad_instances(self, max_length=None):
+    def pad_instances(self, max_lengths: List[int]):
         """
         Make all of the IndexedInstances in the dataset have the same length by padding them (in
         the front) with zeros.
 
-        If max_length is given, we will pad all instances to that length (including left-truncating
-        instances if necessary).  If not, we will find the longest instance and pad all instances
-        to that length.
+        If max_length is given for a particular dimension, we will pad all instances to that length
+        (including left-truncating instances if necessary).  If not, we will find the longest
+        instance and pad all instances to that length.  Note that max_lengths is a _List_, not an
+        int - there could be several dimensions on which we need to pad, depending on what kind of
+        instance we are dealing with.
 
         This method _modifies_ the current object, it does not return a new IndexedDataset.
         """
-        if max_length is None:
-            max_length = max([len(instance.word_indices) for instance in self.instances])
-        padded_instances = []
+        # First we need to decide _how much_ to pad.  To do that, we find the max length for all
+        # relevant padding decisions from the instances themselves.  Then we check whether we were
+        # given a max length for a particular dimension.  If we were, we use that instead of the
+        # instance-based one.
+        instance_max_lengths = self.max_lengths()
+        zipped_maxes = zip(max_lengths, instance_max_lengths)
+        max_lengths = []
+        for given, from_instance in zipped_maxes:
+            if given is not None:
+                max_lengths.append(given)
+            else:
+                max_lengths.append(from_instance)
+
         for instance in self.instances:
-            padded_word_indices = [0]*max_length
-            indices_length = min(len(instance.word_indices), max_length)
-            if indices_length != 0:
-                padded_word_indices[-indices_length:] = instance.word_indices[-indices_length:]
-            padded_instances.append(IndexedInstance(padded_word_indices, instance.label, instance.index))
-        self.instances = padded_instances
+            instance.pad(max_lengths)
 
     def as_training_data(self, shuffle=True):
         """

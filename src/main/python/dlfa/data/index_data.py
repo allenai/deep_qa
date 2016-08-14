@@ -1,9 +1,7 @@
-import random
 import warnings
 from nltk.tokenize import word_tokenize
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 
-from .dataset import Dataset, IndexedDataset, IndexedInstance
 
 class DataIndexer(object):
     def __init__(self):
@@ -15,7 +13,7 @@ class DataIndexer(object):
         self.predicate_indices = set([])
         self.argument_indices = set([])
 
-    def fit_word_dictionary(self, dataset: Dataset):
+    def fit_word_dictionary(self, dataset: 'Dataset'):
         """
         Given a Dataset, this method decides which words are given an index, and which ones are
         mapped to an OOV token (in this case "UNK").  This method must be called before any dataset
@@ -62,17 +60,6 @@ class DataIndexer(object):
             if word in argument_words:
                 self.argument_indices.add(self.word_index[word])
         self.reverse_word_index = {index:word for (word, index) in self.word_index.items()}
-
-    def index_dataset(self, dataset: Dataset):
-        '''
-        Converts the Dataset into an IndexedDataset
-        '''
-        indexed_instances = []
-        for instance in dataset.instances:
-            words = word_tokenize(instance.text.lower())
-            indices = [self.get_word_index(word) for word in words]
-            indexed_instances.append(IndexedInstance(indices, instance.label, instance.index))
-        return IndexedDataset(indexed_instances)
 
     def get_word_index(self, word: str):
         if word in self.word_index:
@@ -136,51 +123,6 @@ class DataIndexer(object):
             all_transitions.append(transitions)
             all_elements.append(elements)
         return all_transitions, all_elements
-
-    def corrupt_dataset(self, dataset: IndexedDataset, num_locations_to_corrupt=1) -> IndexedDataset:
-        corrupted_instances = []
-
-        # We want to ignore the padding token, parentheses and commas while corrputing data.
-        indices_to_ignore = set([0])
-        for token in [",", "(", ")", "."]:
-            if token in self.word_index:
-                indices_to_ignore.add(self.word_index[token])
-        open_paren_index = self.word_index["("]
-
-        for instance in dataset.instances:
-            indices = instance.word_indices
-            # Get the first non zero index to avoid sampling from padding
-            first_non_zero_index = 0
-            for index in indices:
-                if index == 0:
-                    first_non_zero_index += 1
-                else:
-                    break
-            corrupted_indices = list(indices)
-            num_corrupted_locations = 0
-            while num_corrupted_locations < num_locations_to_corrupt:
-                rand_location = random.randint(first_non_zero_index, len(indices)-1)
-                if corrupted_indices[rand_location] in indices_to_ignore:
-                    continue
-                # If the word after the one being replaced is a "(", the one
-                # being replaced is a predicate. We replace it with another predicate
-                # If not, it is an argument.
-                # Since predicate and argument indices sets contain non-singleton
-                # words that are not "(", ")" and ",", we do not need to do other checks.
-                next_word_index = -1
-                # It is possible the proposition is just one word. In that case,
-                # rand_location is the index of that word itself, and we assume
-                # the word is a predicate.
-                if rand_location < len(corrupted_indices)-1:
-                    next_word_index = corrupted_indices[rand_location + 1]
-                if next_word_index == open_paren_index or next_word_index == -1:
-                    rand_index = random.sample(self.predicate_indices, 1)[0]
-                else:
-                    rand_index = random.sample(self.argument_indices, 1)[0]
-                corrupted_indices[rand_location] = rand_index
-                num_corrupted_locations += 1
-            corrupted_instances.append(IndexedInstance(corrupted_indices, False))
-        return IndexedDataset(corrupted_instances)
 
     def get_vocab_size(self):
         return len(self.word_index) + 1

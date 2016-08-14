@@ -13,10 +13,12 @@ class TreeLSTMSolver(NNSolver):
     def __init__(self, **kwargs):
         super(TreeLSTMSolver, self).__init__(**kwargs)
 
-    def _build_model(self, train_input, vocab_size):
+    def _build_model(self, train_input):
         '''
         train_input: List of two numpy arrays: transitions and initial buffer
         '''
+        vocab_size = self.data_indexer.get_vocab_size()
+
         ## STEP 1: Initialze the two inputs
         transitions, _ = train_input
         # Length of transitions (ops) is an upper limit on the stack and buffer
@@ -60,12 +62,12 @@ class TreeLSTMSolver(NNSolver):
         print(model.summary(), file=sys.stderr)
         return model
 
-    def _set_max_sentence_length_from_model(self):
+    def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
 
     def prep_labeled_data(self, dataset: Dataset, for_train: bool):
-        indexed_dataset = self.data_indexer.index_dataset(dataset)
-        indexed_dataset.pad_instances(self.max_sentence_length)
+        indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
+        indexed_dataset.pad_instances([self.max_sentence_length])
 
         sentence_inputs, labels = dataset.as_training_data()
 
@@ -88,7 +90,7 @@ class TreeLSTMSolver(NNSolver):
         # concatenation. This has to match.
         transitions = numpy.expand_dims(transitions, axis=-1)
 
-        return (transitions, elements), labels
+        return (transitions, elements), numpy.asarray(labels)
 
     @classmethod
     def _get_custom_objects(cls):

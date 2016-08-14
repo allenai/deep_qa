@@ -35,8 +35,8 @@ class NNSolver(object):
         self.model = None
         self.best_epoch = -1
 
-    @staticmethod
-    def update_arg_parser(parser):
+    @classmethod
+    def update_arg_parser(cls, parser):
         """
         MODEL SPECIFICATION:
             embedding_size: int. Size of word vectors (default 50).
@@ -123,7 +123,7 @@ class NNSolver(object):
         '''
         Trains the model.
 
-        All training parameters have already been passed to the constructor, so we need to
+        All training parameters have already been passed to the constructor, so we need no
         arguments to this method.
         '''
 
@@ -131,12 +131,8 @@ class NNSolver(object):
         train_input, train_labels = self._get_training_data()
         validation_input, validation_labels = self._get_validation_data()
 
-        # This must be called after self._get_training_data(), because that's where we determine the
-        # vocabulary size.
-        vocab_size = self.data_indexer.get_vocab_size()
-
         # Then we build the model.  This creates a compiled Keras Model.
-        self.model = self._build_model(train_input, vocab_size)
+        self.model = self._build_model(train_input)
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -190,7 +186,7 @@ class NNSolver(object):
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         model_config_file.close()
         data_indexer_file.close()
-        self._set_max_sentence_length_from_model()
+        self._set_max_lengths_from_model()
 
     def score(self, test_input):
         return self.model.predict(test_input)
@@ -255,32 +251,12 @@ class NNSolver(object):
         accuracy = float(num_correct) / len(test_predictions)
         return accuracy
 
-    def _set_max_sentence_length_from_model(self):
+    def _set_max_lengths_from_model(self):
         """
-        Given a loaded model, set the max_sentence_length, so we know what length to pad data to
-        when using this loaded model.
+        Given a loaded model, set the max_lengths needed for padding.  This is necessary so that we
+        can pad the test data if we just loaded a saved model.
         """
         raise NotImplementedError
-
-    def _get_training_sentences(self) -> Dataset:
-        """
-        Just reads datasets from the training files given to the constructor.  All this does is
-        calls Dataset.read_from_file() on the right files, and merges positive and negative data if
-        necessary.  We also truncate the examples to self.max_training_instances. No other indexing
-        or corruption is done.
-
-        Called in the default implementation of _get_training_data(), and it is probably useful as
-        part of _get_training_data() for subclasses that have more complicated inputs.
-        """
-        if self.train_file:
-            dataset = Dataset.read_from_file(self.train_file)
-        else:
-            positive_dataset = Dataset.read_from_file(self.positive_train_file, label=True)
-            negative_dataset = Dataset.read_from_file(self.negative_train_file, label=False)
-            dataset = positive_dataset.merge(negative_dataset)
-        if self.max_training_instances is not None:
-            dataset = dataset.truncate(self.max_training_instances)
-        return dataset
 
     def _get_training_data(self):
         """Loads training data and converts it into a format suitable for input to Keras.  This
@@ -293,7 +269,15 @@ class NNSolver(object):
         logical forms as input.  NNSolvers that have more complicated inputs will need to override
         this method.
         """
-        dataset = self._get_training_sentences()
+        if self.train_file:
+            dataset = Dataset.read_from_file(self.train_file)
+        else:
+            positive_dataset = Dataset.read_from_file(self.positive_train_file, label=True)
+            negative_dataset = Dataset.read_from_file(self.negative_train_file, label=False)
+            dataset = positive_dataset.merge(negative_dataset)
+        if self.max_training_instances is not None:
+            print("Truncating the dataset to", self.max_training_instances, "instances")
+            dataset = dataset.truncate(self.max_training_instances)
         self.data_indexer.fit_word_dictionary(dataset)
         return self.prep_labeled_data(dataset, for_train=True)
 
@@ -318,7 +302,7 @@ class NNSolver(object):
         inputs, labels = self.prep_labeled_data(dataset, for_train=False)
         return inputs, self.group_by_question(labels)
 
-    def _build_model(self, train_input, vocab_size: int):
+    def _build_model(self, train_input):
         """Constructs and returns a Keras model that will take train_input as input, and produce as
         output a true/false decision for each input.
 
