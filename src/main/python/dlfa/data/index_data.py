@@ -7,11 +7,6 @@ class DataIndexer(object):
     def __init__(self):
         self.word_index = {"PADDING":0, "UNK":1, ",":2, ".":3, "(":4, ")":5}
         self.reverse_word_index = {0:"PADDING", 1:"UNK", 2:",", 3:".", 4:"(", 5:")"}
-        # We differentiate between predicate and argument indices for type specific corruption.  If
-        # the corruption code ever gets removed from this class, these variables can go away (along
-        # with the corresponding logic in process_data).
-        self.predicate_indices = set([])
-        self.argument_indices = set([])
 
     def fit_word_dictionary(self, dataset: 'Dataset'):
         """
@@ -22,43 +17,25 @@ class DataIndexer(object):
 
         We use nltk.tokenize.word_tokenize on the text in each Instance in the Dataset, and then
         keep all words that appear at least once.
-
-        If the dataset involves logical forms, we'll also try to keep track of which words are
-        predicates and which ones are arguments, so we can do slightly more intelligent data
-        corruption if requested.
         """
-        predicate_words = set()
-        argument_words = set()
-
         # TODO(matt): might be more efficient and configurable to just keep a count, instead of
         # using these two sets.  Then the caller can set a threshold.
         singletons = set([])
         non_singletons = set([])
         for instance in dataset.instances:
             words = word_tokenize(instance.text.lower())
-            for i, word in enumerate(words):
-                if i < len(words)-1:
-                    next_word = words[i+1]
-                    if next_word == "(":
-                        # If the next token is an opening paren, this token is a predicate.
-                        predicate_words.add(word)
-                    elif (next_word == "," or next_word == ")") and word != ")":
-                        argument_words.add(word)
+            for word in words:
                 if word not in non_singletons:
                     if word in singletons:
                         # Since we are seeing the word again, it is not a singleton
                         singletons.remove(word)
                         non_singletons.add(word)
                     else:
-                        # We have not seen this word. It is a singleton (atleast for now)
+                        # We have not seen this word. It is a singleton (at least for now)
                         singletons.add(word)
         for word in non_singletons:
             if word not in self.word_index:
                 self.word_index[word] = len(self.word_index)
-            if word in predicate_words:
-                self.predicate_indices.add(self.word_index[word])
-            if word in argument_words:
-                self.argument_indices.add(self.word_index[word])
         self.reverse_word_index = {index:word for (word, index) in self.word_index.items()}
 
     def get_word_index(self, word: str):
