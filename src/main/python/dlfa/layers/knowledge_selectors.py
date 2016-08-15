@@ -1,0 +1,145 @@
+'''
+Knowledge selectors take an encoded sentence (or logical form) representation and encoded
+representations of background facts related to the sentence, and compute an attention over the
+background representations.
+'''
+
+from keras.engine import InputSpec
+from keras import backend as K
+from keras import activations, initializations
+from keras.layers import Layer
+
+class DotProductKnowledgeSelector(Layer):
+    """
+    Input Shape: num_samples, (knowledge_length + 1), input_dim
+
+    Take the input as a tensor i, such that i[:, 0, :] is the encoding of the sentence, i[:, 1:, :]
+    are the encodings of the background facts.  There is no need to specify knowledge length here.
+
+    Attend to facts conditioned on the input sentence, just using a dot product between the input
+    vector and the background vectors (i.e., there are no parameters here).  This layer is a
+    reimplementation of the memory layer in "End-to-End Memory Networks", Sukhbaatar et al. 2015.
+    """
+    def __init__(self, **kwargs):
+        self.input_spec = [InputSpec(ndim=3)]
+        super(DotProductKnowledgeSelector, self).__init__(**kwargs)
+
+    def call(self, x, mask=None):
+        # Assumption: The first row in each slice corresponds to the encoding of the input and the
+        # remaining rows to those of the background knowledge.
+
+        sentence_encoding = x[:, 0, :]  # (num_samples, input_dim)
+        knowledge_encoding = x[:, 1:, :]  # (num_samples, knowledge_length, input_dim)
+
+        # We want to take a dot product of the knowledge matrix and the sentence vector from each
+        # sample. Instead of looping over all samples (inefficient), let's tile the sentence
+        # encoding to make it the same size as knowledge encoding, take an element wise product and
+        # sum over the last dimension (dim = 2).
+        knowledge_length = knowledge_encoding.shape[1]
+        tiled_sentence_encoding = K.permute_dimensions(
+                K.tile(sentence_encoding, (knowledge_length, 1, 1)),
+                (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
+        knowledge_attention = K.softmax(K.sum(knowledge_encoding * tiled_sentence_encoding,
+                                              axis=2))  # (num_samples, knowledge_length)
+        return knowledge_attention
+
+    def get_output_shape_for(self, input_shape):
+        # For each sample, the output is a vector of size knowledge_length, indicating the weights
+        # over background information.
+        return (input_shape[0], input_shape[1])  # (num_samples, knowledge_length)
+
+
+class ParameterizedKnowledgeSelector(Layer):
+    """
+    Here we are reimplementing the attention part of the memory layer described in
+    "Teaching Machines to Read and Comprehend", Hermann et al., 2015.
+
+    Input Shape: num_samples, (knowledge_length + 1), input_dim
+
+    Take the input as a tensor i, such that i[:, 0, :] is the encoding of the sentence, i[:, 1:, :]
+    are the encodings of the background facts.  There is no need to specify knowledge length here.
+
+    This layer concatenates the input with each background sentence, passes them through a
+    non-linearity, then does a softmax to get attention weights.
+
+    Equations:
+    Inputs: u is the sentence encoding, z_t are the background sentence encodings
+    Weights: W_1 (called self.dense_weights), v (called self.dot_bias)
+    Output: a_t
+
+    m_t = tanh(W_1 * concat(z_t, u))
+    q_t = dot(v, m_t)
+    a_t = softmax(q_t)
+    """
+
+    def __init__(self, activation='tanh', initialization='glorot_uniform', weights=None, **kwargs):
+        self.activation = activations.get(activation)
+        self.init = initializations.get(initialization)
+        self.input_spec = [InputSpec(ndim=3)]
+        self.initial_weights = weights
+        self.dense_weights = None
+        self.dot_bias = None
+        super(ParameterizedKnowledgeSelector, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        self.input_spec = [InputSpec(shape=input_shape)]
+        input_dim = input_shape[2]
+        self.dense_weights = self.init((input_dim * 2, input_dim), name='{}_dense'.format(self.name))
+        self.dot_bias = self.init((input_dim, 1), name='{}_dot_bias'.format(self.name))
+        self.trainable_weights = [self.dense_weights, self.dot_bias]
+
+        # Now that trainable_weights is complete, we set weights if needed.
+        if self.initial_weights is not None:
+            self.set_weights(self.initial_weights)
+            del self.initial_weights
+
+    def call(self, x, mask=None):
+        '''
+        Equations repeated from above:
+        Inputs: u is the sentence encoding, z_t are the background sentence encodings
+        Weights: W_1 (called self.dense_weights), v (called self.dot_bias)
+        Output: a_t
+
+        (1) zu_t = concat(z_t, u)
+        (2) m_t = tanh(dot(W_1, zu_t))
+        (3) q_t = dot(v, m_t)
+        (4) a_t = softmax(q_t)
+
+        Here we actually implement the logic of these equations.  We label each step with its
+        number and the variable above that it's computing.  The implementation looks more complex
+        than these equations because we have to unpack the input, then use tiling instead of loops
+        to make this more efficient.
+        '''
+        # Remember that the first row in each slice corresponds to the encoding of the input and
+        # the remaining rows to those of the background knowledge.
+        sentence_encoding = x[:, 0, :]  # (num_samples, input_dim)
+        knowledge_encoding = x[:, 1:, :]  # (num_samples, knowledge_length, input_dim)
+
+        # We're going to have to do several operations on the input sentence for each background
+        # sentence.  Instead of looping over the background sentences, which is inefficient, we'll
+        # tile the sentence encoding and use it in what follows.
+        knowledge_length = knowledge_encoding.shape[1]
+        tiled_sentence_encoding = K.permute_dimensions(
+                K.tile(sentence_encoding, (knowledge_length, 1, 1)),
+                (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
+
+        # (1: zu_t) Result of this is (num_samples, knowledge_length, input_dim * 2)
+        concatenated_encodings = K.concatenate([knowledge_encoding, tiled_sentence_encoding])
+
+        # (2: m_t) Result of this is (num_samples, knowledge_length, input_dim)
+        concatenated_activation = self.activation(K.dot(concatenated_encodings, self.dense_weights))
+
+        # (3: q_t) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
+        # after the dot product with K.squeeze, otherwise this would be (num_samples,
+        # knowledge_length, 1), which is not a valid input to K.softmax.
+        unnormalized_attention = K.squeeze(K.dot(concatenated_activation, self.dot_bias), axis=2)
+
+        # (4: a_t) Result is (num_samples, knowledge_length)
+        knowledge_attention = K.softmax(unnormalized_attention)
+        return knowledge_attention
+
+
+selectors = {  # pylint: disable=invalid-name
+        'dot_product': DotProductKnowledgeSelector,
+        'parameterized': ParameterizedKnowledgeSelector,
+        }

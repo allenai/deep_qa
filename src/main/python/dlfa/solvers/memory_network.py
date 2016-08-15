@@ -3,51 +3,71 @@ import sys
 import numpy
 
 from keras import backend as K
-from keras.layers import LSTM, TimeDistributed, Dense, Dropout, merge
+from keras.layers import LSTM, TimeDistributed, Dropout, merge
 from keras.regularizers import l2
 from keras.models import Model
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
-from ..layers.knowledge_backed_scorers import AttentiveReaderLayer, MemoryLayer
+from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector, ParameterizedKnowledgeSelector
+from ..layers.memory_updaters import updaters
+from ..layers.entailment_models import entailment_models
 from .nn_solver import NNSolver
 
-'''
-TODO(pradeep): Replace memory layers in the following implementation, with a combination
-of a KnowledgeSelector and the logic for updating memory given below.
-
-Insight: Memory Networks and Attentive Readers have the following steps:
-    0. Take knowledge input (z), query input (q)
-    1. Knowledge Selection (returns knowledge weights)
-    2. Knowledge Aggregation (returns weighted average)
-    3. Memory Update (returns a memory representation to replace input)
-    4. Optionally repeat 1-3 with output from 3 replacing q
-    5. Pass aggregated knowledge from 2, and q to an entailment function.
-Memory Network: Selector = SimpleKnowledgeSelector; Updater = merge layer with mode = sum
-AttentiveReader: Selector = ParameterizedKnowledgeSelector; Updater = merge with mode = concat, followed by a dense layer.
-'''
-
 class MemoryNetworkSolver(NNSolver):
+    '''
+    We call this a Memory Network Solver because it has an attention over background knowledge, or
+    "memory", similar to a memory network.  This implementation generalizes the architecture of the
+    original memory network, though, and can be used to implement several papers in the literature,
+    as well as some models that we came up with.
 
-    memory_layer_choices = ['attentive', 'memory']
+    Our basic architecture is as follows:
+        Input: a sentence encoding and a set of background knowledge ("memory") encodings
+
+        current_memory = sentence_encoding
+        For each memory layer:
+           attention_weights = knowledge_selector(current_memory, background)
+           aggregated_background = weighted_sum(attention_weights, background)
+           current_memory = memory_updater(current_memory, aggregated_background)
+        final_score = entailment_model(aggregated_background, current_memory, sentence_encoding)
+
+    There are thus three main knobs that can be turned (in addition to the number of memory
+    layers):
+        1. the knowledge_selector
+        2. the memory_updater
+        3. the entailment_model
+
+    The original memory networks paper used the following:
+        1. dot product (our DotProductKnowledgeSelector)
+        2. sum
+        3. linear classifier on top of current_memory
+
+    The attentive reader in "Teaching Machines to Read and Comprehend", Hermann et al., 2015, used
+    the following:
+        1. a dense layer with a dot product bias (our ParameterizedKnowledgeSelector)
+        2. Dense(K.concat([current_memory, aggregated_background]))
+        3. Dense(current_memory)
+
+    Our thought is that we should treat the last step as an entailment problem - does the
+    background knowledge entail the input sentence?  Previous work was solving a different problem,
+    so they used simpler models "entailment".
+    '''
+
 
     def __init__(self, **kwargs):
         '''
         num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
         '''
         super(MemoryNetworkSolver, self).__init__(**kwargs)
-        if kwargs['memory_layer'] == 'attentive':
-            self.memory_layer = AttentiveReaderLayer
-        elif kwargs['memory_layer'] == 'memory':
-            self.memory_layer = MemoryLayer
-        else:
-            raise RuntimeError("Unrecognized memory layer type: " + kwargs['memory_layer'])
-        self.num_memory_layers = kwargs['num_memory_layers']
-
         self.train_background = kwargs['train_background']
         self.positive_train_background = kwargs['positive_train_background']
         self.negative_train_background = kwargs['negative_train_background']
         self.validation_background = kwargs['validation_background']
         self.test_background = kwargs['test_background']
+
+        self.knowledge_selector = selectors[kwargs['knowledge_selector']]
+        self.memory_updater = updaters[kwargs['memory_updater']]
+        self.entailment_model = entailment_models[kwargs['entailment_model']]
+        self.num_memory_layers = kwargs['num_memory_layers']
 
         self.max_knowledge_length = None
 
@@ -61,10 +81,18 @@ class MemoryNetworkSolver(NNSolver):
         parser.add_argument('--validation_background', type=str)
         parser.add_argument('--test_background', type=str)
 
-        parser.add_argument('--memory_layer', type=str, default='attentive',
-                            choices=cls.memory_layer_choices,
-                            help='The kind of memory layer to use.  Options are "memory" and '
-                            '"attentive".  See knowledge_backed_scorers.py for details.')
+        parser.add_argument('--knowledge_selector', type=str, default='parameterized',
+                            choices=selectors.keys(),
+                            help='The kind of knowledge selector to use.  See '
+                            'knowledge_selectors.py for details.')
+        parser.add_argument('--memory_updater', type=str, default='dense_concat',
+                            choices=updaters.keys(),
+                            help='The kind of memory updaters to use.  See memory_updaters.py '
+                            'for details.')
+        parser.add_argument('--entailment_model', type=str, default='dense_memory_only',
+                            choices=entailment_models.keys(),
+                            help='The kind of entailment model to use.  See entailment_models.py '
+                            'for details.')
         parser.add_argument('--num_memory_layers', type=int, default=1,
                             help="Number of memory layers in the network. (default 1)")
 
@@ -82,8 +110,8 @@ class MemoryNetworkSolver(NNSolver):
     @classmethod
     def _get_custom_objects(cls):
         custom_objects = super(MemoryNetworkSolver, cls)._get_custom_objects()
-        custom_objects['MemoryLayer'] = MemoryLayer
-        custom_objects['AttentiveReaderLayer'] = AttentiveReaderLayer
+        custom_objects['DotProductKnowledgeSelector'] = DotProductKnowledgeSelector
+        custom_objects['ParameterizedKnowledgeSelector'] = ParameterizedKnowledgeSelector
         return custom_objects
 
     def _set_max_lengths_from_model(self):
@@ -126,7 +154,7 @@ class MemoryNetworkSolver(NNSolver):
         # At each step in the following loop, we take the proposition encoding, or the output of
         # the previous memory layer, merge it with the knowledge encoding and pass it to the
         # current memory layer.
-        next_memory_layer_input = encoded_proposition
+        current_memory = encoded_proposition
         for i in range(self.num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
             # additional row (at the beginning) in all slices.
@@ -140,24 +168,29 @@ class MemoryNetworkSolver(NNSolver):
                                                           axis=1)
             merged_shape = lambda layer_out_shapes: \
                 (layer_out_shapes[1][0], layer_out_shapes[1][1] + 1, layer_out_shapes[1][2])
-            merged_encoded_rep = merge([next_memory_layer_input, encoded_knowledge],
+            merged_encoded_rep = merge([current_memory, encoded_knowledge],
                                        mode=merge_mode,
                                        output_shape=merged_shape)
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_backed_projector = self.memory_layer(output_dim=self.embedding_size,
-                                                           name='memory_layer_%d' % i)
-            memory_layer_output = knowledge_backed_projector(regularized_merged_rep)
-            next_memory_layer_input = memory_layer_output
+            knowledge_selector = self.knowledge_selector(output_dim=self.embedding_size,
+                                                         name='knowledge_selector_%d' % i)
+            attention_weights = knowledge_selector(regularized_merged_rep)
+            attended_knowledge = K.sum(encoded_knowledge * K.expand_dims(attention_weights, dim=-1), axis=1)
+            memory_updater = self.memory_updater(output_dim=self.embedding_size,
+                                                 name='memory_updater_%d' % i)
+            current_memory = memory_updater.update(current_memory, attended_knowledge)
 
-        ## Step 5: Finally score the projection.
-        softmax = Dense(output_dim=2, activation='softmax', name='softmax')
-        softmax_output = softmax(memory_layer_output)
+        # Step 5: Finally, run the sentence encoding, the current memory, and the attended
+        # background knowledge through an entailment model to get a final true/false score.
+        entailment_output = self.entailment_model.classify(encoded_proposition,
+                                                           current_memory,
+                                                           attended_knowledge)
 
-        ## Step 6: Define the model, compile and train it.
+        # Step 6: Define the model, compile and train it.
         memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
-                               output=softmax_output)
+                               output=entailment_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print(memory_network.summary(), file=sys.stderr)
         return memory_network
