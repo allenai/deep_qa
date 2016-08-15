@@ -92,24 +92,30 @@ object MemoryNetworkExperiments {
   // Step 6: Train a model
   ////////////////////////////////////////////////////////////////
 
-  val modelParams: JValue =
-    ("model type" -> "memory network") ~
-    ("model name" -> "busc/attentive_memory_network") ~
+  val pretrainedEmbeddingParams: JValue =
+    ("file" -> "/home/mattg/data/glove.840B.300d.txt.gz") ~
+    ("fine tune" -> true) ~
+    ("add projection" -> false)
+
+  val baseModelParams: JValue =
     ("positive data" -> sentenceSelectorParams) ~
-    ("positive background" -> positiveBackgroundParams) ~
     ("negative data" -> corruptedSentenceSelectorParams) ~
-    ("negative background" -> negativeBackgroundParams) ~
     ("validation questions" -> validationQuestionParams) ~
-    ("validation background" -> validationBackgroundParams) ~
+    ("pretrained embeddings" -> pretrainedEmbeddingParams) ~
     ("number of epochs" -> 1)
 
-  val simpleLstmModelParams: JValue =
+  val memoryNetworkParams: JValue = baseModelParams merge (
+    ("model type" -> "memory network") ~
+    ("model name" -> "busc/attentive_memory_network") ~
+    ("positive background" -> positiveBackgroundParams) ~
+    ("negative background" -> negativeBackgroundParams) ~
+    ("validation background" -> validationBackgroundParams)
+  )
+
+  val simpleLstmModelParams: JValue = baseModelParams merge (
     ("model type" -> "simple lstm") ~
-    ("model name" -> "busc/simple_lstm") ~
-    ("positive data" -> sentenceSelectorParams) ~
-    ("negative data" -> corruptedSentenceSelectorParams) ~
-    ("validation questions" -> validationQuestionParams) ~
-    ("number of epochs" -> 1)
+    ("model name" -> "busc/simple_lstm")
+  )
 
   // STUFF BELOW HERE STILL TODO
 
@@ -119,7 +125,7 @@ object MemoryNetworkExperiments {
 
   val questionScorerParams: JValue =
     ("questions" -> validationQuestionParams) ~
-    ("model" -> modelParams)
+    ("model" -> memoryNetworkParams)
 
   def main(args: Array[String]) {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
@@ -127,6 +133,6 @@ object MemoryNetworkExperiments {
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
     NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
   }
 }

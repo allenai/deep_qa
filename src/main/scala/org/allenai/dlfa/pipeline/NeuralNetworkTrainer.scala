@@ -7,6 +7,17 @@ import com.mattg.pipeline.SubprocessStep
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
 
+object NeuralNetworkTrainer {
+  def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
+    implicit val formats = DefaultFormats
+    (params \ "model type").extract[String] match {
+      case "simple lstm" => new SimpleLstmTrainer(params, fileUtil)
+      case "memory network" => new MemoryNetworkTrainer(params, fileUtil)
+      case t => throw new IllegalStateException(s"Unrecognized neural network model type: $t")
+    }
+  }
+}
+
 /**
  * This Step executes code in a subprocess to train a neural network using some deep learning
  * library.
@@ -14,11 +25,11 @@ import com.mattg.util.JsonHelper
  * There are lots of different neural network architectures we could try, some of which take very
  * different kinds of input.  So, this is an abstract class, so that subclasses can define their
  * own input requirements.  Then we take those inputs and pass them, along with any neural network
- * parameters, to the neural network code by opening a subprocess.  In general, you should just
- * define one subclass here for each type of required input (e.g., just positive and negative
- * sentences; positive and negative sentences plus background sentences; positive and negative
- * sentences plus KB features; ...), then use the parameters of that subclass to change the neural
- * network as necessary.
+ * parameters, to the neural network code by opening a subprocess.
+ *
+ * The current design is to have one class here for each class under solvers/ in the python code.
+ * This base class corresponds to the NNSolver base class, and handles parameters for that base
+ * class.
  */
 abstract class NeuralNetworkTrainer(
   params: JValue,
@@ -28,12 +39,39 @@ abstract class NeuralNetworkTrainer(
 
   // Anything that is common to training _all_ neural network models should go here.  Data-specific
   // parameters go in subclasses.
-  val baseParams = Seq("model type", "model name", "validation questions", "number of epochs",
-    "max training instances")
+  val baseParams = Seq(
+    "model type",
+    "model name",
+    "positive data",
+    "negative data",
+    "validation questions",
+    "number of epochs",
+    "max training instances",
+    "max sentence length",
+    "embedding size",
+    "embedding dropout",
+    "pretrained embeddings"
+  )
 
-  // The way these parameters work assumes some commonality between the underlying python scripts
-  // that train models.  Currently there's only one script, so that's ok...
   val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
+
+  val embeddingSize = JsonHelper.extractWithDefault(params, "embedding size", 50)
+  val embeddingDropout = JsonHelper.extractWithDefault(params, "embedding dropout", 0.5)
+  val pretrainedEmbeddingArgs = (params \ "pretrained embeddings") match {
+    case JNothing => Seq()
+    case jval => {
+      val allowedArgs = Seq("file", "fine tune", "add projection")
+      JsonHelper.ensureNoExtras(jval, "pretrained embeddings", allowedArgs)
+      val embeddingsFile = (jval \ "file").extract[String]
+      val fineTune = JsonHelper.extractWithDefault(jval, "fine tune", false)
+      val addProjection = JsonHelper.extractWithDefault(jval, "add projection", true)
+      val fileArgs = Seq("--pretrained_embeddings_file", embeddingsFile)
+      val fineTuneArg = if (fineTune) Seq("--fine_tune_embeddings") else Seq()
+      val addProjectionArg = if (addProjection) Seq("--project_embeddings") else Seq()
+      fileArgs ++ fineTuneArg ++ addProjectionArg
+    }
+  }
+
   val maxTrainingInstances = JsonHelper.extractAsOption[Int](params, "max training instances")
   val maxTrainingInstancesArgs =
     maxTrainingInstances.map(max => Seq("--max_training_instances", max.toString)).toSeq.flatten
@@ -41,12 +79,34 @@ abstract class NeuralNetworkTrainer(
   val modelName = (params \ "model name").extract[String]
   val modelPrefix = s"models/$modelName"  // TODO(matt): make this a function of the arguments?
 
+  val maxSentenceLength = JsonHelper.extractAsOption[Int](params, "max sentence length")
+  val maxSentenceLengthArgs =
+    maxSentenceLength.map(max => Seq("--length_upper_limit", max.toString)).toSeq.flatten
+
+  val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
+  val positiveTrainingFile = positiveDataProducer.outputFile
+  val positiveDataInput = (positiveTrainingFile, Some(positiveDataProducer))
+
+  val negativeDataProducer = SentenceProducer.create(params \ "negative data", fileUtil)
+  val negativeTrainingFile = negativeDataProducer.outputFile
+  val negativeDataInput = (negativeTrainingFile, Some(negativeDataProducer))
+
   val questionInterpreter = new QuestionInterpreter(params \ "validation questions", fileUtil)
   val validationQuestionsFile = questionInterpreter.outputFile
   val validationInput = (validationQuestionsFile, Some(questionInterpreter))
 
   override val binary = "python"
   override val scriptFile = Some("src/main/python/run_solver.py")
+
+  val baseInputs = Set[(String, Option[Step])](positiveDataInput, negativeDataInput, validationInput)
+
+  val baseArguments = Seq[String](
+    "--positive_train_file", positiveTrainingFile,
+    "--negative_train_file", negativeTrainingFile,
+    "--validation_file", validationQuestionsFile,
+    "--num_epochs", numEpochs.toString,
+    "--model_serialization_prefix", modelPrefix
+  ) ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs ++ pretrainedEmbeddingArgs
 
   // These three outputs are written by the python code.  The config.json file is a specification
   // of the model layers, so that keras can reconstruct the saved model object / computational
@@ -61,24 +121,13 @@ abstract class NeuralNetworkTrainer(
 
 }
 
-object NeuralNetworkTrainer {
-  def create(params: JValue, fileUtil: FileUtil): NeuralNetworkTrainer = {
-    implicit val formats = DefaultFormats
-    (params \ "model type").extract[String] match {
-      case "simple lstm" => new SimpleLstmTrainer(params, fileUtil)
-      case "memory network" => new MemoryNetworkTrainer(params, fileUtil)
-      case t => throw new IllegalStateException(s"Unrecognized neural network model type: $t")
-    }
-  }
-}
-
 /**
- * This NeuralNetworkTrainer is a simple LSTM.  We take good and bad sentences as input, and
- * nothing else.  The LSTM is trained to map good sentences to "true" and bad sentences to
- * "false".  This is mostly here as a baseline, as we expect to need additional input to actual do
- * well at answering science questions.  At best, this kind of a model will look for word
- * correlations to decide whether a sentence is true or false, similar to what the Salience solver
- * does.
+ * This NeuralNetworkTrainer is a simple LSTM, corresponding to lstm_solver.py.  We take good and
+ * bad sentences as input, and nothing else.  The LSTM is trained to map good sentences to "true"
+ * and bad sentences to "false".  This is mostly here as a baseline, as we expect to need
+ * additional input to actual do well at answering science questions.  At best, this kind of a
+ * model will look for word correlations to decide whether a sentence is true or false, similar to
+ * what the Salience solver does.
  */
 class SimpleLstmTrainer(
   params: JValue,
@@ -86,37 +135,16 @@ class SimpleLstmTrainer(
 ) extends NeuralNetworkTrainer(params, fileUtil) {
   override val name = "Neural Network Trainer, on sentences, no background knowledge input"
 
-  val validParams = baseParams ++ Seq("positive data", "negative data", "max sentence length")
+  val validParams = baseParams
   JsonHelper.ensureNoExtras(params, name, validParams)
-
-  val maxSentenceLength = JsonHelper.extractAsOption[Int](params, "max sentence length")
-  val maxSentenceLengthArgs =
-    maxSentenceLength.map(max => Seq("--length_upper_limit", max.toString)).toSeq.flatten
-
-  val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
-  val positiveTrainingFile = positiveDataProducer.outputFile
-  val positiveDataInput = (positiveTrainingFile, Some(positiveDataProducer))
-
-  val negativeDataProducer = (params \ "negative data") match {
-    case JNothing => None
-    case jval => Some(SentenceProducer.create(jval, fileUtil))
-  }
-  val negativeDataArgs =
-    negativeDataProducer.map(p => Seq("--negative_train_file", p.outputFile)).toSeq.flatten
-  val negativeDataInput = negativeDataProducer.map(p => (p.outputFile, Some(p))).toSet
 
   override val arguments = Seq[String](
     "LSTMSolver",
-    "--positive_train_file", positiveTrainingFile,
     "--validation_file", validationQuestionsFile,
-    "--num_epochs", numEpochs.toString,
-    "--model_serialization_prefix", modelPrefix
-  ) ++ negativeDataArgs ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs
+    "--num_epochs", numEpochs.toString
+  ) ++ baseArguments
 
-  override val inputs: Set[(String, Option[Step])] = Set(
-    positiveDataInput,
-    validationInput
-  ) ++ negativeDataInput
+  override val inputs: Set[(String, Option[Step])] = baseInputs
   override val outputs = modelOutputs.toSet
 
   override val inProgressFile = modelPrefix + "_in_progress"
@@ -124,8 +152,8 @@ class SimpleLstmTrainer(
 }
 
 /**
- * This NeuralNetworkTrainer is a memory network.  We take good and bad sentences as input, as well
- * as a collection of background sentences for each input.
+ * This NeuralNetworkTrainer is a memory network, corresponding to memory_network.py.  We take good
+ * and bad sentences as input, as well as a collection of background sentences for each input.
  */
 class MemoryNetworkTrainer(
   params: JValue,
@@ -145,17 +173,9 @@ class MemoryNetworkTrainer(
   )
   JsonHelper.ensureNoExtras(params, name, validParams)
 
-  val maxSentenceLength = JsonHelper.extractAsOption[Int](params, "max sentence length")
-  val maxSentenceLengthArgs =
-    maxSentenceLength.map(max => Seq("--length_upper_limit", max.toString)).toSeq.flatten
-
-  val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
-  val positiveTrainingFile = positiveDataProducer.outputFile
   val positiveBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "positive background", fileUtil)
   val positiveBackgroundFile = positiveBackgroundSearcher.outputFile
 
-  val negativeDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
-  val negativeTrainingFile = negativeDataProducer.outputFile
   val negativeBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "negative background", fileUtil)
   val negativeBackgroundFile = negativeBackgroundSearcher.outputFile
 
@@ -170,24 +190,16 @@ class MemoryNetworkTrainer(
 
   override val arguments = Seq[String](
     "MemoryNetworkSolver",
-    "--positive_train_file", positiveTrainingFile,
     "--positive_train_background", positiveBackgroundFile,
-    "--negative_train_file", negativeTrainingFile,
     "--negative_train_background", negativeBackgroundFile,
-    "--validation_file", validationQuestionsFile,
     "--validation_background", validationBackgroundFile,
     "--memory_layer", memoryLayerType,
-    "--num_epochs", numEpochs.toString,
-    "--num_memory_layers", numMemoryLayers.toString,
-    "--model_serialization_prefix", modelPrefix
-  ) ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs
+    "--num_memory_layers", numMemoryLayers.toString
+  ) ++ baseArguments
 
-  override val inputs: Set[(String, Option[Step])] = Set(
-    (positiveTrainingFile, Some(positiveDataProducer)),
+  override val inputs: Set[(String, Option[Step])] = baseInputs ++ Set(
     (positiveBackgroundFile, Some(positiveBackgroundSearcher)),
-    (negativeTrainingFile, Some(negativeDataProducer)),
     (negativeBackgroundFile, Some(negativeBackgroundSearcher)),
-    validationInput,
     (validationBackgroundFile, Some(validationBackgroundSearcher))
   )
   override val outputs = modelOutputs.toSet

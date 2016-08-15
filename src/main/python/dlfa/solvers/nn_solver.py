@@ -4,10 +4,11 @@ import pickle
 from typing import List
 
 import numpy
-from keras.layers import Input, Embedding, TimeDistributed, Dropout
+from keras.layers import TimeDistributedDense, Input, Embedding, TimeDistributed, Dropout
 from keras.models import model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
+from ..data.embeddings import PretrainedEmbeddings
 from ..data.index_data import DataIndexer
 
 
@@ -21,6 +22,9 @@ class NNSolver(object):
         # just grab these directly without worrying if they're there or not.
         self.model_prefix = kwargs['model_serialization_prefix']
 
+        self.pretrained_embeddings_file = kwargs['pretrained_embeddings_file']
+        self.fine_tune_embeddings = kwargs['fine_tune_embeddings']
+        self.project_embeddings = kwargs['project_embeddings']
         self.embedding_size = kwargs['embedding_size']
         self.embedding_dropout = kwargs['embedding_dropout']
         self.max_sentence_length = kwargs['max_sentence_length']
@@ -46,6 +50,7 @@ class NNSolver(object):
         """
         MODEL SPECIFICATION:
             embedding_size: int. Size of word vectors (default 50).
+            pretrained_embeddings_file: str.
             max_sentence_length: max length of training sentences (ignored at test time).
 
         DATA SPECIFICATION:
@@ -82,6 +87,15 @@ class NNSolver(object):
                             help="Prefix for saving and loading model files")
         parser.add_argument('--embedding_size', type=int, default=50,
                             help="Number of dimensions to use for word embeddings")
+        parser.add_argument('--pretrained_embeddings_file', type=str,
+                            help="If specified, we will use the vectors in this file and learn a "
+                            "projection matrix to get word vectors of dimension `embedding_size`, "
+                            "instead of learning the embedding matrix ourselves.")
+        parser.add_argument('--fine_tune_embeddings', action='store_true',
+                            help="If we're using pre-trained embeddings, should we fine tune them?")
+        parser.add_argument('--project_embeddings', action='store_true',
+                            help="Should we have a projection layer on top of our embedding layer? "
+                            "(mostly useful with pre-trained embeddings)")
         parser.add_argument('--embedding_dropout', type=float, default=0.5,
                             help="Dropout parameter to apply to the word embedding layer")
         parser.add_argument('--max_sentence_length', type=int,
@@ -310,7 +324,7 @@ class NNSolver(object):
         inputs, labels = self.prep_labeled_data(dataset, for_train=False)
         return inputs, self.group_by_question(labels)
 
-    def _pad_and_embed_dataset(self, dataset: Dataset, max_lengths: List[int]):
+    def _index_and_pad_dataset(self, dataset: TextDataset, max_lengths: List[int]):
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
         indexed_dataset.pad_instances(max_lengths)
         return indexed_dataset
@@ -333,20 +347,35 @@ class NNSolver(object):
         Because Keras requires access to the actual Input() layer, we return that along with the
         final word vector layer.
         """
-        # The input layer has whatever shape sentence_input has.
+        # pylint: disable=redefined-variable-type
         input_layer = Input(shape=sentence_input.shape[1:], dtype='int32')
 
         # If a particular model has several places where sentences are encoded, we want to be sure
         # to use the _same_ embedding layer for all of them, so we initialize them and save them to
         # self here, if we haven't already done so.
         if self.embedding_layer is None:
-            vocab_size = self.data_indexer.get_vocab_size()
-
-            # Mask zero ensures that padding is not a parameter in the entire model.
-            self.embedding_layer = Embedding(input_dim=vocab_size, output_dim=self.embedding_size,
-                                             mask_zero=True, name='embedding')
+            if self.pretrained_embeddings_file:
+                # If we have a pre-trained embeddings file, we'll load a fixed Embedding layer,
+                # then add a projection on top of it.  So our "embedding layer" is actually two
+                # layers: a non-trainable Embedding layer, then a TimeDistributed(Dense) layer.
+                self.embedding_layer = PretrainedEmbeddings.get_embedding_layer(
+                        self.pretrained_embeddings_file,
+                        self.data_indexer,
+                        self.fine_tune_embeddings)
+            else:
+                self.embedding_layer = Embedding(input_dim=self.data_indexer.get_vocab_size(),
+                                                 output_dim=self.embedding_size,
+                                                 mask_zero=True,  # this handles padding correctly
+                                                 name='embedding')
+            if self.project_embeddings:
+                # TODO(matt): this currently crashes...  I guess Keras doesn't expect you to add a
+                # TimeDistributedDense on top of an Embedding?  Theoretically, this should work...
+                self.embedding_layer = TimeDistributedDense(
+                        output_dim=self.embedding_size,
+                        name='embedding_projection')(self.embedding_layer)
             self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer)
 
+        # Now we actually embed the input and apply dropout.
         if is_time_distributed:
             embedded_input = self.time_distributed_embedding_layer(input_layer)
         else:

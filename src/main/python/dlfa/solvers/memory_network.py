@@ -197,7 +197,7 @@ class MemoryNetworkSolver(NNSolver):
         Not much to do here, as IndexedBackgroundInstance does most of the work.
         """
         max_lengths = [self.max_sentence_length, self.max_knowledge_length]
-        processed_dataset = self._pad_and_embed_dataset(dataset, max_lengths)
+        processed_dataset = self._index_and_pad_dataset(dataset, max_lengths)
         if for_train:
             max_lengths = processed_dataset.max_lengths()
             self.max_sentence_length = max_lengths[0]

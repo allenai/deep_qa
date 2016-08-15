@@ -43,9 +43,11 @@ class TextInstance(Instance):
         super(TextInstance, self).__init__(label, index)
         self.text = text
 
+    def words(self):
+        return word_tokenize(self.text.lower())
+
     def to_indexed_instance(self, data_indexer: DataIndexer):
-        words = word_tokenize(self.text.lower())
-        indices = [data_indexer.get_word_index(word) for word in words]
+        indices = [data_indexer.get_word_index(word) for word in self.words()]
         return IndexedInstance(indices, self.label, self.index)
 
     @staticmethod
@@ -104,6 +106,14 @@ class BackgroundTextInstance(TextInstance):
     def __init__(self, text: str, background: List[str], label: bool, index: int=None):
         super(BackgroundTextInstance, self).__init__(text, label, index)
         self.background = background
+
+    def words(self):
+        text_words = super(BackgroundInstance, self).words()
+        background_words = []
+        for background_text in self.background:
+            background_words.extend(word_tokenize(background_text.lower()))
+        text_words.extend(background_words)
+        return text_words
 
     def to_indexed_instance(self, data_indexer: DataIndexer):
         words = word_tokenize(self.text.lower())
