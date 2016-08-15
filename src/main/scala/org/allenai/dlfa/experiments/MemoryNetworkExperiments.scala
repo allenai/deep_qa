@@ -126,6 +126,7 @@ object MemoryNetworkExperiments {
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
     NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
 }

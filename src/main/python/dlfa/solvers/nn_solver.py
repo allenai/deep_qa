@@ -1,7 +1,10 @@
 import sys
 import pickle
 
+from typing import List
+
 import numpy
+from keras.layers import Input, Embedding, TimeDistributed, Dropout
 from keras.models import model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
@@ -19,6 +22,7 @@ class NNSolver(object):
         self.model_prefix = kwargs['model_serialization_prefix']
 
         self.embedding_size = kwargs['embedding_size']
+        self.embedding_dropout = kwargs['embedding_dropout']
         self.max_sentence_length = kwargs['max_sentence_length']
         self.max_training_instances = kwargs['max_training_instances']
 
@@ -34,6 +38,8 @@ class NNSolver(object):
         self.data_indexer = DataIndexer()
         self.model = None
         self.best_epoch = -1
+        self.embedding_layer = None
+        self.time_distributed_embedding_layer = None
 
     @classmethod
     def update_arg_parser(cls, parser):
@@ -76,6 +82,8 @@ class NNSolver(object):
                             help="Prefix for saving and loading model files")
         parser.add_argument('--embedding_size', type=int, default=50,
                             help="Number of dimensions to use for word embeddings")
+        parser.add_argument('--embedding_dropout', type=float, default=0.5,
+                            help="Dropout parameter to apply to the word embedding layer")
         parser.add_argument('--max_sentence_length', type=int,
                             help="Upper limit on length of training data. Ignored during testing.")
 
@@ -302,6 +310,11 @@ class NNSolver(object):
         inputs, labels = self.prep_labeled_data(dataset, for_train=False)
         return inputs, self.group_by_question(labels)
 
+    def _pad_and_embed_dataset(self, dataset: Dataset, max_lengths: List[int]):
+        indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
+        indexed_dataset.pad_instances(max_lengths)
+        return indexed_dataset
+
     def _build_model(self, train_input):
         """Constructs and returns a Keras model that will take train_input as input, and produce as
         output a true/false decision for each input.
@@ -309,6 +322,40 @@ class NNSolver(object):
         The returned model will be used to call model.fit(train_input, train_labels).
         """
         raise NotImplementedError
+
+    def _get_embedded_sentence_input(self, sentence_input, is_time_distributed=False):
+        """
+        Performs the initial steps of embedding sentences.  This function takes care of two steps:
+        (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
+        word vectors with an Embedding layer, if necessary.  If dropout has been specified on the
+        embedding layer, we also apply that here.
+
+        Because Keras requires access to the actual Input() layer, we return that along with the
+        final word vector layer.
+        """
+        # The input layer has whatever shape sentence_input has.
+        input_layer = Input(shape=sentence_input.shape[1:], dtype='int32')
+
+        # If a particular model has several places where sentences are encoded, we want to be sure
+        # to use the _same_ embedding layer for all of them, so we initialize them and save them to
+        # self here, if we haven't already done so.
+        if self.embedding_layer is None:
+            vocab_size = self.data_indexer.get_vocab_size()
+
+            # Mask zero ensures that padding is not a parameter in the entire model.
+            self.embedding_layer = Embedding(input_dim=vocab_size, output_dim=self.embedding_size,
+                                             mask_zero=True, name='embedding')
+            self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer)
+
+        if is_time_distributed:
+            embedded_input = self.time_distributed_embedding_layer(input_layer)
+        else:
+            embedded_input = self.embedding_layer(input_layer)
+
+        if self.embedding_dropout > 0.0:
+            embedded_input = Dropout(self.embedding_dropout)(embedded_input)
+
+        return input_layer, embedded_input
 
     def _save_model(self, epoch: int):
         # Serializing the model for future use.
