@@ -3,7 +3,7 @@ import sys
 import numpy
 
 from keras import backend as K
-from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense, Dropout, merge
+from keras.layers import LSTM, TimeDistributed, Dense, Dropout, merge
 from keras.regularizers import l2
 from keras.models import Model
 
@@ -99,26 +99,17 @@ class MemoryNetworkSolver(NNSolver):
             knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
                 of words in background facts that correspond to the propositions.
         '''
-        vocab_size = self.data_indexer.get_vocab_size()
-
-        ## Step 1: Define the two inputs (propositions and knowledge)
         proposition_inputs, knowledge_inputs = train_input
-        proposition_input = Input(shape=(proposition_inputs.shape[1:]), dtype='int32')
-        knowledge_input = Input(shape=(knowledge_inputs.shape[1:]), dtype='int32')
 
-        ## Step 2: Embed the two inputs using the same embedding matrix and apply dropout
-        embedding = Embedding(input_dim=vocab_size, output_dim=self.embedding_size,
-                              mask_zero=True, name='embedding')
-        # We need a timedistributed variant of the embedding (with same weights) to pass
-        # the knowledge tensor in, and get a 4D tensor out.
-        time_distributed_embedding = TimeDistributed(embedding)
-        proposition_embed = embedding(proposition_input)  # (samples, num_words, word_dim)
-        knowledge_embed = time_distributed_embedding(knowledge_input)  # (samples, knowledge_len, num_words, word_dim)
-        regularized_proposition_embed = Dropout(0.5)(proposition_embed)
-        regularized_knowledge_embed = Dropout(0.5)(knowledge_embed)
+        # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
+        # inputs and the knowledge inputs.
+        proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
+                proposition_inputs)
+        knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
+                knowledge_inputs, is_time_distributed=True)
 
-        ## Step 3: Encode the two embedded inputs using the same encoder
-        # Can replace the LSTM below with fancier encoders depending on the input.
+        # Step 3: Encode the two embedded inputs using the same encoder.  We could replace the LSTM
+        # below with fancier encoders depending on the input.
         proposition_encoder = LSTM(output_dim=self.embedding_size, W_regularizer=l2(0.01),
                                    U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='encoder')
 
@@ -128,14 +119,13 @@ class MemoryNetworkSolver(NNSolver):
         #                       (samples, knowledge_len, word_dim)
         # TimeDistributed generally loops over the second dimension.
         knowledge_encoder = TimeDistributed(proposition_encoder, name='knowledge_encoder')
-        encoded_proposition = proposition_encoder(regularized_proposition_embed)  # (samples, word_dim)
-        encoded_knowledge = knowledge_encoder(regularized_knowledge_embed)  # (samples, knowledge_len, word_dim)
+        encoded_proposition = proposition_encoder(proposition_embedding)  # (samples, word_dim)
+        encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, word_dim)
 
-        ## Step 4: Merge the two encoded representations and pass into the knowledge backed
-        # scorer
-        # At each step in the following loop, we take the proposition encoding,
-        # or the output of the previous memory layer, merge it with the knowledge
-        # encoding and pass it to the current memory layer.
+        # Step 4: Merge the two encoded representations and pass into the knowledge backed scorer.
+        # At each step in the following loop, we take the proposition encoding, or the output of
+        # the previous memory layer, merge it with the knowledge encoding and pass it to the
+        # current memory layer.
         next_memory_layer_input = encoded_proposition
         for i in range(self.num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
@@ -166,7 +156,8 @@ class MemoryNetworkSolver(NNSolver):
         softmax_output = softmax(memory_layer_output)
 
         ## Step 6: Define the model, compile and train it.
-        memory_network = Model(input=[proposition_input, knowledge_input], output=softmax_output)
+        memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
+                               output=softmax_output)
         memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print(memory_network.summary(), file=sys.stderr)
         return memory_network
@@ -205,13 +196,13 @@ class MemoryNetworkSolver(NNSolver):
         """
         Not much to do here, as IndexedBackgroundInstance does most of the work.
         """
-        indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
-        indexed_dataset.pad_instances([self.max_sentence_length, self.max_knowledge_length])
+        max_lengths = [self.max_sentence_length, self.max_knowledge_length]
+        processed_dataset = self._index_and_pad_dataset(dataset, max_lengths)
         if for_train:
-            max_lengths = indexed_dataset.max_lengths()
+            max_lengths = processed_dataset.max_lengths()
             self.max_sentence_length = max_lengths[0]
             self.max_knowledge_length = max_lengths[1]
-        inputs, labels = indexed_dataset.as_training_data()
+        inputs, labels = processed_dataset.as_training_data()
         sentences, background = zip(*inputs)
         sentences = numpy.asarray(sentences)
         background = numpy.asarray(background)

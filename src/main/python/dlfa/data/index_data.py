@@ -1,5 +1,7 @@
 import warnings
-from nltk.tokenize import word_tokenize
+
+from collections import defaultdict
+
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 
 
@@ -8,41 +10,36 @@ class DataIndexer(object):
         self.word_index = {"PADDING":0, "UNK":1, ",":2, ".":3, "(":4, ")":5}
         self.reverse_word_index = {0:"PADDING", 1:"UNK", 2:",", 3:".", 4:"(", 5:")"}
 
-    def fit_word_dictionary(self, dataset: 'Dataset'):
+    def fit_word_dictionary(self, dataset: 'Dataset', min_count: int=1):
         """
         Given a Dataset, this method decides which words are given an index, and which ones are
         mapped to an OOV token (in this case "UNK").  This method must be called before any dataset
         is indexed with this DataIndexer.  If you don't first fit the word dictionary, you'll
         basically map every token onto "UNK".
 
-        We use nltk.tokenize.word_tokenize on the text in each Instance in the Dataset, and then
-        keep all words that appear at least once.
+        We call instance.words() for each instance in the dataset, and then keep all words that
+        appear at least min_count times.
         """
-        # TODO(matt): might be more efficient and configurable to just keep a count, instead of
-        # using these two sets.  Then the caller can set a threshold.
-        singletons = set([])
-        non_singletons = set([])
+        word_counts = defaultdict(int)
         for instance in dataset.instances:
-            words = word_tokenize(instance.text.lower())
-            for word in words:
-                if word not in non_singletons:
-                    if word in singletons:
-                        # Since we are seeing the word again, it is not a singleton
-                        singletons.remove(word)
-                        non_singletons.add(word)
-                    else:
-                        # We have not seen this word. It is a singleton (at least for now)
-                        singletons.add(word)
-        for word in non_singletons:
-            if word not in self.word_index:
+            for word in instance.words():
+                word_counts[word] += 1
+        for word, count in word_counts.items():
+            if count > min_count and word not in self.word_index:
                 self.word_index[word] = len(self.word_index)
-        self.reverse_word_index = {index:word for (word, index) in self.word_index.items()}
+        self.reverse_word_index = {index:word for word, index in self.word_index.items()}
+
+    def words_in_index(self):
+        return self.word_index.keys()
 
     def get_word_index(self, word: str):
         if word in self.word_index:
             return self.word_index[word]
         else:
             return self.word_index["UNK"]
+
+    def get_word_from_index(self, index: int):
+        return self.reverse_word_index[index]
 
     def get_shift_reduce_sequences(self, word_arrays):
         """
