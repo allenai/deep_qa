@@ -38,4 +38,12 @@ resolvers ++= Seq(
   "AllenAI Releases" at "http://utility.allenai.org:8081/nexus/content/repositories/releases"
 )
 
+lazy val testPython = TaskKey[Unit]("testPython")
+
+testPython := {
+  "py.test" !
+}
+
+(test in Test) <<= (test in Test) dependsOn (testPython)
+
 instrumentSettings
