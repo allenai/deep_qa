@@ -4,7 +4,7 @@ import pickle
 import numpy
 from keras.models import model_from_json
 
-from ..data.dataset import Dataset, IndexedDataset  # pylint: disable=unused-import
+from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.index_data import DataIndexer
 
 
@@ -91,7 +91,7 @@ class NNSolver(object):
         parser.add_argument('--use_model_from_epoch', type=int,
                             help="Use model from a particular epoch (use best saved model if empty)")
 
-    def prep_labeled_data(self, dataset, for_train: bool):
+    def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
         """
         Takes dataset, which could be a complex tuple for some classes, and produces as output a
         tuple of (inputs, labels), which can be used directly with Keras to either train or
@@ -192,7 +192,7 @@ class NNSolver(object):
         return self.model.predict(test_input)
 
     @staticmethod
-    def _assert_dataset_is_questions(dataset: Dataset):
+    def _assert_dataset_is_questions(dataset: TextDataset):
         """
         This method checks that dataset matches the assumptions we make about validation data: that
         it is a list of sentences corresponding to four-choice questions, with one correct answer
@@ -270,10 +270,10 @@ class NNSolver(object):
         this method.
         """
         if self.train_file:
-            dataset = Dataset.read_from_file(self.train_file)
+            dataset = TextDataset.read_from_file(self.train_file)
         else:
-            positive_dataset = Dataset.read_from_file(self.positive_train_file, label=True)
-            negative_dataset = Dataset.read_from_file(self.negative_train_file, label=False)
+            positive_dataset = TextDataset.read_from_file(self.positive_train_file, label=True)
+            negative_dataset = TextDataset.read_from_file(self.negative_train_file, label=False)
             dataset = positive_dataset.merge(negative_dataset)
         if self.max_training_instances is not None:
             print("Truncating the dataset to", self.max_training_instances, "instances")
@@ -297,7 +297,7 @@ class NNSolver(object):
         return self._read_question_data(self.test_file)
 
     def _read_question_data(self, filename):
-        dataset = Dataset.read_from_file(filename)
+        dataset = TextDataset.read_from_file(filename)
         self._assert_dataset_is_questions(dataset)
         inputs, labels = self.prep_labeled_data(dataset, for_train=False)
         return inputs, self.group_by_question(labels)

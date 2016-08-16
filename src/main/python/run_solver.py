@@ -13,10 +13,10 @@ def main():
     solver_class = concrete_solvers[model_type]
 
     argparser = argparse.ArgumentParser(description="Neural Network Solver")
-    argparser.add_argument('model_type', type=str, choices=concrete_solvers.keys(),
-                           help="Path to save/load LSH")
     solver_class.update_arg_parser(argparser)
-    args = argparser.parse_args()
+
+    # We already handled the first argument, so we just parse the remaining ones.
+    args = argparser.parse_args(sys.argv[2:])
 
     # The solver class got to update the argument parser, so it will just grab whatever arguments
     # it needs directly from the parsed arguments.

@@ -3,15 +3,15 @@ import random
 
 from typing import List
 
-from .instance import BackgroundInstance, Instance, IndexedInstance
+from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance
 from .index_data import DataIndexer
 
-class Dataset(object):
+class Dataset:
     """
-    A collection of Instances, with some helper methods.
+    A collection of Instances.
 
-    I was originally thinking I'd have several kinds of Dataset subclasses, but in the end decided
-    that subclassing Instance made more sense.
+    This base class has general methods that apply to all collections of Instances.  That basically
+    is just methods that operate on sets, like merging and truncating.
     """
     def __init__(self, instances: List[Instance]):
         """
@@ -21,13 +21,6 @@ class Dataset(object):
         class that call the constructor, such as `merge()` and `truncate()`.
         """
         self.instances = instances
-
-    def to_indexed_dataset(self, data_indexer: DataIndexer) -> 'IndexedDataset':
-        '''
-        Converts the Dataset into an IndexedDataset, given a DataIndexer.
-        '''
-        indexed_instances = [instance.to_indexed_instance(data_indexer) for instance in self.instances]
-        return IndexedDataset(indexed_instances)
 
     def merge(self, other: 'Dataset') -> 'Dataset':
         """
@@ -53,11 +46,30 @@ class Dataset(object):
         random.shuffle(new_instances)
         return self.__class__(new_instances[:max_instances])
 
+
+class TextDataset(Dataset):
+    """
+    A Dataset of TextInstances, with a few helper methods.
+
+    TextInstances aren't useful for much with Keras until they've been indexed.  So this class just
+    has methods to read in data from a file, then convert it into something that's actually useful
+    for Keras or other libraries.
+    """
+    def __init__(self, instances: List[TextInstance]):
+        super(TextDataset, self).__init__(instances)
+
+    def to_indexed_dataset(self, data_indexer: DataIndexer) -> 'IndexedDataset':
+        '''
+        Converts the Dataset into an IndexedDataset, given a DataIndexer.
+        '''
+        indexed_instances = [instance.to_indexed_instance(data_indexer) for instance in self.instances]
+        return IndexedDataset(indexed_instances)
+
     @staticmethod
     def read_from_file(filename: str, label: bool=None):
         lines = [x.strip() for x in codecs.open(filename, "r", "utf-8").readlines()]
-        instances = [Instance.read_from_line(x, label) for x in lines]
-        return Dataset(instances)
+        instances = [TextInstance.read_from_line(x, label) for x in lines]
+        return TextDataset(instances)
 
     @staticmethod
     def read_background_from_file(dataset: 'Dataset', filename: str) -> 'Dataset':
@@ -75,7 +87,7 @@ class Dataset(object):
         """
         new_instances = {}
         for instance in dataset.instances:
-            background_instance = BackgroundInstance(instance.text, [], instance.label, instance.index)
+            background_instance = BackgroundTextInstance(instance.text, [], instance.label, instance.index)
             new_instances[instance.index] = background_instance
         for line in codecs.open(filename, "r", "utf-8"):
             fields = line.strip().split("\t")
@@ -84,15 +96,18 @@ class Dataset(object):
                 instance = new_instances[index]
                 for sequence in fields[1:]:
                     instance.background.append(sequence)
-        return Dataset(list(new_instances.values()))
+        return TextDataset(list(new_instances.values()))
 
 
-class IndexedDataset(object):
+class IndexedDataset(Dataset):
     """
-    A collection of IndexedInstances, with some helper methods.
+    A Dataset of IndexedInstances, with some helper methods.
+
+    IndexedInstances have text sequences replaced with lists of word indices, and are thus able to
+    be padded to consistent lengths and converted to training inputs.
     """
     def __init__(self, instances: List[IndexedInstance]):
-        self.instances = instances
+        super(IndexedDataset, self).__init__(instances)
 
     def max_lengths(self):
         lengths = [instance.get_lengths() for instance in self.instances]

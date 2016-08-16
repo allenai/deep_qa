@@ -6,7 +6,7 @@ from keras.layers import Embedding, Input, LSTM, Dense, Dropout
 from keras.models import Model
 from keras.regularizers import l2
 
-from ..data.dataset import Dataset, IndexedDataset  # pylint: disable=unused-import
+from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from .nn_solver import NNSolver
 
 class LSTMSolver(NNSolver):
@@ -63,7 +63,7 @@ class LSTMSolver(NNSolver):
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[1]
 
-    def prep_labeled_data(self, dataset: Dataset, for_train: bool):
+    def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
         indexed_dataset.pad_instances([self.max_sentence_length])
         if for_train:

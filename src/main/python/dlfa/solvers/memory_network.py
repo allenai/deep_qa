@@ -7,7 +7,7 @@ from keras.layers import Input, Embedding, LSTM, TimeDistributed, Dense, Dropout
 from keras.regularizers import l2
 from keras.models import Model
 
-from ..data.dataset import Dataset, IndexedDataset  # pylint: disable=unused-import
+from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from ..layers.knowledge_backed_scorers import AttentiveReaderLayer, MemoryLayer
 from .nn_solver import NNSolver
 
@@ -173,15 +173,15 @@ class MemoryNetworkSolver(NNSolver):
 
     def _get_training_data(self):
         if self.train_file:
-            dataset = Dataset.read_from_file(self.train_file)
-            background_dataset = Dataset.read_background_from_file(dataset, self.train_background)
+            dataset = TextDataset.read_from_file(self.train_file)
+            background_dataset = TextDataset.read_background_from_file(dataset, self.train_background)
         else:
-            positive_dataset = Dataset.read_from_file(self.positive_train_file, label=True)
-            positive_background = Dataset.read_background_from_file(positive_dataset,
-                                                                    self.positive_train_background)
-            negative_dataset = Dataset.read_from_file(self.negative_train_file, label=False)
-            negative_background = Dataset.read_background_from_file(negative_dataset,
-                                                                    self.negative_train_background)
+            positive_dataset = TextDataset.read_from_file(self.positive_train_file, label=True)
+            positive_background = TextDataset.read_background_from_file(positive_dataset,
+                                                                        self.positive_train_background)
+            negative_dataset = TextDataset.read_from_file(self.negative_train_file, label=False)
+            negative_background = TextDataset.read_background_from_file(negative_dataset,
+                                                                        self.negative_train_background)
             background_dataset = positive_background.merge(negative_background)
         if self.max_training_instances is not None:
             background_dataset = background_dataset.truncate(self.max_training_instances)
@@ -195,9 +195,9 @@ class MemoryNetworkSolver(NNSolver):
         return self._read_question_data_with_background(self.test_file, self.test_background)
 
     def _read_question_data_with_background(self, filename, background_filename):
-        dataset = Dataset.read_from_file(filename)
+        dataset = TextDataset.read_from_file(filename)
         self._assert_dataset_is_questions(dataset)
-        background_dataset = Dataset.read_background_from_file(dataset, background_filename)
+        background_dataset = TextDataset.read_background_from_file(dataset, background_filename)
         inputs, labels = self.prep_labeled_data(background_dataset, for_train=False)
         return inputs, self.group_by_question(labels)
 
