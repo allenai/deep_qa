@@ -94,8 +94,8 @@ object MemoryNetworkExperiments {
 
   val pretrainedEmbeddingParams: JValue =
     ("file" -> "/home/mattg/data/glove.840B.300d.txt.gz") ~
-    ("fine tune" -> true) ~
-    ("add projection" -> false)
+    ("fine tune" -> false) ~
+    ("add projection" -> true)
 
   val baseModelParams: JValue =
     ("positive data" -> sentenceSelectorParams) ~
@@ -132,7 +132,7 @@ object MemoryNetworkExperiments {
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
     NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
   }
 }

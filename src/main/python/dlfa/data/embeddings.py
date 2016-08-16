@@ -9,6 +9,11 @@ from .index_data import DataIndexer
 
 class PretrainedEmbeddings(object):
     @staticmethod
+    def initialize_random_matrix(shape, seed=1337):
+        numpy_rng = numpy.random.RandomState(seed)  # pylint: disable=no-member
+        return numpy_rng.uniform(size=shape, low=0.05, high=-0.05)
+
+    @staticmethod
     def get_embedding_layer(embeddings_filename: str, data_indexer: DataIndexer, trainable=False):
         """
         Reads a pre-trained embedding file and generates a Keras Embedding layer that has weights
@@ -42,7 +47,7 @@ class PretrainedEmbeddings(object):
 
         # Now we initialize the weight matrix for an embedding layer.
         print("Initializing pre-trained embedding layer")
-        embedding_matrix = numpy.zeros((vocab_size, embedding_size))
+        embedding_matrix = PretrainedEmbeddings.initialize_random_matrix((vocab_size, embedding_size))
         empty_embedding = numpy.zeros(embedding_size)
 
         # The 2 here is because we know too much about the DataIndexer.  Index 0 is the padding

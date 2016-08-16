@@ -108,7 +108,7 @@ class BackgroundTextInstance(TextInstance):
         self.background = background
 
     def words(self):
-        text_words = super(BackgroundInstance, self).words()
+        text_words = super(BackgroundTextInstance, self).words()
         background_words = []
         for background_text in self.background:
             background_words.extend(word_tokenize(background_text.lower()))

@@ -4,7 +4,7 @@ import pickle
 from typing import List
 
 import numpy
-from keras.layers import TimeDistributedDense, Input, Embedding, TimeDistributed, Dropout
+from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
 from keras.models import model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
@@ -44,6 +44,8 @@ class NNSolver(object):
         self.best_epoch = -1
         self.embedding_layer = None
         self.time_distributed_embedding_layer = None
+        self.projection = None
+        self.time_distributed_projection = None
 
     @classmethod
     def update_arg_parser(cls, parser):
@@ -368,11 +370,10 @@ class NNSolver(object):
                                                  mask_zero=True,  # this handles padding correctly
                                                  name='embedding')
             if self.project_embeddings:
-                # TODO(matt): this currently crashes...  I guess Keras doesn't expect you to add a
-                # TimeDistributedDense on top of an Embedding?  Theoretically, this should work...
-                self.embedding_layer = TimeDistributedDense(
-                        output_dim=self.embedding_size,
-                        name='embedding_projection')(self.embedding_layer)
+                self.projection = TimeDistributed(Dense(output_dim=self.embedding_size),
+                                                  name='embedding_projection')
+                self.time_distributed_projection = TimeDistributed(self.projection,
+                                                                   name='background_embedding_projection')
             self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer)
 
         # Now we actually embed the input and apply dropout.
@@ -380,6 +381,12 @@ class NNSolver(object):
             embedded_input = self.time_distributed_embedding_layer(input_layer)
         else:
             embedded_input = self.embedding_layer(input_layer)
+
+        if self.project_embeddings:
+            if is_time_distributed:
+                embedded_input = self.time_distributed_projection(embedded_input)
+            else:
+                embedded_input = self.projection(embedded_input)
 
         if self.embedding_dropout > 0.0:
             embedded_input = Dropout(self.embedding_dropout)(embedded_input)
