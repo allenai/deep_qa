@@ -49,8 +49,9 @@ object SimpleLstmExperiments {
   ///////////////////////////////////////////////////////////////////////////
 
   val validationQuestionParams: JValue =
-    ("question file" -> "data/science/monarch_questions/raw_questions.tsv") ~
-    ("output file" -> "data/science/monarch_questions/processed_questions.txt") ~
+    ("sentence producer type" -> "question interpreter") ~
+    ("question file" -> "/home/mattg/data/questions/omnibus_train_raw.tsv") ~
+    ("output file" -> "data/science/omnibus_questions/processed_questions.tsv") ~
     ("wh-movement" -> "matt's")
 
   ////////////////////////////////////////////////////////////////
@@ -63,7 +64,8 @@ object SimpleLstmExperiments {
     ("validation questions" -> validationQuestionParams) ~
     ("number of epochs" -> 1) ~
     ("max training instances" -> 1000) ~
-    ("positive data" -> sentenceSelectorParams)
+    ("positive data" -> sentenceSelectorParams) ~
+    ("negative data" -> corruptedSentenceSelectorParams)
 
   // STUFF BELOW HERE STILL TODO
 
@@ -78,8 +80,8 @@ object SimpleLstmExperiments {
   def main(args: Array[String]) {
     //new SentenceSelector(sentenceSelectorParams, fileUtil).runPipeline()
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
-    new CorruptedSentenceSelector(corruptedSentenceSelectorParams, fileUtil).runPipeline()
+    //new CorruptedSentenceSelector(corruptedSentenceSelectorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    //NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
 }

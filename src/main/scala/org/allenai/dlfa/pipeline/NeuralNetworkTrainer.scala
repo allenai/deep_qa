@@ -36,7 +36,7 @@ abstract class NeuralNetworkTrainer(
   val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
   val maxTrainingInstances = JsonHelper.extractAsOption[Int](params, "max training instances")
   val maxTrainingInstancesArgs =
-    maxTrainingInstances.map(max => Seq("--max_train_size", max.toString)).toSeq.flatten
+    maxTrainingInstances.map(max => Seq("--max_training_instances", max.toString)).toSeq.flatten
 
   val modelName = (params \ "model name").extract[String]
   val modelPrefix = s"models/$modelName"  // TODO(matt): make this a function of the arguments?
@@ -46,6 +46,7 @@ abstract class NeuralNetworkTrainer(
   val validationInput = (validationQuestionsFile, Some(questionInterpreter))
 
   override val binary = "python"
+  override val scriptFile = Some("src/main/python/run_solver.py")
 
   // These three outputs are written by the python code.  The config.json file is a specification
   // of the model layers, so that keras can reconstruct the saved model object / computational
@@ -104,8 +105,8 @@ class SimpleLstmTrainer(
     negativeDataProducer.map(p => Seq("--negative_train_file", p.outputFile)).toSeq.flatten
   val negativeDataInput = negativeDataProducer.map(p => (p.outputFile, Some(p))).toSet
 
-  override val scriptFile = Some("src/main/python/prop_scorer/nn_solver.py")
   override val arguments = Seq[String](
+    "LSTMSolver",
     "--positive_train_file", positiveTrainingFile,
     "--validation_file", validationQuestionsFile,
     "--num_epochs", numEpochs.toString,
@@ -167,13 +168,13 @@ class MemoryNetworkTrainer(
   val defaultChoice = choices(0)
   val memoryLayerType = JsonHelper.extractChoiceWithDefault(params, "memory layer type", choices, defaultChoice)
 
-  override val scriptFile = Some("src/main/python/prop_scorer/memory_network.py")
   override val arguments = Seq[String](
-    "--positive_train_input", positiveTrainingFile,
+    "MemoryNetworkSolver",
+    "--positive_train_file", positiveTrainingFile,
     "--positive_train_background", positiveBackgroundFile,
-    "--negative_train_input", negativeTrainingFile,
+    "--negative_train_file", negativeTrainingFile,
     "--negative_train_background", negativeBackgroundFile,
-    "--validation_input", validationQuestionsFile,
+    "--validation_file", validationQuestionsFile,
     "--validation_background", validationBackgroundFile,
     "--memory_layer", memoryLayerType,
     "--num_epochs", numEpochs.toString,

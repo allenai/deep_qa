@@ -17,7 +17,7 @@ object MemoryNetworkExperiments {
     ("elastic search index url" -> "aristo-es1.dev.ai2") ~
     ("elastic search index port" -> 9300) ~
     ("elastic search cluster name" -> "aristo-es") ~
-    ("elastic search index name" -> "science_templates")
+    ("elastic search index name" -> "busc")
 
   //////////////////////////////////////////////////////////
   // Step 1: Take a corpus and select sentences to use
@@ -126,6 +126,6 @@ object MemoryNetworkExperiments {
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
   }
 }
