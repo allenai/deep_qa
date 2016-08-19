@@ -174,10 +174,18 @@ class MemoryNetworkSolver(NNSolver):
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_selector = self.knowledge_selector(output_dim=self.embedding_size,
-                                                         name='knowledge_selector_%d' % i)
+            knowledge_selector = self.knowledge_selector(name='knowledge_selector_%d' % i)
             attention_weights = knowledge_selector(regularized_merged_rep)
-            attended_knowledge = K.sum(encoded_knowledge * K.expand_dims(attention_weights, dim=-1), axis=1)
+            # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
+            # ndim of weights is one less than data.
+            weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1], dim=-1),
+                                                       axis=1)
+            # input shapes: (samples, knowledge_len, input_dim), (samples, knowledge_len)
+            # output shape: (samples, input_dim)
+            weighted_average_shape = lambda input_shapes: (input_shapes[0][0], input_shapes[0][2])
+            attended_knowledge = merge([encoded_knowledge, attention_weights],
+                                       mode=weighted_average,
+                                       output_shape=weighted_average_shape)
             memory_updater = self.memory_updater(output_dim=self.embedding_size,
                                                  name='memory_updater_%d' % i)
             current_memory = memory_updater.update(current_memory, attended_knowledge)
