@@ -5,7 +5,7 @@ from typing import List
 
 import numpy
 from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
-from keras.models import model_from_json
+from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.embeddings import PretrainedEmbeddings
@@ -38,6 +38,7 @@ class NNSolver(object):
 
         self.num_epochs = kwargs['num_epochs']
         self.patience = kwargs['patience']
+        self.visualize = kwargs['visualize']
 
         self.data_indexer = DataIndexer()
         self.model = None
@@ -110,6 +111,9 @@ class NNSolver(object):
                             help="Number of train epochs (20 by default)")
         parser.add_argument('--patience', type=int, default=1,
                             help="Number of epochs to be patient before early stopping (1 by default)")
+        parser.add_argument('--visualize', action='store_true',
+                            help='Visualize the intermediate outputs of the trained model.'
+                                'Output will be written to <model_serialization_prefix>_debug_<epoch>.out')
 
         # Testing details
         parser.add_argument('--use_model_from_epoch', type=int,
@@ -157,6 +161,12 @@ class NNSolver(object):
 
         # Then we build the model.  This creates a compiled Keras Model.
         self.model = self._build_model(train_input)
+        if self.visualize:
+            # Get the list of layers whose outputs will be visualized as per the
+            # solver definition and build a debug model.
+            debug_layers = self.get_debug_layer_names()
+            self.debug_model = self._build_debug_model(debug_layers)
+            validation_text_with_background = self._get_debug_text_data()
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -176,6 +186,9 @@ class NNSolver(object):
                 best_accuracy = accuracy
                 self.best_epoch = epoch_id
                 self._save_model(epoch_id)
+                if self.visualize:
+                    # Shows intermediate outputs of the model on validation data
+                    self.debug(validation_text_with_background, validation_input, epoch_id)
         self._save_best_model()
 
     def test(self):
@@ -186,6 +199,23 @@ class NNSolver(object):
         print("Scoring test data", file=sys.stderr)
         accuracy = self.evaluate(labels, inputs)
         print("Test accuracy: %.4f" % accuracy, file=sys.stderr)
+
+    def _get_debug_text_data():
+        raise NotImplementedError
+
+    def debug(self, validation_text, validation_input, epoch: int):
+        """
+        Each solver defines its own debug method to visualize the
+        appropriate layers.
+        """
+        raise NotImplementedError
+
+    def get_debug_layer_names(self):
+        """
+        Each solver defines its own list of layers whose output will
+        be visualized.
+        """
+        raise NotImplementedError
 
     def load_model(self, epoch: int=None):
         """
@@ -338,6 +368,20 @@ class NNSolver(object):
         The returned model will be used to call model.fit(train_input, train_labels).
         """
         raise NotImplementedError
+
+    def _build_debug_model(self, wanted_layers: List[str]):
+        """
+        Accesses self.model and extracts the necessary parts of the model out to define another
+        model that has the intermediate outputs we want to visualize.
+        """
+        debug_inputs = self.model.get_input_at(0)  # list of all input_layers
+        debug_outputs = []
+        for layer in self.model.layers:
+            if layer.name in wanted_layers:
+                debug_outputs.append(layer.get_output_at(0))
+        debug_model = Model(input=debug_inputs, output=debug_outputs)
+        debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
+        return debug_model                    
 
     def _get_embedded_sentence_input(self, sentence_input, is_time_distributed=False):
         """
