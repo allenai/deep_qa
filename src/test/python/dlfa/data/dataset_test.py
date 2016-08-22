@@ -2,6 +2,13 @@ import os
 import unittest
 from pyfakefs import fake_filesystem_unittest
 
+# These lines are just here so that `py.test --cov=dlfa` produces a report for all dlfa submodules.
+# It's not perfect (some files are still missing), but at least it's an improvement.  These imports
+# can be removed once there are actual tests for code in these modules.
+import dlfa.layers
+import dlfa.sentence_corruption
+import dlfa.solvers
+
 from dlfa.data.dataset import Dataset, TextDataset
 from dlfa.data.instance import TextInstance
 
