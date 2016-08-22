@@ -17,8 +17,12 @@ overrides
 
 #### TESTING-RELATED PACKAGES ####
 
-# Provides a fake filesystem for testing.
-pyfakefs
+# We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
+# the tests.  With this here, you can run the tests with `py.test` from the base directory.
+pytest
 
 # Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
 pytest-pythonpath
+
+# Provides a fake filesystem for testing.
+pyfakefs
