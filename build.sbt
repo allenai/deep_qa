@@ -38,4 +38,16 @@ resolvers ++= Seq(
   "AllenAI Releases" at "http://utility.allenai.org:8081/nexus/content/repositories/releases"
 )
 
+lazy val testPython = TaskKey[Unit]("testPython")
+
+testPython := {
+  val exitCode = { "py.test --cov=dlfa" ! }
+  if (exitCode != 0) {
+     error("Python tests failed")
+  }
+}
+
+// TODO(matt): it'd be nicer if this would still execute scala tests if python tests fail...
+(test in Test) <<= (test in Test) dependsOn (testPython)
+
 instrumentSettings

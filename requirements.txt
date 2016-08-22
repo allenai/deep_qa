@@ -1,0 +1,31 @@
+# Library dependencies for the python code.  You need to install these with
+# `pip install -r requirements.txt` before you can run this.
+
+# Currently we haven't specified any version numbers on these requirements; we'll do that when
+# there is some pressing reason to do so.
+
+#### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
+
+# Neural net libraries.
+keras
+h5py
+
+#### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
+
+# Adds an @overrides decorator for better documentation and error checking when using subclasses.
+overrides
+
+#### TESTING-RELATED PACKAGES ####
+
+# We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
+# the tests.  With this here, you can run the tests with `py.test` from the base directory.
+pytest
+
+# Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
+pytest-pythonpath
+
+# Allows generation of coverage reports with pytest.
+pytest-cov
+
+# Provides a fake filesystem for testing.
+pyfakefs

@@ -17,3 +17,4 @@ tmp*/
 *.aux
 *.make
 *.temp
+.coverage
