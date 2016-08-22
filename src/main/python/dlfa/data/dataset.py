@@ -66,13 +66,17 @@ class TextDataset(Dataset):
         return IndexedDataset(indexed_instances)
 
     @staticmethod
-    def read_from_file(filename: str, label: bool=None):
+    def read_from_file(filename: str, label: bool=None) -> 'TextDataset':
         lines = [x.strip() for x in codecs.open(filename, "r", "utf-8").readlines()]
+        return TextDataset.read_from_lines(lines, label)
+
+    @staticmethod
+    def read_from_lines(lines: List[str], label: bool=None) -> 'TextDataset':
         instances = [TextInstance.read_from_line(x, label) for x in lines]
         return TextDataset(instances)
 
     @staticmethod
-    def read_background_from_file(dataset: 'Dataset', filename: str) -> 'Dataset':
+    def read_background_from_file(dataset: 'TextDataset', filename: str) -> 'TextDataset':
         """
         Reads a file formatted as background information and matches the background to the
         sentences in the given dataset.  The given dataset must have instance indices, so we can

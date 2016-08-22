@@ -2,6 +2,8 @@ import sys
 
 import numpy
 
+from overrides import overrides
+
 from keras import backend as K
 from keras.layers import LSTM, TimeDistributed, Dropout, merge
 from keras.regularizers import l2
@@ -54,9 +56,6 @@ class MemoryNetworkSolver(NNSolver):
 
 
     def __init__(self, **kwargs):
-        '''
-        num_memory_layers: Number of KnowledgeBackedDenseLayers to use for scoring.
-        '''
         super(MemoryNetworkSolver, self).__init__(**kwargs)
         self.train_background = kwargs['train_background']
         self.positive_train_background = kwargs['positive_train_background']
@@ -77,6 +76,7 @@ class MemoryNetworkSolver(NNSolver):
         self.max_knowledge_length = None
 
     @classmethod
+    @overrides
     def update_arg_parser(cls, parser):
         super(MemoryNetworkSolver, cls).update_arg_parser(parser)
 
@@ -111,6 +111,7 @@ class MemoryNetworkSolver(NNSolver):
         parser.add_argument('--num_memory_layers', type=int, default=1,
                             help="Number of memory layers in the network. (default 1)")
 
+    @overrides
     def can_train(self) -> bool:
         has_train_background = (self.train_background is not None) or (
                 self.positive_train_background is not None and
@@ -119,42 +120,44 @@ class MemoryNetworkSolver(NNSolver):
         has_background = has_train_background and has_validation_background
         return has_background and super(MemoryNetworkSolver, self).can_train()
 
+    @overrides
     def can_test(self) -> bool:
         return self.test_background is not None and super(MemoryNetworkSolver, self).can_test()
 
     @classmethod
+    @overrides
     def _get_custom_objects(cls):
         custom_objects = super(MemoryNetworkSolver, cls)._get_custom_objects()
         custom_objects['DotProductKnowledgeSelector'] = DotProductKnowledgeSelector
         custom_objects['ParameterizedKnowledgeSelector'] = ParameterizedKnowledgeSelector
         return custom_objects
 
+    @overrides
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
         # TODO(matt): set the background length too, or does it matter?  Maybe the model doesn't
         # actually care?
 
-    def _build_model(self, train_input):
-        '''
-        train_input: a tuple of (proposition_inputs, knowledge_inputs), each described below:
-            proposition_inputs: numpy_array(samples, num_words; int32): Indices of words
-                in labeled propositions
-            knowledge_inputs: numpy_array(samples, knowledge_len, num_words; int32): Indices
-                of words in background facts that correspond to the propositions.
-        '''
-        proposition_inputs, knowledge_inputs = train_input
+    def _get_sentence_encoder(self):
+        return LSTM(output_dim=self.embedding_size,
+                    W_regularizer=l2(0.01),
+                    U_regularizer=l2(0.01),
+                    b_regularizer=l2(0.01),
+                    name='sentence_encoder')
 
+    @overrides
+    def _build_model(self):
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
         # inputs and the knowledge inputs.
         proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
-                proposition_inputs)
+                input_shape=(self.max_sentence_length,))
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                knowledge_inputs, is_time_distributed=True)
+                input_shape=(self.max_sentence_length, self.max_knowledge_length),
+                is_time_distributed=True)
 
         # Step 3: Encode the two embedded inputs using the same encoder.  We could replace the LSTM
         # below with fancier encoders depending on the input.
-        proposition_encoder = LSTM(output_dim=self.embedding_size, W_regularizer=l2(0.01),
-                                   U_regularizer=l2(0.01), b_regularizer=l2(0.01), name='encoder')
+        proposition_encoder = self._get_sentence_encoder()
 
         # Knowledge encoder will have the same encoder running on a higher order tensor.
         # i.e., proposition_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
@@ -218,6 +221,7 @@ class MemoryNetworkSolver(NNSolver):
         print(memory_network.summary(), file=sys.stderr)
         return memory_network
 
+    @overrides
     def _get_training_data(self):
         if self.train_file:
             dataset = TextDataset.read_from_file(self.train_file)
@@ -236,28 +240,28 @@ class MemoryNetworkSolver(NNSolver):
         self.data_indexer.fit_word_dictionary(background_dataset)
         return self.prep_labeled_data(background_dataset, for_train=True)
 
+    @overrides
     def _get_validation_data(self):
-        return self._read_question_data_with_background(self.validation_file,
-                                                        self.validation_background)
+        dataset = TextDataset.read_from_file(self.validation_file)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
+        self.validation_dataset = background_dataset
+        return self._prep_question_dataset(background_dataset)
 
+    @overrides
     def _get_test_data(self):
-        return self._read_question_data_with_background(self.test_file, self.test_background)
+        dataset = TextDataset.read_from_file(self.test_file)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
+        return self._prep_question_dataset(background_dataset)
 
+    @overrides
     def _get_debug_dataset_and_input(self):
         dataset = TextDataset.read_from_file(self.debug_file)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.debug_background)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
         # Now get inputs, and ignore the labels (background_dataset has them)
         inputs, _ = self.prep_labeled_data(background_dataset, for_train=False)
         return background_dataset, inputs
 
-    def _read_question_data_with_background(self, filename, background_filename):
-        dataset = TextDataset.read_from_file(filename)
-        self._assert_dataset_is_questions(dataset)
-        background_dataset = TextDataset.read_background_from_file(dataset, background_filename)
-        inputs, labels = self.prep_labeled_data(background_dataset, for_train=False)
-        return inputs, self.group_by_question(labels)
-
+    @overrides
     def prep_labeled_data(self, dataset: Dataset, for_train: bool):
         """
         Not much to do here, as IndexedBackgroundInstance does most of the work.

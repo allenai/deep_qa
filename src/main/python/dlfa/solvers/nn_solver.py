@@ -41,13 +41,25 @@ class NNSolver(object):
         self.patience = kwargs['patience']
 
         self.data_indexer = DataIndexer()
+
+        # Model-specific member variables that will get set and used later.
         self.model = None
         self.debug_model = None
-        self.best_epoch = -1
         self.embedding_layer = None
         self.time_distributed_embedding_layer = None
         self.projection = None
         self.time_distributed_projection = None
+
+        # Training-specific member variables that will get set and used later.
+        self.best_epoch = -1
+        # We store the datasets used for training and validation, both before processing and after
+        # processing, in case a subclass wants to modify it between epochs for whatever reason.
+        self.training_dataset = None
+        self.train_input = None
+        self.train_labels = None
+        self.validation_dataset = None
+        self.validation_input = None
+        self.validation_labels = None
 
     @classmethod
     def update_arg_parser(cls, parser):
@@ -157,11 +169,11 @@ class NNSolver(object):
         '''
 
         # First we need to prepare the data that we'll use for training.
-        train_input, train_labels = self._get_training_data()
-        validation_input, validation_labels = self._get_validation_data()
+        self.train_input, self.train_labels = self._get_training_data()
+        self.validation_input, self.validation_labels = self._get_validation_data()
 
         # Then we build the model and compile it.
-        self.model = self._build_model(train_input)
+        self.model = self._build_model()
         # TODO(pradeep): Try out other optimizers, especially rmsprop.
         self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         if self.debug_file:
@@ -177,9 +189,10 @@ class NNSolver(object):
         self.best_epoch = 0
         num_worse_epochs = 0
         for epoch_id in range(self.num_epochs):
+            self._pre_epoch_hook(epoch_id)
             print("Epoch %d" % epoch_id, file=sys.stderr)
-            self.model.fit(train_input, train_labels, nb_epoch=1)
-            accuracy = self.evaluate(validation_labels, validation_input)
+            self.model.fit(self.train_input, self.train_labels, nb_epoch=1)
+            accuracy = self.evaluate(self.validation_labels, self.validation_input)
             print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
             if accuracy < best_accuracy:
                 num_worse_epochs += 1
@@ -320,7 +333,8 @@ class NNSolver(object):
 
     def _get_training_data(self):
         """Loads training data and converts it into a format suitable for input to Keras.  This
-        method must return a tuple of (train_input, train_labels).
+        method must return a tuple of (train_input, train_labels).  This method also must set
+        self.training_dataset with the unprocessed Dataset object.
 
         This method takes no arguments; any necessary arguments (e.g., a path for where to find the
         training data) must have been passed to the constructor of this object.
@@ -339,6 +353,7 @@ class NNSolver(object):
             print("Truncating the dataset to", self.max_training_instances, "instances")
             dataset = dataset.truncate(self.max_training_instances)
         self.data_indexer.fit_word_dictionary(dataset)
+        self.training_dataset = dataset
         return self.prep_labeled_data(dataset, for_train=True)
 
     def _get_validation_data(self):
@@ -351,13 +366,14 @@ class NNSolver(object):
         logical forms as input.  NNSolvers that have more complicated inputs will need to override
         this method.
         """
-        return self._read_question_data(self.validation_file)
+        self.validation_dataset = TextDataset.read_from_file(self.validation_file)
+        return self._prep_question_dataset(self.validation_dataset)
 
     def _get_test_data(self):
-        return self._read_question_data(self.test_file)
+        dataset = TextDataset.read_from_file(self.test_file)
+        return self._prep_question_dataset(dataset)
 
-    def _read_question_data(self, filename):
-        dataset = TextDataset.read_from_file(filename)
+    def _prep_question_dataset(self, dataset: TextDataset):
         self._assert_dataset_is_questions(dataset)
         inputs, labels = self.prep_labeled_data(dataset, for_train=False)
         return inputs, self.group_by_question(labels)
@@ -367,9 +383,10 @@ class NNSolver(object):
         indexed_dataset.pad_instances(max_lengths)
         return indexed_dataset
 
-    def _build_model(self, train_input):
-        """Constructs and returns a Keras model that will take train_input as input, and produce as
-        output a true/false decision for each input.
+    def _build_model(self):
+        """Constructs and returns a Keras model that will take the output of
+        self._get_training_data as input, and produce as output a true/false decision for each
+        input.
 
         The returned model will be used to call model.fit(train_input, train_labels).
         """
@@ -386,9 +403,9 @@ class NNSolver(object):
             if layer.name in debug_layer_names:
                 debug_outputs.append(layer.get_output_at(0))
         debug_model = Model(input=debug_inputs, output=debug_outputs)
-        return debug_model                    
+        return debug_model
 
-    def _get_embedded_sentence_input(self, sentence_input, is_time_distributed=False):
+    def _get_embedded_sentence_input(self, input_shape, is_time_distributed=False):
         """
         Performs the initial steps of embedding sentences.  This function takes care of two steps:
         (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
@@ -399,7 +416,7 @@ class NNSolver(object):
         final word vector layer.
         """
         # pylint: disable=redefined-variable-type
-        input_layer = Input(shape=sentence_input.shape[1:], dtype='int32')
+        input_layer = Input(shape=input_shape, dtype='int32')
 
         # If a particular model has several places where sentences are encoded, we want to be sure
         # to use the _same_ embedding layer for all of them, so we initialize them and save them to
@@ -441,6 +458,14 @@ class NNSolver(object):
             embedded_input = Dropout(self.embedding_dropout)(embedded_input)
 
         return input_layer, embedded_input
+
+    def _pre_epoch_hook(self, epoch: int):
+        """
+        This method gets called before each epoch of training.  If a solver wants to do any kind of
+        processing in between epochs (e.g., updating the training data for whatever reason), here
+        is your chance to do so.
+        """
+        pass
 
     def _save_model(self, epoch: int):
         # Serializing the model for future use.

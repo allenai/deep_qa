@@ -13,6 +13,7 @@ object NeuralNetworkTrainer {
     (params \ "model type").extract[String] match {
       case "simple lstm" => new SimpleLstmTrainer(params, fileUtil)
       case "memory network" => new MemoryNetworkTrainer(params, fileUtil)
+      case "memory network with differentiable search" => new DifferentiableSearchTrainer(params, fileUtil)
       case t => throw new IllegalStateException(s"Unrecognized neural network model type: $t")
     }
   }
@@ -152,26 +153,23 @@ class SimpleLstmTrainer(
 }
 
 /**
- * This NeuralNetworkTrainer is a memory network, corresponding to memory_network.py.  We take good
- * and bad sentences as input, as well as a collection of background sentences for each input.
+ * Because I had a hard time getting parameter validation to work right when I made
+ * DifferentiableSearchSolver inherit directly from MemoryNetworkTrainer, I refactored the common
+ * stuff out into this base class, which both of those two now inherit from.
  */
-class MemoryNetworkTrainer(
+abstract class MemoryNetworkBase(
   params: JValue,
   fileUtil: FileUtil
 ) extends NeuralNetworkTrainer(params, fileUtil) {
-  override val name = "Neural Network Trainer, on sentences, no background knowledge input"
-
-  val validParams = baseParams ++ Seq(
-    "positive data",
+  val memoryNetworkParams = baseParams ++ Seq(
     "positive background",
-    "negative data",
     "negative background",
     "validation background",
-    "memory layer type",
-    "num memory layers",
-    "max sentence length"
+    "knowledge selector",
+    "memory updater",
+    "entailment model",
+    "num memory layers"
   )
-  JsonHelper.ensureNoExtras(params, name, validParams)
 
   val positiveBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "positive background", fileUtil)
   val positiveBackgroundFile = positiveBackgroundSearcher.outputFile
@@ -184,23 +182,74 @@ class MemoryNetworkTrainer(
 
   val numMemoryLayers = JsonHelper.extractWithDefault(params, "num memory layers", 1)
 
-  val choices = Seq("attentive", "memory")
-  val defaultChoice = choices(0)
-  val memoryLayerType = JsonHelper.extractChoiceWithDefault(params, "memory layer type", choices, defaultChoice)
+  val knowledgeSelector = (params \ "knowledge selector").extract[String]
+  val memoryUpdater = (params \ "memory updater").extract[String]
+  val entailmentModel = (params \ "entailment model").extract[String]
 
-  override val arguments = Seq[String](
-    "MemoryNetworkSolver",
+  val memoryNetworkArguments = baseArguments ++ Seq[String](
     "--positive_train_background", positiveBackgroundFile,
     "--negative_train_background", negativeBackgroundFile,
     "--validation_background", validationBackgroundFile,
-    "--memory_layer", memoryLayerType,
+    "--knowledge_selector", knowledgeSelector,
+    "--memory_updater", memoryUpdater,
+    "--entailment_model", entailmentModel,
     "--num_memory_layers", numMemoryLayers.toString
-  ) ++ baseArguments
+  )
 
-  override val inputs: Set[(String, Option[Step])] = baseInputs ++ Set(
+  val memoryNetworkInputs: Set[(String, Option[Step])] = baseInputs ++ Set(
     (positiveBackgroundFile, Some(positiveBackgroundSearcher)),
     (negativeBackgroundFile, Some(negativeBackgroundSearcher)),
     (validationBackgroundFile, Some(validationBackgroundSearcher))
+  )
+}
+
+/**
+ * This NeuralNetworkTrainer is a memory network, corresponding to memory_network.py.  We take good
+ * and bad sentences as input, as well as a collection of background sentences for each input.
+ */
+class MemoryNetworkTrainer(
+  params: JValue,
+  fileUtil: FileUtil
+) extends MemoryNetworkBase(params, fileUtil) {
+  override val name = "Neural Network Trainer, on sentences, with background knowledge input"
+
+  val validParams = memoryNetworkParams
+  JsonHelper.ensureNoExtras(params, name, validParams)
+
+  override val arguments = Seq("MemoryNetworkSolver") ++ memoryNetworkArguments
+  override val inputs = memoryNetworkInputs
+  override val outputs = modelOutputs.toSet
+
+  override val inProgressFile = modelPrefix + "_in_progress"
+  override val paramFile = modelPrefix + "_params.json"
+}
+
+class DifferentiableSearchTrainer(
+  params: JValue,
+  fileUtil: FileUtil
+) extends MemoryNetworkBase(params, fileUtil) {
+  override val name = "DifferentiableSearchTrainer"
+
+  val validParams = memoryNetworkParams ++ Seq(
+    "corpus",
+    "num epochs delay",
+    "num epochs per encoding"
+  )
+  JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val corpus = (params \ "corpus").extract[String]
+  val numEpochsDelay = JsonHelper.extractWithDefault(params, "num epochs delay", 10)
+  val numEpochsPerEncoding = JsonHelper.extractWithDefault(params, "num epochs per encoding", 2)
+
+  override val arguments = Seq[String](
+    "DifferentiableSearchSolver",
+    "--corpus", corpus,
+    "--num_epochs_delay", numEpochsDelay.toString,
+    "--num_epochs_per_encoding", numEpochsPerEncoding.toString
+  ) ++ memoryNetworkArguments
+
+  override val inputs: Set[(String, Option[Step])] = memoryNetworkInputs ++ Set(
+    (corpus, None)
   )
   override val outputs = modelOutputs.toSet
 

@@ -107,9 +107,20 @@ object MemoryNetworkExperiments {
   val memoryNetworkParams: JValue = baseModelParams merge (
     ("model type" -> "memory network") ~
     ("model name" -> "busc/attentive_memory_network") ~
+    ("knowledge selector" -> "parameterized") ~
+    ("memory updater" -> "dense_concat") ~
+    ("entailment model" -> "dense_memory_only") ~
     ("positive background" -> positiveBackgroundParams) ~
     ("negative background" -> negativeBackgroundParams) ~
     ("validation background" -> validationBackgroundParams)
+  )
+
+  val differentiableSearchParams: JValue = memoryNetworkParams merge (
+    ("model type" -> "memory network with differentiable search") ~
+    ("model name" -> "busc/attentive_memory_network_with_differentiable_search") ~
+    ("corpus" -> "/home/mattg/data/busc/sentences.gz") ~
+    ("num epochs delay" -> 1) ~
+    ("num epochs per encoding" -> 1)
   )
 
   val simpleLstmModelParams: JValue = baseModelParams merge (
@@ -132,7 +143,8 @@ object MemoryNetworkExperiments {
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
+    //NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
+    //NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
   }
 }
