@@ -24,5 +24,8 @@ pytest
 # Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
 pytest-pythonpath
 
+# Allows generation of coverage reports with pytest.
+pytest-cov
+
 # Provides a fake filesystem for testing.
 pyfakefs

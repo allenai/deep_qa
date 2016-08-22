@@ -41,7 +41,7 @@ resolvers ++= Seq(
 lazy val testPython = TaskKey[Unit]("testPython")
 
 testPython := {
-  val exitCode = { "py.test" ! }
+  val exitCode = { "py.test --cov=dlfa" ! }
   if (exitCode != 0) {
      error("Python tests failed")
   }
