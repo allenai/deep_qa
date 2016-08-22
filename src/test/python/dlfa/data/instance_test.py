@@ -1,3 +1,5 @@
+# pylint: disable=no-self-use,invalid-name
+
 from dlfa.data.instance import TextInstance
 
 class TestTextInstance:
@@ -27,7 +29,7 @@ class TestTextInstance:
 
         instance = TextInstance.read_from_line(line)
         assert instance.text == text
-        assert instance.label == label
+        assert instance.label is label
         assert instance.index == index
 
     def test_read_from_line_handles_two_column_with_label(self):
@@ -38,7 +40,7 @@ class TestTextInstance:
 
         instance = TextInstance.read_from_line(line)
         assert instance.text == text
-        assert instance.label == label
+        assert instance.label is label
         assert instance.index == index
 
     def test_read_from_line_handles_two_column_with_index(self):
@@ -49,7 +51,7 @@ class TestTextInstance:
 
         instance = TextInstance.read_from_line(line)
         assert instance.text == text
-        assert instance.label == label
+        assert instance.label is label
         assert instance.index == index
 
     def test_read_from_line_handles_two_column_with_default_true(self):
@@ -60,7 +62,7 @@ class TestTextInstance:
 
         instance = TextInstance.read_from_line(line, default_label=True)
         assert instance.text == text
-        assert instance.label == True
+        assert instance.label is True
         assert instance.index == index
 
     def test_read_from_line_handles_two_column_with_default_false(self):
@@ -71,5 +73,5 @@ class TestTextInstance:
 
         instance = TextInstance.read_from_line(line, default_label=False)
         assert instance.text == text
-        assert instance.label == False
+        assert instance.label is False
         assert instance.index == index

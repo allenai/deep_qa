@@ -1,13 +1,12 @@
-import os
-import unittest
 from pyfakefs import fake_filesystem_unittest
+# pylint: disable=no-self-use
 
 # These lines are just here so that `py.test --cov=dlfa` produces a report for all dlfa submodules.
 # It's not perfect (some files are still missing), but at least it's an improvement.  These imports
 # can be removed once there are actual tests for code in these modules.
-import dlfa.layers
-import dlfa.sentence_corruption
-import dlfa.solvers
+import dlfa.layers  # pylint: disable=unused-import
+import dlfa.sentence_corruption  # pylint: disable=unused-import
+import dlfa.solvers  # pylint: disable=unused-import
 
 from dlfa.data.dataset import Dataset, TextDataset
 from dlfa.data.instance import TextInstance
@@ -35,12 +34,12 @@ class TestTextDataset(fake_filesystem_unittest.TestCase):
         instance = dataset.instances[0]
         assert instance.index == 1
         assert instance.text == "instance1"
-        assert instance.label == False
+        assert instance.label is False
         instance = dataset.instances[1]
         assert instance.index == 2
         assert instance.text == "instance2"
-        assert instance.label == True
+        assert instance.label is True
         instance = dataset.instances[2]
         assert instance.index == 3
         assert instance.text == "instance3"
-        assert instance.label == None
+        assert instance.label is None
