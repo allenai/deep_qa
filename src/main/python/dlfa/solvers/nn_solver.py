@@ -42,6 +42,7 @@ class NNSolver(object):
 
         self.data_indexer = DataIndexer()
         self.model = None
+        self.debug_model = None
         self.best_epoch = -1
         self.embedding_layer = None
         self.time_distributed_embedding_layer = None
@@ -166,7 +167,7 @@ class NNSolver(object):
             # solver definition and build a debug model.
             debug_layers = self.get_debug_layer_names()
             self.debug_model = self._build_debug_model(debug_layers)
-            validation_text_with_background = self._get_debug_text_data()
+            validation_background_dataset = self._get_debug_text_data()
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -188,7 +189,7 @@ class NNSolver(object):
                 self._save_model(epoch_id)
                 if self.visualize:
                     # Shows intermediate outputs of the model on validation data
-                    self.debug(validation_text_with_background, validation_input, epoch_id)
+                    self.debug(validation_background_dataset, validation_input, epoch_id)
         self._save_best_model()
 
     def test(self):
@@ -200,7 +201,7 @@ class NNSolver(object):
         accuracy = self.evaluate(labels, inputs)
         print("Test accuracy: %.4f" % accuracy, file=sys.stderr)
 
-    def _get_debug_text_data():
+    def _get_debug_text_data(self):
         raise NotImplementedError
 
     def debug(self, validation_text, validation_input, epoch: int):

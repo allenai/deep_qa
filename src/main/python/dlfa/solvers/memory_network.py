@@ -230,10 +230,10 @@ class MemoryNetworkSolver(NNSolver):
         return self._read_question_data_with_background(self.test_file, self.test_background)
 
     def _get_debug_text_data(self):
-        text_dataset = TextDataset.read_from_file(self.validation_file)
-        text_with_background = TextDataset.read_background_from_file(text_dataset,
-                                                                     self.validation_background)
-        return text_with_background
+        dataset = TextDataset.read_from_file(self.validation_file)
+        background_dataset = TextDataset.read_background_from_file(dataset,
+                                                                   self.validation_background)
+        return background_dataset
 
     def _read_question_data_with_background(self, filename, background_filename):
         dataset = TextDataset.read_from_file(filename)
@@ -265,7 +265,7 @@ class MemoryNetworkSolver(NNSolver):
                 debug_layers.append(layer.name)
         return debug_layers
 
-    def debug(self, text_with_background, validation_inputs, epoch: int):
+    def debug(self, validation_background_dataset, validation_inputs, epoch: int):
         # A debug_model must be defined by now. Run it on validation data and print the
         # appropriate information to the debug output
         debug_output_file = open("%s_debug_%d.out" % (self.model_prefix, epoch), "w")
@@ -273,7 +273,7 @@ class MemoryNetworkSolver(NNSolver):
         memory_layer_outputs = self.debug_model.predict(validation_inputs)
         if self.num_memory_layers == 1:
             memory_layer_outputs = [memory_layer_outputs]
-        for instance, score, *attention_values in zip(text_with_background.instances,
+        for instance, score, *attention_values in zip(validation_background_dataset.instances,
                                                       scores, *memory_layer_outputs):
             sentence = instance.text
             background_info = instance.background
