@@ -1,6 +1,5 @@
 import gzip
 import logging
-import pickle
 
 from itertools import zip_longest
 from typing import List
@@ -75,12 +74,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         """
         super(DifferentiableSearchSolver, self).load_model(epoch)
         self._load_encoder()
-        lsh_file = open("%s_lsh.pkl" % self.model_prefix, "rb")
-        sentence_index_file = open("%s_index.pkl" % self.model_prefix, "rb")
-        self.lsh = pickle.load(lsh_file)
-        self.instance_index = pickle.load(sentence_index_file)
-        lsh_file.close()
-        sentence_index_file.close()
+        self._initialize_lsh()
 
     def get_nearest_neighbors(self, instance: TextInstance) -> List[TextInstance]:
         '''
@@ -125,20 +119,6 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
             self.validation_dataset = self._update_background_dataset(self.validation_dataset)
             self.validation_input, self.validation_labels = self._prep_question_dataset(
                     self.validation_dataset)
-
-    @overrides
-    def _save_model(self, epoch: int):
-        """
-        In addition to whatever superclasses do, here we need to save the LSH, so we can load it
-        later.  Alternatively, we could just reinitialize it on load_model()...
-        """
-        super(DifferentiableSearchSolver, self)._save_model(epoch)
-        lsh_file = open("%s_lsh.pkl" % self.model_prefix, "wb")
-        sentence_index_file = open("%s_index.pkl" % self.model_prefix, "wb")
-        pickle.dump(self.lsh, lsh_file)
-        pickle.dump(self.instance_index, sentence_index_file)
-        lsh_file.close()
-        sentence_index_file.close()
 
     def _load_encoder(self):
         """
