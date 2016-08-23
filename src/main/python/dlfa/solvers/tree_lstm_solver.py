@@ -1,5 +1,3 @@
-import sys
-
 import numpy
 
 from overrides import overrides
@@ -11,6 +9,7 @@ from keras.regularizers import l2
 from .nn_solver import NNSolver
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..layers.encoders import TreeCompositionLSTM
+
 
 class TreeLSTMSolver(NNSolver):
     def __init__(self, **kwargs):
@@ -55,7 +54,6 @@ class TreeLSTMSolver(NNSolver):
 
         # Step 6: Define crossentropy against labels as the loss and compile the model.
         model = Model(input=[transitions_input, logical_form_input_layer], output=output_probabilities)
-        print(model.summary(), file=sys.stderr)
         return model
 
     @overrides

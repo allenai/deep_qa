@@ -1,5 +1,3 @@
-import sys
-
 import numpy
 
 from overrides import overrides
@@ -10,6 +8,7 @@ from keras.regularizers import l2
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from .nn_solver import NNSolver
+
 
 class LSTMSolver(NNSolver):
     """
@@ -51,7 +50,6 @@ class LSTMSolver(NNSolver):
 
         # Step 4: Define crossentropy against labels as the loss.
         model = Model(input=input_layer, output=output_probabilities)
-        print(model.summary(), file=sys.stderr)
         return model
 
     @overrides

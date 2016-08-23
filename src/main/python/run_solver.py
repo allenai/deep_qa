@@ -1,7 +1,10 @@
 import argparse
+import logging
 import sys
 
 from dlfa.solvers import concrete_solvers
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def main():
     # The first argument to this script must be a model type.  We will use that model type to
@@ -23,10 +26,10 @@ def main():
     solver = solver_class(**vars(args))
 
     if solver.can_train():
-        print("Training model")
+        logger.info("Training model")
         solver.train()
     else:
-        print("Not enough training inputs.  Assuming you wanted to load a model instead.")
+        logger.info("Not enough training inputs.  Assuming you wanted to load a model instead.")
         solver.load_model(args.use_model_from_epoch)
 
     if solver.can_test():
@@ -34,4 +37,6 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                        level=logging.INFO)
     main()

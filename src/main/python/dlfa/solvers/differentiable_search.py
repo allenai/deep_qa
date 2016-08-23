@@ -1,6 +1,5 @@
-from __future__ import print_function
-
 import gzip
+import logging
 import pickle
 
 from itertools import zip_longest
@@ -16,6 +15,7 @@ from ..data.dataset import TextDataset
 from ..data.instance import TextInstance, BackgroundTextInstance
 from .memory_network import MemoryNetworkSolver
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class DifferentiableSearchSolver(MemoryNetworkSolver):
     """
@@ -162,21 +162,29 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         This method encodes the corpus in batches, using encoder_model initialized above.  After
         the whole corpus is encoded, we pass the vectors off to sklearn's LSHForest.fit() method.
         """
+        logger.info("Reading corpus file")
         corpus_file = gzip.open(self.corpus_path)
-        corpus_lines = [line for line in corpus_file.readlines()]
-        dataset = TextDataset.read_from_lines(corpus_lines)
+        corpus_lines = [line.decode('utf-8') for line in corpus_file.readlines()]
+
+        # Because we're calling as_training_data() on the instances, we need them to have a label,
+        # so we pass label=True here.  TODO(matt): make it so that we can get just the input from
+        # an instance without the label somehow.
+        logger.info("Creating dataset")
+        dataset = TextDataset.read_from_lines(corpus_lines, label=True)
         max_lengths = [self.max_sentence_length, self.max_knowledge_length]
+        logger.info("Indexing and padding dataset")
         indexed_dataset = self._index_and_pad_dataset(dataset, max_lengths)
 
         def _get_generator():
             instances = zip(dataset.instances, indexed_dataset.instances)
             grouped_instances = zip_longest(*(iter(instances),) * batch_size)
             for batch in grouped_instances:
+                batch = [x for x in batch if x is not None]
                 yield batch
 
         generator = _get_generator()
         encoded_sentences = []
-        print("Encoding the background corpus")
+        logger.info("Encoding the background corpus")
         for batch in generator:
             instances, indexed_instances = zip(*batch)
 
@@ -189,7 +197,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
             for encoded_sentence in current_batch_encoded_sentences:
                 encoded_sentences.append(encoded_sentence)
         encoded_sentences = numpy.asarray(encoded_sentences)
-        print("Fitting the LSH")
+        logger.info("Fitting the LSH")
         self.lsh.fit(encoded_sentences)
 
     def _update_background_dataset(self, dataset: TextDataset) -> TextDataset:

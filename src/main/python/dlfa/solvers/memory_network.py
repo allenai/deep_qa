@@ -1,5 +1,3 @@
-import sys
-
 import numpy
 
 from overrides import overrides
@@ -14,6 +12,7 @@ from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector,
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models
 from .nn_solver import NNSolver
+
 
 class MemoryNetworkSolver(NNSolver):
     '''
@@ -152,7 +151,7 @@ class MemoryNetworkSolver(NNSolver):
         proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
                 input_shape=(self.max_sentence_length,))
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length, self.max_knowledge_length),
+                input_shape=(self.max_knowledge_length, self.max_sentence_length),
                 is_time_distributed=True)
 
         # Step 3: Encode the two embedded inputs using the same encoder.  We could replace the LSTM
@@ -218,7 +217,6 @@ class MemoryNetworkSolver(NNSolver):
         # calling method.
         memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
                                output=entailment_output)
-        print(memory_network.summary(), file=sys.stderr)
         return memory_network
 
     @overrides

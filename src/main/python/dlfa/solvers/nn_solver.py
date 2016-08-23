@@ -1,4 +1,5 @@
-import sys
+import logging
+
 import pickle
 
 from typing import List
@@ -10,6 +11,8 @@ from keras.models import Model, model_from_json
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.index_data import DataIndexer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class NNSolver(object):
@@ -167,13 +170,18 @@ class NNSolver(object):
         All training parameters have already been passed to the constructor, so we need no
         arguments to this method.
         '''
+        logger.info("Training model")
 
         # First we need to prepare the data that we'll use for training.
+        logger.info("Getting training data")
         self.train_input, self.train_labels = self._get_training_data()
+        logger.info("Getting validation data")
         self.validation_input, self.validation_labels = self._get_validation_data()
 
         # Then we build the model and compile it.
+        logger.info("Building the model")
         self.model = self._build_model()
+        self.model.summary()
         # TODO(pradeep): Try out other optimizers, especially rmsprop.
         self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         if self.debug_file:
@@ -190,14 +198,15 @@ class NNSolver(object):
         num_worse_epochs = 0
         for epoch_id in range(self.num_epochs):
             self._pre_epoch_hook(epoch_id)
-            print("Epoch %d" % epoch_id, file=sys.stderr)
+            logger.info("Epoch %d", epoch_id)
             self.model.fit(self.train_input, self.train_labels, nb_epoch=1)
+            logger.info("Running validation")
             accuracy = self.evaluate(self.validation_labels, self.validation_input)
-            print("Validation accuracy: %.4f" % accuracy, file=sys.stderr)
+            logger.info("Validation accuracy: %.4f", accuracy)
             if accuracy < best_accuracy:
                 num_worse_epochs += 1
                 if num_worse_epochs >= self.patience:
-                    print("Stopping training", file=sys.stderr)
+                    logger.info("Stopping training")
                     break
             else:
                 best_accuracy = accuracy
@@ -214,9 +223,9 @@ class NNSolver(object):
         Tests the model, using the file given to the constructor.
         """
         inputs, labels = self._get_test_data()
-        print("Scoring test data", file=sys.stderr)
+        logger.info("Scoring test data")
         accuracy = self.evaluate(labels, inputs)
-        print("Test accuracy: %.4f" % accuracy, file=sys.stderr)
+        logger.info("Test accuracy: %.4f", accuracy)
 
     def _get_debug_dataset_and_input(self):
         # TODO(matt): Return validation dataset by default
@@ -350,7 +359,7 @@ class NNSolver(object):
             negative_dataset = TextDataset.read_from_file(self.negative_train_file, label=False)
             dataset = positive_dataset.merge(negative_dataset)
         if self.max_training_instances is not None:
-            print("Truncating the dataset to", self.max_training_instances, "instances")
+            logger.info("Truncating the dataset to %d instances", self.max_training_instances)
             dataset = dataset.truncate(self.max_training_instances)
         self.data_indexer.fit_word_dictionary(dataset)
         self.training_dataset = dataset
@@ -379,7 +388,9 @@ class NNSolver(object):
         return inputs, self.group_by_question(labels)
 
     def _index_and_pad_dataset(self, dataset: TextDataset, max_lengths: List[int]):
+        logger.info("Indexing dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
+        logger.info("Padding dataset")
         indexed_dataset.pad_instances(max_lengths)
         return indexed_dataset
 
