@@ -101,8 +101,8 @@ object MemoryNetworkExperiments {
     ("positive data" -> sentenceSelectorParams) ~
     ("negative data" -> corruptedSentenceSelectorParams) ~
     ("validation questions" -> validationQuestionParams) ~
-    ("pretrained embeddings" -> pretrainedEmbeddingParams) ~
-    ("number of epochs" -> 1)
+    //("pretrained embeddings" -> pretrainedEmbeddingParams) ~
+    ("number of epochs" -> 2)
 
   val memoryNetworkParams: JValue = baseModelParams merge (
     ("model type" -> "memory network") ~
@@ -118,7 +118,7 @@ object MemoryNetworkExperiments {
   val differentiableSearchParams: JValue = memoryNetworkParams merge (
     ("model type" -> "memory network with differentiable search") ~
     ("model name" -> "busc/attentive_memory_network_with_differentiable_search") ~
-    ("corpus" -> "/home/mattg/data/busc/sentences.gz") ~
+    ("corpus" -> "/home/mattg/data/busc/small_sample.txt.gz") ~
     ("num epochs delay" -> 1) ~
     ("num epochs per encoding" -> 1)
   )

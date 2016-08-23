@@ -236,6 +236,7 @@ class MemoryNetworkSolver(NNSolver):
         if self.max_training_instances is not None:
             background_dataset = background_dataset.truncate(self.max_training_instances)
         self.data_indexer.fit_word_dictionary(background_dataset)
+        self.training_dataset = background_dataset
         return self.prep_labeled_data(background_dataset, for_train=True)
 
     @overrides

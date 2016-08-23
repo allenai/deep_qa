@@ -90,10 +90,10 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         max_lengths = [self.max_sentence_length, self.max_knowledge_length]
         indexed_instance.pad(max_lengths)
         instance_input, _ = indexed_instance.as_training_data()
-        encoded_instance = self.encoder_model.predict(numpy.asarray(instance_input))
+        encoded_instance = self.encoder_model.predict(numpy.asarray([instance_input]))
         _, nearest_neighbor_indices = self.lsh.kneighbors(
-                [encoded_instance], n_neighbors=self.num_background)
-        return [self.instance_index[neighbor_index] for neighbor_index in nearest_neighbor_indices]
+                encoded_instance, n_neighbors=self.num_background)
+        return [self.instance_index[neighbor_index] for neighbor_index in nearest_neighbor_indices[0]]
 
     @overrides
     def _pre_epoch_hook(self, epoch: int):
@@ -115,8 +115,11 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
 
             # Finally, we update both self.training_dataset and self.validation_dataset with new
             # background information, taken from a nearest neighbor search over the corpus.
+            logger.info("Updating the training data background")
             self.training_dataset = self._update_background_dataset(self.training_dataset)
-            self.train_input, self.train_labels = self.prep_labeled_data(self.training_dataset)
+            self.train_input, self.train_labels = self.prep_labeled_data(
+                    self.training_dataset, for_train=False)
+            logger.info("Updating the validation data background")
             self.validation_dataset = self._update_background_dataset(self.validation_dataset)
             self.validation_input, self.validation_labels = self._prep_question_dataset(
                     self.validation_dataset)
@@ -185,7 +188,13 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         generator = _get_generator()
         encoded_sentences = []
         logger.info("Encoding the background corpus")
+        num_batches = len(dataset.instances) / batch_size
+        log_every = max(1, int(num_batches / 100))
+        batch_num = 0
         for batch in generator:
+            batch_num += 1
+            if batch_num % log_every == 0:
+                logger.info("Processing batch %d / %d", batch_num, num_batches)
             instances, indexed_instances = zip(*batch)
 
             for instance in instances:
@@ -207,7 +216,8 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         """
         new_instances = []
         for instance in dataset.instances:  # type: BackgroundTextInstance
-            new_background = self.get_nearest_neighbors(instance)
+            text_instance = TextInstance(instance.text, label=True)
+            new_background = self.get_nearest_neighbors(text_instance)
             background_text = [background.text for background in new_background]
             new_instances.append(BackgroundTextInstance(instance.text,
                                                         background_text,
