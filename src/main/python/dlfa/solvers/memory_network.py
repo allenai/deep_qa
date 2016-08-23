@@ -200,7 +200,7 @@ class MemoryNetworkSolver(NNSolver):
         # Step 6: Define the model, compile and train it.
         memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
                                output=entailment_output)
-        memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
+        memory_network.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(memory_network.summary(), file=sys.stderr)
         return memory_network
 

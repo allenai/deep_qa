@@ -47,7 +47,7 @@ class LSTMSolver(NNSolver):
 
         # Step 4: Define crossentropy against labels as the loss and compile the model.
         model = Model(input=input_layer, output=output_probabilities)
-        model.compile(loss='categorical_crossentropy', optimizer='adam')
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(model.summary(), file=sys.stderr)
         return model
 
