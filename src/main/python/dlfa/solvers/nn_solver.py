@@ -186,6 +186,7 @@ class NNSolver(object):
             else:
                 best_accuracy = accuracy
                 self.best_epoch = epoch_id
+                num_worse_epochs = 0  # Reset the counter.
                 self._save_model(epoch_id)
                 if self.visualize:
                     # Shows intermediate outputs of the model on validation data
