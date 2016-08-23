@@ -67,7 +67,11 @@ class MemoryNetworkSolver(NNSolver):
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
         self.memory_updater = updaters[kwargs['memory_updater']]
-        self.entailment_model = entailment_models[kwargs['entailment_model']]
+        self.entailment_model = entailment_models[kwargs['entailment_model']](
+                kwargs['entailment_num_hidden_layers'],
+                kwargs['entailment_hidden_layer_width'],
+                kwargs['entailment_hidden_layer_activation']
+                )
         self.num_memory_layers = kwargs['num_memory_layers']
 
         self.max_knowledge_length = None
@@ -95,13 +99,22 @@ class MemoryNetworkSolver(NNSolver):
                             choices=entailment_models.keys(),
                             help='The kind of entailment model to use.  See entailment_models.py '
                             'for details.')
+        # TODO(matt): I wish there were a better way to do this...  You really want the entailment
+        # model object to specify these arguments, and deal with them, instead of having NNSolver
+        # have to know about them...  Not sure how to solve this.
+        parser.add_argument('--entailment_num_hidden_layers', type=int, default=1,
+                            help='Number of hidden layers in the entailment model')
+        parser.add_argument('--entailment_hidden_layer_width', type=int, default=50,
+                            help='Width of hidden layers in the entailment model')
+        parser.add_argument('--entailment_hidden_layer_activation', type=int, default='relu',
+                            help='Activation function for hidden layers in the entailment model')
         parser.add_argument('--num_memory_layers', type=int, default=1,
                             help="Number of memory layers in the network. (default 1)")
 
     def can_train(self) -> bool:
         has_train_background = (self.train_background is not None) or (
-            self.positive_train_background is not None and
-            self.negative_train_background is not None)
+                self.positive_train_background is not None and
+                self.negative_train_background is not None)
         has_validation_background = self.validation_background is not None
         has_background = has_train_background and has_validation_background
         return has_background and super(MemoryNetworkSolver, self).can_train()
@@ -134,9 +147,9 @@ class MemoryNetworkSolver(NNSolver):
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
         # inputs and the knowledge inputs.
         proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
-            proposition_inputs)
+                proposition_inputs)
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-            knowledge_inputs, is_time_distributed=True)
+                knowledge_inputs, is_time_distributed=True)
 
         # Step 3: Encode the two embedded inputs using the same encoder.  We could replace the LSTM
         # below with fancier encoders depending on the input.
@@ -180,8 +193,7 @@ class MemoryNetworkSolver(NNSolver):
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
-            weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1],
-                                                                                      dim=-1),
+            weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1], dim=-1),
                                                         axis=1)
             # input shapes: (samples, knowledge_len, input_dim), (samples, knowledge_len)
             # output shape: (samples, input_dim)
@@ -294,7 +306,7 @@ class MemoryNetworkSolver(NNSolver):
             print("Weights on background:", file=debug_output_file)
             for i, background_i in enumerate(background_info):
                 if i >= len(attention_values[0]):
-                    # This happens when IndexedBackgroundInstance.pad() ignored some 
+                    # This happens when IndexedBackgroundInstance.pad() ignored some
                     # sentences (at the end). Let's ignore them too.
                     break
                 all_hops_attention_i = ["%.4f" % values[i] for values in attention_values]
