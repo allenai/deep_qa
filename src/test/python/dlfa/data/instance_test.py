@@ -75,3 +75,11 @@ class TestTextInstance:
         assert instance.text == text
         assert instance.label is False
         assert instance.index == index
+
+    def test_words_tokenizes_the_sentence_correctly(self):
+        t = TextInstance("This is a sentence.", None)
+        assert t.words() == ['this', 'is', 'a', 'sentence', '.']
+        t = TextInstance("This isn't a sentence.", None)
+        assert t.words() == ['this', 'is', "n't", 'a', 'sentence', '.']
+        t = TextInstance("And, I have commas.", None)
+        assert t.words() == ['and', ',', 'i', 'have', 'commas', '.']

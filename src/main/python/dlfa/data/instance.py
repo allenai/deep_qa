@@ -1,9 +1,8 @@
 from typing import List
 
-from nltk.tokenize import word_tokenize
-
 from .indexed_instance import IndexedInstance, IndexedBackgroundInstance
 from .index_data import DataIndexer
+from .tokenizer import Tokenizer
 
 class Instance:
     """
@@ -32,6 +31,10 @@ class TextInstance(Instance):
     The only thing we can do with this kind of Instance is convert it into another kind that is
     actually usable for training / testing.
     """
+    @staticmethod
+    def tokenize(sentence: str, tokenizer=Tokenizer()) -> List[str]:
+        return tokenizer.tokenize(sentence)
+
     def __init__(self, text: str, label: bool, index: int=None):
         """
         text: the text of this instance, either a sentence or a logical form.
@@ -44,7 +47,7 @@ class TextInstance(Instance):
         self.text = text
 
     def words(self):
-        return word_tokenize(self.text.lower())
+        return self.tokenize(self.text.lower())
 
     def to_indexed_instance(self, data_indexer: DataIndexer):
         indices = [data_indexer.get_word_index(word) for word in self.words()]
@@ -111,16 +114,16 @@ class BackgroundTextInstance(TextInstance):
         text_words = super(BackgroundTextInstance, self).words()
         background_words = []
         for background_text in self.background:
-            background_words.extend(word_tokenize(background_text.lower()))
+            background_words.extend(self.tokenize(background_text.lower()))
         text_words.extend(background_words)
         return text_words
 
     def to_indexed_instance(self, data_indexer: DataIndexer):
-        words = word_tokenize(self.text.lower())
+        words = self.tokenize(self.text.lower())
         word_indices = [data_indexer.get_word_index(word) for word in words]
         background_indices = []
         for text in self.background:
-            words = word_tokenize(text.lower())
+            words = self.tokenize(text.lower())
             indices = [data_indexer.get_word_index(word) for word in words]
             background_indices.append(indices)
         return IndexedBackgroundInstance(word_indices, background_indices, self.label, self.index)
