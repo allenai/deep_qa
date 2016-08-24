@@ -1,6 +1,7 @@
 from typing import List
 
-from .indexed_instance import IndexedInstance, IndexedBackgroundInstance
+from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
+from .indexed_instance import IndexedInstance, IndexedBackgroundInstance, IndexedLogicalFormInstance
 from .index_data import DataIndexer
 from .tokenizer import Tokenizer
 
@@ -26,10 +27,13 @@ class Instance:
 
 class TextInstance(Instance):
     """
-    An Instance that has some attached text, typically either a sentence or a logical form.
+    An Instance that has some attached text, typically either a sentence or a logical form. Calling
+    this a "TextInstance" is because the individual tokens here are encoded as strings, and we can
+    get a list of strings out when we ask what words show up in the instance.
 
-    The only thing we can do with this kind of Instance is convert it into another kind that is
-    actually usable for training / testing.
+    We use these kinds of instances to fit a DataIndexer (e.g., deciding which words should be
+    mapped to an unknown token); to use them in training or testing, we need to first convert them
+    into IndexedInstances.
     """
     @staticmethod
     def tokenize(sentence: str, tokenizer=Tokenizer()) -> List[str]:
@@ -46,7 +50,7 @@ class TextInstance(Instance):
         super(TextInstance, self).__init__(label, index)
         self.text = text
 
-    def words(self):
+    def words(self) -> List[str]:
         return self.tokenize(self.text.lower())
 
     def to_indexed_instance(self, data_indexer: DataIndexer):
@@ -102,9 +106,77 @@ class TextInstance(Instance):
             raise RuntimeError("Unrecognized line format: " + line)
 
 
+class LogicalFormInstance(TextInstance):
+    """
+    This is an instance for use with TreeLSTMs.  Instead of a sequence of words, this Instance is a
+    tree-structured logical form, encoded as something like "for(depend_on(human, plant), oxygen)".
+
+    We base this off of TextInstance because we implement the same interface, though we override
+    most of the methods.
+    """
+    def words(self) -> List[str]:
+        """
+        This method takes all predicate names and arguments and returns them, removing commas and
+        parentheses.
+        """
+        return [word for word in self.tokens() if word != ',' and word != ')' and word != '(']
+
+    def tokens(self) -> List[str]:
+        """
+        This method splits the logical form into tokens, including commas and parentheses.
+        """
+        raise NotImplementedError
+
+    def to_indexed_instance(self, data_indexer: DataIndexer):
+        """
+        Here we have to split the logical forms (containing parantheses and commas) into two
+        sequences, one containing only elements (predicates and arguments) and the other containing
+        shift and reduce operations.
+
+        Example:
+        self.text: "a(b(c), d(e, f))"
+        Outputs: ['a', 'b', 'c', 'd', 'e', 'f']; [S, S, S, R2, S, S, S, R3, R3]
+
+        (except the real output passes the elements through the data indexer as well)
+        """
+        last_symbols = []  # Keeps track of commas and open parens
+        transitions = []
+        elements = []
+        is_malformed = False
+        for token in self.tokens():
+            if token == ',':
+                last_symbols.append(token)
+            elif token == '(':
+                last_symbols.append(token)
+            elif token == ')':
+                if len(last_symbols) == 0:
+                    # This means we saw a closing paren without an opening paren.
+                    is_malformed = True
+                    break
+                last_symbol = last_symbols.pop()
+                if last_symbol == '(':
+                    transitions.append(REDUCE2_OP)
+                else:
+                    # Last symbol is a comma. Pop the open paren before it as well.
+                    last_symbols.pop()
+                    transitions.append(REDUCE3_OP)
+            else:
+                # The token is a predicate or an argument.
+                transitions.append(SHIFT_OP)
+                elements.append(token)
+        if len(last_symbols) != 0 or is_malformed:
+            raise RuntimeError("Malformed binary semantic parse: %s" % self.text)
+        indices = [data_indexer.get_word_index(word) for word in elements]
+        return IndexedLogicalFormInstance(indices, transitions, self.label, self.index)
+
+
 class BackgroundTextInstance(TextInstance):
     """
     An Instance that has background knowledge associated with it.
+
+    TODO(matt): it might make sense to have `background` be a list of instances, instead of a list
+    of strings, to allow for easier combination of background instances with logical form
+    instances.  But, we'll worry about that later, if it ever becomes important.
     """
     def __init__(self, text: str, background: List[str], label: bool, index: int=None):
         super(BackgroundTextInstance, self).__init__(text, label, index)

@@ -2,7 +2,7 @@ from typing import List
 
 import numpy
 
-class IndexedInstance(object):
+class IndexedInstance:
     """
     An indexed data instance, which is a list of word indices, coupled with a label, and possibly
     an instance index.  An IndexedInstance is created from an Instance using a DataIndexer, and the
@@ -50,6 +50,47 @@ class IndexedInstance(object):
         return word_array, label
 
 
+class IndexedLogicalFormInstance(IndexedInstance):
+    def __init__(self, word_indices: List[int], transitions: List[int], label: bool, index: int=None):
+        super(IndexedLogicalFormInstance, self).__init__(word_indices, label, index)
+        self.transitions = transitions
+
+    def get_lengths(self) -> List[int]:
+        """
+        Prep for padding; see comment on this method in the super class.  Here we extend the return
+        value from our super class with the padding lengths necessary for `transitions`.
+        """
+        lengths = super(IndexedLogicalFormInstance, self).get_lengths()
+        lengths.append(len(self.transitions))
+        return lengths
+
+    def pad(self, max_lengths: List[int]):
+        """
+        We let the super class deal with padding word_indices; we'll worry about padding
+        transitions.
+        """
+        super(IndexedLogicalFormInstance, self).pad(max_lengths)
+
+        # We need to do this to find out what index we added our length at.  We could just do
+        # lengths[1] to get the transitions length, but this future-proofs the code, in case things
+        # change in the super class.  lengths[-1] doesn't work either, because this could be
+        # sub-classed, and then the subclass may have added another value to the lengths.
+        super_lengths = super(IndexedLogicalFormInstance, self).get_lengths()
+        transition_length_index = len(super_lengths)
+        transition_length = max_lengths[transition_length_index]
+
+        padded_transitions = [0] * transition_length
+        indices_length = min(len(self.transitions), transition_length)
+        if indices_length != 0:
+            padded_transitions[-indices_length:] = self.transitions[-indices_length:]
+        self.transitions = padded_transitions
+
+    def as_training_data(self):
+        word_array, label = super(IndexedLogicalFormInstance, self).as_training_data()
+        transitions = numpy.asarray(self.transitions, dtype='int32')
+        return (word_array, transitions), label
+
+
 class IndexedBackgroundInstance(IndexedInstance):
     """
     An IndexedInstance that has background knowledge associated with it, where the background
@@ -73,7 +114,7 @@ class IndexedBackgroundInstance(IndexedInstance):
         too.
         """
         lengths = super(IndexedBackgroundInstance, self).get_lengths()
-        lengths.extend([len(self.background_indices)])
+        lengths.append(len(self.background_indices))
         if self.background_indices:
             max_background_length = max(len(background) for background in self.background_indices)
             lengths[0] = max(lengths[0], max_background_length)
@@ -85,7 +126,8 @@ class IndexedBackgroundInstance(IndexedInstance):
         background_indices.  We need to pad it in two ways: (1) we need len(background_indices) to
         be the same for all instances, and (2) we need len(background_indices[i]) to be the same
         for all i, for all instances.  We'll use the word_indices length from the super class for
-        (2).  """
+        (2).
+        """
         super(IndexedBackgroundInstance, self).pad(max_lengths)
         word_sequence_length = max_lengths[0]
 
@@ -114,13 +156,6 @@ class IndexedBackgroundInstance(IndexedInstance):
         self.background_indices = padded_background
 
     def as_training_data(self):
-        word_array = numpy.asarray(self.word_indices, dtype='int32')
+        word_array, label = super(IndexedBackgroundInstance, self).as_training_data()
         background_array = numpy.asarray(self.background_indices, dtype='int32')
-        label = numpy.zeros((2))
-        if self.label is True:
-            label[1] = 1
-        elif self.label is False:
-            label[0] = 1
-        else:
-            raise RuntimeError("Cannot make training data out of instances without labels!")
         return (word_array, background_array), label
