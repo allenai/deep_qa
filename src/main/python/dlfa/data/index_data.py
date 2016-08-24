@@ -25,9 +25,21 @@ class DataIndexer(object):
             for word in instance.words():
                 word_counts[word] += 1
         for word, count in word_counts.items():
-            if count > min_count and word not in self.word_index:
-                self.word_index[word] = len(self.word_index)
-        self.reverse_word_index = {index:word for word, index in self.word_index.items()}
+            if count > min_count:
+                self.add_word_to_index(word)
+
+    def add_word_to_index(self, word: str) -> int:
+        """
+        Adds `word` to the index, if it is not already present.  Either way, we return the index of
+        the word.
+        """
+        if word not in self.word_index:
+            index = len(self.word_index)
+            self.word_index[word] = index
+            self.reverse_word_index[index] = word
+            return index
+        else:
+            return self.word_index[word]
 
     def words_in_index(self):
         return self.word_index.keys()
