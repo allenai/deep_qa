@@ -10,7 +10,7 @@ from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.embeddings import PretrainedEmbeddings
-from ..data.index_data import DataIndexer
+from ..data.data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

@@ -2,8 +2,8 @@ from typing import List
 
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 from .indexed_instance import IndexedInstance, IndexedBackgroundInstance, IndexedLogicalFormInstance
-from .index_data import DataIndexer
 from .tokenizer import Tokenizer
+from .data_indexer import DataIndexer
 
 class Instance:
     """

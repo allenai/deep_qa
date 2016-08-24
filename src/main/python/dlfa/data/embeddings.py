@@ -5,7 +5,7 @@ from typing import Dict, List  # pylint: disable=unused-import
 import numpy
 from keras.layers import Embedding
 
-from .index_data import DataIndexer
+from .data_indexer import DataIndexer
 
 class PretrainedEmbeddings:
     @staticmethod
