@@ -3,8 +3,7 @@ import numpy
 from overrides import overrides
 
 from keras import backend as K
-from keras.layers import LSTM, TimeDistributed, Dropout, merge
-from keras.regularizers import l2
+from keras.layers import TimeDistributed, Dropout, merge
 from keras.models import Model
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
@@ -136,13 +135,6 @@ class MemoryNetworkSolver(NNSolver):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
         # TODO(matt): set the background length too, or does it matter?  Maybe the model doesn't
         # actually care?
-
-    def _get_sentence_encoder(self):
-        return LSTM(output_dim=self.embedding_size,
-                    W_regularizer=l2(0.01),
-                    U_regularizer=l2(0.01),
-                    b_regularizer=l2(0.01),
-                    name='sentence_encoder')
 
     @overrides
     def _build_model(self):

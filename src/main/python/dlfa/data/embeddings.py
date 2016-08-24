@@ -68,4 +68,5 @@ class PretrainedEmbeddings:
                          output_dim=embedding_size,
                          mask_zero=True,
                          weights=[embedding_matrix],
-                         trainable=trainable)
+                         trainable=trainable,
+                         name="embedding")
