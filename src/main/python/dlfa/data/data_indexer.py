@@ -1,12 +1,12 @@
 from collections import defaultdict
 
 
-class DataIndexer(object):
+class DataIndexer:
     def __init__(self):
         self.word_index = {"PADDING":0, "UNK":1, ",":2, ".":3, "(":4, ")":5}
         self.reverse_word_index = {0:"PADDING", 1:"UNK", 2:",", 3:".", 4:"(", 5:")"}
 
-    def fit_word_dictionary(self, dataset: 'Dataset', min_count: int=1):
+    def fit_word_dictionary(self, dataset: 'TextDataset', min_count: int=1):
         """
         Given a Dataset, this method decides which words are given an index, and which ones are
         mapped to an OOV token (in this case "UNK").  This method must be called before any dataset
@@ -21,7 +21,7 @@ class DataIndexer(object):
             for word in instance.words():
                 word_counts[word] += 1
         for word, count in word_counts.items():
-            if count > min_count:
+            if count >= min_count:
                 self.add_word_to_index(word)
 
     def add_word_to_index(self, word: str) -> int:
