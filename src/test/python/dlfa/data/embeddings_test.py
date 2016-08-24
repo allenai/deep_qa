@@ -7,7 +7,7 @@ import pytest
 from pyfakefs import fake_filesystem_unittest
 
 from dlfa.data.embeddings import PretrainedEmbeddings
-from dlfa.data.index_data import DataIndexer
+from dlfa.data.data_indexer import DataIndexer
 
 class TestPretrainedEmbeddings(fake_filesystem_unittest.TestCase):
     # pylint: disable=invalid-name

@@ -2,9 +2,21 @@ from collections import defaultdict
 
 
 class DataIndexer:
+    """
+    A DataIndexer maps strings to integers, allowing for strings to be mapped to an
+    out-of-vocabulary token.
+
+    DataIndexers are fit to a particular dataset, which we use to decide which words are
+    in-vocabulary.
+    """
     def __init__(self):
-        self.word_index = {"PADDING":0, "UNK":1, ",":2, ".":3, "(":4, ")":5}
-        self.reverse_word_index = {0:"PADDING", 1:"UNK", 2:",", 3:".", 4:"(", 5:")"}
+        # Typically all input words to this code are lower-cased, so we could simply use "PADDING"
+        # for this.  But doing it this way, with special characters, future-proofs the code in case
+        # it is used later in a setting where not all input is lowercase.
+        self._padding_token = "@@PADDING@@"
+        self._oov_token = "@@UNKOWN@@"
+        self.word_index = {self._padding_token: 0, self._oov_token: 1}
+        self.reverse_word_index = {0: self._padding_token, 1: self._oov_token}
 
     def fit_word_dictionary(self, dataset: 'TextDataset', min_count: int=1):
         """
@@ -44,7 +56,7 @@ class DataIndexer:
         if word in self.word_index:
             return self.word_index[word]
         else:
-            return self.word_index["UNK"]
+            return self.word_index[self._oov_token]
 
     def get_word_from_index(self, index: int):
         return self.reverse_word_index[index]
