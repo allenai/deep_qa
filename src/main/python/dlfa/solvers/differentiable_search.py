@@ -61,6 +61,8 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
                             "This lets you train with the base memory network code using external "
                             "background knowledge for a time, then, once the encoder is trained "
                             "sufficiently, you can turn on the differentiable search.")
+        # TODO(matt): consider only re-encoding at early stopping, instead of a
+        # number-of-epoch-based parameter.
         parser.add_argument('--num_epochs_per_encoding', type=int, default=2,
                             help="Number of epochs we wait in between re-encoding the corpus")
 
