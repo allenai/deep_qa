@@ -5,10 +5,12 @@ import pickle
 from typing import List
 
 import numpy
-from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
+from keras.layers import Dense, Input, Embedding, LSTM, TimeDistributed, Dropout
+from keras.regularizers import l2
 from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
+from ..data.instance import TextInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.data_indexer import DataIndexer
 
@@ -50,8 +52,11 @@ class NNSolver(object):
         self.debug_model = None
         self.embedding_layer = None
         self.time_distributed_embedding_layer = None
-        self.projection = None
-        self.time_distributed_projection = None
+        self.projection_matrix = None
+        self.projection_layer = None
+        self.time_distributed_projection_layer = None
+        self.sentence_encoder_layer = None
+        self._sentence_encoder_model = None
 
         # Training-specific member variables that will get set and used later.
         self.best_epoch = -1
@@ -253,6 +258,7 @@ class NNSolver(object):
         Paths in here must match those in self._save_model(epoch) and self._save_best_model(), or
         things will break.
         """
+        logger.info("Loading serialized model")
         # Loading serialized model
         model_config_file = open("%s_config.json" % self.model_prefix)
         model_config_json = model_config_file.read()
@@ -262,13 +268,75 @@ class NNSolver(object):
             model_file = "%s_weights_epoch=%d.h5" % (self.model_prefix, epoch)
         else:
             model_file = "%s_weights.h5" % self.model_prefix
+        logger.info("Loading weights from file %s", model_file)
         self.model.load_weights(model_file)
+        self.model.summary()
+        self._load_layers()
         data_indexer_file = open("%s_data_indexer.pkl" % self.model_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
         model_config_file.close()
         data_indexer_file.close()
         self._set_max_lengths_from_model()
+
+    def _load_layers(self):
+        """
+        We have some variables that store individual layers used by the model, so that they can be
+        re-used in several places if desired.  When we load a model, we have to set those layers,
+        or things might break in really odd ways.  This method is in charge of finding those
+        layers and initializing their variables.
+
+        Note that this specifically looks for the layers defined by _get_embedded_sentence_input
+        and _get_sentence_encoder.  If you change any of that in a subclass, or add other layers
+        that are re-used, you must override this method, or loading models will break.  Similarly,
+        if you change code in those two methods (e.g., making the sentence encoder into two
+        layers), this method must be changed accordingly.
+        """
+        logger.info("Loading individual layers from model for re-use")
+
+        # I guess we could just load the embedding layer, the projection layer, and the sentence
+        # encoder, and reconstruct the others, because they don't actually have any parameters...
+        # But, we'll stick with this for now.
+        for layer in self.model.layers:
+            if layer.name == "embedding":
+                logger.info("  Found embedding layer")
+                self.embedding_layer = layer
+            elif layer.name == "background_embedding":
+                logger.info("  Found background embedding layer")
+                self.time_distributed_embedding_layer = layer
+            elif layer.name == "projection_matrix":
+                logger.info("  Found projection matrix")
+                self.projection_matrix = layer
+            elif layer.name == "embedding_projection":
+                logger.info("  Found projection layer")
+                self.projection_layer = layer
+            elif layer.name == "background_embedding_projection":
+                logger.info("  Found background projection layer")
+                self.time_distributed_projection_layer = layer
+            elif layer.name == "sentence_encoder":
+                logger.info("  Found sentence encoder")
+                self.sentence_encoder_layer = layer
+        assert self.embedding_layer is not None, "Embedding layer not found"
+        assert self.time_distributed_embedding_layer is not None, "Background embedding layer not found"
+        assert self.sentence_encoder_layer is not None, "Sentence encoder not found"
+        if self.project_embeddings:
+            assert self.projection_matrix is not None, "Projection matrix not found"
+            assert self.projection_layer is not None, "Projection layer not found"
+            assert self.time_distributed_projection_layer is not None, "Background projection layer not found"
+
+    def get_sentence_vector(self, sentence: str):
+        """
+        Given a sentence (just a string), use the model's sentence encoder to convert it into a
+        vector.  This is mostly just useful for debugging.
+        """
+        if self._sentence_encoder_model is None:
+            self._build_sentence_encoder_model()
+        instance = TextInstance(sentence, True)
+        indexed_instance = instance.to_indexed_instance(self.data_indexer)
+        indexed_instance.pad([self.max_sentence_length])
+        instance_input, _ = indexed_instance.as_training_data()
+        encoded_instance = self._sentence_encoder_model.predict(numpy.asarray([instance_input]))
+        return encoded_instance[0]
 
     def score(self, test_input):
         return self.model.predict(test_input)
@@ -394,7 +462,7 @@ class NNSolver(object):
         indexed_dataset.pad_instances(max_lengths)
         return indexed_dataset
 
-    def _build_model(self):
+    def _build_model(self) -> Model:
         """Constructs and returns a Keras model that will take the output of
         self._get_training_data as input, and produce as output a true/false decision for each
         input.
@@ -420,8 +488,14 @@ class NNSolver(object):
         """
         Performs the initial steps of embedding sentences.  This function takes care of two steps:
         (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
-        word vectors with an Embedding layer, if necessary.  If dropout has been specified on the
-        embedding layer, we also apply that here.
+        word vectors with an Embedding layer.  Depending on how this object was initialized, we
+        might initialize that Embedding layer from pre-trained word vectors, or add a projection on
+        top of the embedding, or add dropout after the embedding layer.
+
+        We allow for inputs of shape (batch_size, sentence_length) and inputs of shape
+        (batch_size, num_sentences, sentence_length).  If your input is the second of these, you
+        must pass is_time_distributed=True.  This is useful for, e.g., encoding the memory
+        sentences in a memory network.
 
         Because Keras requires access to the actual Input() layer, we return that along with the
         final word vector layer.
@@ -434,9 +508,9 @@ class NNSolver(object):
         # self here, if we haven't already done so.
         if self.embedding_layer is None:
             if self.pretrained_embeddings_file:
-                # If we have a pre-trained embeddings file, we'll load a fixed Embedding layer,
-                # then add a projection on top of it.  So our "embedding layer" is actually two
-                # layers: a non-trainable Embedding layer, then a TimeDistributed(Dense) layer.
+                # If we have a pre-trained embeddings file, we'll create the embedding layer
+                # initialized with the embeddings in the file.  These embeddings can either be
+                # fixed or tunable.
                 self.embedding_layer = PretrainedEmbeddings.get_embedding_layer(
                         self.pretrained_embeddings_file,
                         self.data_indexer,
@@ -447,11 +521,14 @@ class NNSolver(object):
                                                  mask_zero=True,  # this handles padding correctly
                                                  name='embedding')
             if self.project_embeddings:
-                self.projection = TimeDistributed(Dense(output_dim=self.embedding_size),
-                                                  name='embedding_projection')
-                self.time_distributed_projection = TimeDistributed(self.projection,
-                                                                   name='background_embedding_projection')
-            self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer)
+                self.projection_matrix = Dense(output_dim=self.embedding_size,
+                                               name="projection_matrix")
+                self.projection_layer = TimeDistributed(self.projection_matrix,
+                                                        name='embedding_projection')
+                self.time_distributed_projection_layer = TimeDistributed(
+                        self.projection_layer, name='background_embedding_projection')
+            self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer,
+                                                                    name='background_embedding')
 
         # Now we actually embed the input and apply dropout.
         if is_time_distributed:
@@ -461,14 +538,52 @@ class NNSolver(object):
 
         if self.project_embeddings:
             if is_time_distributed:
-                embedded_input = self.time_distributed_projection(embedded_input)
+                embedded_input = self.time_distributed_projection_layer(embedded_input)
             else:
-                embedded_input = self.projection(embedded_input)
+                embedded_input = self.projection_layer(embedded_input)
 
         if self.embedding_dropout > 0.0:
             embedded_input = Dropout(self.embedding_dropout)(embedded_input)
 
         return input_layer, embedded_input
+
+    def _get_sentence_encoder(self):
+        """
+        A sentence encoder takes as input a sequence of word embeddings, and returns as output a
+        single vector encoding the sentence.  This is typically either a simple RNN or an LSTM, but
+        could be more complex, if the "sentence" is actually a logical form.
+        """
+        # TODO(matt): we should add options here.
+        if self.sentence_encoder_layer is None:
+            self.sentence_encoder_layer = LSTM(output_dim=self.embedding_size,
+                                               W_regularizer=l2(0.01),
+                                               U_regularizer=l2(0.01),
+                                               b_regularizer=l2(0.01),
+                                               name='sentence_encoder')
+        return self.sentence_encoder_layer
+
+    def _build_sentence_encoder_model(self):
+        """
+        Here we pull out just a couple of layers from self.model and use them to define a
+        stand-alone encoder model.
+
+        Specifically, we need the part of the model that gets us from word index sequences to word
+        embedding sequences, and the part of the model that gets us from word embedding sequences
+        to sentence vectors.
+
+        This must be called after self.max_sentence_length has been set, which happens when
+        self._get_training_data() is called.
+        """
+        input_layer, embedded_input = self._get_embedded_sentence_input(
+                input_shape=(self.max_sentence_length,))
+        encoder_layer = self._get_sentence_encoder()
+        encoded_input = encoder_layer(embedded_input)
+        self._sentence_encoder_model = Model(input=input_layer, output=encoded_input)
+
+        # Loss and optimizer do not matter here since we're not going to train this model. But it
+        # needs to be compiled to use it for prediction.
+        self._sentence_encoder_model.compile(loss="mse", optimizer="adam")
+        self._sentence_encoder_model.summary()
 
     def _pre_epoch_hook(self, epoch: int):
         """

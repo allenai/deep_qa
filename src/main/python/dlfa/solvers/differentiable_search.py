@@ -9,7 +9,6 @@ from overrides import overrides
 import numpy
 
 from sklearn.neighbors import LSHForest
-from keras.models import Model
 
 from ..data.dataset import TextDataset
 from ..data.instance import TextInstance, BackgroundTextInstance
@@ -42,8 +41,8 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         self.num_background = kwargs['num_background']
         self.num_epochs_delay = kwargs['num_epochs_delay']
         self.num_epochs_per_encoding = kwargs['num_epochs_per_encoding']
+        self.load_saved_lsh = kwargs['load_saved_lsh']
 
-        self.encoder_model = None
         self.lsh = LSHForest(random_state=12345)
         self.instance_index = {}  # type: Dict[int, str]
 
@@ -54,6 +53,12 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         parser.add_argument('--corpus_path', type=str,
                             help="Location of corpus to use for background knowledge search. "
                             "This corpus is assumed to be gzipped, one sentence per line.")
+        parser.add_argument('--load_saved_lsh', action='store_true',
+                            help="Only meaningful if you are loading a model.  When loading, "
+                            "should we load a pickled LSH, or should we re-initialize the LSH "
+                            "from the input corpus?  Note that if you give a corpus path, and you "
+                            "load a saved LSH that was constructed from a _different_ corpus, you "
+                            "could end up with really weird behavior.")
         parser.add_argument('--num_background', type=int, default=10,
                             help="Number of background sentences to collect for each input")
         parser.add_argument('--num_epochs_delay', type=int, default=10,
@@ -69,18 +74,23 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
     @overrides
     def load_model(self, epoch: int=None):
         """
-        Two things to do here other than what superclasses do: (1) initialize the encoder model,
-        and (2) load the LSH (note that this includes the background corpus; if you want to use a
-        different corpus at test time, this method has to change).
+        Other than loading the model (which we leave to the super class), we also initialize the
+        LSH, assuming that if you're loading a model you probably want access to search over the
+        input corpus, either for making predictions or for finding nearest neighbors.
+
+        We can either load a saved LSH, or re-initialize it with a new corpus, depending on
+        self.load_saved_lsh.
         """
         super(DifferentiableSearchSolver, self).load_model(epoch)
-        self._load_encoder()
-        lsh_file = open("%s_lsh.pkl" % self.model_prefix, "rb")
-        sentence_index_file = open("%s_index.pkl" % self.model_prefix, "rb")
-        self.lsh = pickle.load(lsh_file)
-        self.instance_index = pickle.load(sentence_index_file)
-        lsh_file.close()
-        sentence_index_file.close()
+        if self.load_saved_lsh:
+            lsh_file = open("%s_lsh.pkl" % self.model_prefix, "rb")
+            sentence_index_file = open("%s_index.pkl" % self.model_prefix, "rb")
+            self.lsh = pickle.load(lsh_file)
+            self.instance_index = pickle.load(sentence_index_file)
+            lsh_file.close()
+            sentence_index_file.close()
+        else:
+            self._initialize_lsh()
 
     def get_nearest_neighbors(self, instance: TextInstance) -> List[TextInstance]:
         '''
@@ -88,13 +98,9 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         many neighbors to return, and the specifics of the encoder model are all defined in
         parameters passed to the constructor of this object.
         '''
-        indexed_instance = instance.to_indexed_instance(self.data_indexer)
-        max_lengths = [self.max_sentence_length, self.max_knowledge_length]
-        indexed_instance.pad(max_lengths)
-        instance_input, _ = indexed_instance.as_training_data()
-        encoded_instance = self.encoder_model.predict(numpy.asarray([instance_input]))
-        _, nearest_neighbor_indices = self.lsh.kneighbors(
-                encoded_instance, n_neighbors=self.num_background)
+        sentence_vector = self.get_sentence_vector(instance.text)
+        _, nearest_neighbor_indices = self.lsh.kneighbors([sentence_vector],
+                                                          n_neighbors=self.num_background)
         return [self.instance_index[neighbor_index] for neighbor_index in nearest_neighbor_indices[0]]
 
     @overrides
@@ -108,11 +114,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         """
         super(DifferentiableSearchSolver, self)._pre_epoch_hook(epoch)
         if epoch >= self.num_epochs_delay and epoch % self.num_epochs_per_encoding == 0:
-            # First we rebuild the encoder model.  TODO(matt): will this actually set weights from
-            # the existing layers?  I assume it will.  Pradeep, do you know?
-            self._load_encoder()
-
-            # Then we encode the corpus and build an LSH.
+            # First we encode the corpus and (re-)build an LSH.
             self._initialize_lsh()
 
             # Finally, we update both self.training_dataset and self.validation_dataset with new
@@ -130,7 +132,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
     def _save_model(self, epoch: int):
         """
         In addition to whatever superclasses do, here we need to save the LSH, so we can load it
-        later.  Alternatively, we could just reinitialize it on load_model()...
+        later if desired.
         """
         super(DifferentiableSearchSolver, self)._save_model(epoch)
         lsh_file = open("%s_lsh.pkl" % self.model_prefix, "wb")
@@ -140,33 +142,13 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         lsh_file.close()
         sentence_index_file.close()
 
-    def _load_encoder(self):
-        """
-        Here we pull out just a couple of layers from self.model and use them to define a
-        stand-alone encoder model.
-
-        Specifically, we need the part of the model that gets us from word index sequences to word
-        embedding sequences, and the part of the model that gets us from word embedding sequences
-        to sentence vectors.
-
-        This must be called after self.max_sentence_length has been set, which happens when
-        self._get_training_data() is called.
-        """
-        input_layer, embedded_input = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,))
-        encoder_layer = self._get_sentence_encoder()
-        encoded_input = encoder_layer(embedded_input)
-        self.encoder_model = Model(input=input_layer, output=encoded_input)
-
-        # Loss and optimizer do not matter here since we're not going to train this model. But it
-        # needs to be compiled to use it for prediction.
-        self.encoder_model.compile(loss="mse", optimizer="adam")
-
     def _initialize_lsh(self, batch_size=100):
         """
         This method encodes the corpus in batches, using encoder_model initialized above.  After
         the whole corpus is encoded, we pass the vectors off to sklearn's LSHForest.fit() method.
         """
+        if self._sentence_encoder_model is None:
+            self._build_sentence_encoder_model()
         logger.info("Reading corpus file")
         corpus_file = gzip.open(self.corpus_path)
         corpus_lines = [line.decode('utf-8') for line in corpus_file.readlines()]
@@ -204,7 +186,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
 
             encoder_input = [instance.as_training_data()[0] for instance in indexed_instances]
             encoder_input = numpy.asarray(encoder_input, dtype='int32')
-            current_batch_encoded_sentences = self.encoder_model.predict(encoder_input)
+            current_batch_encoded_sentences = self._sentence_encoder_model.predict(encoder_input)
             for encoded_sentence in current_batch_encoded_sentences:
                 encoded_sentences.append(encoded_sentence)
         encoded_sentences = numpy.asarray(encoded_sentences)
