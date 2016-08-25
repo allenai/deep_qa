@@ -63,6 +63,7 @@ class MemoryNetworkSolver(NNSolver):
         self.negative_train_background = kwargs['negative_train_background']
         self.validation_background = kwargs['validation_background']
         self.test_background = kwargs['test_background']
+        self.debug_background = kwargs['debug_background']
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
         self.memory_updater = updaters[kwargs['memory_updater']]
@@ -80,6 +81,7 @@ class MemoryNetworkSolver(NNSolver):
         parser.add_argument('--negative_train_background', type=str)
         parser.add_argument('--validation_background', type=str)
         parser.add_argument('--test_background', type=str)
+        parser.add_argument('--debug_background', type=str)
 
         parser.add_argument('--knowledge_selector', type=str, default='parameterized',
                             choices=selectors.keys(),
@@ -98,8 +100,8 @@ class MemoryNetworkSolver(NNSolver):
 
     def can_train(self) -> bool:
         has_train_background = (self.train_background is not None) or (
-                self.positive_train_background is not None and
-                self.negative_train_background is not None)
+            self.positive_train_background is not None and
+            self.negative_train_background is not None)
         has_validation_background = self.validation_background is not None
         has_background = has_train_background and has_validation_background
         return has_background and super(MemoryNetworkSolver, self).can_train()
@@ -132,9 +134,9 @@ class MemoryNetworkSolver(NNSolver):
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
         # inputs and the knowledge inputs.
         proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
-                proposition_inputs)
+            proposition_inputs)
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                knowledge_inputs, is_time_distributed=True)
+            knowledge_inputs, is_time_distributed=True)
 
         # Step 3: Encode the two embedded inputs using the same encoder.  We could replace the LSTM
         # below with fancier encoders depending on the input.
@@ -178,8 +180,9 @@ class MemoryNetworkSolver(NNSolver):
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
-            weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1], dim=-1),
-                                                       axis=1)
+            weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1],
+                                                                                      dim=-1),
+                                                        axis=1)
             # input shapes: (samples, knowledge_len, input_dim), (samples, knowledge_len)
             # output shape: (samples, input_dim)
             weighted_average_shape = lambda input_shapes: (input_shapes[0][0], input_shapes[0][2])
@@ -196,17 +199,18 @@ class MemoryNetworkSolver(NNSolver):
                                                            current_memory,
                                                            attended_knowledge)
 
-        # Step 6: Define the model, compile and train it.
+        # Step 6: Define the model, and return it. The model will be compiled and trained by the
+        # calling method.
         memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
                                output=entailment_output)
-        memory_network.compile(loss='categorical_crossentropy', optimizer='adam')
         print(memory_network.summary(), file=sys.stderr)
         return memory_network
 
     def _get_training_data(self):
         if self.train_file:
             dataset = TextDataset.read_from_file(self.train_file)
-            background_dataset = TextDataset.read_background_from_file(dataset, self.train_background)
+            background_dataset = TextDataset.read_background_from_file(dataset,
+                                                                       self.train_background)
         else:
             positive_dataset = TextDataset.read_from_file(self.positive_train_file, label=True)
             positive_background = TextDataset.read_background_from_file(positive_dataset,
@@ -221,10 +225,19 @@ class MemoryNetworkSolver(NNSolver):
         return self.prep_labeled_data(background_dataset, for_train=True)
 
     def _get_validation_data(self):
-        return self._read_question_data_with_background(self.validation_file, self.validation_background)
+        return self._read_question_data_with_background(self.validation_file,
+                                                        self.validation_background)
 
     def _get_test_data(self):
         return self._read_question_data_with_background(self.test_file, self.test_background)
+
+    def _get_debug_dataset_and_input(self):
+        dataset = TextDataset.read_from_file(self.debug_file)
+        background_dataset = TextDataset.read_background_from_file(dataset,
+                                                                   self.debug_background)
+        # Now get inputs, and ignore the labels (background_dataset has them)
+        inputs, _ = self.prep_labeled_data(background_dataset, for_train=False)
+        return background_dataset, inputs
 
     def _read_question_data_with_background(self, filename, background_filename):
         dataset = TextDataset.read_from_file(filename)
@@ -248,3 +261,44 @@ class MemoryNetworkSolver(NNSolver):
         sentences = numpy.asarray(sentences)
         background = numpy.asarray(background)
         return [sentences, background], numpy.asarray(labels)
+
+    def get_debug_layer_names(self):
+        debug_layer_names = []
+        for layer in self.model.layers:
+            if "knowledge_selector" in layer.name:
+                debug_layer_names.append(layer.name)
+        return debug_layer_names
+
+    def debug(self, debug_dataset, debug_inputs, epoch: int):
+        """
+        A debug_model must be defined by now. Run it on debug data and print the
+        appropriate information to the debug output.
+        """
+        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
+        scores = self.score(debug_inputs)
+        attention_outputs = self.debug_model.predict(debug_inputs)
+        if self.num_memory_layers == 1:
+            attention_outputs = [attention_outputs]
+        # Collect values from all hops of attention for a given instance into attention_values.
+        for instance, score, *attention_values in zip(debug_dataset.instances,
+                                                      scores, *attention_outputs):
+            sentence = instance.text
+            background_info = instance.background
+            label = instance.label
+            positive_score = score[1]  # Only get p(t|x)
+            # Remove the attention values for padding
+            attention_values = [values[-len(background_info):] for values in attention_values]
+            print("Sentence: %s" % sentence, file=debug_output_file)
+            print("Label: %s" % label, file=debug_output_file)
+            print("Assigned score: %.4f" % positive_score, file=debug_output_file)
+            print("Weights on background:", file=debug_output_file)
+            for i, background_i in enumerate(background_info):
+                if i >= len(attention_values[0]):
+                    # This happens when IndexedBackgroundInstance.pad() ignored some 
+                    # sentences (at the end). Let's ignore them too.
+                    break
+                all_hops_attention_i = ["%.4f" % values[i] for values in attention_values]
+                print("\t%s\t%s" % (" ".join(all_hops_attention_i), background_i),
+                      file=debug_output_file)
+            print(file=debug_output_file)
+        debug_output_file.close()

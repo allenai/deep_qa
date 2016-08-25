@@ -5,7 +5,7 @@ from typing import List
 
 import numpy
 from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
-from keras.models import model_from_json
+from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.embeddings import PretrainedEmbeddings
@@ -35,12 +35,14 @@ class NNSolver(object):
         self.negative_train_file = kwargs['negative_train_file']
         self.validation_file = kwargs['validation_file']
         self.test_file = kwargs['test_file']
+        self.debug_file = kwargs['debug_file']
 
         self.num_epochs = kwargs['num_epochs']
         self.patience = kwargs['patience']
 
         self.data_indexer = DataIndexer()
         self.model = None
+        self.debug_model = None
         self.best_epoch = -1
         self.embedding_layer = None
         self.time_distributed_embedding_layer = None
@@ -83,6 +85,9 @@ class NNSolver(object):
         parser.add_argument('--negative_train_file', type=str)
         parser.add_argument('--validation_file', type=str)
         parser.add_argument('--test_file', type=str)
+        parser.add_argument('--debug_file', type=str,
+                            help='Visualize the intermediate outputs of the trained model.'
+                                 'Output will be written to <model_serialization_prefix>_debug_<epoch>.txt')
 
         # Model specification
         parser.add_argument("--model_serialization_prefix", required=True,
@@ -155,8 +160,17 @@ class NNSolver(object):
         train_input, train_labels = self._get_training_data()
         validation_input, validation_labels = self._get_validation_data()
 
-        # Then we build the model.  This creates a compiled Keras Model.
+        # Then we build the model and compile it.
         self.model = self._build_model(train_input)
+        # TODO(pradeep): Try out other optimizers, especially rmsprop.
+        self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        if self.debug_file:
+            # Get the list of layers whose outputs will be visualized as per the
+            # solver definition and build a debug model.
+            debug_layers = self.get_debug_layer_names()
+            self.debug_model = self._build_debug_model(debug_layers)
+            self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
+            debug_dataset, debug_input = self._get_debug_dataset_and_input()
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -175,7 +189,11 @@ class NNSolver(object):
             else:
                 best_accuracy = accuracy
                 self.best_epoch = epoch_id
+                num_worse_epochs = 0  # Reset the counter.
                 self._save_model(epoch_id)
+                if self.debug_file:
+                    # Shows intermediate outputs of the model on validation data
+                    self.debug(debug_dataset, debug_input, epoch_id)
         self._save_best_model()
 
     def test(self):
@@ -186,6 +204,24 @@ class NNSolver(object):
         print("Scoring test data", file=sys.stderr)
         accuracy = self.evaluate(labels, inputs)
         print("Test accuracy: %.4f" % accuracy, file=sys.stderr)
+
+    def _get_debug_dataset_and_input(self):
+        # TODO(matt): Return validation dataset by default
+        raise NotImplementedError
+
+    def debug(self, debug_dataset, debug_input, epoch: int):
+        """
+        Each solver defines its own debug method to visualize the
+        appropriate layers.
+        """
+        raise NotImplementedError
+
+    def get_debug_layer_names(self):
+        """
+        Each solver defines its own list of layers whose output will
+        be visualized.
+        """
+        raise NotImplementedError
 
     def load_model(self, epoch: int=None):
         """
@@ -338,6 +374,19 @@ class NNSolver(object):
         The returned model will be used to call model.fit(train_input, train_labels).
         """
         raise NotImplementedError
+
+    def _build_debug_model(self, debug_layer_names: List[str]):
+        """
+        Accesses self.model and extracts the necessary parts of the model out to define another
+        model that has the intermediate outputs we want to visualize.
+        """
+        debug_inputs = self.model.get_input_at(0)  # list of all input_layers
+        debug_outputs = []
+        for layer in self.model.layers:
+            if layer.name in debug_layer_names:
+                debug_outputs.append(layer.get_output_at(0))
+        debug_model = Model(input=debug_inputs, output=debug_outputs)
+        return debug_model                    
 
     def _get_embedded_sentence_input(self, sentence_input, is_time_distributed=False):
         """
