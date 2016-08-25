@@ -11,7 +11,7 @@ from keras.models import Model, model_from_json
 from keras.layers import Input, LSTM, Embedding, Dropout, merge, TimeDistributed, Dense, SimpleRNN
 from keras.callbacks import EarlyStopping
 
-class WordReplacer(object):
+class WordReplacer:
     def __init__(self):
         self.data_indexer = DataIndexer()
         self.model = None
@@ -215,23 +215,33 @@ def corrupt_sentences(word_replacer, file_to_corrupt, search_space_size, tokeniz
     outfile.close()
 
 
-def select_mostly_likely_candidates(word_replacer, candidates_file, top_k, tokenize,
-                                    create_sentence_indices, output_file):
-    index = 0
+def select_mostly_likely_candidates(word_replacer: WordReplacer,
+                                    candidates_file: str,
+                                    top_k: int,
+                                    tokenize: bool,
+                                    create_sentence_indices: bool,
+                                    max_output_sentences: int,
+                                    output_file: str):
     train_sequence_length = word_replacer.get_model_input_shape()[1]
-    outfile = codecs.open(output_file, "w", "utf-8")
+    kept_sentences = []
     for line in codecs.open(candidates_file, "r", "utf-8"):
         candidates = line.strip().split("\t")
         candidate_scores = word_replacer.score_sentences(candidates, train_sequence_length, tokenize)
         candidate_scores.sort(reverse=True)
         for _, candidate in candidate_scores[:top_k]:
+            kept_sentences.append(candidate)
+    random.shuffle(kept_sentences)
+    if max_output_sentences:
+        kept_sentences = kept_sentences[:max_output_sentences]
+    with codecs.open(output_file, "w", "utf-8") as outfile:
+        index = 0
+        for sentence in kept_sentences:
             if create_sentence_indices:
-                output_string = '%d\t%s' % (index, candidate)
+                output_string = '%d\t%s\n' % (index, sentence)
             else:
-                output_string = candidate
-            print(output_string, file=outfile)
+                output_string = '%s\n' % sentence
             index += 1
-    outfile.close()
+        outfile.write(output_string)
 
 
 def main():
@@ -284,7 +294,7 @@ def main():
                            help="(2) Number of most frequent words to search over as replacement candidates")
     argparser.add_argument("--create_sentence_indices", action="store_true",
                            help="(2,3) If true, output will be [sentence id][tab][sentence]")
-    argparser.add_argument("--max_output_sentences", type=int,  # TODO(matt): this is currently ignored
+    argparser.add_argument("--max_output_sentences", type=int,
                            help="(2,3) If set, limit output to this many corrupted sentences")
     argparser.add_argument("--output_file",
                            help="(2,3) Place to save requested output file")
@@ -326,6 +336,7 @@ def main():
                                         args.keep_top_k,
                                         not args.no_tokenize,
                                         args.create_sentence_indices,
+                                        args.max_output_sentences,
                                         args.output_file)
 
 
