@@ -63,6 +63,7 @@ class MemoryNetworkSolver(NNSolver):
         self.negative_train_background = kwargs['negative_train_background']
         self.validation_background = kwargs['validation_background']
         self.test_background = kwargs['test_background']
+        self.debug_background = kwargs['debug_background']
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
         self.memory_updater = updaters[kwargs['memory_updater']]
@@ -80,6 +81,7 @@ class MemoryNetworkSolver(NNSolver):
         parser.add_argument('--negative_train_background', type=str)
         parser.add_argument('--validation_background', type=str)
         parser.add_argument('--test_background', type=str)
+        parser.add_argument('--debug_background', type=str)
 
         parser.add_argument('--knowledge_selector', type=str, default='parameterized',
                             choices=selectors.keys(),
@@ -229,11 +231,13 @@ class MemoryNetworkSolver(NNSolver):
     def _get_test_data(self):
         return self._read_question_data_with_background(self.test_file, self.test_background)
 
-    def _get_debug_dataset(self):
-        dataset = TextDataset.read_from_file(self.validation_file)
+    def _get_debug_dataset_and_input(self):
+        dataset = TextDataset.read_from_file(self.debug_file)
         background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.validation_background)
-        return background_dataset
+                                                                   self.debug_background)
+        # Now get inputs, and ignore the labels (background_dataset has them)
+        inputs, _ = self.prep_labeled_data(background_dataset, for_train=False)
+        return background_dataset, inputs
 
     def _read_question_data_with_background(self, filename, background_filename):
         dataset = TextDataset.read_from_file(filename)
@@ -259,24 +263,24 @@ class MemoryNetworkSolver(NNSolver):
         return [sentences, background], numpy.asarray(labels)
 
     def get_debug_layer_names(self):
-        debug_layers = []
+        debug_layer_names = []
         for layer in self.model.layers:
             if "knowledge_selector" in layer.name:
-                debug_layers.append(layer.name)
-        return debug_layers
+                debug_layer_names.append(layer.name)
+        return debug_layer_names
 
-    def debug(self, validation_dataset, validation_inputs, epoch: int):
+    def debug(self, debug_dataset, debug_inputs, epoch: int):
         """
-        A debug_model must be defined by now. Run it on validation data and print the
+        A debug_model must be defined by now. Run it on debug data and print the
         appropriate information to the debug output.
         """
         debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
-        scores = self.score(validation_inputs)
-        attention_outputs = self.debug_model.predict(validation_inputs)
+        scores = self.score(debug_inputs)
+        attention_outputs = self.debug_model.predict(debug_inputs)
         if self.num_memory_layers == 1:
             attention_outputs = [attention_outputs]
         # Collect values from all hops of attention for a given instance into attention_values.
-        for instance, score, *attention_values in zip(validation_dataset.instances,
+        for instance, score, *attention_values in zip(debug_dataset.instances,
                                                       scores, *attention_outputs):
             sentence = instance.text
             background_info = instance.background
