@@ -4,7 +4,7 @@ import random
 from typing import List
 
 from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance
-from .index_data import DataIndexer
+from .data_indexer import DataIndexer
 
 class Dataset:
     """
