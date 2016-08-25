@@ -1,5 +1,6 @@
 import gzip
 import logging
+import pickle
 
 from itertools import zip_longest
 from typing import List
@@ -40,6 +41,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         self.num_background = kwargs['num_background']
         self.num_epochs_delay = kwargs['num_epochs_delay']
         self.num_epochs_per_encoding = kwargs['num_epochs_per_encoding']
+        self.load_saved_lsh = kwargs['load_saved_lsh']
 
         self.lsh = LSHForest(random_state=12345)
         self.instance_index = {}  # type: Dict[int, str]
@@ -51,6 +53,12 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         parser.add_argument('--corpus_path', type=str,
                             help="Location of corpus to use for background knowledge search. "
                             "This corpus is assumed to be gzipped, one sentence per line.")
+        parser.add_argument('--load_saved_lsh', action='store_true',
+                            help="Only meaningful if you are loading a model.  When loading, "
+                            "should we load a pickled LSH, or should we re-initialize the LSH "
+                            "from the input corpus?  Note that if you give a corpus path, and you "
+                            "load a saved LSH that was constructed from a _different_ corpus, you "
+                            "could end up with really weird behavior.")
         parser.add_argument('--num_background', type=int, default=10,
                             help="Number of background sentences to collect for each input")
         parser.add_argument('--num_epochs_delay', type=int, default=10,
@@ -69,9 +77,20 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         Other than loading the model (which we leave to the super class), we also initialize the
         LSH, assuming that if you're loading a model you probably want access to search over the
         input corpus, either for making predictions or for finding nearest neighbors.
+
+        We can either load a saved LSH, or re-initialize it with a new corpus, depending on
+        self.load_saved_lsh.
         """
         super(DifferentiableSearchSolver, self).load_model(epoch)
-        self._initialize_lsh()
+        if self.load_saved_lsh:
+            lsh_file = open("%s_lsh.pkl" % self.model_prefix, "rb")
+            sentence_index_file = open("%s_index.pkl" % self.model_prefix, "rb")
+            self.lsh = pickle.load(lsh_file)
+            self.instance_index = pickle.load(sentence_index_file)
+            lsh_file.close()
+            sentence_index_file.close()
+        else:
+            self._initialize_lsh()
 
     def get_nearest_neighbors(self, instance: TextInstance) -> List[TextInstance]:
         '''
@@ -108,6 +127,20 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
             self.validation_dataset = self._update_background_dataset(self.validation_dataset)
             self.validation_input, self.validation_labels = self._prep_question_dataset(
                     self.validation_dataset)
+
+    @overrides
+    def _save_model(self, epoch: int):
+        """
+        In addition to whatever superclasses do, here we need to save the LSH, so we can load it
+        later if desired.
+        """
+        super(DifferentiableSearchSolver, self)._save_model(epoch)
+        lsh_file = open("%s_lsh.pkl" % self.model_prefix, "wb")
+        sentence_index_file = open("%s_index.pkl" % self.model_prefix, "wb")
+        pickle.dump(self.lsh, lsh_file)
+        pickle.dump(self.instance_index, sentence_index_file)
+        lsh_file.close()
+        sentence_index_file.close()
 
     def _initialize_lsh(self, batch_size=100):
         """
