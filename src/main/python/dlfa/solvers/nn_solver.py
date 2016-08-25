@@ -171,9 +171,6 @@ class NNSolver(object):
             self.debug_model = self._build_debug_model(debug_layers)
             self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
             debug_dataset, debug_input = self._get_debug_dataset_and_input()
-            do_debug = True
-        else:
-            do_debug = False
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -194,7 +191,7 @@ class NNSolver(object):
                 self.best_epoch = epoch_id
                 num_worse_epochs = 0  # Reset the counter.
                 self._save_model(epoch_id)
-                if do_debug:
+                if self.debug_file:
                     # Shows intermediate outputs of the model on validation data
                     self.debug(debug_dataset, debug_input, epoch_id)
         self._save_best_model()
