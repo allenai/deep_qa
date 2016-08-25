@@ -96,7 +96,10 @@ class IndexedBackgroundInstance(IndexedInstance):
         background_length_index = len(super_lengths)
         background_length = max_lengths[background_length_index]
 
-        # Padding (1): making sure we have the right number of background sentences.
+        # Padding (1): making sure we have the right number of background sentences.  We also need
+        # to truncate, if necessary.
+        if len(self.background_indices) > background_length:
+            self.background_indices = self.background_indices[:background_length]
         for _ in range(background_length - len(self.background_indices)):
             self.background_indices.append([0])
 

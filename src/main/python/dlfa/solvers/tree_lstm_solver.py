@@ -1,6 +1,7 @@
-import sys
-
 import numpy
+
+from overrides import overrides
+
 from keras.layers import Input, Dense, Dropout, merge
 from keras.models import Model
 from keras.regularizers import l2
@@ -9,20 +10,21 @@ from .nn_solver import NNSolver
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..layers.encoders import TreeCompositionLSTM
 
+
 class TreeLSTMSolver(NNSolver):
     def __init__(self, **kwargs):
         super(TreeLSTMSolver, self).__init__(**kwargs)
 
-    def _build_model(self, train_input):
+    @overrides
+    def _build_model(self):
         '''
         train_input: List of two numpy arrays: transitions and initial buffer
         '''
-        transitions, logical_forms = train_input
 
         # Step 1: Initialze the transition inputs.
         # Length of transitions (ops) is an upper limit on the stack and buffer sizes. So we'll use
         # that to initialize the stack and buffer in the LSTM.
-        buffer_ops_limit = transitions.shape[1]
+        buffer_ops_limit = self.max_sentence_length
         stack_limit = buffer_ops_limit
 
         # The transitions input has an extra trailing dimension to make the concatenation with the
@@ -31,7 +33,7 @@ class TreeLSTMSolver(NNSolver):
 
         # Step 2: Convert the logical form input to word vectors.
         logical_form_input_layer, logical_form_embeddings = self._get_embedded_sentence_input(
-                logical_forms)
+                input_shape=(self.max_sentence_length,))
 
         # Step 3: Merge transitions and buffer.
         lstm_input = merge([transitions_input, logical_form_embeddings], mode='concat')
@@ -52,12 +54,13 @@ class TreeLSTMSolver(NNSolver):
 
         # Step 6: Define crossentropy against labels as the loss and compile the model.
         model = Model(input=[transitions_input, logical_form_input_layer], output=output_probabilities)
-        print(model.summary(), file=sys.stderr)
         return model
 
+    @overrides
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
 
+    @overrides
     def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
         processed_dataset = self._index_and_pad_dataset(dataset, [self.max_sentence_length])
         sentence_inputs, labels = processed_dataset.as_training_data()
@@ -81,6 +84,7 @@ class TreeLSTMSolver(NNSolver):
         return (transitions, elements), numpy.asarray(labels)
 
     @classmethod
+    @overrides
     def _get_custom_objects(cls):
         custom_objects = super(TreeLSTMSolver, cls)._get_custom_objects()
         custom_objects['TreeCompositionLSTM'] = TreeCompositionLSTM

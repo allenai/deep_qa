@@ -1,6 +1,6 @@
-import sys
-
 import numpy
+
+from overrides import overrides
 
 from keras.layers import LSTM, Dense, Dropout
 from keras.models import Model
@@ -8,6 +8,7 @@ from keras.regularizers import l2
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from .nn_solver import NNSolver
+
 
 class LSTMSolver(NNSolver):
     """
@@ -23,13 +24,15 @@ class LSTMSolver(NNSolver):
     def __init__(self, **kwargs):
         super(LSTMSolver, self).__init__(**kwargs)
 
-    def _build_model(self, train_input):
+    @overrides
+    def _build_model(self):
         '''
         train_input: numpy array: int32 (samples, num_words). Left padded arrays of word indices
             from sentences in training data
         '''
         # Step 1: Convert the sentence input into sequences of word vectors.
-        input_layer, sentence_embedding = self._get_embedded_sentence_input(train_input)
+        input_layer, sentence_embedding = self._get_embedded_sentence_input(
+                input_shape=(self.max_sentence_length,))
 
         # Step 2: Pass the sequences of word vectors through LSTM.
         lstm_layer = LSTM(output_dim=self.embedding_size, W_regularizer=l2(0.01), U_regularizer=l2(0.01),
@@ -47,12 +50,13 @@ class LSTMSolver(NNSolver):
 
         # Step 4: Define crossentropy against labels as the loss.
         model = Model(input=input_layer, output=output_probabilities)
-        print(model.summary(), file=sys.stderr)
         return model
 
+    @overrides
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[1]
 
+    @overrides
     def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
         processed_dataset = self._index_and_pad_dataset(dataset, [self.max_sentence_length])
         if for_train:
