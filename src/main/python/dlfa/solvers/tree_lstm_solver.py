@@ -52,7 +52,6 @@ class TreeLSTMSolver(NNSolver):
 
         # Step 6: Define crossentropy against labels as the loss and compile the model.
         model = Model(input=[transitions_input, logical_form_input_layer], output=output_probabilities)
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(model.summary(), file=sys.stderr)
         return model
 

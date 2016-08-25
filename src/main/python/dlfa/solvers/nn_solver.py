@@ -38,7 +38,7 @@ class NNSolver(object):
 
         self.num_epochs = kwargs['num_epochs']
         self.patience = kwargs['patience']
-        self.visualize = kwargs['visualize']
+        self.do_debug = kwargs['debug']
 
         self.data_indexer = DataIndexer()
         self.model = None
@@ -112,9 +112,9 @@ class NNSolver(object):
                             help="Number of train epochs (20 by default)")
         parser.add_argument('--patience', type=int, default=1,
                             help="Number of epochs to be patient before early stopping (1 by default)")
-        parser.add_argument('--visualize', action='store_true',
+        parser.add_argument('--debug', action='store_true',
                             help='Visualize the intermediate outputs of the trained model.'
-                                'Output will be written to <model_serialization_prefix>_debug_<epoch>.out')
+                                'Output will be written to <model_serialization_prefix>_debug_<epoch>.txt')
 
         # Testing details
         parser.add_argument('--use_model_from_epoch', type=int,
@@ -160,14 +160,17 @@ class NNSolver(object):
         train_input, train_labels = self._get_training_data()
         validation_input, validation_labels = self._get_validation_data()
 
-        # Then we build the model.  This creates a compiled Keras Model.
+        # Then we build the model and compile it.
         self.model = self._build_model(train_input)
-        if self.visualize:
+        # TODO(pradeep): Try out other optimizers, especially rmsprop.
+        self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        if self.do_debug:
             # Get the list of layers whose outputs will be visualized as per the
             # solver definition and build a debug model.
             debug_layers = self.get_debug_layer_names()
             self.debug_model = self._build_debug_model(debug_layers)
-            validation_background_dataset = self._get_debug_text_data()
+            self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
+            validation_background_dataset = self._get_debug_dataset()
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -188,7 +191,7 @@ class NNSolver(object):
                 self.best_epoch = epoch_id
                 num_worse_epochs = 0  # Reset the counter.
                 self._save_model(epoch_id)
-                if self.visualize:
+                if self.do_debug:
                     # Shows intermediate outputs of the model on validation data
                     self.debug(validation_background_dataset, validation_input, epoch_id)
         self._save_best_model()
@@ -202,7 +205,8 @@ class NNSolver(object):
         accuracy = self.evaluate(labels, inputs)
         print("Test accuracy: %.4f" % accuracy, file=sys.stderr)
 
-    def _get_debug_text_data(self):
+    def _get_debug_dataset(self):
+        # TODO(matt): Return validation dataset by default
         raise NotImplementedError
 
     def debug(self, validation_text, validation_input, epoch: int):
@@ -371,7 +375,7 @@ class NNSolver(object):
         """
         raise NotImplementedError
 
-    def _build_debug_model(self, wanted_layers: List[str]):
+    def _build_debug_model(self, debug_layer_names: List[str]):
         """
         Accesses self.model and extracts the necessary parts of the model out to define another
         model that has the intermediate outputs we want to visualize.
@@ -379,10 +383,9 @@ class NNSolver(object):
         debug_inputs = self.model.get_input_at(0)  # list of all input_layers
         debug_outputs = []
         for layer in self.model.layers:
-            if layer.name in wanted_layers:
+            if layer.name in debug_layer_names:
                 debug_outputs.append(layer.get_output_at(0))
         debug_model = Model(input=debug_inputs, output=debug_outputs)
-        debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
         return debug_model                    
 
     def _get_embedded_sentence_input(self, sentence_input, is_time_distributed=False):

@@ -45,9 +45,8 @@ class LSTMSolver(NNSolver):
         softmax_layer = Dense(2, activation='softmax', name='softmax')
         output_probabilities = softmax_layer(projection_layer(regularized_lstm_out))
 
-        # Step 4: Define crossentropy against labels as the loss and compile the model.
+        # Step 4: Define crossentropy against labels as the loss.
         model = Model(input=input_layer, output=output_probabilities)
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(model.summary(), file=sys.stderr)
         return model
 

@@ -197,10 +197,10 @@ class MemoryNetworkSolver(NNSolver):
                                                            current_memory,
                                                            attended_knowledge)
 
-        # Step 6: Define the model, compile and train it.
+        # Step 6: Define the model, and return it. The model will be compiled and trained by the
+        # calling method.
         memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
                                output=entailment_output)
-        memory_network.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(memory_network.summary(), file=sys.stderr)
         return memory_network
 
@@ -229,7 +229,7 @@ class MemoryNetworkSolver(NNSolver):
     def _get_test_data(self):
         return self._read_question_data_with_background(self.test_file, self.test_background)
 
-    def _get_debug_text_data(self):
+    def _get_debug_dataset(self):
         dataset = TextDataset.read_from_file(self.validation_file)
         background_dataset = TextDataset.read_background_from_file(dataset,
                                                                    self.validation_background)
@@ -265,16 +265,19 @@ class MemoryNetworkSolver(NNSolver):
                 debug_layers.append(layer.name)
         return debug_layers
 
-    def debug(self, validation_background_dataset, validation_inputs, epoch: int):
-        # A debug_model must be defined by now. Run it on validation data and print the
-        # appropriate information to the debug output
-        debug_output_file = open("%s_debug_%d.out" % (self.model_prefix, epoch), "w")
+    def debug(self, validation_dataset, validation_inputs, epoch: int):
+        """
+        A debug_model must be defined by now. Run it on validation data and print the
+        appropriate information to the debug output.
+        """
+        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
         scores = self.score(validation_inputs)
-        memory_layer_outputs = self.debug_model.predict(validation_inputs)
+        attention_outputs = self.debug_model.predict(validation_inputs)
         if self.num_memory_layers == 1:
-            memory_layer_outputs = [memory_layer_outputs]
-        for instance, score, *attention_values in zip(validation_background_dataset.instances,
-                                                      scores, *memory_layer_outputs):
+            attention_outputs = [attention_outputs]
+        # Collect values from all hops of attention for a given instance into attention_values.
+        for instance, score, *attention_values in zip(validation_dataset.instances,
+                                                      scores, *attention_outputs):
             sentence = instance.text
             background_info = instance.background
             label = instance.label
@@ -286,6 +289,10 @@ class MemoryNetworkSolver(NNSolver):
             print("Assigned score: %.4f" % positive_score, file=debug_output_file)
             print("Weights on background:", file=debug_output_file)
             for i, background_i in enumerate(background_info):
+                if i >= len(attention_values[0]):
+                    # This happens when IndexedBackgroundInstance.pad() ignored some 
+                    # sentences (at the end). Let's ignore them too.
+                    break
                 all_hops_attention_i = ["%.4f" % values[i] for values in attention_values]
                 print("\t%s\t%s" % (" ".join(all_hops_attention_i), background_i),
                       file=debug_output_file)
