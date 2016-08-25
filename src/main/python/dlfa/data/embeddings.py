@@ -7,7 +7,7 @@ from keras.layers import Embedding
 
 from .index_data import DataIndexer
 
-class PretrainedEmbeddings(object):
+class PretrainedEmbeddings:
     @staticmethod
     def initialize_random_matrix(shape, seed=1337):
         numpy_rng = numpy.random.RandomState(seed)  # pylint: disable=no-member
@@ -27,7 +27,7 @@ class PretrainedEmbeddings(object):
 
         The embeddings file is assumed to be gzipped, formatted as [word] [dim 1] [dim 2] ...
         """
-        words_to_keep = data_indexer.words_in_index()
+        words_to_keep = set(data_indexer.words_in_index())
         vocab_size = data_indexer.get_vocab_size()
         embeddings = {}
         embedding_size = None
@@ -36,19 +36,21 @@ class PretrainedEmbeddings(object):
         print("Reading embeddings from file")
         with gzip.open(embeddings_filename, 'rb') as embeddings_file:
             for line in embeddings_file:
-                fields = line.strip().split()
+                fields = line.decode('utf-8').strip().split()
                 if embedding_size is None:
                     embedding_size = len(fields) - 1
+                else:
+                    assert len(fields) - 1 == embedding_size, "Changing embedding size!"
                 word = fields[0]
                 if word in words_to_keep:
                     vector = numpy.asarray(fields[1:], dtype='float32')
                     embeddings[word] = vector
 
 
-        # Now we initialize the weight matrix for an embedding layer.
+        # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
+        # then filling in the word vectors we just read.
         print("Initializing pre-trained embedding layer")
         embedding_matrix = PretrainedEmbeddings.initialize_random_matrix((vocab_size, embedding_size))
-        empty_embedding = numpy.zeros(embedding_size)
 
         # The 2 here is because we know too much about the DataIndexer.  Index 0 is the padding
         # index, and the vector for that dimension is going to be 0.  Index 1 is the OOV token, and
@@ -56,12 +58,12 @@ class PretrainedEmbeddings(object):
         for i in range(2, vocab_size - 1):
             word = data_indexer.get_word_from_index(i)
 
-            # If we don't have a pre-trained vector for this word, return an empty embedding.  Not
-            # sure what else we could do that would be better...
-            vector = embeddings.get(word, empty_embedding)
-            embedding_matrix[i] = vector
+            # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
+            # so the word has a random initialization.
+            if word in embeddings:
+                embedding_matrix[i] = embeddings[word]
 
-        # Now return the embedding layer.
+        # The weight matrix is initialized, so we construct and return the actual Embedding layer.
         return Embedding(input_dim=vocab_size,
                          output_dim=embedding_size,
                          mask_zero=True,
