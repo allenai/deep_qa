@@ -24,7 +24,7 @@ libraryDependencies ++= Seq(
   "org.elasticsearch" % "elasticsearch" % "2.3.4",
   "org.json4s" %% "json4s-native" % "3.2.11",
   "com.jayantkrish.jklol" % "jklol" % "1.1",
-  "edu.cmu.ml.rtw" %%  "pra" % "3.4-SNAPSHOT",
+  "edu.cmu.ml.rtw" %%  "pra" % "3.4",
   "edu.cmu.ml.rtw" %%  "matt-util" % "2.3.2",
   "edu.stanford.nlp" %  "stanford-corenlp" % "3.4.1",
   "edu.stanford.nlp" %  "stanford-corenlp" % "3.4.1" classifier "models",
