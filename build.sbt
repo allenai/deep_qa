@@ -16,7 +16,7 @@ connectInput := true
 
 cancelable in Global := true
 
-javaOptions ++= Seq("-Xmx14g", "-Xms14g")
+javaOptions ++= Seq("-Xmx4g", "-Xms4g")
 
 libraryDependencies ++= Seq(
   //"org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",
