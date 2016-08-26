@@ -1,8 +1,9 @@
 # pylint: disable=no-self-use
 import argparse
 import gzip
+import os
 
-from pyfakefs import fake_filesystem_unittest
+from unittest import TestCase
 
 from dlfa.solvers.differentiable_search import DifferentiableSearchSolver
 from dlfa.data.instance import TextInstance
@@ -14,16 +15,18 @@ class FakeEncoder:
             predictions.append([1.0, -1.0, 0.5, 0.25])
         return predictions
 
-class TestDifferentiableSearchSolver(fake_filesystem_unittest.TestCase):
+class TestDifferentiableSearchSolver(TestCase):
     # pylint: disable=protected-access
     def setUp(self):
-        self.setUpPyfakefs()
-        self.corpus_path = '/corpus.gz'
+        self.corpus_path = './TMP_FAKE_corpus.gz'
         with gzip.open(self.corpus_path, 'wb') as corpus_file:
             corpus_file.write('this is a sentence\n'.encode('utf-8'))
             corpus_file.write('this is another sentence\n'.encode('utf-8'))
             corpus_file.write('a really great sentence\n'.encode('utf-8'))
             corpus_file.write('scientists study animals\n'.encode('utf-8'))
+
+    def tearDown(self):
+        os.remove(self.corpus_path)
 
     def get_solver(self) -> DifferentiableSearchSolver:
         # It's easiest to get default values for all of the parameters this way.

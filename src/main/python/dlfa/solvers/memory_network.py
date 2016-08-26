@@ -104,7 +104,7 @@ class MemoryNetworkSolver(NNSolver):
                             help='Number of hidden layers in the entailment model')
         parser.add_argument('--entailment_hidden_layer_width', type=int, default=50,
                             help='Width of hidden layers in the entailment model')
-        parser.add_argument('--entailment_hidden_layer_activation', type=int, default='relu',
+        parser.add_argument('--entailment_hidden_layer_activation', type=str, default='relu',
                             help='Activation function for hidden layers in the entailment model')
         parser.add_argument('--num_memory_layers', type=int, default=1,
                             help="Number of memory layers in the network. (default 1)")

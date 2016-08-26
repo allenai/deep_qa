@@ -56,7 +56,7 @@ class DenseMemoryOnlyEntailmentModel(BaseEntailmentModel):
         return current_memory
 
 
-class HeuristicMatchingEntailmentModel:
+class HeuristicMatchingEntailmentModel(BaseEntailmentModel):
     """
     This class is an implementation of the heuristic matching algorithm proposed in the following paper:
     "Natural Language Inference by Tree-Based Convolution and Heuristic Matching", Mou et al, ACL 2016.
