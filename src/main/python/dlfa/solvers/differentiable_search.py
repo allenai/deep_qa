@@ -23,9 +23,9 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
     external code (such as Lucene) to do the search for us.
 
     The only thing we have to change here is re-computing the background info in
-    self.pre_epoch_hook(), along with adding a few command-line arguments.
+    self._pre_epoch_hook(), along with adding a few command-line arguments.
 
-    To do the search, we encode a corpus of sentences using a sentence encoder (e.g., as LSTM),
+    To do the search, we encode a corpus of sentences using a sentence encoder (e.g., an LSTM),
     then use nearest-neighbor search on the sentence encodings.
 
     We perform the nearest-neighbor search using a scikit-learn's locality sensitive hash (LSH).

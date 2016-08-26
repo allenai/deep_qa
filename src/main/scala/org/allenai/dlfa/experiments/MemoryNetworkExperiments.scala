@@ -13,7 +13,7 @@ object MemoryNetworkExperiments {
   // These parameters define where the elastic search index is that we'll get background data from,
   // and how many results to request from the index per query.
   val baseElasticSearchParams: JValue =
-    ("num passages per sentence" -> 4) ~
+    ("num passages per sentence" -> 10) ~
     ("elastic search index url" -> "aristo-es1.dev.ai2") ~
     ("elastic search index port" -> 9300) ~
     ("elastic search cluster name" -> "aristo-es") ~
@@ -27,11 +27,11 @@ object MemoryNetworkExperiments {
   val sentenceSelectorParams: JValue =
     ("sentence producer type" -> "sentence selector") ~
     ("create sentence indices" -> true) ~
-    ("sentence selector" -> ("max word count per sentence" -> 8) ~
+    ("sentence selector" -> ("max word count per sentence" -> 20) ~
                             ("min word count per sentence" -> 6)) ~
-    ("data name" -> "busc_testing2") ~
+    ("data name" -> "busc") ~
     ("data directory" -> corpus) ~
-    ("max sentences" -> 100)
+    ("max sentences" -> 250000)
 
   //////////////////////////////////////////////////////////////////
   // Step 2: Corrupt the positive sentences to get negative data
@@ -42,8 +42,8 @@ object MemoryNetworkExperiments {
     ("sentences" -> sentenceSelectorParams) ~
     ("tokenize input" -> false) ~
     ("use lstm" -> true) ~
-    ("word dimensionality" -> 10) ~
-    ("max training epochs" -> 1)
+    ("word dimensionality" -> 50) ~
+    ("max training epochs" -> 20)
 
   // Step 2b: generate candidate corruptions using the KB
   val kbSentenceCorruptorParams: JValue =
@@ -54,7 +54,8 @@ object MemoryNetworkExperiments {
   val corruptedSentenceSelectorParams: JValue =
     ("sentence producer type" -> "kb sentence corruptor") ~
     ("create sentence indices" -> true) ~
-    ("candidates per set" -> 1) ~
+    ("candidates per set" -> 5) ~
+    ("max sentences" -> 250000) ~
     ("corruptor" -> kbSentenceCorruptorParams) ~
     ("language model" -> languageModelParams)
 
@@ -101,15 +102,15 @@ object MemoryNetworkExperiments {
     ("positive data" -> sentenceSelectorParams) ~
     ("negative data" -> corruptedSentenceSelectorParams) ~
     ("validation questions" -> validationQuestionParams) ~
-    //("pretrained embeddings" -> pretrainedEmbeddingParams) ~
-    ("number of epochs" -> 2)
+    ("pretrained embeddings" -> pretrainedEmbeddingParams) ~
+    ("number of epochs" -> 30)
 
   val memoryNetworkParams: JValue = baseModelParams merge (
     ("model type" -> "memory network") ~
-    ("model name" -> "busc/attentive_memory_network") ~
+    ("model name" -> "busc/memory_network_pretrained_heuristic_entailment") ~
     ("knowledge selector" -> "parameterized") ~
     ("memory updater" -> "dense_concat") ~
-    ("entailment model" -> "dense_memory_only") ~
+    ("entailment model" -> "heuristic_matching") ~
     ("positive background" -> positiveBackgroundParams) ~
     ("negative background" -> negativeBackgroundParams) ~
     ("validation background" -> validationBackgroundParams)
@@ -143,8 +144,8 @@ object MemoryNetworkExperiments {
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
     //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
-    //NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
+    NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
+    //NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
   }
 }

@@ -33,11 +33,6 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" %  "logback-classic" % "1.1.7"  // backend for scala-logging
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
-resolvers ++= Seq(
-  Resolver.bintrayRepo("allenai", "private"),
-  "AllenAI Releases" at "http://utility.allenai.org:8081/nexus/content/repositories/releases"
-)
-
 lazy val testPython = TaskKey[Unit]("testPython")
 
 testPython := {
