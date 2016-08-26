@@ -8,7 +8,10 @@ import org.json4s.JsonDSL._
 import com.mattg.util.FileUtil
 
 class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
-  val params: JValue = ("question file" -> "/dev/null") ~ ("data name" -> "test data")
+  val params: JValue =
+    ("question file" -> "/dev/null") ~
+    ("output file" -> "/dev/null") ~
+    ("wh-movement" -> "matt's")
   val processor = new QuestionInterpreter(params, new FileUtil)
 
 
@@ -36,14 +39,12 @@ class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
         Answer("answer 4", false)
       )
     )
-    processor.fillInAnswerOptions(question) should be(Some("Sentence 1. Sentence 2 ___.",
-      Seq(
-        ("Sentence 2 answer 1.", false),
-        ("Sentence 2 answer 2.", true),
-        ("Sentence 2 answer 3.", false),
-        ("Sentence 2 answer 4.", false)
-      )
-    ))
+    processor.fillInAnswerOptions(question) should be(Some(Seq(
+      ("Sentence 2 answer 1.", false),
+      ("Sentence 2 answer 2.", true),
+      ("Sentence 2 answer 3.", false),
+      ("Sentence 2 answer 4.", false)
+    )))
   }
 
   it should "replace wh-phrases" in {
@@ -54,12 +55,10 @@ class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
         Answer("false", true)
       )
     )
-    processor.fillInAnswerOptions(question) should be(Some("Which option is the answer?",
-      Seq(
-        ("The answer is true.", false),
-        ("The answer is false.", true)
-      )
-    ))
+    processor.fillInAnswerOptions(question) should be(Some(Seq(
+      ("The answer is true.", false),
+      ("The answer is false.", true)
+    )))
   }
 
   it should "handle \"where is\" questions" in {
@@ -70,19 +69,17 @@ class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
         Answer("the sky", true)
       )
     )
-    processor.fillInAnswerOptions(question) should be(Some("Where is the answer?",
-      Seq(
-        ("The answer is in the ground.", false),
-        ("The answer is in the sky.", true)
-      )
-    ))
+    processor.fillInAnswerOptions(question) should be(Some(Seq(
+      ("The answer is in the ground.", false),
+      ("The answer is in the sky.", true)
+    )))
   }
 
   it should "handle \"where is\" questions with wh-movement" in {
     val questionText = "Where is most of Earth's water located?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("oceans", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("Most of Earth's water is located in oceans.", true))))
+      Some(Seq(("Most of Earth's water is located in oceans.", true))))
   }
 
   it should "not add \"in\" if the answer already has it" in {
@@ -93,12 +90,10 @@ class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
         Answer("in the sky", true)
       )
     )
-    processor.fillInAnswerOptions(question) should be(Some("Where is the answer?",
-      Seq(
-        ("The answer is in the ground.", false),
-        ("The answer is in the sky.", true)
-      )
-    ))
+    processor.fillInAnswerOptions(question) should be(Some(Seq(
+      ("The answer is in the ground.", false),
+      ("The answer is in the sky.", true)
+    )))
   }
 
   ignore should "handle \"how are\" questions (Stanford parser gets this wrong)" in {
@@ -111,118 +106,116 @@ class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
         Answer("In threes", false)
       )
     )
-    processor.fillInAnswerOptions(question) should be(Some("How are genes usually grouped inside a cell?",
-      Seq(
-        ("Genes are usually grouped inside a cell by themselves.", false),
-        ("Genes are usually grouped inside a cell in pairs.", true),
-        ("Genes are usually grouped inside a cell in fours.", false),
-        ("Genes are usually grouped inside a cell in threes.", false)
-      )
-    ))
+    processor.fillInAnswerOptions(question) should be(Some(Seq(
+      ("Genes are usually grouped inside a cell by themselves.", false),
+      ("Genes are usually grouped inside a cell in pairs.", true),
+      ("Genes are usually grouped inside a cell in fours.", false),
+      ("Genes are usually grouped inside a cell in threes.", false)
+    )))
   }
 
   it should "undo wh-movement" in {
     val questionText = "What is the male part of a flower called?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("Stamen", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("The male part of a flower is called stamen.", true))))
+      Some(Seq(("The male part of a flower is called stamen.", true))))
   }
 
   ignore should "undo nested wh-movement (Stanford parser gets this wrong)" in {
     val questionText = "From which part of the plant does a bee get food?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("flower", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("A bee gets food from flower.", true))))
+      Some(Seq(("A bee gets food from flower.", true))))
   }
 
   it should "handle another wh-question" in {
     val questionText = "What is the end stage in a human's life cycle?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("death", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("The end stage in a human's life cycle is death.", true))))
+      Some(Seq(("The end stage in a human's life cycle is death.", true))))
   }
 
   it should "handle agents correctly" in {
     val questionText = "What is a waste product excreted by lungs?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("carbon dioxide", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("A waste product excreted by lungs is carbon dioxide.", true))))
+      Some(Seq(("A waste product excreted by lungs is carbon dioxide.", true))))
   }
 
   ignore should "undo movement correctly (Stanford gets this wrong...)" in {
     val questionText = "Which property of air does a barometer measure?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("pressure", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("A barometer does measure pressue.", true))))
+      Some(Seq(("A barometer does measure pressue.", true))))
   }
 
   it should "handle dangling prepositions" in {
     val questionText = "Where do plants get energy from to make food?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("the sun", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("Plants do get energy to make food from the sun.", true))))
+      Some(Seq(("Plants do get energy to make food from the sun.", true))))
   }
 
   it should "order adjuncts correctly" in {
     val questionText = "What is the source of energy required to begin photosynthesis?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("sunlight", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("The source of energy required to begin photosynthesis is sunlight.", true))))
+      Some(Seq(("The source of energy required to begin photosynthesis is sunlight.", true))))
   }
 
   ignore should "deal with extra words correctly (parser is incorrect)" in {
     val questionText = "The digestion process begins in which of the following?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("mouth", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("The digestion process begins in mouth.", true))))
+      Some(Seq(("The digestion process begins in mouth.", true))))
   }
 
   it should "deal with PP attachment on the wh word and a redundant word in the answer correctly" in {
     val questionText = "Where is the pigment chlorophyll found in plants?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("in the leaves", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("The pigment chlorophyll is found in plants in the leaves.", true))))
+      Some(Seq(("The pigment chlorophyll is found in plants in the leaves.", true))))
   }
 
   ignore should "deal with does in question correctly (parser is incorrect)" in {
     val questionText = "From which part of the plant does a bee get food?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("flower", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("A bee does get food from flower part of the plant.", true))))
+      Some(Seq(("A bee does get food from flower part of the plant.", true))))
   }
 
   it should "move head before prepositional phrases" in {
     val questionText = "How are genes usually grouped in a cell?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("in pairs", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("Genes are usually grouped in a cell in pairs.", true))))
+      Some(Seq(("Genes are usually grouped in a cell in pairs.", true))))
   }
 
   it should "not add \"in\" for \"where\" questions if the answer has \"from\"" in {
     val questionText = "Where do offspring get their genes?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("From their parents", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("Offspring do get their genes from their parents.", true))))
+      Some(Seq(("Offspring do get their genes from their parents.", true))))
   }
 
   ignore should "deal with modal verbs correctly (parser is incorrect)" in {
     val questionText = "What tool should this student use?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("magnet", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("This student should use magnet.", true))))
+      Some(Seq(("This student should use magnet.", true))))
   }
 
   ignore should "get the word order right (parser is incorrect)" in {
     val questionText = "Which of the following resources does an animal use for energy?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("food", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("An animal does use food for energy.", true))))
+      Some(Seq(("An animal does use food for energy.", true))))
   }
 
   it should "deal with Why correctly" in {
     val questionText = "Why is competition important?"
     val question = ScienceQuestion(Seq(questionText), Seq(Answer("It maintains a natural balance", true)))
     processor.fillInAnswerOptions(question) should be(
-      Some(questionText, Seq(("Competition is important because it maintains a natural balance.", true))))
+      Some(Seq(("Competition is important because it maintains a natural balance.", true))))
   }
 }
