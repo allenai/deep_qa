@@ -20,6 +20,7 @@ javaOptions ++= Seq("-Xmx14g", "-Xms14g")
 
 libraryDependencies ++= Seq(
   //"org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",
+  "org.apache.commons" % "commons-lang3" % "3.0",
   "org.apache.spark" %% "spark-core" % "1.6.0",
   "org.elasticsearch" % "elasticsearch" % "2.3.4",
   "org.json4s" %% "json4s-native" % "3.2.11",
