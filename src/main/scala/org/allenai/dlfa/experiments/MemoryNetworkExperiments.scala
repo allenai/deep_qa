@@ -19,6 +19,22 @@ object MemoryNetworkExperiments {
     ("elastic search cluster name" -> "aristo-es") ~
     ("elastic search index name" -> "busc")
 
+  val manualBuscLargePositiveData: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("filename" -> "/home/mattg/data/memory_network/busc_large/indexed_training_data.tsv")
+
+  val manualBuscLargeNegativeData: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("filename" -> "/home/mattg/data/memory_network/busc_large/indexed_training_data_corrupted.tsv")
+
+  val manualBuscLargePositiveBackground: JValue =
+    ("searcher type" -> "manually provided") ~
+    ("filename" -> "/home/mattg/data/memory_network/busc_large/indexed_training_data_background.tsv")
+
+  val manualBuscLargeNegativeBackground: JValue =
+    ("searcher type" -> "manually provided") ~
+    ("filename" -> "/home/mattg/data/memory_network/busc_large/indexed_training_data_corrupted_background.tsv")
+
   //////////////////////////////////////////////////////////
   // Step 1: Take a corpus and select sentences to use
   //////////////////////////////////////////////////////////
@@ -99,8 +115,10 @@ object MemoryNetworkExperiments {
     ("add projection" -> true)
 
   val baseModelParams: JValue =
-    ("positive data" -> sentenceSelectorParams) ~
-    ("negative data" -> corruptedSentenceSelectorParams) ~
+    //("positive data" -> sentenceSelectorParams) ~
+    //("negative data" -> corruptedSentenceSelectorParams) ~
+    ("positive data" -> manualBuscLargePositiveData) ~
+    ("negative data" -> manualBuscLargeNegativeData) ~
     ("validation questions" -> validationQuestionParams) ~
     ("pretrained embeddings" -> pretrainedEmbeddingParams) ~
     ("patience" -> 4) ~
@@ -112,8 +130,10 @@ object MemoryNetworkExperiments {
     ("knowledge selector" -> "parameterized") ~
     ("memory updater" -> "dense_concat") ~
     ("entailment model" -> "heuristic_matching") ~
-    ("positive background" -> positiveBackgroundParams) ~
-    ("negative background" -> negativeBackgroundParams) ~
+    //("positive background" -> positiveBackgroundParams) ~
+    //("negative background" -> negativeBackgroundParams) ~
+    ("positive background" -> manualBuscLargePositiveBackground) ~
+    ("negative background" -> manualBuscLargeNegativeBackground) ~
     ("validation background" -> validationBackgroundParams)
   )
 
