@@ -13,7 +13,7 @@ addons:
       - gfortran
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  - bash miniconda.sh -b -p $HOME/miniconda_dlfa || true
+  - rm -rf $HOME/miniconda_dlfa && bash miniconda.sh -b -p $HOME/miniconda_dlfa
   - export PATH="$HOME/miniconda_dlfa/bin:$PATH"
 before_script:
   - pip install -r requirements.txt
@@ -21,6 +21,5 @@ script:
   - sbt clean test
 cache:
   directories:
-    - $HOME/miniconda_dlfa
     - $HOME/.ivy2/cache
     - $HOME/.sbt/boot/
