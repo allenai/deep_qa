@@ -6,9 +6,10 @@
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
-# Neural net libraries.
+# Neural net and related libraries.
 keras
 h5py
+sklearn
 
 #### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
 

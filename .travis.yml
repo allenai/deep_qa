@@ -21,6 +21,6 @@ script:
   - sbt clean test
 cache:
   directories:
-    - $HOME/miniconda
+    - $HOME/miniconda_dlfa
     - $HOME/.ivy2/cache
     - $HOME/.sbt/boot/
