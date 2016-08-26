@@ -13,7 +13,7 @@ addons:
       - gfortran
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  - if [ ! -d $HOME/miniconda_dlfa ]\; then bash miniconda.sh -b -p $HOME/miniconda_dlfa\; fi
+  - if [ ! -d "$HOME/miniconda_dlfa" ]\; then bash miniconda.sh -b -p $HOME/miniconda_dlfa\; fi
   - export PATH="$HOME/miniconda_dlfa/bin:$PATH"
 before_script:
   - pip install -r requirements.txt
