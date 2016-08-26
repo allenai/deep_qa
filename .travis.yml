@@ -1,10 +1,15 @@
 language: scala
+python:
+  - "3.5"
 scala:
   - 2.11.7
 jdk:
   - oraclejdk8
-script: "sbt clean test"
+script:
+  - pip3 install -r requirements.txt
+  - sbt clean test
 cache:
   directories:
+    - $HOME/.cache/pip
     - $HOME/.ivy2/cache
     - $HOME/.sbt/boot/
