@@ -224,7 +224,11 @@ def select_mostly_likely_candidates(word_replacer: WordReplacer,
                                     output_file: str):
     train_sequence_length = word_replacer.get_model_input_shape()[1]
     kept_sentences = []
+    print("Selecting most likely candidates")
+    index = 0
     for line in codecs.open(candidates_file, "r", "utf-8"):
+        index += 1
+        if index % 10000 == 0: print(index)
         candidates = line.strip().split("\t")
         candidate_scores = word_replacer.score_sentences(candidates, train_sequence_length, tokenize)
         candidate_scores.sort(reverse=True)
