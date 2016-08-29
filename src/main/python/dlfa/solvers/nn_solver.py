@@ -52,7 +52,6 @@ class NNSolver(object):
         self.debug_model = None
         self.embedding_layer = None
         self.time_distributed_embedding_layer = None
-        self.projection_matrix = None
         self.projection_layer = None
         self.time_distributed_projection_layer = None
         self.sentence_encoder_layer = None
@@ -304,9 +303,6 @@ class NNSolver(object):
             elif layer.name == "background_embedding":
                 logger.info("  Found background embedding layer")
                 self.time_distributed_embedding_layer = layer
-            elif layer.name == "projection_matrix":
-                logger.info("  Found projection matrix")
-                self.projection_matrix = layer
             elif layer.name == "embedding_projection":
                 logger.info("  Found projection layer")
                 self.projection_layer = layer
@@ -320,7 +316,6 @@ class NNSolver(object):
         assert self.time_distributed_embedding_layer is not None, "Background embedding layer not found"
         assert self.sentence_encoder_layer is not None, "Sentence encoder not found"
         if self.project_embeddings:
-            assert self.projection_matrix is not None, "Projection matrix not found"
             assert self.projection_layer is not None, "Projection layer not found"
             assert self.time_distributed_projection_layer is not None, "Background projection layer not found"
 
@@ -458,7 +453,7 @@ class NNSolver(object):
     def _index_and_pad_dataset(self, dataset: TextDataset, max_lengths: List[int]):
         logger.info("Indexing dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
-        logger.info("Padding dataset")
+        logger.info("Padding dataset to lengths %s", str(max_lengths))
         indexed_dataset.pad_instances(max_lengths)
         return indexed_dataset
 
@@ -521,9 +516,7 @@ class NNSolver(object):
                                                  mask_zero=True,  # this handles padding correctly
                                                  name='embedding')
             if self.project_embeddings:
-                self.projection_matrix = Dense(output_dim=self.embedding_size,
-                                               name="projection_matrix")
-                self.projection_layer = TimeDistributed(self.projection_matrix,
+                self.projection_layer = TimeDistributed(Dense(output_dim=self.embedding_size,),
                                                         name='embedding_projection')
                 self.time_distributed_projection_layer = TimeDistributed(
                         self.projection_layer, name='background_embedding_projection')
