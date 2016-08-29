@@ -1,4 +1,6 @@
+import codecs
 import gzip
+import logging
 
 from typing import Dict, List  # pylint: disable=unused-import
 
@@ -6,6 +8,9 @@ import numpy
 from keras.layers import Embedding
 
 from .data_indexer import DataIndexer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class PretrainedEmbeddings:
     @staticmethod
@@ -32,15 +37,19 @@ class PretrainedEmbeddings:
         embeddings = {}
         embedding_size = None
 
+        # TODO(matt): make this a parameter
+        embedding_misses_filename = 'embedding_misses.txt'
+
         # First we read the embeddings from the file, only keeping vectors for the words we need.
-        print("Reading embeddings from file")
+        logger.info("Reading embeddings from file")
         with gzip.open(embeddings_filename, 'rb') as embeddings_file:
             for line in embeddings_file:
-                fields = line.decode('utf-8').strip().split()
+                fields = line.decode('utf-8').strip().split(' ')
                 if embedding_size is None:
                     embedding_size = len(fields) - 1
                 else:
-                    assert len(fields) - 1 == embedding_size, "Changing embedding size!"
+                    if len(fields) - 1 != embedding_size:
+                        continue
                 word = fields[0]
                 if word in words_to_keep:
                     vector = numpy.asarray(fields[1:], dtype='float32')
@@ -49,12 +58,14 @@ class PretrainedEmbeddings:
 
         # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
         # then filling in the word vectors we just read.
-        print("Initializing pre-trained embedding layer")
+        logger.info("Initializing pre-trained embedding layer; logging embedding misses to %s",
+                    embedding_misses_filename)
         embedding_matrix = PretrainedEmbeddings.initialize_random_matrix((vocab_size, embedding_size))
 
         # The 2 here is because we know too much about the DataIndexer.  Index 0 is the padding
         # index, and the vector for that dimension is going to be 0.  Index 1 is the OOV token, and
         # we can't really set a vector for the OOV token.
+        embedding_misses_file = codecs.open(embedding_misses_filename, 'w', 'utf-8')
         for i in range(2, vocab_size - 1):
             word = data_indexer.get_word_from_index(i)
 
@@ -62,6 +73,9 @@ class PretrainedEmbeddings:
             # so the word has a random initialization.
             if word in embeddings:
                 embedding_matrix[i] = embeddings[word]
+            else:
+                print(word, file=embedding_misses_file)
+        embedding_misses_file.close()
 
         # The weight matrix is initialized, so we construct and return the actual Embedding layer.
         return Embedding(input_dim=vocab_size,
