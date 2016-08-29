@@ -218,4 +218,19 @@ class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
     processor.fillInAnswerOptions(question) should be(
       Some(Seq(("Competition is important because it maintains a natural balance.", true))))
   }
+
+  it should "not care about how many underscores there are (if there are at least 3)" in {
+    val base = "This would be an example of "
+    val expected = Some(Seq(("This would be an example of absorption.", true)))
+    processor.fillInAnswerOptions(
+      ScienceQuestion(Seq(base + "___."), Seq(Answer("absorption", true)))) should be(expected)
+    processor.fillInAnswerOptions(
+      ScienceQuestion(Seq(base + "_____."), Seq(Answer("absorption", true)))) should be(expected)
+    processor.fillInAnswerOptions(
+      ScienceQuestion(Seq(base + "________."), Seq(Answer("absorption", true)))) should be(expected)
+    processor.fillInAnswerOptions(
+      ScienceQuestion(Seq(base + "_________."), Seq(Answer("absorption", true)))) should be(expected)
+    processor.fillInAnswerOptions(
+      ScienceQuestion(Seq(base + "__________."), Seq(Answer("absorption", true)))) should be(expected)
+  }
 }
