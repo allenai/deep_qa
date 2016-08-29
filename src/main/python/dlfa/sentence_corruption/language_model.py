@@ -1,4 +1,4 @@
-from __future__ import print_function
+import logging
 import sys
 import pickle
 import codecs
@@ -11,7 +11,9 @@ from keras.models import Model, model_from_json
 from keras.layers import Input, LSTM, Embedding, Dropout, merge, TimeDistributed, Dense, SimpleRNN
 from keras.callbacks import EarlyStopping
 
-class WordReplacer(object):
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+class WordReplacer:
     def __init__(self):
         self.data_indexer = DataIndexer()
         self.model = None
@@ -75,7 +77,7 @@ class WordReplacer(object):
         # [(batch_size, num_words, factor_base)] * num_factors
         model = Model(input=model_input, output=model_outputs)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
-        print(model.summary(), file=sys.stderr)
+        model.summary()
         early_stopping = EarlyStopping()
         model.fit(input_array, factored_target_arrays, nb_epoch=num_epochs, validation_split=0.1,
                   callbacks=[early_stopping])
@@ -97,7 +99,7 @@ class WordReplacer(object):
         self.model = model_from_json(open("%s_config.json" % model_serialization_prefix).read())
         self.model.load_weights("%s_weights.h5" % model_serialization_prefix)
         self.model.compile(loss='categorical_crossentropy', optimizer='adam')
-        print(self.model.summary(), file=sys.stderr)
+        self.model.summary()
 
     def get_substitutes(self, sentences, locations, train_sequence_length, num_substitutes=5,
                         tokenize=True, search_space_size=5000):
@@ -150,7 +152,7 @@ class WordReplacer(object):
 def train(train_file, max_instances, factor_base, word_dim, num_epochs, tokenize, use_lstm,
           model_serialization_prefix):
     word_replacer = WordReplacer()
-    print("Reading training data", file=sys.stderr)
+    logger.info("Reading training data")
     train_lines = [x.strip() for x in codecs.open(train_file, "r", "utf-8")]
     if '\t' in train_lines[0]:
         train_sentences = [x.split('\t')[1] for x in train_lines]
@@ -168,7 +170,7 @@ def train(train_file, max_instances, factor_base, word_dim, num_epochs, tokenize
 
 def corrupt_sentences(word_replacer, file_to_corrupt, search_space_size, tokenize,
                       create_sentence_indices, output_file):
-    print("Reading test data", file=sys.stderr)
+    logger.info("Reading test data")
     test_lines = [x.strip() for x in codecs.open(file_to_corrupt, "r", "utf-8")]
     if '\t' in test_lines[0]:
         test_sentence_strings = [x.split('\t')[1] for x in test_lines]
@@ -192,7 +194,7 @@ def corrupt_sentences(word_replacer, file_to_corrupt, search_space_size, tokeniz
         locations.append(location)
         test_sentences.append(" ".join(words))
     train_sequence_length = word_replacer.get_model_input_shape()[1]
-    print("Limiting search space size to %d" % search_space_size, file=sys.stderr)
+    logger.info("Limiting search space size to %d", search_space_size)
     substitutes = word_replacer.get_substitutes(test_sentences, locations,
                                                 train_sequence_length, tokenize=tokenize,
                                                 search_space_size=search_space_size)
@@ -215,23 +217,37 @@ def corrupt_sentences(word_replacer, file_to_corrupt, search_space_size, tokeniz
     outfile.close()
 
 
-def select_mostly_likely_candidates(word_replacer, candidates_file, top_k, tokenize,
-                                    create_sentence_indices, output_file):
-    index = 0
+def select_mostly_likely_candidates(word_replacer: WordReplacer,
+                                    candidates_file: str,
+                                    top_k: int,
+                                    tokenize: bool,
+                                    create_sentence_indices: bool,
+                                    max_output_sentences: int,
+                                    output_file: str):
     train_sequence_length = word_replacer.get_model_input_shape()[1]
-    outfile = codecs.open(output_file, "w", "utf-8")
+    kept_sentences = []
+    logger.info("Selecting most likely candidates")
+    index = 0
     for line in codecs.open(candidates_file, "r", "utf-8"):
+        index += 1
+        if index % 10000 == 0: logger.info(index)
         candidates = line.strip().split("\t")
         candidate_scores = word_replacer.score_sentences(candidates, train_sequence_length, tokenize)
         candidate_scores.sort(reverse=True)
         for _, candidate in candidate_scores[:top_k]:
+            kept_sentences.append(candidate)
+    random.shuffle(kept_sentences)
+    if max_output_sentences:
+        kept_sentences = kept_sentences[:max_output_sentences]
+    with codecs.open(output_file, "w", "utf-8") as outfile:
+        index = 0
+        for sentence in kept_sentences:
             if create_sentence_indices:
-                output_string = '%d\t%s' % (index, candidate)
+                output_string = '%d\t%s\n' % (index, sentence)
             else:
-                output_string = candidate
-            print(output_string, file=outfile)
+                output_string = '%s\n' % sentence
             index += 1
-    outfile.close()
+            outfile.write(output_string)
 
 
 def main():
@@ -284,7 +300,7 @@ def main():
                            help="(2) Number of most frequent words to search over as replacement candidates")
     argparser.add_argument("--create_sentence_indices", action="store_true",
                            help="(2,3) If true, output will be [sentence id][tab][sentence]")
-    argparser.add_argument("--max_output_sentences", type=int,  # TODO(matt): this is currently ignored
+    argparser.add_argument("--max_output_sentences", type=int,
                            help="(2,3) If set, limit output to this many corrupted sentences")
     argparser.add_argument("--output_file",
                            help="(2,3) Place to save requested output file")
@@ -303,14 +319,14 @@ def main():
                               args.use_lstm,
                               args.model_serialization_prefix)
     else:
-        print("Loading saved model", file=sys.stderr)
+        logger.info("Loading saved model")
         word_replacer = WordReplacer()
         word_replacer.load_model(args.model_serialization_prefix)
 
     # Sentence corruption, if we were asked to do that.
     if args.file_to_corrupt is not None:
         if args.output_file is None:
-            print("Need to specify where to save output with --output_file", file=sys.stderr)
+            logger.info("Need to specify where to save output with --output_file")
             sys.exit(-1)
         corrupt_sentences(word_replacer,
                           args.file_to_corrupt,
@@ -326,9 +342,12 @@ def main():
                                         args.keep_top_k,
                                         not args.no_tokenize,
                                         args.create_sentence_indices,
+                                        args.max_output_sentences,
                                         args.output_file)
 
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                        level=logging.INFO)
     main()
