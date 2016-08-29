@@ -45,10 +45,20 @@ class PretrainedEmbeddings:
         with gzip.open(embeddings_filename, 'rb') as embeddings_file:
             for line in embeddings_file:
                 fields = line.decode('utf-8').strip().split(' ')
+                print(line)
                 if embedding_size is None:
                     embedding_size = len(fields) - 1
+                    print(embedding_size)
+                    assert embedding_size > 1, "Found embedding size of 1; do you have a header?"
                 else:
                     if len(fields) - 1 != embedding_size:
+                        # Sometimes there are funny unicode parsing problems that lead to different
+                        # fields lengths (e.g., a word with a unicode space character that splits
+                        # into more than one column).  We skip those lines.  Note that if you have
+                        # some kind of long header, this could result in all of your lines getting
+                        # skipped.  It's hard to check for that here; you just have to look in the
+                        # embedding_misses_file and at the model summary to make sure things look
+                        # like they are supposed to.
                         continue
                 word = fields[0]
                 if word in words_to_keep:
