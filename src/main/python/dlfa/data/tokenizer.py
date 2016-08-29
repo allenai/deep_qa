@@ -9,8 +9,9 @@ class Tokenizer:
     # These are certainly incomplete.  But at least it's a start.
     special_cases = set(['mr.', 'mrs.', 'etc.', 'e.g.', 'cf.', 'c.f.', 'eg.', 'al.'])
     contractions = set(["n't", "'s", "'ve", "'re", "'ll", "'d", "'m"])
-    ending_punctuation = set(['"', "'", '.', ',', ';', ')', ']', '}'])
-    beginning_punctuation = set(['"', "'", '(', '[', '{'])
+    contractions |= set([x.replace("'", "’") for x in contractions])
+    ending_punctuation = set(['"', "'", '.', ',', ';', ')', ']', '}', ':', '!', '?', '%', '”', "’"])
+    beginning_punctuation = set(['"', "'", '(', '[', '{', '#', '$', '“', "‘"])
 
     @classmethod
     def tokenize(cls, sentence: str):
