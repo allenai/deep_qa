@@ -1,10 +1,14 @@
 import codecs
+import logging
 import random
 
 from typing import List
 
 from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance
 from .data_indexer import DataIndexer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class Dataset:
     """
@@ -134,8 +138,11 @@ class IndexedDataset(Dataset):
         # relevant padding decisions from the instances themselves.  Then we check whether we were
         # given a max length for a particular dimension.  If we were, we use that instead of the
         # instance-based one.
+        logger.info("Getting max lengths from instances")
         instance_max_lengths = self.max_lengths()
+        logger.info("Instance max lengths: %s", str(instance_max_lengths))
         zipped_maxes = zip(max_lengths, instance_max_lengths)
+        logger.info("zipped with given: %s", str(zipped_maxes))
         max_lengths = []
         for given, from_instance in zipped_maxes:
             if given is not None:
@@ -143,6 +150,7 @@ class IndexedDataset(Dataset):
             else:
                 max_lengths.append(from_instance)
 
+        logger.info("Now actually padding instances to length: %s", str(max_lengths))
         for instance in self.instances:
             instance.pad(max_lengths)
 
