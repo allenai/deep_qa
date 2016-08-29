@@ -60,7 +60,7 @@ object SentenceProducer {
       case JString("kb sentence corruptor") => new CorruptedSentenceSelector(params, fileUtil)
       case JString("question interpreter") => new QuestionInterpreter(params, fileUtil)
       case JString("manually provided") => new ManuallyProvidedSentences(params, fileUtil)
-      case _ => throw new IllegalStateException("unrecognized SentenceProducer parameters")
+      case jval => throw new IllegalStateException(s"unrecognized SentenceProducer parameters: $jval")
     }
   }
 }
@@ -79,6 +79,7 @@ class ManuallyProvidedSentences(
   override val name = "Manually Provided Sentences"
 
   val validParams = baseParams ++ Seq("filename")
+  JsonHelper.ensureNoExtras(params, name, validParams)
 
   override val outputFile = (params \ "filename").extract[String]
   override val inputs: Set[(String, Option[Step])] = Set((outputFile, None))
