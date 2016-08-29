@@ -46,6 +46,7 @@ abstract class NeuralNetworkTrainer(
     "positive data",
     "negative data",
     "validation questions",
+    "patience",
     "number of epochs",
     "max training instances",
     "max sentence length",
@@ -55,6 +56,7 @@ abstract class NeuralNetworkTrainer(
   )
 
   val numEpochs = JsonHelper.extractWithDefault(params, "number of epochs", 20)
+  val patience = JsonHelper.extractWithDefault(params, "patience", 1)
 
   val embeddingSize = JsonHelper.extractWithDefault(params, "embedding size", 50)
   val embeddingDropout = JsonHelper.extractWithDefault(params, "embedding dropout", 0.5)
@@ -106,6 +108,7 @@ abstract class NeuralNetworkTrainer(
     "--negative_train_file", negativeTrainingFile,
     "--validation_file", validationQuestionsFile,
     "--num_epochs", numEpochs.toString,
+    "--patience", patience.toString,
     "--model_serialization_prefix", modelPrefix
   ) ++ maxTrainingInstancesArgs ++ maxSentenceLengthArgs ++ pretrainedEmbeddingArgs
 

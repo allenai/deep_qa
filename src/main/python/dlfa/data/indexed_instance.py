@@ -29,7 +29,12 @@ class IndexedInstance:
     def pad(self, max_lengths: List[int]):
         """
         Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
-        self.get_lengths() for why this is a list instead of an int.
+        self.get_lengths() for why max_lengths is a list instead of an int.
+
+        If we need to truncate self.word_indices, we do it from the _right_, not the left.  This is
+        important for cases that are questions, with long set ups.  We at least want to get the
+        question encoded, which is always at the end, even if we've lost much of the question set
+        up.
         """
         desired_length = max_lengths[0]
         padded_word_indices = [0] * desired_length

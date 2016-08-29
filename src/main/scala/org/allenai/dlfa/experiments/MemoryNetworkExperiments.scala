@@ -103,11 +103,12 @@ object MemoryNetworkExperiments {
     ("negative data" -> corruptedSentenceSelectorParams) ~
     ("validation questions" -> validationQuestionParams) ~
     ("pretrained embeddings" -> pretrainedEmbeddingParams) ~
+    ("patience" -> 4) ~
     ("number of epochs" -> 30)
 
   val memoryNetworkParams: JValue = baseModelParams merge (
     ("model type" -> "memory network") ~
-    ("model name" -> "busc/memory_network_pretrained_heuristic_entailment") ~
+    ("model name" -> "busc/memory_network_pretrained_projected_heuristic_entailment") ~
     ("knowledge selector" -> "parameterized") ~
     ("memory updater" -> "dense_concat") ~
     ("entailment model" -> "heuristic_matching") ~
