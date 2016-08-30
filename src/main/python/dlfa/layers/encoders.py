@@ -2,7 +2,7 @@ import warnings
 import copy
 from keras import backend as K
 from keras import activations, initializations, regularizers
-from keras.layers import Layer, Recurrent
+from keras.layers import Layer, Recurrent, LSTM
 from keras.engine import InputSpec
 import numpy as np
 
@@ -26,23 +26,30 @@ class TreeCompositionLSTM(Recurrent):
         gates, for each element that can be forgotten and G_3 has three.
     '''
     # pylint: disable=invalid-name
-    def __init__(self, stack_limit, buffer_ops_limit, output_dim,
-                 init='glorot_uniform', inner_init='orthogonal',
-                 forget_bias_init='one', activation='tanh',
-                 inner_activation='hard_sigmoid',
-                 W_regularizer=None, U_regularizer=None, V_regularizer=None, b_regularizer=None,
-                 dropout_W=0., dropout_U=0., dropout_V=0., **kwargs):
-        self.stack_limit = stack_limit
+    def __init__(self, **kwargs):
+        assert "stack_limit" in kwargs, "Specify stack_limit"
+        assert "buffer_ops_limit" in kwargs, "Specify buffer_ops_limit"
+        assert "output_dim" in kwargs, "Specify output_dim"
+        self.stack_limit = kwargs["stack_limit"]
         # buffer_ops_limit is the max of buffer_limit and num_ops. This needs to be one value since
         # the initial buffer state and the list of operations need to be concatenated before passing
         # them to TreeCompositionLSTM
-        self.buffer_ops_limit = buffer_ops_limit
-        self.output_dim = output_dim
+        self.buffer_ops_limit = kwargs["buffer_ops_limit"]
+        self.output_dim = kwargs["output_dim"]
+        init = kwargs["init"] if "init" in kwargs else "glorot_uniform"
         self.init = initializations.get(init)
+        inner_init = kwargs["inner_init"] if "inner_init" in kwargs else "orthogonal"
         self.inner_init = initializations.get(inner_init)
+        forget_bias_init = kwargs["forget_bias_init"] if "forget_bias_init" in kwargs else "one"
         self.forget_bias_init = initializations.get(forget_bias_init)
+        activation = kwargs["activation"] if "activation" in kwargs else "tanh"
         self.activation = activations.get(activation)
+        inner_activation = kwargs["inner_activation"] if "inner_activation" in kwargs else "hard_sigmoid"
         self.inner_activation = activations.get(inner_activation)
+        W_regularizer = kwargs["W_regularizer"] if "W_regularizer" in kwargs else None
+        U_regularizer = kwargs["U_regularizer"] if "U_regularizer" in kwargs else None
+        V_regularizer = kwargs["V_regularizer"] if "V_regularizer" in kwargs else None
+        b_regularizer = kwargs["b_regularizer"] if "b_regularizer" in kwargs else None
         # Make two deep copies each of W, U and b since regularizers.get() method modifes them!
         W2_regularizer = copy.deepcopy(W_regularizer)
         W3_regularizer = copy.deepcopy(W_regularizer)
@@ -60,9 +67,9 @@ class TreeCompositionLSTM(Recurrent):
                 if b_regularizer else None
         # TODO(pradeep): Ensure output_dim = input_dim - 1
 
-        self.dropout_W = dropout_W
-        self.dropout_U = dropout_U
-        self.dropout_V = dropout_V
+        self.dropout_W = kwargs["dropout_W"] if "dropout_W" in kwargs else 0.
+        self.dropout_U = kwargs["dropout_U"] if "dropout_U" in kwargs else 0.
+        self.dropout_V = kwargs["dropout_V"] if "dropout_V" in kwargs else 0.
         if self.dropout_W:
             self.uses_learning_phase = True
         # Pass any remaining arguments of the constructor to the super class' constructor
@@ -455,3 +462,8 @@ class BOWEncoder(Layer):
         # supports masking. We don't want that. After the input is averaged, we can stop propagating
         # the mask.
         return None
+
+encoders = {  # pylint:  disable=invalid-name
+    "lstm": LSTM,
+    "tree_lstm": TreeCompositionLSTM,
+    "bow": BOWEncoder}
