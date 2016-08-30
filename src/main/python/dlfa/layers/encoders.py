@@ -444,7 +444,10 @@ class BOWEncoder(Layer):
             # weight is ditributed equally among the unmasked elements.
             # Mask (samples, num_words) has 0s for masked elements and 1s everywhere else.
             # Mask needs to be cast because it's int8 and softmax does not like it.
-            weighted_mask = K.expand_dims(K.softmax(K.cast(mask, 'float32')))  # (samples, num_words, 1)
+            float_mask = K.cast(mask, 'float32')
+            # Expanding dims of the denominator to make it the same shape as the numerator.
+            weighted_mask = float_mask / K.expand_dims(K.sum(float_mask, axis=1))  # (samples, num_words)
+            weighted_mask = K.expand_dims(weighted_mask)  # (samples, num_words, 1)
             return K.sum(x * weighted_mask, axis=1)  # (samples, word_dim)
 
     def compute_mask(self, input, mask):
