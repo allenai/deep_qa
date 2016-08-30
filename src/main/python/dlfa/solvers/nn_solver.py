@@ -217,9 +217,9 @@ class NNSolver(object):
                 self.best_epoch = epoch_id
                 num_worse_epochs = 0  # Reset the counter.
                 self._save_model(epoch_id)
-                if self.debug_file:
-                    # Shows intermediate outputs of the model on validation data
-                    self.debug(debug_dataset, debug_input, epoch_id)
+            if self.debug_file:
+                # Shows intermediate outputs of the model on validation data
+                self.debug(debug_dataset, debug_input, epoch_id)
         self._save_best_model()
 
     def test(self):
