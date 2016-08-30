@@ -552,7 +552,6 @@ class NNSolver(object):
         single vector encoding the sentence.  This is typically either a simple RNN or an LSTM, but
         could be more complex, if the "sentence" is actually a logical form.
         """
-        # TODO(matt): we should add options here.
         if self.sentence_encoder_layer is None:
             if self.encoder == "bow":
                 # Bag of words sentence encoder just takes each sentence as a matrix of word vectors,
@@ -560,6 +559,7 @@ class NNSolver(object):
                 self.sentence_encoder_layer = BOWEncoder(name='sentence_encoder')
             else:
                 # Use an LSTM to encode sentences.
+                # TODO(matt): we should add options here.
                 self.sentence_encoder_layer = LSTM(output_dim=self.embedding_size,
                                                    W_regularizer=l2(0.01),
                                                    U_regularizer=l2(0.01),
