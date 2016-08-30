@@ -229,7 +229,7 @@ class MemoryNetworkSolver(NNSolver):
             background_dataset = background_dataset.truncate(self.max_training_instances)
         self.data_indexer.fit_word_dictionary(background_dataset)
         self.training_dataset = background_dataset
-        return self.prep_labeled_data(background_dataset, for_train=True)
+        return self.prep_labeled_data(background_dataset, for_train=True, shuffle=True)
 
     @overrides
     def _get_validation_data(self):
@@ -249,11 +249,11 @@ class MemoryNetworkSolver(NNSolver):
         dataset = TextDataset.read_from_file(self.debug_file)
         background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
         # Now get inputs, and ignore the labels (background_dataset has them)
-        inputs, _ = self.prep_labeled_data(background_dataset, for_train=False)
+        inputs, _ = self.prep_labeled_data(background_dataset, for_train=False, shuffle=False)
         return background_dataset, inputs
 
     @overrides
-    def prep_labeled_data(self, dataset: Dataset, for_train: bool):
+    def prep_labeled_data(self, dataset: Dataset, for_train: bool, shuffle: bool):
         """
         Not much to do here, as IndexedBackgroundInstance does most of the work.
         """
@@ -263,7 +263,7 @@ class MemoryNetworkSolver(NNSolver):
             max_lengths = processed_dataset.max_lengths()
             self.max_sentence_length = max_lengths[0]
             self.max_knowledge_length = max_lengths[1]
-        inputs, labels = processed_dataset.as_training_data()
+        inputs, labels = processed_dataset.as_training_data(shuffle)
         sentences, background = zip(*inputs)
         sentences = numpy.asarray(sentences)
         background = numpy.asarray(background)

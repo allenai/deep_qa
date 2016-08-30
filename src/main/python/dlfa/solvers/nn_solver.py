@@ -139,7 +139,7 @@ class NNSolver(object):
         parser.add_argument('--use_model_from_epoch', type=int,
                             help="Use model from a particular epoch (use best saved model if empty)")
 
-    def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
+    def prep_labeled_data(self, dataset: TextDataset, for_train: bool, shuffle: bool):
         """
         Takes dataset, which could be a complex tuple for some classes, and produces as output a
         tuple of (inputs, labels), which can be used directly with Keras to either train or
@@ -203,7 +203,7 @@ class NNSolver(object):
         for epoch_id in range(self.num_epochs):
             self._pre_epoch_hook(epoch_id)
             logger.info("Epoch %d", epoch_id)
-            self.model.fit(self.train_input, self.train_labels, nb_epoch=1)
+            self.model.fit(self.train_input, self.train_labels, nb_epoch=1, validation_split=0.1)
             logger.info("Running validation")
             accuracy = self.evaluate(self.validation_labels, self.validation_input)
             logger.info("Validation accuracy: %.4f", accuracy)
@@ -426,7 +426,7 @@ class NNSolver(object):
             dataset = dataset.truncate(self.max_training_instances)
         self.data_indexer.fit_word_dictionary(dataset)
         self.training_dataset = dataset
-        return self.prep_labeled_data(dataset, for_train=True)
+        return self.prep_labeled_data(dataset, for_train=True, shuffle=True)
 
     def _get_validation_data(self):
         """
@@ -447,7 +447,7 @@ class NNSolver(object):
 
     def _prep_question_dataset(self, dataset: TextDataset):
         self._assert_dataset_is_questions(dataset)
-        inputs, labels = self.prep_labeled_data(dataset, for_train=False)
+        inputs, labels = self.prep_labeled_data(dataset, for_train=False, shuffle=False)
         return inputs, self.group_by_question(labels)
 
     def _index_and_pad_dataset(self, dataset: TextDataset, max_lengths: List[int]):

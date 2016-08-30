@@ -56,9 +56,9 @@ class LSTMSolver(NNSolver):
         self.max_sentence_length = self.model.get_input_shape_at(0)[1]
 
     @overrides
-    def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
+    def prep_labeled_data(self, dataset: TextDataset, for_train: bool, shuffle: bool):
         processed_dataset = self._index_and_pad_dataset(dataset, [self.max_sentence_length])
         if for_train:
             self.max_sentence_length = processed_dataset.max_lengths()[0]
-        inputs, labels = processed_dataset.as_training_data()
+        inputs, labels = processed_dataset.as_training_data(shuffle)
         return numpy.asarray(inputs), numpy.asarray(labels)
