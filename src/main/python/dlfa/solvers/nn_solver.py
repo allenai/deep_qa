@@ -13,6 +13,7 @@ from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused
 from ..data.instance import TextInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.data_indexer import DataIndexer
+from ..layers.encoders import BOWEncoder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -46,6 +47,8 @@ class NNSolver(object):
         self.patience = kwargs['patience']
 
         self.data_indexer = DataIndexer()
+
+        self.encoder = kwargs['encoder']
 
         # Model-specific member variables that will get set and used later.
         self.model = None
@@ -126,6 +129,9 @@ class NNSolver(object):
                             help="Dropout parameter to apply to the word embedding layer")
         parser.add_argument('--max_sentence_length', type=int,
                             help="Upper limit on length of training data. Ignored during testing.")
+        parser.add_argument('--encoder', type=str, choices=['bow', 'lstm'], default='lstm',
+                            help="Kind of encoder used to encode all kinds of sentences."
+                                 "Bag of words (bow) or lstm?")
 
         # Training details
         parser.add_argument('--max_training_instances', type=int,
@@ -548,11 +554,17 @@ class NNSolver(object):
         """
         # TODO(matt): we should add options here.
         if self.sentence_encoder_layer is None:
-            self.sentence_encoder_layer = LSTM(output_dim=self.embedding_size,
-                                               W_regularizer=l2(0.01),
-                                               U_regularizer=l2(0.01),
-                                               b_regularizer=l2(0.01),
-                                               name='sentence_encoder')
+            if self.encoder == "bow":
+                # Bag of words sentence encoder just takes each sentence as a matrix of word vectors,
+                # and averages along the row to get the sentence representation. (axis=0 is the batch size)
+                self.sentence_encoder_layer = BOWEncoder(name='sentence_encoder')
+            else:
+                # Use an LSTM to encode sentences.
+                self.sentence_encoder_layer = LSTM(output_dim=self.embedding_size,
+                                                   W_regularizer=l2(0.01),
+                                                   U_regularizer=l2(0.01),
+                                                   b_regularizer=l2(0.01),
+                                                   name='sentence_encoder')
         return self.sentence_encoder_layer
 
     def _build_sentence_encoder_model(self):

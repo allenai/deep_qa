@@ -2,7 +2,7 @@ import warnings
 import copy
 from keras import backend as K
 from keras import activations, initializations, regularizers
-from keras.layers import Recurrent
+from keras.layers import Layer, Recurrent
 from keras.engine import InputSpec
 import numpy as np
 
@@ -421,3 +421,34 @@ class TreeCompositionLSTM(Recurrent):
                   'dropout_V': self.dropout_V}
         base_config = super(TreeCompositionLSTM, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+class BOWEncoder(Layer):
+    '''
+    Bag of Words Encoder takes a matrix of shape (num_words, word_dim) and returns a vector of size (word_dim),
+    which is an average of the (unmasked) rows in the input matrix. This could have been done using a Lambda
+    layer, except that Lambda layer does not support masking (as of Keras 1.0.7).
+    '''
+    def __init__(self, **kwargs):
+        self.supports_masking = True
+        self.input_spec = [InputSpec(ndim=3)]
+        super(BOWEncoder, self).__init__(**kwargs)
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], input_shape[2])  # removing second dimension
+
+    def call(self, x, mask=None):
+        if mask is None:
+            return K.mean(x, axis=1)
+        else:
+            # Compute weights such that masked elements have zero weights and the remaining
+            # weight is ditributed equally among the unmasked elements.
+            # Mask (samples, num_words) has 0s for masked elements and 1s everywhere else.
+            # Mask needs to be cast because it's int8 and softmax does not like it.
+            weighted_mask = K.expand_dims(K.softmax(K.cast(mask, 'float32')))  # (samples, num_words, 1)
+            return K.sum(x * weighted_mask, axis=1)  # (samples, word_dim)
+
+    def compute_mask(self, input, mask):
+        # We need to override this method because Layer passes the input mask unchanged since this layer
+        # supports masking. We don't want that. After the input is averaged, we can stop propagating
+        # the mask.
+        return None
