@@ -131,7 +131,7 @@ class QuestionInterpreter(
       }
     }
     val answerSentences = question.answers.map(a => {
-      val replacedLastSentence = sentenceWithBlank.replace("___", a.text.toLowerCase)
+      val replacedLastSentence = sentenceWithBlank.replaceFirst("_+", a.text.toLowerCase)
       val answerSentence = if (lastSentenceOnly) {
         replacedLastSentence
       } else {
