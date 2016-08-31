@@ -3,6 +3,7 @@
 /bin/
 target/
 *.pyc
+*.py.swp
 /data/
 output/
 models/
