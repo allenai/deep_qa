@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
+
+from unittest.mock import patch
 import argparse
 import codecs
 
@@ -8,7 +10,9 @@ import pytest
 import numpy
 
 from dlfa.data.dataset import TextDataset
+from dlfa.data.data_indexer import DataIndexer
 from dlfa.data.instance import TextInstance
+from dlfa.data.tokenizer import NltkTokenizer, SimpleTokenizer
 from dlfa.solvers.lstm_solver import LSTMSolver
 
 
@@ -40,19 +44,38 @@ class TestNNSolver(fake_filesystem_unittest.TestCase):
             train_file.write('5\tsentence5\t0\n')
             train_file.write('6\tsentence6\t0\n')
 
-    def _get_solver(self):
+    def _get_solver(self, additional_arguments=None):
         # We'll use the LSTMSolver for these tests, so we have a class that actually has fully
         # implemented methods.  We use the argument parser because it's easiest to get default
         # values for all of the parameters this way.
         parser = argparse.ArgumentParser()
         LSTMSolver.update_arg_parser(parser)
-        additional_arguments = [
+        arguments = [
                 '--train_file', self.train_file,
                 '--validation_file', self.validation_file,
                 '--model_serialization_prefix', '/',
                 ]
-        args = parser.parse_args(additional_arguments)
+        if additional_arguments:
+            arguments.extend(additional_arguments)
+        args = parser.parse_args(arguments)
         return LSTMSolver(**vars(args))
+
+    @patch.object(DataIndexer, 'fit_word_dictionary', lambda x, y: y)
+    @patch.object(LSTMSolver, 'prep_labeled_data', return_value=([], numpy.asarray([[1, 0], [0, 1],
+                                                                                    [0, 1], [0, 1]])))
+    def test_tokenizer_argument_is_handled(self, prep_method):  # pylint: disable=unused-argument
+        solver = self._get_solver(['--tokenizer', 'nltk'])
+        assert isinstance(solver.tokenizer, NltkTokenizer)
+        solver._get_training_data()
+        assert isinstance(solver.training_dataset.instances[0].tokenizer, NltkTokenizer)
+        solver._get_validation_data()
+        assert isinstance(solver.validation_dataset.instances[0].tokenizer, NltkTokenizer)
+        solver = self._get_solver(['--tokenizer', 'simple'])
+        assert isinstance(solver.tokenizer, SimpleTokenizer)
+        solver._get_training_data()
+        assert isinstance(solver.training_dataset.instances[0].tokenizer, SimpleTokenizer)
+        solver._get_validation_data()
+        assert isinstance(solver.validation_dataset.instances[0].tokenizer, SimpleTokenizer)
 
     def test_prep_question_data_does_not_shuffle_data(self):
         dataset = TextDataset.read_from_file(self.validation_file)
