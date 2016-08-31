@@ -45,6 +45,7 @@ class NNSolver(object):
 
         self.tokenizer = tokenizers[kwargs['tokenizer']]()
 
+        self.keras_validation_split = kwargs['keras_validation_split']
         self.num_epochs = kwargs['num_epochs']
         self.patience = kwargs['patience']
 
@@ -136,6 +137,9 @@ class NNSolver(object):
         # Training details
         parser.add_argument('--max_training_instances', type=int,
                             help="Upper limit on the size of training data")
+        parser.add_argument('--keras_validation_split', type=float, default=0.1,
+                            help="Amount of training data to use for Keras' validation (not our "
+                            "QA validation, with --validation_file, which is separate)")
         parser.add_argument('--num_epochs', type=int, default=20,
                             help="Number of train epochs (20 by default)")
         parser.add_argument('--patience', type=int, default=1,
@@ -209,7 +213,10 @@ class NNSolver(object):
         for epoch_id in range(self.num_epochs):
             self._pre_epoch_hook(epoch_id)
             logger.info("Epoch %d", epoch_id)
-            self.model.fit(self.train_input, self.train_labels, nb_epoch=1, validation_split=0.1)
+            kwargs = {'nb_epoch': 1}
+            if self.keras_validation_split > 0.0:
+                kwargs['validation_split'] = self.keras_validation_split
+            self.model.fit(self.train_input, self.train_labels, **kwargs)
             logger.info("Running validation")
             accuracy = self.evaluate(self.validation_labels, self.validation_input)
             logger.info("Validation accuracy: %.4f", accuracy)

@@ -2,7 +2,15 @@ import argparse
 import logging
 import sys
 
-from dlfa.solvers import concrete_solvers
+# These have to be before we do any import from keras.  It would be nice to be able to pass in a
+# value for this, but that makes argument passing a whole lot more complicated.  If/when we change
+# how arguments work (e.g., loading a file), then we can think about setting this as a parameter.
+import random
+import numpy
+random.seed(13370)
+numpy.random.seed(1337)  # pylint: disable=no-member
+
+from dlfa.solvers import concrete_solvers  # pylint: disable=wrong-import-position
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
