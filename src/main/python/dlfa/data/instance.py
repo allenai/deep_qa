@@ -1,8 +1,10 @@
 from typing import List
 
+from overrides import overrides
+
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 from .indexed_instance import IndexedInstance, IndexedBackgroundInstance, IndexedLogicalFormInstance
-from .tokenizer import Tokenizer
+from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
 class Instance:
@@ -35,11 +37,11 @@ class TextInstance(Instance):
     mapped to an unknown token); to use them in training or testing, we need to first convert them
     into IndexedInstances.
     """
-    @staticmethod
-    def tokenize(sentence: str, tokenizer=Tokenizer()) -> List[str]:
-        return tokenizer.tokenize(sentence)
-
-    def __init__(self, text: str, label: bool, index: int=None):
+    def __init__(self,
+                 text: str,
+                 label: bool,
+                 index: int=None,
+                 tokenizer: Tokenizer=tokenizers['default']()):
         """
         text: the text of this instance, either a sentence or a logical form.
         label: True, False, or None, indicating whether the instance is a positive, negative or
@@ -49,6 +51,10 @@ class TextInstance(Instance):
         """
         super(TextInstance, self).__init__(label, index)
         self.text = text
+        self.tokenizer = tokenizer
+
+    def tokenize(self, sentence: str) -> List[str]:
+        return self.tokenizer.tokenize(sentence)
 
     def words(self) -> List[str]:
         return self.tokenize(self.text.lower())
@@ -58,7 +64,9 @@ class TextInstance(Instance):
         return IndexedInstance(indices, self.label, self.index)
 
     @staticmethod
-    def read_from_line(line: str, default_label: bool=None):
+    def read_from_line(line: str,
+                       default_label: bool=None,
+                       tokenizer: Tokenizer=tokenizers['default']()):
         """
         Reads an Instance object from a line.  The format has one of four options:
 
@@ -85,23 +93,23 @@ class TextInstance(Instance):
             index, text, label_string = fields
             label = label_string == '1'
             Instance._check_label(label, default_label)
-            return TextInstance(text, label, int(index))
+            return TextInstance(text, label, int(index), tokenizer)
         elif len(fields) == 2:
             if fields[0].isdecimal():
                 index, text = fields
                 Instance._check_label(None, default_label)
-                return TextInstance(text, default_label, int(index))
+                return TextInstance(text, default_label, int(index), tokenizer)
             elif fields[1].isdecimal():
                 text, label_string = fields
                 label = label_string == '1'
                 Instance._check_label(label, default_label)
-                return TextInstance(text, label)
+                return TextInstance(text, label, tokenizer=tokenizer)
             else:
                 raise RuntimeError("Unrecognized line format: " + line)
         elif len(fields) == 1:
             text = fields[0]
             Instance._check_label(None, default_label)
-            return TextInstance(text, default_label)
+            return TextInstance(text, default_label, tokenizer=tokenizer)
         else:
             raise RuntimeError("Unrecognized line format: " + line)
 
@@ -114,6 +122,7 @@ class LogicalFormInstance(TextInstance):
     We base this off of TextInstance because we implement the same interface, though we override
     most of the methods.
     """
+    @overrides
     def words(self) -> List[str]:
         """
         This method takes all predicate names and arguments and returns them, removing commas and
@@ -178,10 +187,16 @@ class BackgroundTextInstance(TextInstance):
     of strings, to allow for easier combination of background instances with logical form
     instances.  But, we'll worry about that later, if it ever becomes important.
     """
-    def __init__(self, text: str, background: List[str], label: bool, index: int=None):
-        super(BackgroundTextInstance, self).__init__(text, label, index)
+    def __init__(self,
+                 text: str,
+                 background: List[str],
+                 label: bool,
+                 index: int=None,
+                 tokenizer: Tokenizer=tokenizers['default']()):
+        super(BackgroundTextInstance, self).__init__(text, label, index, tokenizer)
         self.background = background
 
+    @overrides
     def words(self):
         text_words = super(BackgroundTextInstance, self).words()
         background_words = []
@@ -190,6 +205,7 @@ class BackgroundTextInstance(TextInstance):
         text_words.extend(background_words)
         return text_words
 
+    @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
         words = self.tokenize(self.text.lower())
         word_indices = [data_indexer.get_word_index(word) for word in words]

@@ -1,4 +1,14 @@
+from overrides import overrides
+
 class Tokenizer:
+    """
+    A Tokenizer splits strings into tokens.
+    """
+    def tokenize(self, sentence: str):
+        raise NotImplementedError
+
+
+class SimpleTokenizer(Tokenizer):
     """
     Does really simple tokenization.  NLTK was too slow, so we wrote our own simple tokenizer
     instead.  This just does an initial split(), followed by some heuristic filtering of each
@@ -13,8 +23,8 @@ class Tokenizer:
     ending_punctuation = set(['"', "'", '.', ',', ';', ')', ']', '}', ':', '!', '?', '%', '”', "’"])
     beginning_punctuation = set(['"', "'", '(', '[', '{', '#', '$', '“', "‘"])
 
-    @classmethod
-    def tokenize(cls, sentence: str):
+    @overrides
+    def tokenize(self, sentence: str):
         """
         Splits a sentence into tokens.  We handle four kinds of things: words with punctuation that
         should be ignored as a special case (Mr. Mrs., etc.), contractions/genitives (isn't, don't,
@@ -31,10 +41,10 @@ class Tokenizer:
         tokens = []
         for field in fields:  # type: str
             add_at_end = []
-            while cls._can_split(field) and field[0] in cls.beginning_punctuation:
+            while self._can_split(field) and field[0] in self.beginning_punctuation:
                 tokens.append(field[0])
                 field = field[1:]
-            while cls._can_split(field) and field[-1] in cls.ending_punctuation:
+            while self._can_split(field) and field[-1] in self.ending_punctuation:
                 add_at_end.insert(0, field[-1])
                 field = field[:-1]
 
@@ -44,8 +54,8 @@ class Tokenizer:
             remove_contractions = True
             while remove_contractions:
                 remove_contractions = False
-                for contraction in cls.contractions:
-                    if cls._can_split(field) and field.endswith(contraction):
+                for contraction in self.contractions:
+                    if self._can_split(field) and field.endswith(contraction):
                         field = field[:-len(contraction)]
                         add_at_end.insert(0, contraction)
                         remove_contractions = True
@@ -54,6 +64,26 @@ class Tokenizer:
             tokens.extend(add_at_end)
         return tokens
 
-    @classmethod
-    def _can_split(cls, token: str):
-        return token and token not in cls.special_cases
+    def _can_split(self, token: str):
+        return token and token not in self.special_cases
+
+
+class NltkTokenizer(Tokenizer):
+    """
+    A tokenizer that uses nltk's word_tokenize method.
+
+    I found that nltk is very slow, so I switched to using my own simple one, which is a good deal
+    faster.  But I'm adding this one back so that there's consistency with older versions of the
+    code, if you really want it.
+    """
+    @overrides
+    def tokenize(self, sentence: str):
+        # Import is here because it's slow, and by default unnecessary.
+        from nltk.tokenize import word_tokenize
+        return word_tokenize(sentence)
+
+tokenizers = {  # pylint: disable=invalid-name
+        'default': SimpleTokenizer,
+        'simple': SimpleTokenizer,
+        'nltk': NltkTokenizer,
+        }

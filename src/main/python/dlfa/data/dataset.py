@@ -5,6 +5,7 @@ import random
 from typing import List
 
 from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance
+from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -70,13 +71,17 @@ class TextDataset(Dataset):
         return IndexedDataset(indexed_instances)
 
     @staticmethod
-    def read_from_file(filename: str, label: bool=None) -> 'TextDataset':
+    def read_from_file(filename: str,
+                       label: bool=None,
+                       tokenizer: Tokenizer=tokenizers['default']()) -> 'TextDataset':
         lines = [x.strip() for x in codecs.open(filename, "r", "utf-8").readlines()]
-        return TextDataset.read_from_lines(lines, label)
+        return TextDataset.read_from_lines(lines, label, tokenizer)
 
     @staticmethod
-    def read_from_lines(lines: List[str], label: bool=None) -> 'TextDataset':
-        instances = [TextInstance.read_from_line(x, label) for x in lines]
+    def read_from_lines(lines: List[str],
+                        label: bool=None,
+                        tokenizer: Tokenizer=tokenizers['default']()) -> 'TextDataset':
+        instances = [TextInstance.read_from_line(x, label, tokenizer) for x in lines]
         num_positive = len([x for x in instances if x.label is True])
         num_negative = len([x for x in instances if x.label is False])
         num_unknown = len([x for x in instances if x.label is None])
@@ -85,7 +90,9 @@ class TextDataset(Dataset):
         return TextDataset(instances)
 
     @staticmethod
-    def read_background_from_file(dataset: 'TextDataset', filename: str) -> 'TextDataset':
+    def read_background_from_file(dataset: 'TextDataset',
+                                  filename: str,
+                                  tokenizer: Tokenizer=tokenizers['default']()) -> 'TextDataset':
         """
         Reads a file formatted as background information and matches the background to the
         sentences in the given dataset.  The given dataset must have instance indices, so we can
@@ -100,7 +107,11 @@ class TextDataset(Dataset):
         """
         new_instances = {}
         for instance in dataset.instances:
-            background_instance = BackgroundTextInstance(instance.text, [], instance.label, instance.index)
+            background_instance = BackgroundTextInstance(instance.text,
+                                                         [],
+                                                         instance.label,
+                                                         instance.index,
+                                                         tokenizer)
             new_instances[instance.index] = background_instance
         for line in codecs.open(filename, "r", "utf-8"):
             fields = line.strip().split("\t")

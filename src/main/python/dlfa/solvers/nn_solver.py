@@ -12,6 +12,7 @@ from keras.models import Model, model_from_json
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.instance import TextInstance
 from ..data.embeddings import PretrainedEmbeddings
+from ..data.tokenizer import tokenizers
 from ..data.data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -41,6 +42,8 @@ class NNSolver(object):
         self.validation_file = kwargs['validation_file']
         self.test_file = kwargs['test_file']
         self.debug_file = kwargs['debug_file']
+
+        self.tokenizer = tokenizers[kwargs['tokenizer']]()
 
         self.num_epochs = kwargs['num_epochs']
         self.patience = kwargs['patience']
@@ -107,6 +110,9 @@ class NNSolver(object):
         parser.add_argument('--debug_file', type=str,
                             help='Visualize the intermediate outputs of the trained model.'
                                  'Output will be written to <model_serialization_prefix>_debug_<epoch>.txt')
+
+        parser.add_argument('--tokenizer', type=str, choices=tokenizers.keys(), default='default',
+                            help='Which tokenizer to use for TextInstances')
 
         # Model specification
         parser.add_argument("--model_serialization_prefix", required=True,
@@ -326,7 +332,7 @@ class NNSolver(object):
         """
         if self._sentence_encoder_model is None:
             self._build_sentence_encoder_model()
-        instance = TextInstance(sentence, True)
+        instance = TextInstance(sentence, True, tokenizer=self.tokenizer)
         indexed_instance = instance.to_indexed_instance(self.data_indexer)
         indexed_instance.pad([self.max_sentence_length])
         instance_input, _ = indexed_instance.as_training_data()
@@ -416,10 +422,14 @@ class NNSolver(object):
         this method.
         """
         if self.train_file:
-            dataset = TextDataset.read_from_file(self.train_file)
+            dataset = TextDataset.read_from_file(self.train_file, tokenizer=self.tokenizer)
         else:
-            positive_dataset = TextDataset.read_from_file(self.positive_train_file, label=True)
-            negative_dataset = TextDataset.read_from_file(self.negative_train_file, label=False)
+            positive_dataset = TextDataset.read_from_file(self.positive_train_file,
+                                                          label=True,
+                                                          tokenizer=self.tokenizer)
+            negative_dataset = TextDataset.read_from_file(self.negative_train_file,
+                                                          label=False,
+                                                          tokenizer=self.tokenizer)
             dataset = positive_dataset.merge(negative_dataset)
         if self.max_training_instances is not None:
             logger.info("Truncating the dataset to %d instances", self.max_training_instances)
@@ -438,11 +448,12 @@ class NNSolver(object):
         logical forms as input.  NNSolvers that have more complicated inputs will need to override
         this method.
         """
-        self.validation_dataset = TextDataset.read_from_file(self.validation_file)
+        self.validation_dataset = TextDataset.read_from_file(self.validation_file,
+                                                             tokenizer=self.tokenizer)
         return self._prep_question_dataset(self.validation_dataset)
 
     def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file)
+        dataset = TextDataset.read_from_file(self.test_file, tokenizer=self.tokenizer)
         return self._prep_question_dataset(dataset)
 
     def _prep_question_dataset(self, dataset: TextDataset):

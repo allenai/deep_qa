@@ -214,16 +214,23 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def _get_training_data(self):
         if self.train_file:
-            dataset = TextDataset.read_from_file(self.train_file)
+            dataset = TextDataset.read_from_file(self.train_file, tokenizer=self.tokenizer)
             background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                       self.train_background)
+                                                                       self.train_background,
+                                                                       tokenizer=self.tokenizer)
         else:
-            positive_dataset = TextDataset.read_from_file(self.positive_train_file, label=True)
+            positive_dataset = TextDataset.read_from_file(self.positive_train_file,
+                                                          label=True,
+                                                          tokenizer=self.tokenizer)
             positive_background = TextDataset.read_background_from_file(positive_dataset,
-                                                                        self.positive_train_background)
-            negative_dataset = TextDataset.read_from_file(self.negative_train_file, label=False)
+                                                                        self.positive_train_background,
+                                                                        tokenizer=self.tokenizer)
+            negative_dataset = TextDataset.read_from_file(self.negative_train_file,
+                                                          label=False,
+                                                          tokenizer=self.tokenizer)
             negative_background = TextDataset.read_background_from_file(negative_dataset,
-                                                                        self.negative_train_background)
+                                                                        self.negative_train_background,
+                                                                        tokenizer=self.tokenizer)
             background_dataset = positive_background.merge(negative_background)
         if self.max_training_instances is not None:
             background_dataset = background_dataset.truncate(self.max_training_instances)
@@ -233,21 +240,27 @@ class MemoryNetworkSolver(NNSolver):
 
     @overrides
     def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
+        dataset = TextDataset.read_from_file(self.validation_file, tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset,
+                                                                   self.validation_background,
+                                                                   tokenizer=self.tokenizer)
         self.validation_dataset = background_dataset
         return self._prep_question_dataset(background_dataset)
 
     @overrides
     def _get_test_data(self):
         dataset = TextDataset.read_from_file(self.test_file)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
+        background_dataset = TextDataset.read_background_from_file(dataset,
+                                                                   self.test_background,
+                                                                   tokenizer=self.tokenizer)
         return self._prep_question_dataset(background_dataset)
 
     @overrides
     def _get_debug_dataset_and_input(self):
         dataset = TextDataset.read_from_file(self.debug_file)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
+        background_dataset = TextDataset.read_background_from_file(dataset,
+                                                                   self.debug_background,
+                                                                   tokenizer=self.tokenizer)
         # Now get inputs, and ignore the labels (background_dataset has them)
         inputs, _ = self.prep_labeled_data(background_dataset, for_train=False, shuffle=False)
         return background_dataset, inputs

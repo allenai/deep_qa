@@ -157,7 +157,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         # so we pass label=True here.  TODO(matt): make it so that we can get just the input from
         # an instance without the label somehow.
         logger.info("Creating dataset")
-        dataset = TextDataset.read_from_lines(corpus_lines, label=True)
+        dataset = TextDataset.read_from_lines(corpus_lines, label=True, tokenizer=self.tokenizer)
         max_lengths = [self.max_sentence_length, self.max_knowledge_length]
         logger.info("Indexing and padding dataset")
         indexed_dataset = self._index_and_pad_dataset(dataset, max_lengths)
@@ -200,11 +200,12 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         """
         new_instances = []
         for instance in dataset.instances:  # type: BackgroundTextInstance
-            text_instance = TextInstance(instance.text, label=True)
+            text_instance = TextInstance(instance.text, label=True, tokenizer=self.tokenizer)
             new_background = self.get_nearest_neighbors(text_instance)
             background_text = [background.text for background in new_background]
             new_instances.append(BackgroundTextInstance(instance.text,
                                                         background_text,
                                                         instance.label,
-                                                        instance.index))
+                                                        instance.index,
+                                                        tokenizer=self.tokenizer))
         return TextDataset(new_instances)
