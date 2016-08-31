@@ -121,6 +121,7 @@ object MemoryNetworkExperiments {
     ("negative data" -> manualBuscLargeNegativeData) ~
     ("validation questions" -> validationQuestionParams) ~
     ("pretrained embeddings" -> pretrainedEmbeddingParams) ~
+    ("max sentence length" -> 125) ~
     ("patience" -> 4) ~
     ("number of epochs" -> 30)
 

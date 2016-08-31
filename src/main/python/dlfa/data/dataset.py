@@ -77,6 +77,11 @@ class TextDataset(Dataset):
     @staticmethod
     def read_from_lines(lines: List[str], label: bool=None) -> 'TextDataset':
         instances = [TextInstance.read_from_line(x, label) for x in lines]
+        num_positive = len([x for x in instances if x.label is True])
+        num_negative = len([x for x in instances if x.label is False])
+        num_unknown = len([x for x in instances if x.label is None])
+        logger.info("Finished reading dataset; there are %d positives, %d negatives, and %d unknown",
+                    num_positive, num_negative, num_unknown)
         return TextDataset(instances)
 
     @staticmethod
@@ -142,7 +147,6 @@ class IndexedDataset(Dataset):
         instance_max_lengths = self.max_lengths()
         logger.info("Instance max lengths: %s", str(instance_max_lengths))
         zipped_maxes = zip(max_lengths, instance_max_lengths)
-        logger.info("zipped with given: %s", str(zipped_maxes))
         max_lengths = []
         for given, from_instance in zipped_maxes:
             if given is not None:

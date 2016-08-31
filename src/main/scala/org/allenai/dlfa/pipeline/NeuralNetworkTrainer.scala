@@ -84,7 +84,7 @@ abstract class NeuralNetworkTrainer(
 
   val maxSentenceLength = JsonHelper.extractAsOption[Int](params, "max sentence length")
   val maxSentenceLengthArgs =
-    maxSentenceLength.map(max => Seq("--length_upper_limit", max.toString)).toSeq.flatten
+    maxSentenceLength.map(max => Seq("--max_sentence_length", max.toString)).toSeq.flatten
 
   val positiveDataProducer = SentenceProducer.create(params \ "positive data", fileUtil)
   val positiveTrainingFile = positiveDataProducer.outputFile
