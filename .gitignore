@@ -1,9 +1,6 @@
-# Ignore emacs temp files
-*~
 /bin/
 target/
 *.pyc
-*.py.swp
 /data/
 output/
 models/
