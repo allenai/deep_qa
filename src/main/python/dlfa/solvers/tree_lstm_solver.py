@@ -39,7 +39,7 @@ class TreeLSTMSolver(NNSolver):
         lstm_input = merge([transitions_input, logical_form_embeddings], mode='concat')
 
         # Step 4: Pass the sequences of word vectors through TreeLSTM.
-        lstm_layer = TreeCompositionLSTM(stack_limit, buffer_ops_limit,
+        lstm_layer = TreeCompositionLSTM(stack_limit=stack_limit, buffer_ops_limit=buffer_ops_limit,
                                          output_dim=self.embedding_size, W_regularizer=l2(0.01),
                                          U_regularizer=l2(0.01), V_regularizer=l2(0.01),
                                          b_regularizer=l2(0.01), name='treelstm')

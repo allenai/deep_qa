@@ -1,5 +1,3 @@
-# Ignore emacs temp files
-*~
 /bin/
 target/
 *.pyc

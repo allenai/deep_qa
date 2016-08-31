@@ -6,7 +6,7 @@ from typing import List
 
 import numpy
 from keras.layers import Dense, Input, Embedding, LSTM, TimeDistributed, Dropout
-from keras.regularizers import l2
+from keras.regularizers import l1l2
 from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
@@ -14,6 +14,7 @@ from ..data.instance import TextInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizer import tokenizers
 from ..data.data_indexer import DataIndexer
+from ..layers.encoders import encoders
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -50,6 +51,13 @@ class NNSolver(object):
         self.patience = kwargs['patience']
 
         self.data_indexer = DataIndexer()
+
+        self.encoder = kwargs['encoder']
+        if kwargs["l1_weight_regularizer"] > 0 or kwargs["l2_weight_regularizer"] > 0:
+            self.encoder_regularizer = l1l2(l1=kwargs["l1_weight_regularizer"],
+                                            l2=kwargs["l2_weight_regularizer"])
+        else:
+            self.encoder_regularizer = None
 
         # Model-specific member variables that will get set and used later.
         self.model = None
@@ -133,6 +141,16 @@ class NNSolver(object):
                             help="Dropout parameter to apply to the word embedding layer")
         parser.add_argument('--max_sentence_length', type=int,
                             help="Upper limit on length of training data. Ignored during testing.")
+        parser.add_argument('--encoder', type=str, choices=encoders.keys(), default='lstm',
+                            help="Kind of encoder used to encode all kinds of inputs and background."
+                                 "Hint: Use lstm for sentences, treelstm for logical forms,"
+                                 "and bow for either.")
+        parser.add_argument('--l1_weight_regularizer', type=float, default=0.0,
+                            help="Coefficient for L1 weight regularization for the encoder."
+                                 "This will be applied to all parameters. Defaults to 0.")
+        parser.add_argument('--l2_weight_regularizer', type=float, default=0.0,
+                            help="Coefficient for L2 weight regularization for the encoder."
+                                 "This will be applied to all parameters. Defaults to 0.")
 
         # Training details
         parser.add_argument('--max_training_instances', type=int,
@@ -564,13 +582,19 @@ class NNSolver(object):
         single vector encoding the sentence.  This is typically either a simple RNN or an LSTM, but
         could be more complex, if the "sentence" is actually a logical form.
         """
-        # TODO(matt): we should add options here.
         if self.sentence_encoder_layer is None:
-            self.sentence_encoder_layer = LSTM(output_dim=self.embedding_size,
-                                               W_regularizer=l2(0.01),
-                                               U_regularizer=l2(0.01),
-                                               b_regularizer=l2(0.01),
-                                               name='sentence_encoder')
+            # The encoder will use only those arguments that are relevant to it. For example,
+            # BOWEncoder will use nothing except the name.
+            # Assuming we will not need a different kind of regularizer for each parameter.
+            encoder_arguments = {"name": "sentence_encoder"}
+            if self.encoder != "bow":
+                # BOWEncoder does not need to know the output dim
+                encoder_arguments["output_dim"] = self.embedding_size
+            if self.encoder_regularizer is not None:
+                encoder_arguments["W_regularizer"] = self.encoder_regularizer 
+                encoder_arguments["U_regularizer"] = self.encoder_regularizer 
+                encoder_arguments["b_regularizer"] = self.encoder_regularizer 
+            self.sentence_encoder_layer = encoders[self.encoder](**encoder_arguments)
         return self.sentence_encoder_layer
 
     def _build_sentence_encoder_model(self):
