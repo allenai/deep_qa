@@ -18,7 +18,7 @@ class DataIndexer:
         self.word_index = {self._padding_token: 0, self._oov_token: 1}
         self.reverse_word_index = {0: self._padding_token, 1: self._oov_token}
 
-    def fit_word_dictionary(self, dataset: 'TextDataset', min_count: int=2):
+    def fit_word_dictionary(self, dataset: 'TextDataset', min_count: int=1):
         """
         Given a Dataset, this method decides which words are given an index, and which ones are
         mapped to an OOV token (in this case "UNK").  This method must be called before any dataset
