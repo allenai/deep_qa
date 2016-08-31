@@ -450,7 +450,9 @@ class BOWEncoder(Layer):
             # Compute weights such that masked elements have zero weights and the remaining
             # weight is ditributed equally among the unmasked elements.
             # Mask (samples, num_words) has 0s for masked elements and 1s everywhere else.
-            # Mask needs to be cast because it's int8 and softmax does not like it.
+            # Mask is of type int8. While theano would automatically make weighted_mask below
+            # of type float32 even if mask remains int8, tensorflow would complain. Let's cast it
+            # explicitly to remain compatible with tf.
             float_mask = K.cast(mask, 'float32')
             # Expanding dims of the denominator to make it the same shape as the numerator.
             weighted_mask = float_mask / K.expand_dims(K.sum(float_mask, axis=1))  # (samples, num_words)

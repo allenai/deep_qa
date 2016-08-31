@@ -567,7 +567,7 @@ class NNSolver(object):
         if self.sentence_encoder_layer is None:
             # The encoder will use only those arguments that are relevant to it. For example,
             # BOWEncoder will use nothing except the name.
-            # Assuming we will not need a different king of regularizer for each parameter.
+            # Assuming we will not need a different kind of regularizer for each parameter.
             encoder_arguments = {"name": "sentence_encoder"}
             if self.encoder != "bow":
                 # BOWEncoder does not need to know the output dim
