@@ -9,6 +9,15 @@ from keras import backend as K
 from keras import activations, initializations
 from keras.layers import Layer
 
+def tile_sentence_encoding(sentence_encoding, knowledge_encoding):
+    batch_size = K.shape(knowledge_encoding)[0]
+    knowledge_length = K.shape(knowledge_encoding)[1]
+    encoding_dim = K.shape(knowledge_encoding)[2]
+    return K.permute_dimensions(K.reshape(K.tile(K.expand_dims(sentence_encoding, 1),
+                                                 (knowledge_length, 1, 1)),
+                                          (knowledge_length, batch_size, encoding_dim)),
+                                (1, 0, 2))
+
 class DotProductKnowledgeSelector(Layer):
     """
     Input Shape: num_samples, (knowledge_length + 1), input_dim
@@ -35,12 +44,12 @@ class DotProductKnowledgeSelector(Layer):
         # sample. Instead of looping over all samples (inefficient), let's tile the sentence
         # encoding to make it the same size as knowledge encoding, take an element wise product and
         # sum over the last dimension (dim = 2).
-        knowledge_length = knowledge_encoding.shape[1]
-        tiled_sentence_encoding = K.permute_dimensions(
-                K.tile(sentence_encoding, (knowledge_length, 1, 1)),
-                (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
-        knowledge_attention = K.softmax(K.sum(knowledge_encoding * tiled_sentence_encoding,
-                                              axis=2))  # (num_samples, knowledge_length)
+
+        # (num_samples, knowledge_length, input_dim)
+        tiled_sentence_encoding = tile_sentence_encoding(sentence_encoding, knowledge_encoding)
+
+        # (num_samples, knowledge_length)
+        knowledge_attention = K.softmax(K.sum(knowledge_encoding * tiled_sentence_encoding, axis=2))
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
@@ -118,10 +127,9 @@ class ParameterizedKnowledgeSelector(Layer):
         # We're going to have to do several operations on the input sentence for each background
         # sentence.  Instead of looping over the background sentences, which is inefficient, we'll
         # tile the sentence encoding and use it in what follows.
-        knowledge_length = knowledge_encoding.shape[1]
-        tiled_sentence_encoding = K.permute_dimensions(
-                K.tile(sentence_encoding, (knowledge_length, 1, 1)),
-                (1, 0, 2))  # (num_samples, knowledge_length, input_dim)
+
+        # (num_samples, knowledge_length, input_dim)
+        tiled_sentence_encoding = tile_sentence_encoding(sentence_encoding, knowledge_encoding)
 
         # (1: zu_t) Result of this is (num_samples, knowledge_length, input_dim * 2)
         concatenated_encodings = K.concatenate([knowledge_encoding, tiled_sentence_encoding])
