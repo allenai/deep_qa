@@ -5,7 +5,7 @@ import pickle
 from typing import List
 
 import numpy
-from keras.layers import Dense, Input, Embedding, LSTM, TimeDistributed, Dropout
+from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
 from keras.regularizers import l1l2
 from keras.models import Model, model_from_json
 
@@ -368,25 +368,6 @@ class NNSolver(object):
         return self.model.predict(test_input)
 
     @staticmethod
-    def _assert_dataset_is_questions(dataset: TextDataset):
-        """
-        This method checks that dataset matches the assumptions we make about validation data: that
-        it is a list of sentences corresponding to four-choice questions, with one correct answer
-        for every four instances.
-
-        So, specifically, we check that the number of instances is a multiple of four, and we check
-        that each group of four instances has exactly one instance with label True, and all other
-        labels are False (i.e., no None labels for validation data).
-        """
-        assert len(dataset.instances) % 4 == 0, "Not enough lines per question"
-        questions = zip(*[dataset.instances[i::4] for i in range(4)])
-        for question in questions:
-            question_labels = [instance.label for instance in question]
-            label_counts = {x: question_labels.count(x) for x in set(question_labels)}
-            assert label_counts[True] == 1, "Must have one correct answer option"
-            assert label_counts[False] == 3, "Must have three incorrect answer options"
-
-    @staticmethod
     def group_by_question(labels):
         """
         This method takes a sequential numpy array of shape (num_instances, 2), and groups it by
@@ -401,9 +382,11 @@ class NNSolver(object):
         highest-scoring answer, returning an array of shape (num_questions).  This allows us to
         compute question accuracy, instead of an instance-level loss function.
 
-        We assume that the data that produced `labels` has already been validated with
-        NNSolver._assert_dataset_is_questions(), so we do not do any checking here.  See the comments
-        there for the requirements on the input data.
+        We assume that the data that produced `labels` has dataset.can_be_converted_to_questions()
+        == True.  See the comments there for the requirements on the input data.
+
+        TODO(matt): remove this code and just use the new QuestionInstance instead.  This will
+        require an option to flatten the training inputs (or maybe we just do it here?).
         """
         num_questions = int(len(labels) / 4)
         reshaped_labels = labels[:, 1].reshape(num_questions, 4)
@@ -482,7 +465,7 @@ class NNSolver(object):
         return self._prep_question_dataset(dataset)
 
     def _prep_question_dataset(self, dataset: TextDataset):
-        self._assert_dataset_is_questions(dataset)
+        assert dataset.can_be_converted_to_questions(), "Dataset not formatted as questions"
         inputs, labels = self.prep_labeled_data(dataset, for_train=False, shuffle=False)
         return inputs, self.group_by_question(labels)
 
@@ -591,9 +574,9 @@ class NNSolver(object):
                 # BOWEncoder does not need to know the output dim
                 encoder_arguments["output_dim"] = self.embedding_size
             if self.encoder_regularizer is not None:
-                encoder_arguments["W_regularizer"] = self.encoder_regularizer 
-                encoder_arguments["U_regularizer"] = self.encoder_regularizer 
-                encoder_arguments["b_regularizer"] = self.encoder_regularizer 
+                encoder_arguments["W_regularizer"] = self.encoder_regularizer
+                encoder_arguments["U_regularizer"] = self.encoder_regularizer
+                encoder_arguments["b_regularizer"] = self.encoder_regularizer
             self.sentence_encoder_layer = encoders[self.encoder](**encoder_arguments)
         return self.sentence_encoder_layer
 
