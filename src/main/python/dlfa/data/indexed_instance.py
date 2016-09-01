@@ -170,6 +170,7 @@ class IndexedBackgroundInstance(IndexedInstance):
 
 
 class IndexedQuestionInstance(IndexedInstance):
+    # TODO(matt): worry about num_options padding at some point.
     def __init__(self, options: List[IndexedInstance], label):
         self.options = options
         super(IndexedQuestionInstance, self).__init__([], label)

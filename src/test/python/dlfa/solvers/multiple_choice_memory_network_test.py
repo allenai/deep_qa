@@ -6,10 +6,10 @@ import codecs
 import os
 import shutil
 
-from dlfa.solvers.memory_network import MemoryNetworkSolver
+from dlfa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
 
 
-class TestMemoryNetworkSolver(TestCase):
+class TestMultipleChoiceMemoryNetworkSolver(TestCase):
     # pylint: disable=protected-access
 
     def setUp(self):
@@ -30,19 +30,15 @@ class TestMemoryNetworkSolver(TestCase):
         self.train_file = self.test_dir + 'train_file'
         with codecs.open(self.train_file, 'w', 'utf-8') as train_file:
             train_file.write('1\tsentence1\t0\n')
-            train_file.write('2\tsentence2\t1\n')
+            train_file.write('2\tsentence2\t0\n')
             train_file.write('3\tsentence3\t0\n')
             train_file.write('4\tsentence4\t1\n')
-            train_file.write('5\tsentence5\t0\n')
-            train_file.write('6\tsentence6\t0\n')
         self.train_background = self.test_dir + 'train_background'
         with codecs.open(self.train_background, 'w', 'utf-8') as train_background:
             train_background.write('1\tsb1\tsb2\n')
             train_background.write('2\tsb3\n')
             train_background.write('3\tsb4\n')
             train_background.write('4\tsb5\tsb6\n')
-            train_background.write('5\tsb7\tsb8\n')
-            train_background.write('6\tsb9\n')
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
@@ -52,7 +48,7 @@ class TestMemoryNetworkSolver(TestCase):
         # implemented methods.  We use the argument parser because it's easiest to get default
         # values for all of the parameters this way.
         parser = argparse.ArgumentParser()
-        MemoryNetworkSolver.update_arg_parser(parser)
+        MultipleChoiceMemoryNetworkSolver.update_arg_parser(parser)
         arguments = [
                 '--train_file', self.train_file,
                 '--train_background', self.train_background,
@@ -71,7 +67,7 @@ class TestMemoryNetworkSolver(TestCase):
         if additional_arguments:
             arguments.extend(additional_arguments)
         args = parser.parse_args(arguments)
-        return MemoryNetworkSolver(**vars(args))
+        return MultipleChoiceMemoryNetworkSolver(**vars(args))
 
     def test_train_does_not_crash(self):
         solver = self._get_solver()

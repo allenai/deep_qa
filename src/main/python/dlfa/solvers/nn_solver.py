@@ -63,9 +63,7 @@ class NNSolver(object):
         self.model = None
         self.debug_model = None
         self.embedding_layer = None
-        self.time_distributed_embedding_layer = None
         self.projection_layer = None
-        self.time_distributed_projection_layer = None
         self.sentence_encoder_layer = None
         self._sentence_encoder_model = None
 
@@ -207,6 +205,8 @@ class NNSolver(object):
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
         self.train_input, self.train_labels = self._get_training_data()
+        print(self.train_input)
+        print(self.train_labels)
         logger.info("Getting validation data")
         self.validation_input, self.validation_labels = self._get_validation_data()
 
@@ -321,6 +321,9 @@ class NNSolver(object):
         that are re-used, you must override this method, or loading models will break.  Similarly,
         if you change code in those two methods (e.g., making the sentence encoder into two
         layers), this method must be changed accordingly.
+
+        Note that we don't need to store any TimeDistributed() layers directly, because they don't
+        have any parameters themselves.
         """
         logger.info("Loading individual layers from model for re-use")
 
@@ -331,24 +334,16 @@ class NNSolver(object):
             if layer.name == "embedding":
                 logger.info("  Found embedding layer")
                 self.embedding_layer = layer
-            elif layer.name == "background_embedding":
-                logger.info("  Found background embedding layer")
-                self.time_distributed_embedding_layer = layer
             elif layer.name == "embedding_projection":
                 logger.info("  Found projection layer")
                 self.projection_layer = layer
-            elif layer.name == "background_embedding_projection":
-                logger.info("  Found background projection layer")
-                self.time_distributed_projection_layer = layer
             elif layer.name == "sentence_encoder":
                 logger.info("  Found sentence encoder")
                 self.sentence_encoder_layer = layer
         assert self.embedding_layer is not None, "Embedding layer not found"
-        assert self.time_distributed_embedding_layer is not None, "Background embedding layer not found"
         assert self.sentence_encoder_layer is not None, "Sentence encoder not found"
         if self.project_embeddings:
             assert self.projection_layer is not None, "Projection layer not found"
-            assert self.time_distributed_projection_layer is not None, "Background projection layer not found"
 
     def get_sentence_vector(self, sentence: str):
         """
@@ -498,7 +493,7 @@ class NNSolver(object):
         debug_model = Model(input=debug_inputs, output=debug_outputs)
         return debug_model
 
-    def _get_embedded_sentence_input(self, input_shape, is_time_distributed=False):
+    def _get_embedded_sentence_input(self, input_shape):
         """
         Performs the initial steps of embedding sentences.  This function takes care of two steps:
         (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
@@ -506,10 +501,12 @@ class NNSolver(object):
         might initialize that Embedding layer from pre-trained word vectors, or add a projection on
         top of the embedding, or add dropout after the embedding layer.
 
-        We allow for inputs of shape (batch_size, sentence_length) and inputs of shape
-        (batch_size, num_sentences, sentence_length).  If your input is the second of these, you
-        must pass is_time_distributed=True.  This is useful for, e.g., encoding the memory
-        sentences in a memory network.
+        We use `input_shape` to decide how many TimeDistributed() layers we need on top of the
+        initial embedding / projection.  We will always do one less TimeDistributed() layer than
+        there are dimensions in `input_shape`.  For example, if you pass an input shape of
+        (max_sentence_length,), we will not add any TimeDistributed() layers.  If you pass
+        (max_knowledge_length, max_sentence_length), we'll add one, and if you pass (num_options,
+        max_knowledge_length, max_sentence_length), we'll add two, etc.
 
         Because Keras requires access to the actual Input() layer, we return that along with the
         final word vector layer.
@@ -537,22 +534,18 @@ class NNSolver(object):
             if self.project_embeddings:
                 self.projection_layer = TimeDistributed(Dense(output_dim=self.embedding_size,),
                                                         name='embedding_projection')
-                self.time_distributed_projection_layer = TimeDistributed(
-                        self.projection_layer, name='background_embedding_projection')
-            self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer,
-                                                                    name='background_embedding')
 
         # Now we actually embed the input and apply dropout.
-        if is_time_distributed:
-            embedded_input = self.time_distributed_embedding_layer(input_layer)
-        else:
-            embedded_input = self.embedding_layer(input_layer)
+        embedding = self.embedding_layer
+        for _ in input_shape[1:]:
+            embedding = TimeDistributed(embedding)
+        embedded_input = embedding(input_layer)
 
         if self.project_embeddings:
-            if is_time_distributed:
-                embedded_input = self.time_distributed_projection_layer(embedded_input)
-            else:
-                embedded_input = self.projection_layer(embedded_input)
+            projection = self.projection_layer
+            for _ in input_shape[1:]:
+                projection = TimeDistributed(projection)
+            embedded_input = projection(embedded_input)
 
         if self.embedding_dropout > 0.0:
             embedded_input = Dropout(self.embedding_dropout)(embedded_input)
