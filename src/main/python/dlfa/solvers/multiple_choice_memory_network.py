@@ -6,7 +6,6 @@ from keras.models import Model
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from .memory_network import MemoryNetworkSolver
-from ..layers.answer_selectors import ArgmaxAnswerSelector
 
 
 class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
@@ -28,7 +27,6 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
     def __init__(self, **kwargs):
         super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
         self.num_options = 4  # TODO(matt): we'll handle the more general case later
-        self.answer_selector = ArgmaxAnswerSelector(4)  # TODO(matt): make this configurable
 
     @overrides
     def can_train(self) -> bool:
@@ -98,7 +96,8 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_selector = TimeDistributed(self.knowledge_selector(name='knowledge_selector_%d' % i))
+            knowledge_selector = TimeDistributed(self.knowledge_selector(),
+                                                 name='knowledge_selector_%d' % i)
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
@@ -120,8 +119,8 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
             updater_input = merge([current_memory, attended_knowledge],
                                   mode='concat',
                                   concat_axis=2)
-            memory_updater = TimeDistributed(self.memory_updater(encoding_dim=self.embedding_size,
-                                                                 name='memory_updater_%d' % i))
+            memory_updater = TimeDistributed(self.memory_updater(encoding_dim=self.embedding_size),
+                                             name='memory_updater_%d' % i)
             current_memory = memory_updater(updater_input)
 
         # Step 5: Finally, run the sentence encoding, the current memory, and the attended
@@ -129,15 +128,24 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         entailment_input = merge([encoded_proposition, current_memory, attended_knowledge],
                                  mode='concat',
                                  concat_axis=2)
-        combined_input = TimeDistributed(self.entailment_combiner)(entailment_input)
+        combined_input = TimeDistributed(self.entailment_combiner,
+                                         name="entailment_combiner")(entailment_input)
         entailment_output = self.entailment_model.classify(combined_input, time_distributed=True)
 
-        answer_selection = self.answer_selector(entailment_output)
         # Step 6: Define the model, and return it. The model will be compiled and trained by the
         # calling method.
         memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
-                               output=answer_selection)
+                               output=entailment_output)
         return memory_network
+
+    @overrides
+    def evaluate(self, labels, test_input):
+        """
+        We need to override this method, because our test input is already grouped by question.
+        """
+        scores = self.model.evaluate(test_input, labels)
+        return scores[1]  # NOTE: depends on metrics=['accuracy'] in self.model.compile()
+
 
     @overrides
     def _get_training_data(self):

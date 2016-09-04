@@ -55,7 +55,7 @@ class DotProductKnowledgeSelector(Layer):
     def get_output_shape_for(self, input_shape):
         # For each sample, the output is a vector of size knowledge_length, indicating the weights
         # over background information.
-        return (input_shape[0], input_shape[1])  # (num_samples, knowledge_length)
+        return (input_shape[0], input_shape[1] - 1)  # (num_samples, knowledge_length)
 
 
 class ParameterizedKnowledgeSelector(Layer):

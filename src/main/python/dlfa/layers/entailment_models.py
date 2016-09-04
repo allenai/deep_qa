@@ -13,7 +13,7 @@ reasoning over this background knowledge, which the entailment model can choose 
 """
 
 from keras import backend as K
-from keras.layers import Dense, Layer, TimeDistributed
+from keras.layers import Dense, Layer, TimeDistributed, Lambda
 
 
 class BasicEntailmentModel:
@@ -31,18 +31,26 @@ class BasicEntailmentModel:
         self.hidden_layer_activation = hidden_layer_activation
 
     def classify(self, combined_input, time_distributed: bool=False):
+        # pylint: disable=redefined-variable-type
         hidden_input = combined_input
         for i in range(self.num_hidden_layers):
             layer = Dense(output_dim=self.hidden_layer_width,
                           activation=self.hidden_layer_activation,
                           name='entailment_hidden_layer_%d' % i)
             if time_distributed:
-                layer = TimeDistributed(layer)  # pylint: disable=redefined-variable-type
+                layer = TimeDistributed(layer)
             hidden_input = layer(hidden_input)
-        softmax_layer = Dense(output_dim=2, activation='softmax', name='entailment_softmax')
         if time_distributed:
-            softmax_layer = TimeDistributed(softmax_layer)  # pylint: disable=redefined-variable-type
-        return softmax_layer(hidden_input)
+            # (batch_size, num_options, 1)
+            score_layer = Dense(output_dim=1, activation='sigmoid', name='entailment_score')
+            scores = TimeDistributed(score_layer)(hidden_input)
+            softmax_layer = Lambda(lambda x: K.softmax(K.squeeze(scores, axis=2)),
+                                   output_shape=lambda input_shape: (input_shape[0], input_shape[1]))
+            softmax_output = softmax_layer(scores)
+        else:
+            softmax_layer = Dense(output_dim=2, activation='softmax', name='entailment_softmax')
+            softmax_output = softmax_layer(hidden_input)
+        return softmax_output
 
 
 def split_combiner_inputs(x, encoding_dim: int):  # pylint: disable=invalid-name
