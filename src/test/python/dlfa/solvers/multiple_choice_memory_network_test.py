@@ -54,7 +54,7 @@ class TestMultipleChoiceMemoryNetworkSolver(TestCase):
                 '--train_background', self.train_background,
                 '--validation_file', self.validation_file,
                 '--validation_background', self.validation_background,
-                '--embedding_size', '2',
+                '--embedding_size', '5',
                 '--encoder', 'bow',
                 '--memory_updater', 'sum',
                 '--entailment_model', 'basic_mlp',
