@@ -205,8 +205,6 @@ class NNSolver(object):
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
         self.train_input, self.train_labels = self._get_training_data()
-        print(self.train_input)
-        print(self.train_labels)
         logger.info("Getting validation data")
         self.validation_input, self.validation_labels = self._get_validation_data()
 
