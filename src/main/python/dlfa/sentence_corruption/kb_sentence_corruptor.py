@@ -1,11 +1,14 @@
-from __future__ import print_function
 import argparse
 import codecs
+import logging
 import random
 from collections import defaultdict as ddict
 
 import nltk
 from nltk.stem.wordnet import WordNetLemmatizer
+
+random.seed(13370)
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def get_triples_from_file(filename):
@@ -107,33 +110,48 @@ def main():
     Sentences for which we found no corruption are just skipped.
     '''
     argparser = argparse.ArgumentParser(description="Perturb sentences using KB and type information")
-    argparser.add_argument("--input_file", type=str, help="File with sentences to perturb, one per line.")
-    argparser.add_argument("--output_file", type=str, help="File with purturbed sentences along with an id, one per line.")
-    argparser.add_argument("--kb_tensor_file", type=str, help="input KB tensor in csv format with type information,one per line.")
-    argparser.add_argument("--num_perturbation", type=int,\
-                           help="no. of word replacements per word combination in sentence, default=20",\
-                            default=20)
+    argparser.add_argument("--input_file", type=str,
+                           help="File with sentences to perturb, one per line.")
+    argparser.add_argument("--output_file", type=str,
+                           help="File with purturbed sentences along with an id, one per line.")
+    argparser.add_argument("--kb_tensor_file", type=str,
+                           help="input KB tensor in csv format with type information,one per line.")
+    argparser.add_argument("--num_perturbation", type=int, default=20,
+                           help="no. of word replacements per word combination in sentence, default=20")
+    argparser.add_argument("--max_sentences", type=int,
+                           help="Only do this many sentences from --input_file")
     args = argparser.parse_args()
 
     entity_pair_relations = get_triples_from_file(args.kb_tensor_file)
     type_entity_dict, entity_type_dict, entities = create_type_dict(args.kb_tensor_file)
 
     negative_sentences = []
+    index = 0
     for line in codecs.open(args.input_file, "r", "utf-8"):
+        index += 1
+        if index % 1000 == 0: logger.info(index)
+        if args.max_sentences and index > args.max_sentences:
+            break
         if '\t' in line:
-            input_sentence = line.strip().split('\t')[1]
+            (sentence_index, input_sentence) = line.strip().split('\t')
         else:
+            sentence_index = None
             input_sentence = line.strip()
         input_sentence = input_sentence.lower()
         negatives = create_negative_sentence(input_sentence, entities, type_entity_dict,
                                              entity_type_dict, entity_pair_relations)
         if negatives:
             random.shuffle(negatives)
-            negative_sentences.append(negatives[:args.num_perturbation])
+            negative_sentences.append((sentence_index, negatives[:args.num_perturbation]))
     with codecs.open(args.output_file, 'w', 'utf-8') as out_file:
-        for sentences in negative_sentences:
-            out_file.write('\t'.join(sentences) + '\n')
+        for sentence_index, sentences in negative_sentences:
+            if sentence_index is not None:
+                out_file.write(sentence_index + '\t' + '\t'.join(sentences) + '\n')
+            else:
+                out_file.write('\t'.join(sentences) + '\n')
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                        level=logging.INFO)
     main()
