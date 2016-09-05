@@ -44,9 +44,8 @@ class TestMultipleChoiceMemoryNetworkSolver(TestCase):
         shutil.rmtree(self.test_dir)
 
     def _get_solver(self, additional_arguments=None):
-        # We'll use the LSTMSolver for these tests, so we have a class that actually has fully
-        # implemented methods.  We use the argument parser because it's easiest to get default
-        # values for all of the parameters this way.
+        # We use the argument parser because it's easiest to get default values for all of the
+        # parameters this way.
         parser = argparse.ArgumentParser()
         MultipleChoiceMemoryNetworkSolver.update_arg_parser(parser)
         arguments = [
