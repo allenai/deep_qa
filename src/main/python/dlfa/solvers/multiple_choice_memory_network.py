@@ -106,7 +106,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
             # input shapes: (batch_size, num_options, knowledge_len, encoding_dim),
             #               (batch_size, num_options, knowledge_len)
             # output shape: (batch_size, num_options, encoding_dim)
-            weighted_average_shape = lambda shapes: (shapes[0][0], shapes[0][1], shapes[0][2])
+            weighted_average_shape = lambda shapes: (shapes[0][0], shapes[0][1], shapes[0][3])
             attended_knowledge = merge([encoded_knowledge, attention_weights],
                                        mode=weighted_average,
                                        output_shape=weighted_average_shape)
@@ -145,7 +145,6 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         """
         scores = self.model.evaluate(test_input, labels)
         return scores[1]  # NOTE: depends on metrics=['accuracy'] in self.model.compile()
-
 
     @overrides
     def _get_training_data(self):
