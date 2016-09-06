@@ -130,7 +130,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
                                  concat_axis=2)
         combined_input = TimeDistributed(self.entailment_combiner,
                                          name="entailment_combiner")(entailment_input)
-        entailment_output = self.entailment_model.classify(combined_input, time_distributed=True)
+        entailment_output = self.entailment_model.classify(combined_input, multiple_choice=True)
 
         # Step 6: Define the model, and return it. The model will be compiled and trained by the
         # calling method.

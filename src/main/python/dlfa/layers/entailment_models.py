@@ -30,17 +30,26 @@ class BasicEntailmentModel:
         self.hidden_layer_width = hidden_layer_width
         self.hidden_layer_activation = hidden_layer_activation
 
-    def classify(self, combined_input, time_distributed: bool=False):
+    def classify(self, combined_input, multiple_choice: bool=False):
+        """
+        Here we take the combined entailment input and decide whether it is true or false (or, in
+        the case of multiple choice input, we do a softmax over the final entailment decisions for
+        each choice).
+
+        The combined input has shape (batch_size, combined_input_dim), or (batch_size, num_options,
+        combined_input_dim) for multiple choice questions.  We do not know what combined_input_dim
+        is, as it depends on the combiner.
+        """
         # pylint: disable=redefined-variable-type
         hidden_input = combined_input
         for i in range(self.num_hidden_layers):
             layer = Dense(output_dim=self.hidden_layer_width,
                           activation=self.hidden_layer_activation,
                           name='entailment_hidden_layer_%d' % i)
-            if time_distributed:
+            if multiple_choice:
                 layer = TimeDistributed(layer)
             hidden_input = layer(hidden_input)
-        if time_distributed:
+        if multiple_choice:
             # (batch_size, num_options, 1)
             score_layer = Dense(output_dim=1, activation='sigmoid', name='entailment_score')
             scores = TimeDistributed(score_layer)(hidden_input)
@@ -87,13 +96,17 @@ class HeuristicMatchingCombiner(Layer):
 
     def call(self, x, mask=None):
         sentence_encoding, current_memory, _ = split_combiner_inputs(x, self.encoding_dim)
-
-        sentence_memory_concat = K.concatenate([sentence_encoding, current_memory])
         sentence_memory_product = sentence_encoding * current_memory
         sentence_memory_diff = sentence_encoding - current_memory
-        return K.concatenate([sentence_memory_concat, sentence_memory_product, sentence_memory_diff])
+        return K.concatenate([sentence_encoding,
+                              current_memory,
+                              sentence_memory_product,
+                              sentence_memory_diff])
 
     def get_output_shape_for(self, input_shape):
+        # There are four components we've concatenated above: (1) the sentence encoding, (2) the
+        # current memory, (3) the elementwise product of these two, and (4) their difference.  Each
+        # of these has dimension `self.encoding_dim`.
         return (input_shape[0], self.encoding_dim * 4)
 
 
