@@ -48,26 +48,35 @@ class TestMultipleChoiceMemoryNetworkSolver(TestCase):
         # parameters this way.
         parser = argparse.ArgumentParser()
         MultipleChoiceMemoryNetworkSolver.update_arg_parser(parser)
-        arguments = [
-                '--train_file', self.train_file,
-                '--train_background', self.train_background,
-                '--validation_file', self.validation_file,
-                '--validation_background', self.validation_background,
-                '--embedding_size', '5',
-                '--encoder', 'bow',
-                '--memory_updater', 'sum',
-                '--entailment_model', 'basic_mlp',
-                '--entailment_input_combiner', 'memory_only',
-                '--knowledge_selector', 'dot_product',
-                '--num_epochs', '1',
-                '--keras_validation_split', '0.0',
-                '--model_serialization_prefix', self.test_dir,
-                ]
+        arguments = {}
+        arguments['model_serialization_prefix'] = self.test_dir
+        arguments['train_file'] = self.train_file
+        arguments['train_background'] = self.train_background
+        arguments['validation_file'] = self.validation_file
+        arguments['validation_background'] = self.validation_background
+        arguments['embedding_size'] = '5'
+        arguments['encoder'] = 'bow'
+        arguments['knowledge_selector'] = 'dot_product'
+        arguments['memory_updater'] = 'sum'
+        arguments['entailment_input_combiner'] = 'memory_only'
+        arguments['entailment_model'] = 'basic_mlp'
+        arguments['num_epochs'] = '1'
+        arguments['keras_validation_split'] = '0.0'
         if additional_arguments:
-            arguments.extend(additional_arguments)
-        args = parser.parse_args(arguments)
+            for key, value in additional_arguments.items():
+                arguments[key] = value
+        argument_list = []
+        for key, value in arguments.items():
+            argument_list.append('--' + key)
+            argument_list.append(value)
+        args = parser.parse_args(argument_list)
         return MultipleChoiceMemoryNetworkSolver(**vars(args))
 
     def test_train_does_not_crash(self):
         solver = self._get_solver()
+        solver.train()
+
+    def test_train_does_not_crash_with_parameterized_knowledge_selector(self):
+        args = {'knowledge_selector': 'parameterized'}
+        solver = self._get_solver(args)
         solver.train()
