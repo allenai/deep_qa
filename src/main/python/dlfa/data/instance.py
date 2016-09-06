@@ -3,7 +3,10 @@ from typing import List
 from overrides import overrides
 
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
-from .indexed_instance import IndexedInstance, IndexedBackgroundInstance, IndexedLogicalFormInstance
+from .indexed_instance import IndexedInstance
+from .indexed_instance import IndexedBackgroundInstance
+from .indexed_instance import IndexedLogicalFormInstance
+from .indexed_instance import IndexedQuestionInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
@@ -11,10 +14,12 @@ class Instance:
     """
     A data instance, used either for training a neural network or for testing one.
     """
-    def __init__(self, label: bool, index: int=None):
+    def __init__(self, label, index: int=None):
         """
-        label: True, False, or None, indicating whether the instance is a positive, negative or
-            unknown (i.e., test) example, respectively.
+        label: Could be boolean or an index.  For simple Instances (like TextInstance), this is
+            either True, False, or None, indicating whether the instance is a positive, negative or
+            unknown (i.e., test) example, respectively.  For QuestionInstances or other more
+            complicated things, is a class index.
         index: if given, must be an integer.  Used for matching instances with other data, such as
             background sentences.
         """
@@ -215,3 +220,22 @@ class BackgroundTextInstance(TextInstance):
             indices = [data_indexer.get_word_index(word) for word in words]
             background_indices.append(indices)
         return IndexedBackgroundInstance(word_indices, background_indices, self.label, self.index)
+
+
+class QuestionInstance(Instance):
+    """
+    A QuestionInstance is a grouping of other Instances, where exactly one of those Instance must
+    have label True.  When this is converted to training data, it will group all of those option
+    Instances into a single training instance, with a label that is an index to the answer option
+    that is correct for its label.
+    """
+    def __init__(self, options: List[Instance]):
+        self.options = options
+        positive_index = [index for index, instance in enumerate(options) if instance.label is True]
+        assert len(positive_index) == 1
+        label = positive_index[0]
+        super(QuestionInstance, self).__init__(label)
+
+    def to_indexed_instance(self, data_indexer: DataIndexer):
+        indexed_options = [option.to_indexed_instance(data_indexer) for option in self.options]
+        return IndexedQuestionInstance(indexed_options, self.label)

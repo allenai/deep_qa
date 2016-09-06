@@ -11,6 +11,7 @@ from keras.models import Model, model_from_json
 from keras.layers import Input, LSTM, Embedding, Dropout, merge, TimeDistributed, Dense, SimpleRNN
 from keras.callbacks import EarlyStopping
 
+random.seed(13370)
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class WordReplacer:
@@ -250,6 +251,51 @@ def select_mostly_likely_candidates(word_replacer: WordReplacer,
             outfile.write(output_string)
 
 
+def generate_multiple_choice_questions(word_replacer: WordReplacer,
+                                       sentences_file: str,
+                                       candidates_file: str,
+                                       tokenize: bool,
+                                       num_false_options: int,
+                                       create_sentence_indices: bool,
+                                       max_output_sentences: int,
+                                       output_file: str):
+    train_sequence_length = word_replacer.get_model_input_shape()[1]
+    logger.info("Reading sentences file")
+    sentences = {}
+    for line in codecs.open(sentences_file, "r", "utf-8"):
+        (sentence_index, sentence) = line.strip().split("\t")
+        sentences[int(sentence_index)] = sentence
+    generated_questions = []
+    index = 0
+    for line in codecs.open(candidates_file, "r", "utf-8"):
+        index += 1
+        if index % 10 == 0: logger.info(index)
+        if max_output_sentences is not None and index > max_output_sentences:
+            break
+        fields = line.strip().split("\t")
+        original_sentence_index = int(fields[0])
+        candidates = fields[1:]
+        candidate_scores = word_replacer.score_sentences(candidates, train_sequence_length, tokenize)
+        candidate_scores.sort(reverse=True)
+        options = [(sentences[original_sentence_index], True)]
+        for _, candidate in candidate_scores[:num_false_options]:
+            options.append((candidate, False))
+        random.shuffle(options)
+        generated_questions.append(options)
+    random.shuffle(generated_questions)
+    with codecs.open(output_file, "w", "utf-8") as outfile:
+        index = 0
+        for question in generated_questions:
+            for (sentence, label) in question:
+                label_string = '1' if label else '0'
+                if create_sentence_indices:
+                    output_string = '%d\t%s\t%s\n' % (index, sentence, label_string)
+                else:
+                    output_string = '%s\t%s\n' % (sentence, label_string)
+                index += 1
+                outfile.write(output_string)
+
+
 def main():
     description = """Trains and tests a language model using Keras.
 
@@ -281,6 +327,8 @@ def main():
     argparser.add_argument("--file_to_corrupt", type=str,
                            help="(2) File with sentences to replace words, one per line.")
     argparser.add_argument("--candidates_file", type=str,
+                           help="(3) File with candidate sentences to select among, tab-separated.")
+    argparser.add_argument("--sentences_file", type=str,
                            help="(3) File with candidate sentences to select among, tab-separated.")
     argparser.add_argument("--word_dim", type=int, default=50,
                            help="(1) Word dimensionality, default=50")
@@ -337,13 +385,24 @@ def main():
 
     # Selecting most likely candidates, if we were asked to do that.
     if args.candidates_file is not None:
-        select_mostly_likely_candidates(word_replacer,
-                                        args.candidates_file,
-                                        args.keep_top_k,
-                                        not args.no_tokenize,
-                                        args.create_sentence_indices,
-                                        args.max_output_sentences,
-                                        args.output_file)
+        if args.sentences_file is None:
+            select_mostly_likely_candidates(word_replacer,
+                                            args.candidates_file,
+                                            args.keep_top_k,
+                                            not args.no_tokenize,
+                                            args.create_sentence_indices,
+                                            args.max_output_sentences,
+                                            args.output_file)
+        else:
+            generate_multiple_choice_questions(word_replacer,
+                                               args.sentences_file,
+                                               args.candidates_file,
+                                               not args.no_tokenize,
+                                               3,
+                                               args.create_sentence_indices,
+                                               args.max_output_sentences,
+                                               args.output_file)
+
 
 
 

@@ -35,6 +35,14 @@ object MemoryNetworkExperiments {
     ("searcher type" -> "manually provided") ~
     ("filename" -> "/home/mattg/data/memory_network/busc_large/indexed_training_data_corrupted_background.tsv")
 
+  val manualGeneratedQuestions: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("create sentence indices" -> true) ~
+    ("filename" -> "/home/mattg/clone/dlfa/generated_questions.tsv")
+
+  val generatedQuestionBackgroundParams: JValue = baseElasticSearchParams merge
+    (("sentences" -> manualGeneratedQuestions) ~ ("remove query near duplicates" -> true): JValue)
+
   //////////////////////////////////////////////////////////
   // Step 1: Take a corpus and select sentences to use
   //////////////////////////////////////////////////////////
@@ -165,8 +173,8 @@ object MemoryNetworkExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    //new LuceneBackgroundCorpusSearcher(positiveBackgroundParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
+    new LuceneBackgroundCorpusSearcher(generatedQuestionBackgroundParams, fileUtil).runPipeline()
+    //NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
   }

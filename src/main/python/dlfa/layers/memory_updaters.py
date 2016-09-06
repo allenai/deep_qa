@@ -5,33 +5,40 @@ combine them to produce an updated memory vector.
 Both the input vectors should have the same dimensionality, and the output vector should match that
 dimensionality.
 """
-from keras import backend as K
-from keras.layers import Dense, merge
+from keras.layers import Dense, Layer
 
 
-class SumMemoryUpdater:
-    def __init__(self, output_dim, name="sum_memory_updater"):
-        self.output_dim = output_dim
-        self.name = name
+class SumMemoryUpdater(Layer):
+    """
+    This MemoryUpdater adds the memory vector and the aggregated knowledge vector.
 
-    def update(self, memory_vector, aggregated_knowledge_vector):
-        # Returning a Keras layer instead of symbolic sum so that we can name the output.
-        return merge([memory_vector, aggregated_knowledge_vector], mode='sum',
-                    output_shape=(self.output_dim,), name=self.name)
+    We can't just do a merge() here because we want to be able to TimeDistribute this layer, so we
+    need to do some fancy footwork with the input vector.
+    """
+    def __init__(self, encoding_dim, name="sum_memory_updater"):
+        super(SumMemoryUpdater, self).__init__(name=name)
+        self.encoding_dim = encoding_dim
+        self.mode = 'sum'
+
+    def call(self, x, mask=None):
+        memory_vector = x[:, :self.encoding_dim]
+        aggregated_knowledge_vector = x[:, self.encoding_dim:]
+        return memory_vector + aggregated_knowledge_vector
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], int(input_shape[1] / 2))
 
 
-class DenseConcatMemoryUpdater:
-    def __init__(self, output_dim, name="dense_concat_memory_updater"):
-        self.output_dim = output_dim
-        self.name = name
+class DenseConcatMemoryUpdater(Dense):
+    """
+    This MemoryUpdater concatenates the memory vector and the aggregated knowledge vector, then
+    passes them through a Dense layer.
 
-    def update(self, memory_vector, aggregated_knowledge_vector):
-        # We're assuming the both memory_vector and aggregated_knowledge_vector have shape
-        # (batch_size, output_dim).
-        # We need the concatenation to be done by a layer to propagate the shape information.
-        # Or else the following layer wouldn't know what shape to expect.
-        concatenated_input = merge([memory_vector, aggregated_knowledge_vector], mode='concat')
-        return Dense(self.output_dim, name=self.name)(concatenated_input)
+    Because the input to the memory updater is already concatenated, we don't have to do anything
+    here, we just subclass Dense.
+    """
+    def __init__(self, encoding_dim, name="dense_concat_memory_updater"):
+        super(DenseConcatMemoryUpdater, self).__init__(encoding_dim, name=name)
 
 
 updaters = {  # pylint: disable=invalid-name

@@ -15,7 +15,10 @@ class IndexedInstance:
     This would mean that "Jamie" and "Holly" were OOV to the DataIndexer, and the other words were
     given indices.
     """
-    def __init__(self, word_indices: List[int], label: bool, index: int=None):
+    def __init__(self, word_indices: List[int], label, index: int=None):
+        """
+        label and index have same values and meaning as in `Instance`.
+        """
         self.word_indices = word_indices
         self.label = label
         self.index = index
@@ -164,3 +167,38 @@ class IndexedBackgroundInstance(IndexedInstance):
         word_array, label = super(IndexedBackgroundInstance, self).as_training_data()
         background_array = numpy.asarray(self.background_indices, dtype='int32')
         return (word_array, background_array), label
+
+
+class IndexedQuestionInstance(IndexedInstance):
+    # TODO(matt): worry about num_options padding at some point.
+    def __init__(self, options: List[IndexedInstance], label):
+        self.options = options
+        super(IndexedQuestionInstance, self).__init__([], label)
+
+    def get_lengths(self) -> List[int]:
+        """
+        Here we return the max of get_lengths on all of the Instances in self.options.
+        """
+        lengths = [instance.get_lengths() for instance in self.options]
+        return [max(dimension_lengths) for dimension_lengths in zip(*lengths)]
+
+    def pad(self, max_lengths: List[int]):
+        """
+        This method pads all of the underlying Instances in self.options.
+        """
+        for instance in self.options:  # type: IndexedInstance
+            instance.pad(max_lengths)
+
+    def as_training_data(self):
+        inputs = []
+        unzip_inputs = False
+        for option in self.options:
+            option_input, _ = option.as_training_data()
+            if isinstance(option_input, tuple):
+                unzip_inputs = True
+            inputs.append(option_input)
+        if unzip_inputs:
+            inputs = tuple(zip(*inputs))  # pylint: disable=redefined-variable-type
+        label = numpy.zeros(len(self.options))
+        label[self.label] = 1
+        return inputs, label

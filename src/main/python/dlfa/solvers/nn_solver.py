@@ -5,7 +5,7 @@ import pickle
 from typing import List
 
 import numpy
-from keras.layers import Dense, Input, Embedding, LSTM, TimeDistributed, Dropout
+from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
 from keras.regularizers import l1l2
 from keras.models import Model, model_from_json
 
@@ -63,9 +63,7 @@ class NNSolver(object):
         self.model = None
         self.debug_model = None
         self.embedding_layer = None
-        self.time_distributed_embedding_layer = None
         self.projection_layer = None
-        self.time_distributed_projection_layer = None
         self.sentence_encoder_layer = None
         self._sentence_encoder_model = None
 
@@ -321,6 +319,9 @@ class NNSolver(object):
         that are re-used, you must override this method, or loading models will break.  Similarly,
         if you change code in those two methods (e.g., making the sentence encoder into two
         layers), this method must be changed accordingly.
+
+        Note that we don't need to store any TimeDistributed() layers directly, because they don't
+        have any parameters themselves.
         """
         logger.info("Loading individual layers from model for re-use")
 
@@ -331,24 +332,16 @@ class NNSolver(object):
             if layer.name == "embedding":
                 logger.info("  Found embedding layer")
                 self.embedding_layer = layer
-            elif layer.name == "background_embedding":
-                logger.info("  Found background embedding layer")
-                self.time_distributed_embedding_layer = layer
             elif layer.name == "embedding_projection":
                 logger.info("  Found projection layer")
                 self.projection_layer = layer
-            elif layer.name == "background_embedding_projection":
-                logger.info("  Found background projection layer")
-                self.time_distributed_projection_layer = layer
             elif layer.name == "sentence_encoder":
                 logger.info("  Found sentence encoder")
                 self.sentence_encoder_layer = layer
         assert self.embedding_layer is not None, "Embedding layer not found"
-        assert self.time_distributed_embedding_layer is not None, "Background embedding layer not found"
         assert self.sentence_encoder_layer is not None, "Sentence encoder not found"
         if self.project_embeddings:
             assert self.projection_layer is not None, "Projection layer not found"
-            assert self.time_distributed_projection_layer is not None, "Background projection layer not found"
 
     def get_sentence_vector(self, sentence: str):
         """
@@ -368,25 +361,6 @@ class NNSolver(object):
         return self.model.predict(test_input)
 
     @staticmethod
-    def _assert_dataset_is_questions(dataset: TextDataset):
-        """
-        This method checks that dataset matches the assumptions we make about validation data: that
-        it is a list of sentences corresponding to four-choice questions, with one correct answer
-        for every four instances.
-
-        So, specifically, we check that the number of instances is a multiple of four, and we check
-        that each group of four instances has exactly one instance with label True, and all other
-        labels are False (i.e., no None labels for validation data).
-        """
-        assert len(dataset.instances) % 4 == 0, "Not enough lines per question"
-        questions = zip(*[dataset.instances[i::4] for i in range(4)])
-        for question in questions:
-            question_labels = [instance.label for instance in question]
-            label_counts = {x: question_labels.count(x) for x in set(question_labels)}
-            assert label_counts[True] == 1, "Must have one correct answer option"
-            assert label_counts[False] == 3, "Must have three incorrect answer options"
-
-    @staticmethod
     def group_by_question(labels):
         """
         This method takes a sequential numpy array of shape (num_instances, 2), and groups it by
@@ -401,9 +375,11 @@ class NNSolver(object):
         highest-scoring answer, returning an array of shape (num_questions).  This allows us to
         compute question accuracy, instead of an instance-level loss function.
 
-        We assume that the data that produced `labels` has already been validated with
-        NNSolver._assert_dataset_is_questions(), so we do not do any checking here.  See the comments
-        there for the requirements on the input data.
+        We assume that the data that produced `labels` has dataset.can_be_converted_to_questions()
+        == True.  See the comments there for the requirements on the input data.
+
+        TODO(matt): remove this code and just use the new QuestionInstance instead.  This will
+        require an option to flatten the training inputs (or maybe we just do it here?).
         """
         num_questions = int(len(labels) / 4)
         reshaped_labels = labels[:, 1].reshape(num_questions, 4)
@@ -482,7 +458,7 @@ class NNSolver(object):
         return self._prep_question_dataset(dataset)
 
     def _prep_question_dataset(self, dataset: TextDataset):
-        self._assert_dataset_is_questions(dataset)
+        assert dataset.can_be_converted_to_questions(), "Dataset not formatted as questions"
         inputs, labels = self.prep_labeled_data(dataset, for_train=False, shuffle=False)
         return inputs, self.group_by_question(labels)
 
@@ -515,7 +491,7 @@ class NNSolver(object):
         debug_model = Model(input=debug_inputs, output=debug_outputs)
         return debug_model
 
-    def _get_embedded_sentence_input(self, input_shape, is_time_distributed=False):
+    def _get_embedded_sentence_input(self, input_shape):
         """
         Performs the initial steps of embedding sentences.  This function takes care of two steps:
         (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
@@ -523,10 +499,12 @@ class NNSolver(object):
         might initialize that Embedding layer from pre-trained word vectors, or add a projection on
         top of the embedding, or add dropout after the embedding layer.
 
-        We allow for inputs of shape (batch_size, sentence_length) and inputs of shape
-        (batch_size, num_sentences, sentence_length).  If your input is the second of these, you
-        must pass is_time_distributed=True.  This is useful for, e.g., encoding the memory
-        sentences in a memory network.
+        We use `input_shape` to decide how many TimeDistributed() layers we need on top of the
+        initial embedding / projection.  We will always do one less TimeDistributed() layer than
+        there are dimensions in `input_shape`.  For example, if you pass an input shape of
+        (max_sentence_length,), we will not add any TimeDistributed() layers.  If you pass
+        (max_knowledge_length, max_sentence_length), we'll add one, and if you pass (num_options,
+        max_knowledge_length, max_sentence_length), we'll add two, etc.
 
         Because Keras requires access to the actual Input() layer, we return that along with the
         final word vector layer.
@@ -554,22 +532,18 @@ class NNSolver(object):
             if self.project_embeddings:
                 self.projection_layer = TimeDistributed(Dense(output_dim=self.embedding_size,),
                                                         name='embedding_projection')
-                self.time_distributed_projection_layer = TimeDistributed(
-                        self.projection_layer, name='background_embedding_projection')
-            self.time_distributed_embedding_layer = TimeDistributed(self.embedding_layer,
-                                                                    name='background_embedding')
 
         # Now we actually embed the input and apply dropout.
-        if is_time_distributed:
-            embedded_input = self.time_distributed_embedding_layer(input_layer)
-        else:
-            embedded_input = self.embedding_layer(input_layer)
+        embedding = self.embedding_layer
+        for _ in input_shape[1:]:
+            embedding = TimeDistributed(embedding)
+        embedded_input = embedding(input_layer)
 
         if self.project_embeddings:
-            if is_time_distributed:
-                embedded_input = self.time_distributed_projection_layer(embedded_input)
-            else:
-                embedded_input = self.projection_layer(embedded_input)
+            projection = self.projection_layer
+            for _ in input_shape[1:]:
+                projection = TimeDistributed(projection)
+            embedded_input = projection(embedded_input)
 
         if self.embedding_dropout > 0.0:
             embedded_input = Dropout(self.embedding_dropout)(embedded_input)
@@ -591,9 +565,9 @@ class NNSolver(object):
                 # BOWEncoder does not need to know the output dim
                 encoder_arguments["output_dim"] = self.embedding_size
             if self.encoder_regularizer is not None:
-                encoder_arguments["W_regularizer"] = self.encoder_regularizer 
-                encoder_arguments["U_regularizer"] = self.encoder_regularizer 
-                encoder_arguments["b_regularizer"] = self.encoder_regularizer 
+                encoder_arguments["W_regularizer"] = self.encoder_regularizer
+                encoder_arguments["U_regularizer"] = self.encoder_regularizer
+                encoder_arguments["b_regularizer"] = self.encoder_regularizer
             self.sentence_encoder_layer = encoders[self.encoder](**encoder_arguments)
         return self.sentence_encoder_layer
 

@@ -41,6 +41,13 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
     searcher.consolidateHits(negative, hits, 10) should be(Seq(sentence))
   }
 
+  it should "remove near duplicates with the query when all are lower cased" in {
+    val positive = "Tiger sharks and killer whales eat adult sea turtles."
+    val negative = "tiger elephant and killer whales eat adult sea turtles."
+    val hits = Seq(positive, sentence)
+    searcher.consolidateHits(negative, hits, 10) should be(Seq(sentence))
+  }
+
   it should "keep only the top k" in {
     val hits = Seq(sentence, different, different2)
     searcher.consolidateHits("", hits, 2) should be(Seq(sentence, different))

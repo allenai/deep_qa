@@ -4,7 +4,7 @@ import random
 
 from typing import List
 
-from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance
+from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance, QuestionInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
@@ -26,6 +26,31 @@ class Dataset:
         class that call the constructor, such as `merge()` and `truncate()`.
         """
         self.instances = instances
+
+    def can_be_converted_to_questions(self):
+        """
+        This method checks that dataset matches the assumptions we make about question data: that
+        it is a list of sentences corresponding to four-choice questions, with one correct answer
+        for every four instances.
+
+        So, specifically, we check that the number of instances is a multiple of four, and we check
+        that each group of four instances has exactly one instance with label True, and all other
+        labels are False (i.e., no None labels for validation data).
+        """
+        for instance in self.instances:
+            if isinstance(instance, QuestionInstance):
+                return False
+        if len(self.instances) % 4 != 0:
+            return False
+        questions = zip(*[self.instances[i::4] for i in range(4)])
+        for question in questions:
+            question_labels = [instance.label for instance in question]
+            label_counts = {x: question_labels.count(x) for x in set(question_labels)}
+            if label_counts[True] != 1:
+                return False
+            if label_counts[False] != 3:
+                return False
+        return True
 
     def merge(self, other: 'Dataset') -> 'Dataset':
         """
@@ -57,8 +82,7 @@ class TextDataset(Dataset):
     A Dataset of TextInstances, with a few helper methods.
 
     TextInstances aren't useful for much with Keras until they've been indexed.  So this class just
-    has methods to read in data from a file, then convert it into something that's actually useful
-    for Keras or other libraries.
+    has methods to read in data from a file and converting it into other kinds of Datasets.
     """
     def __init__(self, instances: List[TextInstance]):
         super(TextDataset, self).__init__(instances)
@@ -69,6 +93,14 @@ class TextDataset(Dataset):
         '''
         indexed_instances = [instance.to_indexed_instance(data_indexer) for instance in self.instances]
         return IndexedDataset(indexed_instances)
+
+    def to_question_dataset(self) -> 'Dataset':
+        assert self.can_be_converted_to_questions()
+        questions = zip(*[self.instances[i::4] for i in range(4)])
+        question_instances = []
+        for question in questions:
+            question_instances.append(QuestionInstance(question))
+        return TextDataset(question_instances)
 
     @staticmethod
     def read_from_file(filename: str,

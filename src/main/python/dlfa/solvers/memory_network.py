@@ -9,7 +9,7 @@ from keras.models import Model
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector, ParameterizedKnowledgeSelector
 from ..layers.memory_updaters import updaters
-from ..layers.entailment_models import entailment_models
+from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from .nn_solver import NNSolver
 
 
@@ -64,6 +64,8 @@ class MemoryNetworkSolver(NNSolver):
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
         self.memory_updater = updaters[kwargs['memory_updater']]
+        self.entailment_combiner = entailment_input_combiners[kwargs['entailment_input_combiner']](
+                self.embedding_size)
         self.entailment_model = entailment_models[kwargs['entailment_model']](
                 kwargs['entailment_num_hidden_layers'],
                 kwargs['entailment_hidden_layer_width'],
@@ -93,7 +95,11 @@ class MemoryNetworkSolver(NNSolver):
                             choices=updaters.keys(),
                             help='The kind of memory updaters to use.  See memory_updaters.py '
                             'for details.')
-        parser.add_argument('--entailment_model', type=str, default='dense_memory_only',
+        parser.add_argument('--entailment_input_combiner', type=str, default='heuristic_matching',
+                            choices=entailment_input_combiners.keys(),
+                            help='The kind of entailment input combiner.  See entailment_models.py '
+                            'for details.')
+        parser.add_argument('--entailment_model', type=str, default='basic_mlp',
                             choices=entailment_models.keys(),
                             help='The kind of entailment model to use.  See entailment_models.py '
                             'for details.')
@@ -138,16 +144,19 @@ class MemoryNetworkSolver(NNSolver):
 
     @overrides
     def _build_model(self):
+        # TODO(matt): Merge this with the _build_model() code in multiple_choice_memory_network.
+        # It's almost identical already; we just need to have some flag in the constructor that
+        # says whether we should make this TimeDistributed or not, and changes a few things in
+        # here, like what the concat_axis is, and the merge shapes.
+
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
         # inputs and the knowledge inputs.
         proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
                 input_shape=(self.max_sentence_length,))
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.max_knowledge_length, self.max_sentence_length),
-                is_time_distributed=True)
+                input_shape=(self.max_knowledge_length, self.max_sentence_length))
 
-        # Step 3: Encode the two embedded inputs using the same encoder.  We could replace the LSTM
-        # below with fancier encoders depending on the input.
+        # Step 3: Encode the two embedded inputs using the sentence encoder.
         proposition_encoder = self._get_sentence_encoder()
 
         # Knowledge encoder will have the same encoder running on a higher order tensor.
@@ -195,15 +204,27 @@ class MemoryNetworkSolver(NNSolver):
             attended_knowledge = merge([encoded_knowledge, attention_weights],
                                        mode=weighted_average,
                                        output_shape=weighted_average_shape)
-            memory_updater = self.memory_updater(output_dim=self.embedding_size,
+
+            # To make this easier to TimeDistribute, we're going to concatenate the current memory
+            # with the attended knowledge, and use that as the input to the memory updater, instead
+            # of just passing a list.
+            # We going from two inputs of (batch_size, encoding_dim) to one input of (batch_size,
+            # encoding_dim * 2).
+            updater_input = merge([current_memory, attended_knowledge],
+                                  mode='concat',
+                                  concat_axis=1)
+            memory_updater = self.memory_updater(encoding_dim=self.embedding_size,
                                                  name='memory_updater_%d' % i)
-            current_memory = memory_updater.update(current_memory, attended_knowledge)
+            current_memory = memory_updater(updater_input)
+
 
         # Step 5: Finally, run the sentence encoding, the current memory, and the attended
         # background knowledge through an entailment model to get a final true/false score.
-        entailment_output = self.entailment_model.classify(encoded_proposition,
-                                                           current_memory,
-                                                           attended_knowledge)
+        entailment_input = merge([encoded_proposition, current_memory, attended_knowledge],
+                                 mode='concat',
+                                 concat_axis=1)
+        combined_input = self.entailment_combiner(entailment_input)
+        entailment_output = self.entailment_model.classify(combined_input)
 
         # Step 6: Define the model, and return it. The model will be compiled and trained by the
         # calling method.
