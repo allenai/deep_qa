@@ -187,3 +187,43 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         question_dataset = background_dataset.to_question_dataset()
         inputs, _ = self.prep_labeled_data(question_dataset, for_train=False, shuffle=False)
         return question_dataset, inputs
+
+    @overrides
+    def debug(self, debug_dataset, debug_inputs, epoch: int):
+        """
+        A debug_model must be defined by now. Run it on debug data and print the
+        appropriate information to the debug output.
+        """
+        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
+        all_question_scores = self.score(debug_inputs)
+        all_question_attention_outputs = self.debug_model.predict(debug_inputs)
+        if self.num_memory_layers == 1:
+            all_question_attention_outputs = [all_question_attention_outputs]
+        # Collect values from all hops of attention for a given instance into attention_values.
+        for instance, question_scores, *question_attention_values in zip(debug_dataset.instances,
+                                                                         all_question_scores,
+                                                                         *all_question_attention_outputs):
+            label = instance.label
+            print("Correct answer: %s" % label, file=debug_output_file)
+            for option_id, option_instance in enumerate(instance.options):
+                option_sentence = option_instance.text
+                option_background_info = option_instance.background
+                option_score = question_scores[option_id]
+                # Remove the attention values for padding
+                option_attention_values = [hop_attention_values[option_id]
+                                           for hop_attention_values in question_attention_values]
+                option_attention_values = [values[-len(option_background_info):]
+                                           for values in option_attention_values]
+                print("\tOption %d: %s" % (option_id, option_sentence), file=debug_output_file)
+                print("\tAssigned score: %.4f" % option_score, file=debug_output_file)
+                print("\tWeights on background:", file=debug_output_file)
+                for i, background_i in enumerate(option_background_info):
+                    if i >= len(option_attention_values[0]):
+                        # This happens when IndexedBackgroundInstance.pad() ignored some
+                        # sentences (at the end). Let's ignore them too.
+                        break
+                    all_hops_attention_i = ["%.4f" % values[i] for values in option_attention_values]
+                    print("\t\t%s\t%s" % (" ".join(all_hops_attention_i), background_i),
+                          file=debug_output_file)
+                print(file=debug_output_file)
+        debug_output_file.close()
