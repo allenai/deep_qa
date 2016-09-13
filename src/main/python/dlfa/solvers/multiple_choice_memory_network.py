@@ -188,13 +188,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         inputs, _ = self.prep_labeled_data(question_dataset, for_train=False, shuffle=False)
         return question_dataset, inputs
 
-    def get_debug_layer_names(self):
-        debug_layer_names = []
-        for layer in self.model.layers:
-            if "knowledge_selector" in layer.name:
-                debug_layer_names.append(layer.name)
-        return debug_layer_names
-
+    @overrides
     def debug(self, debug_dataset, debug_inputs, epoch: int):
         """
         A debug_model must be defined by now. Run it on debug data and print the
