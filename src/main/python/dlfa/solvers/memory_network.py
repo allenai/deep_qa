@@ -73,6 +73,7 @@ class MemoryNetworkSolver(NNSolver):
                 )
         self.num_memory_layers = kwargs['num_memory_layers']
 
+        self.instance_type = 'true/false'
         self.max_knowledge_length = None
 
     @classmethod
@@ -142,19 +143,44 @@ class MemoryNetworkSolver(NNSolver):
         # TODO(matt): set the background length too, or does it matter?  Maybe the model doesn't
         # actually care?
 
+    def _get_sentence_shape(self):
+        return (self.max_sentence_length,)
+
+    def _get_background_shape(self):
+        return (self.max_knowledge_length, self.max_sentence_length)
+
+    def _get_merge_axis(self):
+        return 1
+
+    def _get_merged_background_shape(self):
+        return lambda layer_out_shapes: (layer_out_shapes[1][0],
+                                         layer_out_shapes[1][1] + 1,
+                                         layer_out_shapes[1][2])
+
+    def _get_knowledge_selector(self, layer_num: int):
+        return self.knowledge_selector(name='knowledge_selector_%d' % layer_num)
+
+    def _get_weighted_average_shape(self):
+        return lambda input_shapes: (input_shapes[0][0], input_shapes[0][2])
+
+    def _get_memory_updater(self, layer_num: int):
+        return self.memory_updater(encoding_dim=self.embedding_size, name='memory_updater_%d' % layer_num)
+
+    def _get_entailment_combiner(self):
+        return self.entailment_combiner
+
+    def _get_entailment_output(self, combined_input):
+        return self.entailment_model.classify(combined_input)
+
     @overrides
     def _build_model(self):
-        # TODO(matt): Merge this with the _build_model() code in multiple_choice_memory_network.
-        # It's almost identical already; we just need to have some flag in the constructor that
-        # says whether we should make this TimeDistributed or not, and changes a few things in
-        # here, like what the concat_axis is, and the merge shapes.
-
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
         # inputs and the knowledge inputs.
+        sentence_shape = self._get_sentence_shape()
         proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,))
+                input_shape=self._get_sentence_shape())
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.max_knowledge_length, self.max_sentence_length))
+                input_shape=self._get_background_shape())
 
         # Step 3: Encode the two embedded inputs using the sentence encoder.
         proposition_encoder = self._get_sentence_encoder()
@@ -173,6 +199,8 @@ class MemoryNetworkSolver(NNSolver):
         # the previous memory layer, merge it with the knowledge encoding and pass it to the
         # current memory layer.
         current_memory = encoded_proposition
+
+        merge_axis = self._get_merge_axis()
         for i in range(self.num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
             # additional row (at the beginning) in all slices.
@@ -181,26 +209,25 @@ class MemoryNetworkSolver(NNSolver):
             # Since this is an unconventional merge, we define a customized lambda merge.
             # Keras cannot infer the shape of the output of a lambda function, so we make
             # that explicit.
-            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=1),
+            merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=merge_axis),
                                                            layer_outs[1]],
-                                                          axis=1)
-            merged_shape = lambda layer_out_shapes: \
-                (layer_out_shapes[1][0], layer_out_shapes[1][1] + 1, layer_out_shapes[1][2])
+                                                          axis=merge_axis)
+            merged_shape = self._get_merged_background_shape()
             merged_encoded_rep = merge([current_memory, encoded_knowledge],
                                        mode=merge_mode,
                                        output_shape=merged_shape)
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_selector = self.knowledge_selector(name='knowledge_selector_%d' % i)
+            knowledge_selector = self._get_knowledge_selector(i)
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
             weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1], dim=-1),
-                                                        axis=1)
+                                                        axis=merge_axis)
             # input shapes: (samples, knowledge_len, input_dim), (samples, knowledge_len)
             # output shape: (samples, input_dim)
-            weighted_average_shape = lambda input_shapes: (input_shapes[0][0], input_shapes[0][2])
+            weighted_average_shape = self._get_weighted_average_shape()
             attended_knowledge = merge([encoded_knowledge, attention_weights],
                                        mode=weighted_average,
                                        output_shape=weighted_average_shape)
@@ -212,9 +239,8 @@ class MemoryNetworkSolver(NNSolver):
             # encoding_dim * 2).
             updater_input = merge([current_memory, attended_knowledge],
                                   mode='concat',
-                                  concat_axis=1)
-            memory_updater = self.memory_updater(encoding_dim=self.embedding_size,
-                                                 name='memory_updater_%d' % i)
+                                  concat_axis=merge_axis)
+            memory_updater = self._get_memory_updater(i)
             current_memory = memory_updater(updater_input)
 
 
@@ -222,9 +248,9 @@ class MemoryNetworkSolver(NNSolver):
         # background knowledge through an entailment model to get a final true/false score.
         entailment_input = merge([encoded_proposition, current_memory, attended_knowledge],
                                  mode='concat',
-                                 concat_axis=1)
-        combined_input = self.entailment_combiner(entailment_input)
-        entailment_output = self.entailment_model.classify(combined_input)
+                                 concat_axis=merge_axis)
+        combined_input = self._get_entailment_combiner()(entailment_input)
+        entailment_output = self._get_entailment_output(combined_input)
 
         # Step 6: Define the model, and return it. The model will be compiled and trained by the
         # calling method.
