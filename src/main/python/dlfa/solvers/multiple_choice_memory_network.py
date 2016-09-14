@@ -1,8 +1,6 @@
 from overrides import overrides
 
-from keras import backend as K
-from keras.layers import TimeDistributed, Dropout, merge
-from keras.models import Model
+from keras.layers import TimeDistributed
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from .memory_network import MemoryNetworkSolver
@@ -67,7 +65,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_knowledge_selector(self, layer_num: int):
-        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_knowledge_selector())
+        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_knowledge_selector(layer_num))
 
     @overrides
     def _get_weighted_average_shape(self):
@@ -75,7 +73,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_memory_updater(self, layer_num: int):
-        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_memory_updater())
+        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_memory_updater(layer_num))
 
     @overrides
     def _get_entailment_combiner(self):
