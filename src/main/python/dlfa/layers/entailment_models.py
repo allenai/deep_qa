@@ -64,8 +64,8 @@ class BasicEntailmentModel:
 
 def split_combiner_inputs(x, encoding_dim: int):  # pylint: disable=invalid-name
     sentence_encoding = x[:, :encoding_dim]
-    current_memory = x[:, encoding_dim:-encoding_dim]
-    attended_knowledge = x[:, -encoding_dim:]
+    current_memory = x[:, encoding_dim:2*encoding_dim]
+    attended_knowledge = x[:, 2*encoding_dim:]
     return sentence_encoding, current_memory, attended_knowledge
 
 
