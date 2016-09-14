@@ -10,7 +10,8 @@
 keras
 h5py
 sklearn
-
+theano
+tensorflow
 #### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
 
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
