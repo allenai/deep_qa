@@ -41,7 +41,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         return has_train and has_validation
 
     @overrides
-    def _get_sentence_shape(self):
+    def _get_question_shape(self):
         return (self.num_options, self.max_sentence_length,)
 
     @overrides
@@ -53,23 +53,13 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_sentence_encoder())
 
     @overrides
-    def _get_merge_axis(self):
+    def _get_knowledge_axis(self):
+        # pylint: disable=no-self-use
         return 2
-
-    @overrides
-    def _get_merged_background_shape(self):
-        return lambda layer_out_shapes: (layer_out_shapes[1][0],
-                                         layer_out_shapes[1][1],
-                                         layer_out_shapes[1][2] + 1,
-                                         layer_out_shapes[1][3])
 
     @overrides
     def _get_knowledge_selector(self, layer_num: int):
         return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_knowledge_selector(layer_num))
-
-    @overrides
-    def _get_weighted_average_shape(self):
-        return lambda input_shapes: (input_shapes[0][0], input_shapes[0][1], input_shapes[0][3])
 
     @overrides
     def _get_memory_updater(self, layer_num: int):
