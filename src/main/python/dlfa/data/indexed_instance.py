@@ -226,19 +226,19 @@ class IndexedBackgroundInstance(IndexedInstance):
         return final_inputs, label
 
 
-class IndexedQuestionInstance(IndexedInstance):
+class IndexedMultipleChoiceInstance(IndexedInstance):
     """
-    A QuestionInstance that has been indexed.  QuestionInstance has a better description of what
-    this represents.
+    A MultipleChoiceInstance that has been indexed.  MultipleChoiceInstance has a better
+    description of what this represents.
     """
     def __init__(self, options: List[IndexedInstance], label):
-        super(IndexedQuestionInstance, self).__init__(label=label, index=None)
+        super(IndexedMultipleChoiceInstance, self).__init__(label=label, index=None)
         self.options = options
 
     @classmethod
     @overrides
     def empty_instance(cls):
-        return IndexedQuestionInstance([], None)
+        return IndexedMultipleChoiceInstance([], None)
 
     @overrides
     def get_lengths(self) -> Dict[str, int]:

@@ -403,10 +403,11 @@ class NNSolver(object):
         highest-scoring answer, returning an array of shape (num_questions).  This allows us to
         compute question accuracy, instead of an instance-level loss function.
 
-        We assume that the data that produced `labels` has dataset.can_be_converted_to_questions()
-        == True.  See the comments there for the requirements on the input data.
+        We assume that the data that produced `labels` has
+        dataset.can_be_converted_to_multiple_choice() == True.  See the comments there for the
+        requirements on the input data.
 
-        TODO(matt): remove this code and just use the new QuestionInstance instead.  This will
+        TODO(matt): remove this code and just use MultipleChoiceInstance instead.  This will
         require an option to flatten the training inputs (or maybe we just do it here?).
         """
         num_questions = int(len(labels) / 4)
@@ -507,7 +508,7 @@ class NNSolver(object):
         return self._prep_question_dataset(dataset)
 
     def _prep_question_dataset(self, dataset: TextDataset):
-        assert dataset.can_be_converted_to_questions(), "Dataset not formatted as questions"
+        assert dataset.can_be_converted_to_multiple_choice(), "Dataset not formatted as questions"
         inputs, labels = self.prep_labeled_data(dataset, for_train=False, shuffle=False)
         return inputs, self.group_by_question(labels)
 

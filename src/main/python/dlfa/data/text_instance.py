@@ -8,7 +8,7 @@ from .indexed_instance import IndexedInstance
 from .indexed_instance import IndexedTrueFalseInstance
 from .indexed_instance import IndexedBackgroundInstance
 from .indexed_instance import IndexedLogicalFormInstance
-from .indexed_instance import IndexedQuestionInstance
+from .indexed_instance import IndexedMultipleChoiceInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
@@ -212,12 +212,12 @@ class BackgroundInstance(TextInstance):
         return IndexedBackgroundInstance(indexed_instance, background_indices)
 
 
-class QuestionInstance(TextInstance):
+class MultipleChoiceInstance(TextInstance):
     """
-    A QuestionInstance is a grouping of other Instances, where exactly one of those Instance must
-    have label True.  When this is converted to training data, it will group all of those option
-    Instances into a single training instance, with a label that is an index to the answer option
-    that is correct for its label.
+    A MultipleChoiceInstance is a grouping of other Instances, where exactly one of those Instances
+    must have label True.  When this is converted to training data, it will group all of those
+    option Instances into a single training instance, with a label that is an index to the answer
+    option that is correct for its label.
     """
     def __init__(self, options: List[TextInstance]):
         self.options = options
@@ -225,7 +225,7 @@ class QuestionInstance(TextInstance):
         assert len(positive_index) == 1
         label = positive_index[0]
         tokenizer = self.options[0].tokenizer if self.options else None
-        super(QuestionInstance, self).__init__(label, None, tokenizer)
+        super(MultipleChoiceInstance, self).__init__(label, None, tokenizer)
 
     @overrides
     def words(self):
@@ -237,4 +237,4 @@ class QuestionInstance(TextInstance):
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
         indexed_options = [option.to_indexed_instance(data_indexer) for option in self.options]
-        return IndexedQuestionInstance(indexed_options, self.label)
+        return IndexedMultipleChoiceInstance(indexed_options, self.label)

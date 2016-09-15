@@ -6,7 +6,7 @@ import random
 from typing import Dict, List
 
 from .instance import Instance
-from .text_instance import BackgroundInstance, QuestionInstance, TextInstance
+from .text_instance import BackgroundInstance, MultipleChoiceInstance, TextInstance
 from .indexed_instance import IndexedInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
@@ -30,7 +30,7 @@ class Dataset:
         """
         self.instances = instances
 
-    def can_be_converted_to_questions(self):
+    def can_be_converted_to_multiple_choice(self):
         """
         This method checks that dataset matches the assumptions we make about question data: that
         it is a list of sentences corresponding to four-choice questions, with one correct answer
@@ -41,7 +41,7 @@ class Dataset:
         labels are False (i.e., no None labels for validation data).
         """
         for instance in self.instances:
-            if isinstance(instance, QuestionInstance):
+            if isinstance(instance, MultipleChoiceInstance):
                 return False
         if len(self.instances) % 4 != 0:
             return False
@@ -98,11 +98,11 @@ class TextDataset(Dataset):
         return IndexedDataset(indexed_instances)
 
     def to_question_dataset(self) -> 'Dataset':
-        assert self.can_be_converted_to_questions()
+        assert self.can_be_converted_to_multiple_choice()
         questions = zip(*[self.instances[i::4] for i in range(4)])
         question_instances = []
         for question in questions:
-            question_instances.append(QuestionInstance(question))
+            question_instances.append(MultipleChoiceInstance(question))
         return TextDataset(question_instances)
 
     @staticmethod

@@ -4,7 +4,9 @@ from unittest import TestCase
 
 import numpy
 
-from dlfa.data.indexed_instance import IndexedTrueFalseInstance, IndexedBackgroundInstance, IndexedQuestionInstance
+from dlfa.data.indexed_instance import IndexedBackgroundInstance
+from dlfa.data.indexed_instance import IndexedMultipleChoiceInstance
+from dlfa.data.indexed_instance import IndexedTrueFalseInstance
 
 class TestIndexedTrueFalseInstance:
     def test_get_lengths_returns_length_of_word_indices(self):
@@ -81,12 +83,12 @@ class TestIndexedBackgroundInstance(TestCase):
         assert numpy.all(label == numpy.asarray([1, 0]))
 
 
-class TestIndexedQuestionInstance(TestCase):
+class TestIndexedMultipleChoiceInstance(TestCase):
 
     def setUp(self):
         # We'll just test with underlying IndexedTrueFalseInstances for most of these, because it's
         # simpler.
-        self.instance = IndexedQuestionInstance(
+        self.instance = IndexedMultipleChoiceInstance(
                 [
                         IndexedTrueFalseInstance([1], False),
                         IndexedTrueFalseInstance([2, 3, 4], False),
@@ -126,7 +128,7 @@ class TestIndexedQuestionInstance(TestCase):
         assert numpy.all(inputs == numpy.asarray([[0, 0, 1], [2, 3, 4], [0, 5, 6], [0, 7, 8]]))
 
     def test_as_training_data_produces_correct_numpy_arrays_with_background_instances(self):
-        instance = IndexedQuestionInstance(
+        instance = IndexedMultipleChoiceInstance(
                 [
                         IndexedBackgroundInstance(IndexedTrueFalseInstance([1, 2], False),
                                                   [[2], [3]]),

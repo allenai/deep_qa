@@ -6,7 +6,7 @@ class Instance:
         """
         label: Could be boolean or an index.  For simple Instances (like TextInstance), this is
             either True, False, or None, indicating whether the instance is a positive, negative or
-            unknown (i.e., test) example, respectively.  For QuestionInstances or other more
+            unknown (i.e., test) example, respectively.  For MultipleChoiceInstances or other more
             complicated things, is a class index.
         index: if given, must be an integer.  Used for matching instances with other data, such as
             background sentences.
