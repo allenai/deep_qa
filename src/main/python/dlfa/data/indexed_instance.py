@@ -51,6 +51,25 @@ class IndexedInstance(Instance):
         """
         raise NotImplementedError
 
+    @staticmethod
+    def pad_word_sequence_to_length(indices: List[int], desired_length: int) -> List[int]:
+        """
+        Take a list of word indices and pads them to the desired length.
+
+        If we need to truncate the word indices, we do it from the _right_, not the left.  This is
+        important for cases that are questions, with long set ups.  We at least want to get the
+        question encoded, which is always at the end, even if we've lost much of the question set
+        up.
+
+        Though, this might be backwards for encoding background information...
+        """
+        padded_indices = [0] * desired_length
+        indices_length = min(len(indices), desired_length)
+        if indices_length != 0:
+            padded_indices[-indices_length:] = indices[-indices_length:]
+        return padded_indices
+
+
 class IndexedTrueFalseInstance(IndexedInstance):
     def __init__(self, word_indices: List[int], label, index: int=None):
         super(IndexedTrueFalseInstance, self).__init__(label, index)
@@ -73,18 +92,9 @@ class IndexedTrueFalseInstance(IndexedInstance):
         """
         Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
         self.get_lengths() for why max_lengths is a list instead of an int.
-
-        If we need to truncate self.word_indices, we do it from the _right_, not the left.  This is
-        important for cases that are questions, with long set ups.  We at least want to get the
-        question encoded, which is always at the end, even if we've lost much of the question set
-        up.
         """
         desired_length = max_lengths['word_sequence_length']
-        padded_word_indices = [0] * desired_length
-        indices_length = min(len(self.word_indices), desired_length)
-        if indices_length != 0:
-            padded_word_indices[-indices_length:] = self.word_indices[-indices_length:]
-        self.word_indices = padded_word_indices
+        self.word_indices = self.pad_word_sequence_to_length(self.word_indices, desired_length)
 
     @overrides
     def as_training_data(self):
@@ -138,11 +148,7 @@ class IndexedLogicalFormInstance(IndexedTrueFalseInstance):
         super(IndexedLogicalFormInstance, self).pad(max_lengths)
 
         transition_length = max_lengths['transition_length']
-        padded_transitions = [0] * transition_length
-        indices_length = min(len(self.transitions), transition_length)
-        if indices_length != 0:
-            padded_transitions[-indices_length:] = self.transitions[-indices_length:]
-        self.transitions = padded_transitions
+        self.transitions = self.pad_word_sequence_to_length(self.transitions, transition_length)
 
     @overrides
     def as_training_data(self):
@@ -156,6 +162,7 @@ class IndexedBackgroundInstance(IndexedInstance):
     An IndexedInstance that has background knowledge associated with it, where the background
     knowledge has also been indexed.
     """
+    contained_instance_type = None
     def __init__(self,
                  indexed_instance: IndexedInstance,
                  background_indices: List[List[int]]):
@@ -163,11 +170,17 @@ class IndexedBackgroundInstance(IndexedInstance):
         self.indexed_instance = indexed_instance
         self.background_indices = background_indices
 
+        # We need to set this here so that we know what kind of contained instance we should create
+        # when we're asked for an empty IndexedBackgroundInstance.  Note that this assumes that
+        # you'll only ever have one underlying Instance type, which is a reasonable assumption
+        # given our current code.
+        IndexedBackgroundInstance.contained_instance_type = indexed_instance.__class__
+
     @classmethod
     @overrides
     def empty_instance(cls):
-        # TODO(matt): This is a problem... not sure how to solve it...
-        return IndexedBackgroundInstance(IndexedTrueFalseInstance.empty_instance(), [])
+        contained_instance = IndexedBackgroundInstance.contained_instance_type.empty_instance()
+        return IndexedBackgroundInstance(contained_instance, [])
 
     @overrides
     def get_lengths(self) -> Dict[str, int]:
@@ -209,11 +222,7 @@ class IndexedBackgroundInstance(IndexedInstance):
         # Padding (2): making sure all background sentences have the right length.
         padded_background = []
         for background in self.background_indices:
-            padded_word_indices = [0] * word_sequence_length
-            indices_length = min(len(background), word_sequence_length)
-            if indices_length != 0:
-                padded_word_indices[-indices_length:] = background[-indices_length:]
-            padded_background.append(padded_word_indices)
+            padded_background.append(self.pad_word_sequence_to_length(background, word_sequence_length))
         self.background_indices = padded_background
 
     @overrides
@@ -285,3 +294,56 @@ class IndexedMultipleChoiceInstance(IndexedInstance):
         label = numpy.zeros(len(self.options))
         label[self.label] = 1
         return inputs, label
+
+
+class IndexedQuestionAnswerInstance(IndexedInstance):
+    def __init__(self,
+                 question_indices: List[int],
+                 option_indices: List[List[int]],
+                 label: int,
+                 index: int=None):
+        super(IndexedQuestionAnswerInstance, self).__init__(label, index)
+        self.question_indices = question_indices
+        self.option_indices = option_indices
+
+    @classmethod
+    @overrides
+    def empty_instance(cls):
+        return IndexedQuestionAnswerInstance([], [], 0)
+
+    @overrides
+    def get_lengths(self) -> List[int]:
+        """
+        Three things to pad here: the question length, the answer option length, and the number of
+        answer options.
+        """
+        question_length = len(self.question_indices)
+        max_option_length = max([len(indices) for indices in self.option_indices])
+        num_options = len(self.option_indices)
+        return [question_length, max_option_length, num_options]
+
+    @overrides
+    def pad(self, max_lengths: List[int]):
+        """
+        Three things to pad here: the question length, the answer option length, and the number of
+        answer options.
+        """
+        question_length, option_length, num_options = max_lengths
+        self.question_indices = self.pad_word_sequence_to_length(self.question_indices, question_length)
+
+        while len(self.option_indices) < num_options:
+            self.option_indices.append([])
+        self.option_indices = self.option_indices[:num_options]
+
+        padded_options = []
+        for indices in self.option_indices:
+            padded_options.append(self.pad_word_sequence_to_length(indices, option_length))
+        self.option_indices = padded_options
+
+    @overrides
+    def as_training_data(self):
+        question_array = numpy.asarray(self.question_indices, dtype='int32')
+        option_array = numpy.asarray(self.option_indices, dtype='int32')
+        label = numpy.zeros((len(self.option_indices)))
+        label[self.label] = 1
+        return (question_array, option_array), label
