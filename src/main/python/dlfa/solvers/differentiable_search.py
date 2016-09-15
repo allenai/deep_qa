@@ -11,7 +11,7 @@ import numpy
 from sklearn.neighbors import LSHForest
 
 from ..data.dataset import TextDataset
-from ..data.instance import TextInstance, BackgroundTextInstance
+from ..data.text_instance import TrueFalseInstance, BackgroundInstance
 from .memory_network import MemoryNetworkSolver
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -92,7 +92,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         else:
             self._initialize_lsh()
 
-    def get_nearest_neighbors(self, instance: TextInstance) -> List[TextInstance]:
+    def get_nearest_neighbors(self, instance: TrueFalseInstance) -> List[TrueFalseInstance]:
         '''
         Search in the corpus for the nearest neighbors to `instance`.  The corpus we search, how
         many neighbors to return, and the specifics of the encoder model are all defined in
@@ -157,7 +157,10 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         # so we pass label=True here.  TODO(matt): make it so that we can get just the input from
         # an instance without the label somehow.
         logger.info("Creating dataset")
-        dataset = TextDataset.read_from_lines(corpus_lines, label=True, tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_lines(corpus_lines,
+                                              self._instance_type(),
+                                              label=True,
+                                              tokenizer=self.tokenizer)
         logger.info("Indexing and padding dataset")
         indexed_dataset = self._index_and_pad_dataset(dataset, self._get_max_lengths())
 
@@ -198,13 +201,9 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         background knowledge for them, returning a new dataset with updated background knowledge.
         """
         new_instances = []
-        for instance in dataset.instances:  # type: BackgroundTextInstance
-            text_instance = TextInstance(instance.text, label=True, tokenizer=self.tokenizer)
+        for instance in dataset.instances:  # type: BackgroundInstance
+            text_instance = TrueFalseInstance(instance.text, label=True, tokenizer=self.tokenizer)
             new_background = self.get_nearest_neighbors(text_instance)
             background_text = [background.text for background in new_background]
-            new_instances.append(BackgroundTextInstance(instance.text,
-                                                        background_text,
-                                                        instance.label,
-                                                        instance.index,
-                                                        tokenizer=self.tokenizer))
+            new_instances.append(BackgroundInstance(instance, background_text))
         return TextDataset(new_instances)

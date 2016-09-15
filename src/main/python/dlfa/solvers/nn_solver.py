@@ -10,7 +10,7 @@ from keras.regularizers import l1l2
 from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
-from ..data.instance import TextInstance
+from ..data.text_instance import TrueFalseInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizer import tokenizers
 from ..data.data_indexer import DataIndexer
@@ -178,6 +178,12 @@ class NNSolver(object):
         # Testing details
         parser.add_argument('--use_model_from_epoch', type=int,
                             help="Use model from a particular epoch (use best saved model if empty)")
+
+    def _instance_type(self):
+        """
+        When reading datasets, what instance type should we create?
+        """
+        raise NotImplementedError
 
     def prep_labeled_data(self, dataset: TextDataset, for_train: bool, shuffle: bool):
         """
@@ -372,7 +378,7 @@ class NNSolver(object):
         """
         if self._sentence_encoder_model is None:
             self._build_sentence_encoder_model()
-        instance = TextInstance(sentence, True, tokenizer=self.tokenizer)
+        instance = TrueFalseInstance(sentence, True, tokenizer=self.tokenizer)
         indexed_instance = instance.to_indexed_instance(self.data_indexer)
         indexed_instance.pad({'word_sequence_length': self.max_sentence_length})
         instance_input, _ = indexed_instance.as_training_data()
@@ -461,13 +467,16 @@ class NNSolver(object):
         logical forms as input.  NNSolvers that have more complicated inputs will need to override
         this method.
         """
+        instance_type = self._instance_type()
         if self.train_file:
-            dataset = TextDataset.read_from_file(self.train_file, tokenizer=self.tokenizer)
+            dataset = TextDataset.read_from_file(self.train_file, instance_type, tokenizer=self.tokenizer)
         else:
             positive_dataset = TextDataset.read_from_file(self.positive_train_file,
+                                                          instance_type,
                                                           label=True,
                                                           tokenizer=self.tokenizer)
             negative_dataset = TextDataset.read_from_file(self.negative_train_file,
+                                                          instance_type,
                                                           label=False,
                                                           tokenizer=self.tokenizer)
             dataset = positive_dataset.merge(negative_dataset)
@@ -489,11 +498,12 @@ class NNSolver(object):
         this method.
         """
         self.validation_dataset = TextDataset.read_from_file(self.validation_file,
+                                                             self._instance_type(),
                                                              tokenizer=self.tokenizer)
         return self._prep_question_dataset(self.validation_dataset)
 
     def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file, tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.test_file, self._instance_type(), tokenizer=self.tokenizer)
         return self._prep_question_dataset(dataset)
 
     def _prep_question_dataset(self, dataset: TextDataset):

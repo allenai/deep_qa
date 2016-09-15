@@ -4,6 +4,7 @@ from overrides import overrides
 from keras.layers import TimeDistributed
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
+from ..data.text_instance import TrueFalseInstance
 from .memory_network import MemoryNetworkSolver
 
 
@@ -47,6 +48,10 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
                 'background_sentences': self.max_knowledge_length,
                 'num_options': self.num_options,
                 }
+
+    @overrides
+    def _instance_type(self):
+        return TrueFalseInstance
 
     @overrides
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
@@ -97,10 +102,8 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_training_data(self):
-        dataset = TextDataset.read_from_file(self.train_file, tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.train_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.train_file, self._instance_type(), tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.train_background)
         self.data_indexer.fit_word_dictionary(background_dataset)
         question_dataset = background_dataset.to_question_dataset()
         if self.max_training_instances is not None:
@@ -110,29 +113,29 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file, tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.validation_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.validation_file,
+                                             self._instance_type(),
+                                             tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
         question_dataset = background_dataset.to_question_dataset()
         self.validation_dataset = question_dataset
         return self.prep_labeled_data(question_dataset, for_train=False, shuffle=True)
 
     @overrides
     def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.test_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.test_file,
+                                             self._instance_type(),
+                                             tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
         question_dataset = background_dataset.to_question_dataset()
         return self.prep_labeled_data(question_dataset, for_train=False, shuffle=True)
 
     @overrides
     def _get_debug_dataset_and_input(self):
-        dataset = TextDataset.read_from_file(self.debug_file)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.debug_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.debug_file,
+                                             self._instance_type(),
+                                             tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
         question_dataset = background_dataset.to_question_dataset()
         inputs, _ = self.prep_labeled_data(question_dataset, for_train=False, shuffle=False)
         return question_dataset, inputs

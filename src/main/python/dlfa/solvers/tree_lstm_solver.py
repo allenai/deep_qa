@@ -6,6 +6,7 @@ from keras.models import Model
 from keras.regularizers import l2
 
 from .nn_solver import NNSolver
+from ..data.text_instance import LogicalFormInstance
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..layers.encoders import TreeCompositionLSTM
 
@@ -15,8 +16,8 @@ class TreeLSTMSolver(NNSolver):
         super(TreeLSTMSolver, self).__init__(**kwargs)
         self.max_transition_length = None
 
-    # TODO(matt): need to override the methods that read datasets to use logical form instances,
-    # instead of TextInstances.
+    def _instance_type(self):
+        return LogicalFormInstance
 
     @overrides
     def _build_model(self):

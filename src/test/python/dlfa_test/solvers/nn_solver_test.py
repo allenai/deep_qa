@@ -11,7 +11,7 @@ import numpy
 
 from dlfa.data.dataset import TextDataset
 from dlfa.data.data_indexer import DataIndexer
-from dlfa.data.instance import TextInstance
+from dlfa.data.text_instance import TrueFalseInstance
 from dlfa.data.tokenizer import NltkTokenizer, SimpleTokenizer
 from dlfa.solvers.lstm_solver import LSTMSolver
 
@@ -78,7 +78,7 @@ class TestNNSolver(fake_filesystem_unittest.TestCase):
         assert isinstance(solver.validation_dataset.instances[0].tokenizer, SimpleTokenizer)
 
     def test_prep_question_data_does_not_shuffle_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file)
+        dataset = TextDataset.read_from_file(self.validation_file, TrueFalseInstance)
         solver = self._get_solver()
         _, labels = solver._prep_question_dataset(dataset)
         assert numpy.all(labels == numpy.asarray([1, 2, 3]))
@@ -86,17 +86,17 @@ class TestNNSolver(fake_filesystem_unittest.TestCase):
     def test_prep_question_data_crashes_on_invalid_question_data_not_divisible_by_four(self):
         solver = self._get_solver()
         dataset = TextDataset([])
-        dataset.instances.append(TextInstance("instance1", label=True))
+        dataset.instances.append(TrueFalseInstance("instance1", label=True))
         with pytest.raises(Exception):
             solver._prep_question_dataset(dataset)
 
     def test_prep_question_data_crashes_on_invalid_question_data_more_than_one_correct_answer(self):
         solver = self._get_solver()
         dataset = TextDataset([])
-        dataset.instances.append(TextInstance("instance1", label=True))
-        dataset.instances.append(TextInstance("instance2", label=True))
-        dataset.instances.append(TextInstance("instance3", label=False))
-        dataset.instances.append(TextInstance("instance4", label=False))
+        dataset.instances.append(TrueFalseInstance("instance1", label=True))
+        dataset.instances.append(TrueFalseInstance("instance2", label=True))
+        dataset.instances.append(TrueFalseInstance("instance3", label=False))
+        dataset.instances.append(TrueFalseInstance("instance4", label=False))
         with pytest.raises(Exception):
             solver._prep_question_dataset(dataset)
 

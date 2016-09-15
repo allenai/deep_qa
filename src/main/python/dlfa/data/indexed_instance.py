@@ -3,37 +3,71 @@ from overrides import overrides
 
 import numpy
 
-class IndexedInstance:
+from .instance import Instance
+
+class IndexedInstance(Instance):
     """
-    An indexed data instance, which is a list of word indices, coupled with a label, and possibly
-    an instance index.  An IndexedInstance is created from an Instance using a DataIndexer, and the
-    indices here have no recoverable meaning without the DataIndexer.
+    An indexed data instance has all word tokens replaced with word indices, along with some kind
+    of label, suitable for input to a Keras model.  An IndexedInstance is created from an Instance
+    using a DataIndexer, and the indices here have no recoverable meaning without the DataIndexer.
 
     For example, we might have the following instance:
-        Instance('Jamie is nice, Holly is mean', True, 25).
+        TrueFalseInstance('Jamie is nice, Holly is mean', True, 25).
     After being converted into an IndexedInstance, we might have the following:
-        IndexedInstance([1, 6, 7, 1, 6, 8], True, 25).
+        IndexedTrueFalseInstance([1, 6, 7, 1, 6, 8], True, 25).
     This would mean that "Jamie" and "Holly" were OOV to the DataIndexer, and the other words were
     given indices.
     """
-    def __init__(self, word_indices: List[int], label, index: int=None):
-        """
-        label and index have same values and meaning as in `Instance`.
-        """
-        self.word_indices = word_indices
-        self.label = label
-        self.index = index
-
     @classmethod
     def empty_instance(cls):
-        return IndexedInstance([], None)
+        """
+        Returns an empty, unpadded instance of this class.  Necessary for option padding in
+        multiple choice instances.
+        """
+        raise NotImplementedError
 
+    def get_lengths(self) -> List[int]:
+        """
+        Used for padding.  Different kinds of instances have different fields that are padded, such
+        as sentence length, number of background sentences, number of options, etc.  The length of
+        this instance in all dimensions that require padding are returned here.
+        """
+        raise NotImplementedError
+
+    def pad(self, max_lengths: List[int]):
+        """
+        The max_lengths argument passed here must have the same dimension as was returned by
+        get_lengths().  We will use these lengths to pad the instance in all of the necessary
+        dimensions to the given lengths.
+
+        This modifies the current object.
+        """
+        raise NotImplementedError
+
+    def as_training_data(self):
+        """
+        Returns a tuple of (inputs, label).  `inputs` might itself be a complex tuple, depending on
+        the Instance type.
+        """
+
+class IndexedTrueFalseInstance(IndexedInstance):
+    def __init__(self, word_indices: List[int], label, index: int=None):
+        super(IndexedTrueFalseInstance, self).__init__(label, index)
+        self.word_indices = word_indices
+
+    @classmethod
+    @overrides
+    def empty_instance(cls):
+        return IndexedTrueFalseInstance([], label=None, index=None)
+
+    @overrides
     def get_lengths(self) -> Dict[str, int]:
         """
         This simple IndexedInstance only has one padding dimension: word_indices.
         """
         return {'word_sequence_length': len(self.word_indices)}
 
+    @overrides
     def pad(self, max_lengths: Dict[str, int]):
         """
         Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
@@ -51,6 +85,7 @@ class IndexedInstance:
             padded_word_indices[-indices_length:] = self.word_indices[-indices_length:]
         self.word_indices = padded_word_indices
 
+    @overrides
     def as_training_data(self):
         word_array = numpy.asarray(self.word_indices, dtype='int32')
         label = numpy.zeros((2))
@@ -63,7 +98,7 @@ class IndexedInstance:
         return word_array, label
 
 
-class IndexedLogicalFormInstance(IndexedInstance):
+class IndexedLogicalFormInstance(IndexedTrueFalseInstance):
     """
     An IndexedLogicalFormInstance is a tree-structured instance, which represents a logical form
     like "for(depend_on(human, plant), oxygen)" as a pair of: (1) a (sequential) list of predicates
@@ -121,17 +156,17 @@ class IndexedBackgroundInstance(IndexedInstance):
     knowledge has also been indexed.
     """
     def __init__(self,
-                 word_indices: List[int],
-                 background_indices: List[List[int]],
-                 label: bool,
-                 index: int=None):
-        super(IndexedBackgroundInstance, self).__init__(word_indices, label, index)
+                 indexed_instance: IndexedInstance,
+                 background_indices: List[List[int]]):
+        super(IndexedBackgroundInstance, self).__init__(indexed_instance.label, indexed_instance.index)
+        self.indexed_instance = indexed_instance
         self.background_indices = background_indices
 
     @classmethod
     @overrides
     def empty_instance(cls):
-        return IndexedBackgroundInstance([], [], None)
+        # TODO(matt): This is a problem... not sure how to solve it...
+        return IndexedBackgroundInstance(IndexedTrueFalseInstance.empty_instance(), [])
 
     @overrides
     def get_lengths(self) -> Dict[str, int]:
@@ -143,7 +178,7 @@ class IndexedBackgroundInstance(IndexedInstance):
         knowledge, we'll also modify the word_indices length to look at the background sentences
         too.
         """
-        lengths = super(IndexedBackgroundInstance, self).get_lengths()
+        lengths = self.indexed_instance.get_lengths()
         lengths['background_sentences'] = len(self.background_indices)
         if self.background_indices:
             max_background_length = max(len(background) for background in self.background_indices)
@@ -153,13 +188,13 @@ class IndexedBackgroundInstance(IndexedInstance):
     @overrides
     def pad(self, max_lengths: Dict[str, int]):
         """
-        We let the super class deal with padding word_indices; we'll worry about padding
+        We let self.indexed_instance pad itself, and in this method we mostly worry about padding
         background_indices.  We need to pad it in two ways: (1) we need len(background_indices) to
         be the same for all instances, and (2) we need len(background_indices[i]) to be the same
         for all i, for all instances.  We'll use the word_indices length from the super class for
         (2).
         """
-        super(IndexedBackgroundInstance, self).pad(max_lengths)
+        self.indexed_instance.pad(max_lengths)
         background_length = max_lengths['background_sentences']
         word_sequence_length = max_lengths['word_sequence_length']
 
@@ -182,9 +217,13 @@ class IndexedBackgroundInstance(IndexedInstance):
 
     @overrides
     def as_training_data(self):
-        word_array, label = super(IndexedBackgroundInstance, self).as_training_data()
+        instance_inputs, label = self.indexed_instance.as_training_data()
         background_array = numpy.asarray(self.background_indices, dtype='int32')
-        return (word_array, background_array), label
+        if isinstance(instance_inputs, tuple):
+            final_inputs = instance_inputs + (background_array,)
+        else:
+            final_inputs = (instance_inputs, background_array)
+        return final_inputs, label
 
 
 class IndexedQuestionInstance(IndexedInstance):
@@ -193,8 +232,8 @@ class IndexedQuestionInstance(IndexedInstance):
     this represents.
     """
     def __init__(self, options: List[IndexedInstance], label):
+        super(IndexedQuestionInstance, self).__init__(label=label, index=None)
         self.options = options
-        super(IndexedQuestionInstance, self).__init__([], label)
 
     @classmethod
     @overrides
