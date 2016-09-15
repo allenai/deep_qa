@@ -1,4 +1,5 @@
 from typing import List
+from overrides import overrides
 
 import numpy
 
@@ -22,6 +23,10 @@ class IndexedInstance:
         self.word_indices = word_indices
         self.label = label
         self.index = index
+
+    @classmethod
+    def empty_instance(cls):
+        return IndexedInstance([], None)
 
     def get_lengths(self) -> List[int]:
         """
@@ -63,6 +68,12 @@ class IndexedLogicalFormInstance(IndexedInstance):
         super(IndexedLogicalFormInstance, self).__init__(word_indices, label, index)
         self.transitions = transitions
 
+    @classmethod
+    @overrides
+    def empty_instance(cls):
+        return IndexedLogicalFormInstance([], [], None)
+
+    @overrides
     def get_lengths(self) -> List[int]:
         """
         Prep for padding; see comment on this method in the super class.  Here we extend the return
@@ -72,20 +83,15 @@ class IndexedLogicalFormInstance(IndexedInstance):
         lengths.append(len(self.transitions))
         return lengths
 
+    @overrides
     def pad(self, max_lengths: List[int]):
         """
         We let the super class deal with padding word_indices; we'll worry about padding
         transitions.
         """
-        super(IndexedLogicalFormInstance, self).pad(max_lengths)
-
-        # We need to do this to find out what index we added our length at.  We could just do
-        # lengths[1] to get the transitions length, but this future-proofs the code, in case things
-        # change in the super class.  lengths[-1] doesn't work either, because this could be
-        # sub-classed, and then the subclass may have added another value to the lengths.
-        super_lengths = super(IndexedLogicalFormInstance, self).get_lengths()
-        transition_length_index = len(super_lengths)
-        transition_length = max_lengths[transition_length_index]
+        lengths = list(max_lengths)
+        transition_length = lengths.pop()
+        super(IndexedLogicalFormInstance, self).pad(lengths)
 
         padded_transitions = [0] * transition_length
         indices_length = min(len(self.transitions), transition_length)
@@ -93,6 +99,7 @@ class IndexedLogicalFormInstance(IndexedInstance):
             padded_transitions[-indices_length:] = self.transitions[-indices_length:]
         self.transitions = padded_transitions
 
+    @overrides
     def as_training_data(self):
         word_array, label = super(IndexedLogicalFormInstance, self).as_training_data()
         transitions = numpy.asarray(self.transitions, dtype='int32')
@@ -112,6 +119,12 @@ class IndexedBackgroundInstance(IndexedInstance):
         super(IndexedBackgroundInstance, self).__init__(word_indices, label, index)
         self.background_indices = background_indices
 
+    @classmethod
+    @overrides
+    def empty_instance(cls):
+        return IndexedBackgroundInstance([], [], None)
+
+    @overrides
     def get_lengths(self) -> List[int]:
         """
         Prep for padding; see comment on this method in the super class.  Here we extend the return
@@ -128,6 +141,7 @@ class IndexedBackgroundInstance(IndexedInstance):
             lengths[0] = max(lengths[0], max_background_length)
         return lengths
 
+    @overrides
     def pad(self, max_lengths: List[int]):
         """
         We let the super class deal with padding word_indices; we'll worry about padding
@@ -136,15 +150,10 @@ class IndexedBackgroundInstance(IndexedInstance):
         for all i, for all instances.  We'll use the word_indices length from the super class for
         (2).
         """
-        super(IndexedBackgroundInstance, self).pad(max_lengths)
-        word_sequence_length = max_lengths[0]
-
-        # We need to do this to find out what index we added our length at.  We could just do
-        # lengths[1] to get the background length, but this future proofs the code, in case things
-        # change in the super class.
-        super_lengths = super(IndexedBackgroundInstance, self).get_lengths()
-        background_length_index = len(super_lengths)
-        background_length = max_lengths[background_length_index]
+        lengths = list(max_lengths)
+        background_length = lengths.pop()
+        super(IndexedBackgroundInstance, self).pad(lengths)
+        word_sequence_length = lengths[0]
 
         # Padding (1): making sure we have the right number of background sentences.  We also need
         # to truncate, if necessary.
@@ -163,6 +172,7 @@ class IndexedBackgroundInstance(IndexedInstance):
             padded_background.append(padded_word_indices)
         self.background_indices = padded_background
 
+    @overrides
     def as_training_data(self):
         word_array, label = super(IndexedBackgroundInstance, self).as_training_data()
         background_array = numpy.asarray(self.background_indices, dtype='int32')
@@ -170,25 +180,43 @@ class IndexedBackgroundInstance(IndexedInstance):
 
 
 class IndexedQuestionInstance(IndexedInstance):
-    # TODO(matt): worry about num_options padding at some point.
     def __init__(self, options: List[IndexedInstance], label):
         self.options = options
         super(IndexedQuestionInstance, self).__init__([], label)
 
+    @classmethod
+    @overrides
+    def empty_instance(cls):
+        return IndexedQuestionInstance([], None)
+
+    @overrides
     def get_lengths(self) -> List[int]:
         """
         Here we return the max of get_lengths on all of the Instances in self.options.
         """
         lengths = [instance.get_lengths() for instance in self.options]
-        return [max(dimension_lengths) for dimension_lengths in zip(*lengths)]
+        max_lengths = [max(dimension_lengths) for dimension_lengths in zip(*lengths)]
+        max_lengths.append(len(self.options))
+        return max_lengths
 
+    @overrides
     def pad(self, max_lengths: List[int]):
         """
         This method pads all of the underlying Instances in self.options.
         """
-        for instance in self.options:  # type: IndexedInstance
-            instance.pad(max_lengths)
+        lengths = list(max_lengths)
+        num_options = lengths.pop()
 
+        # First we pad the number of options.
+        while len(self.options) < num_options:
+            self.options.append(self.options[0].empty_instance())
+        self.options = self.options[:num_options]
+
+        # Then we pad each option.
+        for instance in self.options:  # type: IndexedInstance
+            instance.pad(lengths)
+
+    @overrides
     def as_training_data(self):
         inputs = []
         unzip_inputs = False

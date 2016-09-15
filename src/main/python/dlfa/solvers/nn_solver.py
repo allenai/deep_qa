@@ -190,7 +190,15 @@ class NNSolver(object):
         call.  However, that dataset has to have labels, or this method will crash.  We don't
         currently have an API for making predictions on data that doesn't have labels.  TODO(matt)
         """
-        raise NotImplementedError
+        processed_dataset = self._index_and_pad_dataset(dataset, self._get_max_lengths())
+        if for_train:
+            self._set_max_lengths(processed_dataset.max_lengths())
+        inputs, labels = processed_dataset.as_training_data(shuffle)
+        if isinstance(inputs[0], tuple):
+            inputs = [numpy.asarray(x) for x in zip(*inputs)]
+        else:
+            inputs = numpy.asarray(inputs)
+        return inputs, numpy.asarray(labels)
 
     def can_train(self) -> bool:
         """
@@ -416,6 +424,23 @@ class NNSolver(object):
         num_correct = sum(test_predictions == labels)
         accuracy = float(num_correct) / len(test_predictions)
         return accuracy
+
+    def _get_max_lengths(self) -> List[int]:
+        """
+        This is about padding.  Any solver will have some number of things that need padding in
+        order to make a compilable model, like the length of a sentence.  This method returns a
+        list of all of those things.
+        """
+        raise NotImplementedError
+
+    def _set_max_lengths(self, max_lengths: List[int]):
+        """
+        This is about padding.  Any solver will have some number of things that need padding in
+        order to make a compilable model, like the length of a sentence.  This method sets those
+        variables given a list of lengths, perhaps computed from training data or loaded from a
+        saved model.
+        """
+        raise NotImplementedError
 
     def _set_max_lengths_from_model(self):
         """
