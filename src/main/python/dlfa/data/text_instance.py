@@ -108,7 +108,7 @@ class TrueFalseInstance(TextInstance):
         you're reading has that label.  If we find one that doesn't match, you probably messed up
         some parameters somewhere else in your code.
         """
-        fields = line.strip().split("\t")
+        fields = line.split("\t")
 
         # We'll call Instance._check_label for all four cases, even though it means passing None to
         # two of them.  We do this mainly for consistency, and in case the _check_label() ever
@@ -315,7 +315,7 @@ class QuestionAnswerInstance(TextInstance):
 
         default_label is ignored, but we keep the argument to match the interface.
         """
-        fields = line.strip().split("\t")
+        fields = line.split("\t")
 
         if len(fields) == 3:
             question, answers, label_string = fields

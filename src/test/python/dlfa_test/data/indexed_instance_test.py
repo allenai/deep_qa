@@ -6,6 +6,7 @@ import numpy
 
 from dlfa.data.indexed_instance import IndexedBackgroundInstance
 from dlfa.data.indexed_instance import IndexedMultipleChoiceInstance
+from dlfa.data.indexed_instance import IndexedQuestionAnswerInstance
 from dlfa.data.indexed_instance import IndexedTrueFalseInstance
 
 class TestIndexedTrueFalseInstance:
@@ -36,6 +37,9 @@ class TestIndexedTrueFalseInstance:
 class TestIndexedBackgroundInstance(TestCase):
     def setUp(self):
         self.base_instance = IndexedTrueFalseInstance([1, 2], True)
+        self.qa_instance = IndexedQuestionAnswerInstance([1, 2, 3],
+                                                         [[2, 3], [4], [5, 6]],
+                                                         1)
 
     def test_get_lengths_returns_max_of_background_and_word_indices(self):
         instance = IndexedBackgroundInstance(self.base_instance, [[2, 3, 4], [4, 5]])
@@ -69,6 +73,15 @@ class TestIndexedBackgroundInstance(TestCase):
         assert instance.indexed_instance.word_indices == [2]
         assert instance.background_indices == [[2]]
 
+    def test_pad_works_with_complex_contained_instance(self):
+        instance = IndexedBackgroundInstance(self.qa_instance, [[2]])
+        instance.pad([3, 1, 2, 2])
+        assert instance.indexed_instance.question_indices == [1, 2, 3]
+        assert len(instance.indexed_instance.option_indices) == 2
+        assert instance.indexed_instance.option_indices[0] == [3]
+        assert instance.indexed_instance.option_indices[1] == [4]
+        assert instance.background_indices == [[0, 0, 2], [0, 0, 0]]
+
     def test_as_training_data_produces_correct_numpy_arrays(self):
         instance = IndexedBackgroundInstance(self.base_instance, [[2, 3], [4, 5]])
         (word_array, background_array), label = instance.as_training_data()
@@ -82,9 +95,17 @@ class TestIndexedBackgroundInstance(TestCase):
         _, label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([1, 0]))
 
+    def test_as_training_data_produces_correct_numpy_arrays_with_complex_contained_instance(self):
+        instance = IndexedBackgroundInstance(self.qa_instance, [[2, 3], [4, 5]])
+        instance.pad([2, 2, 3, 2])
+        (question_array, answer_array, background_array), label = instance.as_training_data()
+        assert numpy.all(label == numpy.asarray([0, 1, 0]))
+        assert numpy.all(question_array == numpy.asarray([2, 3]))
+        assert numpy.all(answer_array == numpy.asarray([[2, 3], [0, 4], [5, 6]]))
+        assert numpy.all(background_array == numpy.asarray([[2, 3], [4, 5]]))
+
 
 class TestIndexedMultipleChoiceInstance(TestCase):
-
     def setUp(self):
         # We'll just test with underlying IndexedTrueFalseInstances for most of these, because it's
         # simpler.
@@ -147,3 +168,42 @@ class TestIndexedMultipleChoiceInstance(TestCase):
                                                              [[5], [6]],
                                                              [[8], [9]],
                                                              [[11], [12]]]))
+
+
+class TestIndexedQuestionAnswerInstance(TestCase):
+    def setUp(self):
+        self.instance = IndexedQuestionAnswerInstance([1, 2, 3],
+                                                      [[2, 3], [4], [5, 6]],
+                                                      1)
+
+    def test_get_lengths_returns_three_correct_lengths(self):
+        assert self.instance.get_lengths() == [3, 2, 3]
+
+    def test_pad_calls_pad_on_all_options(self):
+        self.instance.pad([2, 2, 3])
+        assert self.instance.question_indices == [2, 3]
+        assert self.instance.option_indices[0] == [2, 3]
+        assert self.instance.option_indices[1] == [0, 4]
+        assert self.instance.option_indices[2] == [5, 6]
+
+    def test_pad_adds_empty_options_when_necessary(self):
+        self.instance.pad([1, 1, 4])
+        assert self.instance.question_indices == [3]
+        assert self.instance.option_indices[0] == [3]
+        assert self.instance.option_indices[1] == [4]
+        assert self.instance.option_indices[2] == [6]
+        assert self.instance.option_indices[3] == [0]
+        assert len(self.instance.option_indices) == 4
+
+    def test_pad_removes_options_when_necessary(self):
+        self.instance.pad([1, 1, 1])
+        assert self.instance.question_indices == [3]
+        assert self.instance.option_indices[0] == [3]
+        assert len(self.instance.option_indices) == 1
+
+    def test_as_training_data_produces_correct_numpy_arrays(self):
+        self.instance.pad([3, 2, 3])
+        inputs, label = self.instance.as_training_data()
+        assert numpy.all(label == numpy.asarray([0, 1, 0]))
+        assert numpy.all(inputs[0] == numpy.asarray([1, 2, 3]))
+        assert numpy.all(inputs[1] == numpy.asarray([[2, 3], [0, 4], [5, 6]]))
