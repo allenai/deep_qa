@@ -29,7 +29,7 @@ class NNSolver(object):
         # just grab these directly without worrying if they're there or not.
         self.model_prefix = kwargs['model_serialization_prefix']
         parent_directory = os.path.dirname(self.model_prefix)
-        os.makedirs(parent_directory,exist_ok=True)
+        os.makedirs(parent_directory, exist_ok=True)
 
         self.pretrained_embeddings_file = kwargs['pretrained_embeddings_file']
         self.fine_tune_embeddings = kwargs['fine_tune_embeddings']
