@@ -62,6 +62,7 @@ class MemoryNetworkSolver(NNSolver):
         self.debug_background = kwargs['debug_background']
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
+        self.hard_memory_selection = kwargs['hard_memory_selection']
         self.memory_updater = updaters[kwargs['memory_updater']]
         self.entailment_combiner = entailment_input_combiners[kwargs['entailment_input_combiner']](
                 self.embedding_size)
@@ -90,6 +91,8 @@ class MemoryNetworkSolver(NNSolver):
                             choices=selectors.keys(),
                             help='The kind of knowledge selector to use.  See '
                             'knowledge_selectors.py for details.')
+        parser.add_argument('--hard_memory_selection', action='store_true',
+                            help='Make hard choices instead of using softmax.')
         parser.add_argument('--memory_updater', type=str, default='dense_concat',
                             choices=updaters.keys(),
                             help='The kind of memory updaters to use.  See memory_updaters.py '
@@ -270,7 +273,8 @@ class MemoryNetworkSolver(NNSolver):
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_selector = self._get_knowledge_selector(i)
+            knowledge_selector = self.knowledge_selector(name='knowledge_selector_%d' % i,
+                                                         hard_selection=self.hard_memory_selection)
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.

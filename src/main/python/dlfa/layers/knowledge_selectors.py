@@ -22,6 +22,16 @@ def tile_sentence_encoding(sentence_encoding, knowledge_encoding):
     return tiled_sentence_encoding
 
 
+def hardmax(unnormalized_attention, knowledge_length):
+    # (knowledge_length, num_samples)
+    tiled_max_values = K.tile(K.max(unnormalized_attention, axis=1), (knowledge_length, 1))
+    # (num_samples, knowledge_length)
+    bool_max_attention = K.equal(unnormalized_attention, K.transpose(tiled_max_values))
+    # Needs to be cast to be compatible with TensorFlow
+    max_attention = K.cast(bool_max_attention, 'float32')
+    return max_attention
+
+
 class DotProductKnowledgeSelector(Layer):
     """
     Input Shape: num_samples, (knowledge_length + 1), input_dim
@@ -33,8 +43,9 @@ class DotProductKnowledgeSelector(Layer):
     vector and the background vectors (i.e., there are no parameters here).  This layer is a
     reimplementation of the memory layer in "End-to-End Memory Networks", Sukhbaatar et al. 2015.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, hard_selection=False, **kwargs):
         self.input_spec = [InputSpec(ndim=3)]
+        self.hard_selection = hard_selection
         super(DotProductKnowledgeSelector, self).__init__(**kwargs)
 
     def call(self, x, mask=None):
@@ -53,7 +64,12 @@ class DotProductKnowledgeSelector(Layer):
         tiled_sentence_encoding = tile_sentence_encoding(sentence_encoding, knowledge_encoding)
 
         # (num_samples, knowledge_length)
-        knowledge_attention = K.softmax(K.sum(knowledge_encoding * tiled_sentence_encoding, axis=2))
+        unnormalized_attention = K.sum(knowledge_encoding * tiled_sentence_encoding, axis=2)
+        if self.hard_selection:
+            knowledge_length = K.shape(knowledge_encoding)[1]
+            knowledge_attention = hardmax(unnormalized_attention, knowledge_length)
+        else:
+            knowledge_attention = K.softmax(unnormalized_attention)
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
@@ -85,9 +101,11 @@ class ParameterizedKnowledgeSelector(Layer):
     a_t = softmax(q_t)
     """
 
-    def __init__(self, activation='tanh', initialization='glorot_uniform', weights=None, **kwargs):
+    def __init__(self, activation='tanh', initialization='glorot_uniform', hard_selection=False,
+                 weights=None, **kwargs):
         self.activation = activations.get(activation)
         self.init = initializations.get(initialization)
+        self.hard_selection = hard_selection
         self.input_spec = [InputSpec(ndim=3)]
         self.initial_weights = weights
         self.dense_weights = None
@@ -147,7 +165,11 @@ class ParameterizedKnowledgeSelector(Layer):
         unnormalized_attention = K.squeeze(K.dot(concatenated_activation, self.dot_bias), axis=2)
 
         # (4: a_t) Result is (num_samples, knowledge_length)
-        knowledge_attention = K.softmax(unnormalized_attention)
+        if self.hard_selection:
+            knowledge_length = K.shape(knowledge_encoding)[1]
+            knowledge_attention = hardmax(unnormalized_attention, knowledge_length)
+        else:
+            knowledge_attention = K.softmax(unnormalized_attention)
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
