@@ -33,7 +33,7 @@ class TestDifferentiableSearchSolver(TestCase):
         parser = argparse.ArgumentParser()
         DifferentiableSearchSolver.update_arg_parser(parser)
         additional_arguments = ['--corpus_path', self.corpus_path,
-                                '--model_serialization_prefix', '.']
+                                '--model_serialization_prefix', './']
         args = parser.parse_args(additional_arguments)
         return DifferentiableSearchSolver(**vars(args))
 

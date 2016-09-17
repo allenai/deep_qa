@@ -1,7 +1,7 @@
 import logging
 
 import pickle
-
+import os
 from typing import List
 
 import numpy
@@ -28,6 +28,8 @@ class NNSolver(object):
         # in update_arg_parser() will already be present here, including None values, so we can
         # just grab these directly without worrying if they're there or not.
         self.model_prefix = kwargs['model_serialization_prefix']
+        parent_directory = os.path.dirname(self.model_prefix)
+        os.makedirs(parent_directory, exist_ok=True)
 
         self.pretrained_embeddings_file = kwargs['pretrained_embeddings_file']
         self.fine_tune_embeddings = kwargs['fine_tune_embeddings']

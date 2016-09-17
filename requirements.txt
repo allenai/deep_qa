@@ -7,9 +7,18 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-keras
+keras>=1.0.8
 h5py
 sklearn
+theano
+
+## Tensorflow Requirements ##
+# Tensorflow is required to run this code but depends on specific configurations. Install from:
+# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/g3doc/get_started/os_setup.md#pip-installation
+# If the GPU version is installed, you will also need Nvidia's CUDA toolkit and cuDNN:
+# https://developer.nvidia.com/cuda-downloads
+# https://developer.nvidia.com/cudnn
+
 
 #### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
 
@@ -31,5 +40,7 @@ pytest-pythonpath
 # Allows generation of coverage reports with pytest.
 pytest-cov
 
-# Provides a fake filesystem for testing.
-pyfakefs
+# pyfakefs: Provides a fake filesystem for testing.  There was a bug in version 2.8 that made it
+# fail when using os.makedirs() with the exist_ok parameter.  This commit fixes that bug.  When a
+# version with the fix gets pushed to pypi, we can change this line back to just `pyfakefs`.
+git+git://github.com/jmcgeheeiv/pyfakefs.git@90e33844bf3fc3e51550ee8fc839ccd950f53a66

@@ -37,7 +37,7 @@ libraryDependencies ++= Seq(
 lazy val testPython = TaskKey[Unit]("testPython")
 
 testPython := {
-  val exitCode = { "py.test -v --cov=dlfa" ! }
+  val exitCode = { "bash py.test.sh -v --cov=dlfa" ! }
   if (exitCode != 0) {
      error("Python tests failed")
   }
