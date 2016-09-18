@@ -63,7 +63,6 @@ class TestMemoryNetworkSolver(TestCase):
         arguments['knowledge_selector'] = 'dot_product'
         arguments['memory_updater'] = 'sum'
         arguments['entailment_input_combiner'] = 'memory_only'
-        arguments['entailment_model'] = 'basic_mlp'
         arguments['num_epochs'] = '1'
         arguments['keras_validation_split'] = '0.0'
         if additional_arguments:
