@@ -101,6 +101,7 @@ class TestIndexedBackgroundInstance(TestCase):
         assert numpy.all(label == numpy.asarray([1, 0]))
 
     def test_as_training_data_produces_correct_numpy_arrays_with_complex_contained_instance(self):
+        # We need the background array to always be _second_, not last.
         instance = IndexedBackgroundInstance(self.qa_instance, [[2, 3], [4, 5]])
         instance.pad({
                 'word_sequence_length': 2,
@@ -108,7 +109,7 @@ class TestIndexedBackgroundInstance(TestCase):
                 'num_options': 3,
                 'background_sentences': 2,
                 })
-        (question_array, answer_array, background_array), label = instance.as_training_data()
+        (question_array, background_array, answer_array), label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 1, 0]))
         assert numpy.all(question_array == numpy.asarray([2, 3]))
         assert numpy.all(answer_array == numpy.asarray([[2, 3], [0, 4], [5, 6]]))
