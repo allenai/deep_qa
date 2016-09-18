@@ -3,7 +3,7 @@ from overrides import overrides
 
 from keras.layers import TimeDistributed
 
-from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
+from ..data.dataset import TextDataset
 from ..data.text_instance import TrueFalseInstance
 from .memory_network import MemoryNetworkSolver
 
@@ -24,6 +24,8 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
     and adding a final softmax.
     '''
 
+    entailment_choices = ['multiple_choice_mlp']
+    entailment_default = entailment_choices[0]
     def __init__(self, **kwargs):
         super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
         self.num_options = None
@@ -90,7 +92,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_entailment_output(self, combined_input):
-        return self.entailment_model.classify(combined_input, multiple_choice=True)
+        return [], self.entailment_model.classify(combined_input, multiple_choice=True)
 
     @overrides
     def evaluate(self, labels, test_input):

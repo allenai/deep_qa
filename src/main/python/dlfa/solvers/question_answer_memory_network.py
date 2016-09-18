@@ -1,0 +1,69 @@
+from typing import List
+from overrides import overrides
+
+from keras.layers import TimeDistributed
+
+from ..data.dataset import TextDataset
+from ..data.text_instance import QuestionAnswerInstance
+from .memory_network import MemoryNetworkSolver
+
+
+class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
+    '''
+    This is a MemoryNetworkSolver that is trained on QuestionAnswerInstances.
+
+    The base MemoryNetworkSolver assumes we're dealing with TrueFalseInstances, so there is no
+    separate question and answer text.  We need to add an additional input, and handle it specially
+    at the end, with a very different final "entailment" model, where we're doing dot-product
+    similarity with encoded answer options, or something similar.
+    '''
+
+    def __init__(self, **kwargs):
+        self.entailment_choices = ['question_answer_mlp']
+        super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
+        self.num_options = None
+        self.max_answer_length = None
+
+    @overrides
+    def can_train(self) -> bool:
+        """
+        Where a MemoryNetworkSolver allows separate positive and negative training files, we only
+        allow a single train file, so we need to override this method.
+
+        The train file must be a valid question file, as determined by
+        Dataset.can_be_converted_to_multiple_choice(), but we don't check that here.
+        """
+        has_train = self.train_file is not None and self.train_background is not None
+        has_validation = self.validation_file is not None and self.validation_background is not None
+        return has_train and has_validation
+
+    @overrides
+    def _instance_type(self):
+        return QuestionAnswerInstance
+
+    @overrides
+    def _get_max_lengths(self) -> List[int]:
+        return [self.max_sentence_length, self.max_answer_length, self.num_options, self.max_knowledge_length]
+
+    @overrides
+    def _set_max_lengths(self, max_lengths: List[int]):
+        self.max_sentence_length = max_lengths[0]
+        self.max_answer_length = max_lengths[1]
+        self.num_options = max_lengths[2]
+        self.max_knowledge_length = max_lengths[3]
+
+    @overrides
+    def _get_entailment_output(self, combined_input):
+        answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
+                input_shape=(self.num_options, self.max_answer_length))
+        answer_encoder = TimeDistributed(self._get_sentence_encoder(), name="answer_encoder")
+        encoded_answers = answer_encoder(answer_embedding)
+        return self.entailment_model.classify(combined_input, multiple_choice=True)
+
+    @overrides
+    def evaluate(self, labels, test_input):
+        """
+        We need to override this method, because our test input is already grouped by question.
+        """
+        scores = self.model.evaluate(test_input, labels)
+        return scores[1]  # NOTE: depends on metrics=['accuracy'] in self.model.compile()

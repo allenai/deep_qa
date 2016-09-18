@@ -13,6 +13,7 @@ from ..layers.entailment_models import entailment_models, entailment_input_combi
 from .nn_solver import NNSolver
 
 
+# TODO(matt): make this class abstract, and make a TrueFalseMemoryNetwork subclass.
 class MemoryNetworkSolver(NNSolver):
     '''
     We call this a Memory Network Solver because it has an attention over background knowledge, or
@@ -52,6 +53,8 @@ class MemoryNetworkSolver(NNSolver):
     so they used simpler models "entailment".
     '''
 
+    entailment_choices = ['true_false_mlp']
+    entailment_default = entailment_choices[0]
     def __init__(self, **kwargs):
         super(MemoryNetworkSolver, self).__init__(**kwargs)
         self.train_background = kwargs['train_background']
@@ -101,8 +104,8 @@ class MemoryNetworkSolver(NNSolver):
                             choices=entailment_input_combiners.keys(),
                             help='The kind of entailment input combiner.  See entailment_models.py '
                             'for details.')
-        parser.add_argument('--entailment_model', type=str, default='basic_mlp',
-                            choices=entailment_models.keys(),
+        parser.add_argument('--entailment_model', type=str, default=cls.entailment_default,
+                            choices=cls.entailment_choices,
                             help='The kind of entailment model to use.  See entailment_models.py '
                             'for details.')
         # TODO(matt): I wish there were a better way to do this...  You really want the entailment
@@ -240,35 +243,39 @@ class MemoryNetworkSolver(NNSolver):
         Gets from the combined entailment input to an output that matches the training labels.
         This is typically done using self.entailment_model.classify(), but could do other things
         also.
+
+        To allow for subclasses to take additional inputs in the entailment model, the return value
+        is a tuple of ([additional input layers], output layer).  For instance, this is where
+        answer options go, for models that separate the question text from the answer options.
         """
-        return self.entailment_model.classify(combined_input)
+        return [], self.entailment_model.classify(combined_input)
 
     @overrides
     def _build_model(self):
-        # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the proposition
+        # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the question
         # inputs and the knowledge inputs.
-        proposition_input_layer, proposition_embedding = self._get_embedded_sentence_input(
+        question_input_layer, question_embedding = self._get_embedded_sentence_input(
                 input_shape=self._get_question_shape())
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
                 input_shape=self._get_background_shape())
 
         # Step 3: Encode the two embedded inputs using the sentence encoder.
-        proposition_encoder = self._get_sentence_encoder()
+        question_encoder = self._get_sentence_encoder()
 
         # Knowledge encoder will have the same encoder running on a higher order tensor.
-        # i.e., proposition_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
+        # i.e., question_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
         # and knowledge_encoder: (samples, knowledge_len, num_words, word_dim) ->
         #                       (samples, knowledge_len, word_dim)
         # TimeDistributed generally loops over the second dimension.
-        knowledge_encoder = TimeDistributed(proposition_encoder, name='knowledge_encoder')
-        encoded_proposition = proposition_encoder(proposition_embedding)  # (samples, word_dim)
+        knowledge_encoder = TimeDistributed(question_encoder, name='knowledge_encoder')
+        encoded_question = question_encoder(question_embedding)  # (samples, word_dim)
         encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, word_dim)
 
         # Step 4: Merge the two encoded representations and pass into the knowledge backed scorer.
-        # At each step in the following loop, we take the proposition encoding, or the output of
+        # At each step in the following loop, we take the question encoding, or the output of
         # the previous memory layer, merge it with the knowledge encoding and pass it to the
         # current memory layer.
-        current_memory = encoded_proposition
+        current_memory = encoded_question
 
         knowledge_axis = self._get_knowledge_axis()
         for i in range(self.num_memory_layers):
@@ -316,16 +323,17 @@ class MemoryNetworkSolver(NNSolver):
 
         # Step 5: Finally, run the sentence encoding, the current memory, and the attended
         # background knowledge through an entailment model to get a final true/false score.
-        entailment_input = merge([encoded_proposition, current_memory, attended_knowledge],
+        entailment_input = merge([encoded_question, current_memory, attended_knowledge],
                                  mode='concat',
                                  concat_axis=knowledge_axis)
         combined_input = self._get_entailment_combiner()(entailment_input)
-        entailment_output = self._get_entailment_output(combined_input)
+        extra_entailment_inputs, entailment_output = self._get_entailment_output(combined_input)
 
         # Step 6: Define the model, and return it. The model will be compiled and trained by the
         # calling method.
-        memory_network = Model(input=[proposition_input_layer, knowledge_input_layer],
-                               output=entailment_output)
+        input_layers = [question_input_layer, knowledge_input_layer]
+        input_layers.extend(extra_entailment_inputs)
+        memory_network = Model(input=input_layers, output=entailment_output)
         return memory_network
 
     @overrides

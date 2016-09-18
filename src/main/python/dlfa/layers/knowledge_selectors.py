@@ -12,15 +12,14 @@ from keras import activations, initializations
 from keras.layers import Layer
 
 def tile_sentence_encoding(sentence_encoding, knowledge_encoding):
-    # Tensorflow can't use unknown sizes at runtime, so we have to make use
-    # of the broadcasting ability of TF and Theano instead to create the tiled
-    # sentence encoding.
+    # Tensorflow can't use unknown sizes at runtime, so we have to make use of the broadcasting
+    # ability of TF and Theano instead to create the tiled sentence encoding.
 
     # Shape: (knowledge_length, num_samples, encoding_dim)
     k_ones = K.permute_dimensions(K.ones_like(knowledge_encoding), [1, 0, 2])
     # Now we have a (knowledge_length, num_samples, encoding_dim)*(num_samples, encoding_dim)
     # elementwise multiplication which is broadcast. We then reshape back.
-    tiled_sentence_encoding = K.permute_dimensions(k_ones*sentence_encoding, [1, 0, 2])
+    tiled_sentence_encoding = K.permute_dimensions(k_ones * sentence_encoding, [1, 0, 2])
     return tiled_sentence_encoding
 
 
