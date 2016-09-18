@@ -18,9 +18,10 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
     similarity with encoded answer options, or something similar.
     '''
 
+    entailment_choices = ['question_answer_mlp']
+    entailment_default = entailment_choices[0]
     def __init__(self, **kwargs):
-        self.entailment_choices = ['question_answer_mlp']
-        super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
+        super(QuestionAnswerMemoryNetworkSolver, self).__init__(**kwargs)
         self.num_options = None
         self.max_answer_length = None
 
@@ -55,10 +56,28 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
     @overrides
     def _get_entailment_output(self, combined_input):
         answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.num_options, self.max_answer_length))
+                input_shape=(self.num_options, self.max_answer_length), name_prefix="answer")
         answer_encoder = TimeDistributed(self._get_sentence_encoder(), name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
-        return self.entailment_model.classify(combined_input, multiple_choice=True)
+        return ([answer_input_layer],
+                self.entailment_model.classify(combined_input, encoded_answers, self.embedding_size))
+
+    @overrides
+    def _get_validation_data(self):
+        dataset = TextDataset.read_from_file(self.validation_file,
+                                             self._instance_type(),
+                                             tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
+        self.validation_dataset = background_dataset
+        return self.prep_labeled_data(background_dataset, for_train=False, shuffle=True)
+
+    @overrides
+    def _get_test_data(self):
+        dataset = TextDataset.read_from_file(self.test_file,
+                                             self._instance_type(),
+                                             tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
+        return self.prep_labeled_data(background_dataset, for_train=False, shuffle=True)
 
     @overrides
     def evaluate(self, labels, test_input):

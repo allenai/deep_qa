@@ -4,7 +4,6 @@ from overrides import overrides
 from keras.layers import TimeDistributed
 
 from ..data.dataset import TextDataset
-from ..data.text_instance import TrueFalseInstance
 from .memory_network import MemoryNetworkSolver
 
 
@@ -92,7 +91,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_entailment_output(self, combined_input):
-        return [], self.entailment_model.classify(combined_input, multiple_choice=True)
+        return [], self.entailment_model.classify(combined_input)
 
     @overrides
     def evaluate(self, labels, test_input):

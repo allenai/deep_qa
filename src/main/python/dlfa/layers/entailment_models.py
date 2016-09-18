@@ -63,7 +63,7 @@ class QuestionAnswerEntailmentModel:
         self.hidden_layer_width = hidden_layer_width
         self.hidden_layer_activation = hidden_layer_activation
 
-    def classify(self, combined_input, encoded_answers, num_options: int, answer_dim: int):
+    def classify(self, combined_input, encoded_answers, answer_dim: int):
         """
         Here we take the combined entailment input and decide whether it is true or false.  The
         combined input has shape (batch_size, combined_input_dim).  We do not know what
@@ -78,20 +78,25 @@ class QuestionAnswerEntailmentModel:
         projection_layer = Dense(output_dim=answer_dim, activation='linear', name='entailment_projection')
         projected_input = projection_layer(hidden_input)
 
-        # We need to tile the projected_input so that we can easily do a dot product with the
-        # encoded_answers.  This follows the logic in knowledge_selectors.tile_sentence_encoding.
-        # Shape: (num_options, batch_size, answer_dim)
-        k_ones = K.permute_dimensions(K.ones_like(encoded_answers), [1, 0 ,2])
-        # Shape: (batch_size, num_options, answer_dim)
-        tiled_projected_input = K.permute_dimensions(k_ones * projected_input, [1, 0, 2])
+        def tile_projection(inputs):
+            # We need to tile the projected_input so that we can easily do a dot product with the
+            # encoded_answers.  This follows the logic in knowledge_selectors.tile_sentence_encoding.
+            answers, projected = inputs
+            # Shape: (num_options, batch_size, answer_dim)
+            ones = K.permute_dimensions(K.ones_like(answers), [1, 0, 2])
+            # Shape: (batch_size, num_options, answer_dim)
+            return K.permute_dimensions(ones * projected, [1, 0, 2])
 
-        similarity_layer = Lambda(lambda question, answers: K.softmax(K.sum(question * answers), axis=2),
-                                  output_shape=lambda input_shapes: (input_shapes[0][0], input_shape[0][1]))
+        tile_layer = Lambda(tile_projection,
+                            output_shape=lambda input_shapes: input_shapes[0],
+                            name='tile_entailment_input')
+        tiled_projected_input = tile_layer([encoded_answers, projected_input])
+
+        softmax_similarity = Lambda(lambda x: K.softmax(K.sum(x[0] * x[1], axis=2)),
+                                    output_shape=lambda input_shapes: (input_shapes[0][0], input_shapes[0][1]),
+                                    name='answer_similarity_softmax')
         # Shape: (batch_size, num_options)
-        similarity_scores = similarity_layer(tiled_projected_input, encoded_answers)
-
-        softmax_layer = Lambda(lambda x: K.softmax(x), output_shape=lambda input_shape)
-        softmax_output = softmax_layer(similarity_scores)
+        softmax_output = softmax_similarity([tiled_projected_input, encoded_answers])
         return softmax_output
 
 
@@ -109,7 +114,7 @@ class MultipleChoiceEntailmentModel:
         self.hidden_layer_width = hidden_layer_width
         self.hidden_layer_activation = hidden_layer_activation
 
-    def classify(self, combined_input, multiple_choice: bool=False):
+    def classify(self, combined_input):
         """
         Here we take the combined entailment input for each option, decide whether it is true or
         false, then do a final softmax over the true/false scores for each option.
@@ -127,7 +132,8 @@ class MultipleChoiceEntailmentModel:
         score_layer = TimeDistributed(Dense(output_dim=1, activation='sigmoid'), name='entailment_score')
         scores = score_layer(hidden_input)
         softmax_layer = Lambda(lambda x: K.softmax(K.squeeze(x, axis=2)),
-                               output_shape=lambda input_shape: (input_shape[0], input_shape[1]))
+                               output_shape=lambda input_shape: (input_shape[0], input_shape[1]),
+                               name='answer_option_softmax')
         softmax_output = softmax_layer(scores)
         return softmax_output
 

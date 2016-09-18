@@ -2,7 +2,7 @@ import logging
 
 import pickle
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy
 from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
@@ -541,7 +541,7 @@ class NNSolver(object):
         debug_model = Model(input=debug_inputs, output=debug_outputs)
         return debug_model
 
-    def _get_embedded_sentence_input(self, input_shape):
+    def _get_embedded_sentence_input(self, input_shape: Tuple[int], name_prefix: str):
         """
         Performs the initial steps of embedding sentences.  This function takes care of two steps:
         (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
@@ -560,7 +560,7 @@ class NNSolver(object):
         final word vector layer.
         """
         # pylint: disable=redefined-variable-type
-        input_layer = Input(shape=input_shape, dtype='int32')
+        input_layer = Input(shape=input_shape, dtype='int32', name=name_prefix + "_input")
 
         # If a particular model has several places where sentences are encoded, we want to be sure
         # to use the _same_ embedding layer for all of them, so we initialize them and save them to
@@ -586,17 +586,17 @@ class NNSolver(object):
         # Now we actually embed the input and apply dropout.
         embedding = self.embedding_layer
         for _ in input_shape[1:]:
-            embedding = TimeDistributed(embedding)
+            embedding = TimeDistributed(embedding, name=name_prefix + "_embedding")
         embedded_input = embedding(input_layer)
 
         if self.project_embeddings:
             projection = self.projection_layer
             for _ in input_shape[1:]:
-                projection = TimeDistributed(projection)
+                projection = TimeDistributed(projection, name=name_prefix + "_projection")
             embedded_input = projection(embedded_input)
 
         if self.embedding_dropout > 0.0:
-            embedded_input = Dropout(self.embedding_dropout)(embedded_input)
+            embedded_input = Dropout(self.embedding_dropout, name=name_prefix + "_dropout")(embedded_input)
 
         return input_layer, embedded_input
 
@@ -641,7 +641,7 @@ class NNSolver(object):
         self._get_training_data() is called.
         """
         input_layer, embedded_input = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,))
+                input_shape=(self.max_sentence_length,), name_prefix="sentence")
         encoder_layer = self._get_sentence_encoder()
         encoded_input = encoder_layer(embedded_input)
         self._sentence_encoder_model = Model(input=input_layer, output=encoded_input)

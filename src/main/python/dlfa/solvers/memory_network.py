@@ -255,9 +255,9 @@ class MemoryNetworkSolver(NNSolver):
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the question
         # inputs and the knowledge inputs.
         question_input_layer, question_embedding = self._get_embedded_sentence_input(
-                input_shape=self._get_question_shape())
+                input_shape=self._get_question_shape(), name_prefix="sentence")
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                input_shape=self._get_background_shape())
+                input_shape=self._get_background_shape(), name_prefix="background")
 
         # Step 3: Encode the two embedded inputs using the sentence encoder.
         question_encoder = self._get_sentence_encoder()
@@ -292,7 +292,8 @@ class MemoryNetworkSolver(NNSolver):
             merged_shape = self._get_merged_background_shape()
             merged_encoded_rep = merge([current_memory, encoded_knowledge],
                                        mode=merge_mode,
-                                       output_shape=merged_shape)
+                                       output_shape=merged_shape,
+                                       name='concat_question_with_background_%d' % i)
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
@@ -307,7 +308,8 @@ class MemoryNetworkSolver(NNSolver):
             weighted_average_shape = self._get_weighted_average_shape()
             attended_knowledge = merge([encoded_knowledge, attention_weights],
                                        mode=weighted_average,
-                                       output_shape=weighted_average_shape)
+                                       output_shape=weighted_average_shape,
+                                       name='background_weighted_average_%d' % i)
 
             # To make this easier to TimeDistribute, we're going to concatenate the current memory
             # with the attended knowledge, and use that as the input to the memory updater, instead
@@ -316,7 +318,8 @@ class MemoryNetworkSolver(NNSolver):
             # encoding_dim * 2).
             updater_input = merge([current_memory, attended_knowledge],
                                   mode='concat',
-                                  concat_axis=knowledge_axis)
+                                  concat_axis=knowledge_axis,
+                                  name='concat_current_memory_with_background_%d' % i)
             memory_updater = self._get_memory_updater(i)
             current_memory = memory_updater(updater_input)
 
@@ -325,7 +328,8 @@ class MemoryNetworkSolver(NNSolver):
         # background knowledge through an entailment model to get a final true/false score.
         entailment_input = merge([encoded_question, current_memory, attended_knowledge],
                                  mode='concat',
-                                 concat_axis=knowledge_axis)
+                                 concat_axis=knowledge_axis,
+                                 name='concat_entailment_inputs')
         combined_input = self._get_entailment_combiner()(entailment_input)
         extra_entailment_inputs, entailment_output = self._get_entailment_output(combined_input)
 
