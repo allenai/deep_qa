@@ -55,6 +55,10 @@ class NNSolver(object):
         self.data_indexer = DataIndexer()
 
         self.encoder = kwargs['encoder']
+        if self.encoder == "cnn":
+            self.cnn_filter_output_size = kwargs['cnn_filter_output_size']
+            self.cnn_ngram_filter_sizes = tuple(kwargs['cnn_ngram_filter_sizes'])
+            self.cnn_activation = kwargs['cnn_activation']
         if kwargs["l1_weight_regularizer"] > 0 or kwargs["l2_weight_regularizer"] > 0:
             self.encoder_regularizer = l1l2(l1=kwargs["l1_weight_regularizer"],
                                             l2=kwargs["l2_weight_regularizer"])
@@ -143,8 +147,16 @@ class NNSolver(object):
                             help="Upper limit on length of training data. Ignored during testing.")
         parser.add_argument('--encoder', type=str, choices=encoders.keys(), default='lstm',
                             help="Kind of encoder used to encode all kinds of inputs and background."
-                                 "Hint: Use lstm for sentences, treelstm for logical forms,"
+                                 "Hint: Use lstm or cnn for sentences, treelstm for logical forms,"
                                  "and bow for either.")
+        parser.add_argument('--cnn_filter_output_size', type=int, default=20,
+                            help="Output dimensionality of each convolution layer")
+        parser.add_argument('--cnn_ngram_filter_sizes', type=int, nargs='+', default=[2, 3, 4, 5],
+                            help="ngram sizes that will be used as filter sizes in convolution layers."
+                                 "Example: '--cnn_ngram_filter_sizes 2 3 4 5' will use four convolution layers,"
+                                 "with filter sizes 2, 3, 4 and 5, corresponding to 2 to 5 grams.")
+        parser.add_argument('--cnn_activation', type=str, default='relu',
+                            help='Activation for the convolution layer. Default: ReLU.') 
         parser.add_argument('--l1_weight_regularizer', type=float, default=0.0,
                             help="Coefficient for L1 weight regularization for the encoder."
                                  "This will be applied to all parameters. Defaults to 0.")
@@ -563,13 +575,20 @@ class NNSolver(object):
             # BOWEncoder will use nothing except the name.
             # Assuming we will not need a different kind of regularizer for each parameter.
             encoder_arguments = {"name": "sentence_encoder"}
-            if self.encoder != "bow":
+            if self.encoder in ["lstm", "tree_lstm", "cnn"]:
                 # BOWEncoder does not need to know the output dim
                 encoder_arguments["output_dim"] = self.embedding_size
             if self.encoder_regularizer is not None:
                 encoder_arguments["W_regularizer"] = self.encoder_regularizer
-                encoder_arguments["U_regularizer"] = self.encoder_regularizer
                 encoder_arguments["b_regularizer"] = self.encoder_regularizer
+                if self.encoder in ["lstm", "tree_lstm"]:
+                    encoder_arguments["U_regularizer"] = self.encoder_regularizer
+                if self.encoder == "tree_lstm":
+                    encoder_arguments["V_regularizer"] = self.encoder_regularizer
+            if self.encoder == "cnn":
+                encoder_arguments["filter_output_dim"] = self.cnn_filter_output_size
+                encoder_arguments["ngram_filter_sizes"] = self.cnn_ngram_filter_sizes
+                encoder_arguments["conv_layer_activation"] = self.cnn_activation
             self.sentence_encoder_layer = encoders[self.encoder](**encoder_arguments)
         return self.sentence_encoder_layer
 

@@ -2,7 +2,7 @@ import warnings
 import copy
 from keras import backend as K
 from keras import activations, initializations, regularizers
-from keras.layers import Layer, Recurrent, LSTM
+from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, Flatten, merge, Dense
 from keras.engine import InputSpec
 import numpy as np
 
@@ -465,7 +465,97 @@ class BOWEncoder(Layer):
         # the mask.
         return None
 
+class CNNEncoder(Layer):
+    '''
+    CNNEncoder is a combination of multiple convolution layers and max pooling layers. This is defined as
+    a single layer to be consistent with the other encoders in terms of input and output specifications.
+    The input to this "layer" is of shape (batch_size, num_words, embedding_size) and the output is of size
+    (batch_size, input_dim)
+    '''
+    def __init__(self, weights=None, **kwargs):
+        self.supports_masking = True
+        # This is the output dim for each filter
+        assert 'filter_output_dim' in kwargs, "Specify filter_output_dim"
+        assert 'output_dim' in kwargs, "Specify output_dim"
+        self.filter_output_dim = kwargs['filter_output_dim']
+        ngram_filter_sizes = kwargs['ngram_filter_sizes'] if 'ngram_filter_sizes' in kwargs else (2, 3, 4, 5)
+        self.ngram_filter_sizes = ngram_filter_sizes
+        self.output_dim = kwargs['output_dim']
+        conv_layer_activation = kwargs['conv_layer_activation'] if 'conv_layer_activation' in kwargs else 'relu'
+        self.conv_layer_activation = conv_layer_activation
+        self.W_regularizer = kwargs["W_regularizer"] if "W_regularizer" in kwargs else None
+        self.b_regularizer = kwargs["b_regularizer"] if "b_regularizer" in kwargs else None
+        self.input_spec = [InputSpec(ndim=3)]
+        self.initial_weights = weights
+        layer_kwargs = {}
+        # Layer complains if it gets unexpected kwargs.
+        for arg in kwargs:
+            if arg not in ["output_dim", "filter_output_dim", "ngram_filter_sizes",
+                           "conv_layer_activation", "W_regularizer", "b_regularizer"]:
+                layer_kwargs[arg] = kwargs[arg]
+        super(CNNEncoder, self).__init__(**layer_kwargs)
+
+    def build(self, input_shape):
+        input_length = input_shape[1]  # number of words
+        input_dim = input_shape[-1]
+        # Defining convolution layers
+        self.convolution_layers = [Convolution1D(nb_filter=self.filter_output_dim,
+                                                 filter_length=ngram_size,
+                                                 activation=self.conv_layer_activation,
+                                                 W_regularizer=self.W_regularizer,
+                                                 b_regularizer=self.b_regularizer)
+                                   for ngram_size in self.ngram_filter_sizes]
+        # Defining maxpooling layers
+        self.max_pooling_layers = [MaxPooling1D(pool_length=input_length - ngram_size + 1)
+                                   for ngram_size in self.ngram_filter_sizes]
+        # Defining a Dense layer to project it back to the input dim
+        self.projection_layer = Dense(input_dim)
+        # Building convolution and maxpooling layers
+        for convolution_layer, max_pooling_layer in zip(self.convolution_layers, self.max_pooling_layers):
+            convolution_layer.build(input_shape)
+            max_pooling_layer.build(convolution_layer.get_output_shape_for(input_shape))
+        # This is the output dim of the concatenated maxpool layers
+        maxpool_output_dim = self.filter_output_dim * len(self.ngram_filter_sizes)
+        projection_input_shape = (input_shape[0], maxpool_output_dim)
+        # Building projection layer
+        self.projection_layer.build(projection_input_shape)
+        # Defining the weights of this "layer" as the set of weights from all convolution 
+        # and maxpooling layers.
+        self.trainable_weights = []
+        for layer in self.convolution_layers + self.max_pooling_layers + [self.projection_layer]:
+            self.trainable_weights.extend(layer.trainable_weights)
+        
+        if self.initial_weights is not None:
+            self.set_weights(self.initial_weights)
+            del self.initial_weights
+
+    def call(self, x, mask=None):
+        # Each convolution layer return output of size (samples, pool_length, filter_output_dim)
+        #       where pool_length = num_words - ngram_size + 1
+        # Each maxpooling layer returns output of size (samples, 1, filter_output_dim)
+        # We need to flatten to remove the second dimension of length 1 from the maxpooled output.
+        filter_outputs = [K.batch_flatten(max_pooling_layer.call(convolution_layer.call(x, mask)))
+                          for max_pooling_layer, convolution_layer in zip(self.max_pooling_layers,
+                                                                          self.convolution_layers)]
+        maxpool_concat_output = merge(filter_outputs, mode='concat')
+        return self.projection_layer.call(maxpool_concat_output)
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], self.output_dim)
+
+    def get_config(self):
+        config = {"filter_output_dim": self.filter_output_dim,
+                  "ngram_filter_sizes": self.ngram_filter_sizes,
+                  "conv_layer_activation": self.conv_layer_activation,
+                  "W_regularizer": self.W_regularizer.get_config() if self.W_regularizer else None,
+                  "b_regularizer": self.b_regularizer.get_config() if self.b_regularizer else None
+                 }
+        base_config = super(CNNEncoder, self).get_config()
+        return dict(list(base_config.items()) + list(config.items())) 
+
+
 encoders = {  # pylint:  disable=invalid-name
     "lstm": LSTM,
     "tree_lstm": TreeCompositionLSTM,
-    "bow": BOWEncoder}
+    "bow": BOWEncoder,
+    "cnn": CNNEncoder}
