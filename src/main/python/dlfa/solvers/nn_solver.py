@@ -56,7 +56,7 @@ class NNSolver(object):
 
         self.encoder = kwargs['encoder']
         if self.encoder == "cnn":
-            self.cnn_filter_output_size = kwargs['cnn_filter_output_size']
+            self.cnn_num_filters = kwargs['cnn_num_filters']
             self.cnn_ngram_filter_sizes = tuple(kwargs['cnn_ngram_filter_sizes'])
             self.cnn_activation = kwargs['cnn_activation']
         if kwargs["l1_weight_regularizer"] > 0 or kwargs["l2_weight_regularizer"] > 0:
@@ -149,7 +149,7 @@ class NNSolver(object):
                             help="Kind of encoder used to encode all kinds of inputs and background."
                                  "Hint: Use lstm or cnn for sentences, treelstm for logical forms,"
                                  "and bow for either.")
-        parser.add_argument('--cnn_filter_output_size', type=int, default=20,
+        parser.add_argument('--cnn_num_filters', type=int, default=20,
                             help="Output dimensionality of each convolution layer")
         parser.add_argument('--cnn_ngram_filter_sizes', type=int, nargs='+', default=[2, 3, 4, 5],
                             help="ngram sizes that will be used as filter sizes in convolution layers."
@@ -586,7 +586,7 @@ class NNSolver(object):
                 if self.encoder == "tree_lstm":
                     encoder_arguments["V_regularizer"] = self.encoder_regularizer
             if self.encoder == "cnn":
-                encoder_arguments["filter_output_dim"] = self.cnn_filter_output_size
+                encoder_arguments["filter_output_dim"] = self.cnn_num_filters
                 encoder_arguments["ngram_filter_sizes"] = self.cnn_ngram_filter_sizes
                 encoder_arguments["conv_layer_activation"] = self.cnn_activation
             self.sentence_encoder_layer = encoders[self.encoder](**encoder_arguments)
