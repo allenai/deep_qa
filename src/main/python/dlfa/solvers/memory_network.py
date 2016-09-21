@@ -203,7 +203,8 @@ class MemoryNetworkSolver(NNSolver):
         Instantiates a KnowledgeSelector layer.  This is an overridable method because some
         subclasses might need to TimeDistribute this, for instance.
         """
-        return self.knowledge_selector(name='knowledge_selector_%d' % layer_num)
+        return self.knowledge_selector(name='knowledge_selector_%d' % layer_num,
+                                                         hard_selection=self.hard_memory_selection)
 
     def _get_memory_updater(self, layer_num: int):
         """
@@ -273,8 +274,7 @@ class MemoryNetworkSolver(NNSolver):
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_selector = self.knowledge_selector(name='knowledge_selector_%d' % i,
-                                                         hard_selection=self.hard_memory_selection)
+            knowledge_selector = 
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
