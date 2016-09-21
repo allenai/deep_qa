@@ -49,9 +49,9 @@ class DotProductKnowledgeSelector(Layer):
     vector and the background vectors (i.e., there are no parameters here).  This layer is a
     reimplementation of the memory layer in "End-to-End Memory Networks", Sukhbaatar et al. 2015.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, hard_selection=False, **kwargs):
         self.input_spec = [InputSpec(ndim=3)]
-        self.hard_selection = kwargs.get('hard_selection', False)
+        self.hard_selection = hard_selection
         super(DotProductKnowledgeSelector, self).__init__(**kwargs)
 
     def call(self, x, mask=None):
@@ -107,10 +107,10 @@ class ParameterizedKnowledgeSelector(Layer):
     a_t = softmax(q_t)
     """
 
-    def __init__(self, activation='tanh', initialization='glorot_uniform', weights=None, **kwargs):
+    def __init__(self, activation='tanh', initialization='glorot_uniform', hard_selection=False, weights=None, **kwargs):
         self.activation = activations.get(activation)
         self.init = initializations.get(initialization)
-        self.hard_selection = kwargs.get('hard_selection', False)
+        self.hard_selection = hard_selection
         self.input_spec = [InputSpec(ndim=3)]
         self.initial_weights = weights
         self.dense_weights = None
