@@ -561,7 +561,7 @@ class CNNEncoder(Layer):
                   "b_regularizer": self.b_regularizer.get_config() if self.b_regularizer else None
                  }
         base_config = super(CNNEncoder, self).get_config()
-        return dict(list(base_config.items()) + list(config.items())) 
+        return base_config.update(config)
 
 
 encoders = {  # pylint:  disable=invalid-name
