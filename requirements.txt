@@ -7,7 +7,7 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-keras>=1.0.8
+keras==1.0.8
 h5py
 sklearn
 theano
