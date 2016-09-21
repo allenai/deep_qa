@@ -19,7 +19,7 @@ from ..layers.encoders import encoders
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class NNSolver(object):
+class NNSolver:
     def __init__(self, **kwargs):
         """
         Allowed kwargs are specified in update_arg_parser()
@@ -75,6 +75,7 @@ class NNSolver(object):
 
         # Training-specific member variables that will get set and used later.
         self.best_epoch = -1
+        self.pretrainers = []
         # We store the datasets used for training and validation, both before processing and after
         # processing, in case a subclass wants to modify it between epochs for whatever reason.
         self.training_dataset = None
@@ -221,6 +222,13 @@ class NNSolver(object):
         """
         return self.test_file is not None
 
+    def _pretrain(self):
+        """
+        Runs whatever pre-training has been specified in the constructor.
+        """
+        for pretrainer in self.pretrainers:
+            pretrainer.train()
+
     def train(self):
         '''
         Trains the model.
@@ -228,7 +236,13 @@ class NNSolver(object):
         All training parameters have already been passed to the constructor, so we need no
         arguments to this method.
         '''
-        logger.info("Training model")
+        logger.info("Running training")
+
+        # Before actually doing any training, we'll run whatever pre-training has been specified.
+        # We have no idea here what those models or data look like, so all we can do is call this
+        # method.  If you want to do pretraining, you'll have to load the data and build the model
+        # in this method.
+        self._pretrain()
 
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
