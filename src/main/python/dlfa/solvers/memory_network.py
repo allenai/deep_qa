@@ -274,7 +274,7 @@ class MemoryNetworkSolver(NNSolver):
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-            knowledge_selector = 
+            knowledge_selector = self._get_knowledge_selector(i)
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
