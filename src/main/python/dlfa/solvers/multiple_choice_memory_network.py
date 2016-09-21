@@ -25,7 +25,6 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
     def __init__(self, **kwargs):
         super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
         self.num_options = 4  # TODO(matt): we'll handle the more general case later
-        self.instance_type = 'multiple_choice'
 
     @overrides
     def can_train(self) -> bool:

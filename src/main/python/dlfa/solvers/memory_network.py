@@ -52,7 +52,6 @@ class MemoryNetworkSolver(NNSolver):
     so they used simpler models "entailment".
     '''
 
-
     def __init__(self, **kwargs):
         super(MemoryNetworkSolver, self).__init__(**kwargs)
         self.train_background = kwargs['train_background']
@@ -73,7 +72,6 @@ class MemoryNetworkSolver(NNSolver):
                 )
         self.num_memory_layers = kwargs['num_memory_layers']
 
-        self.instance_type = 'true/false'
         self.max_knowledge_length = None
 
     @classmethod
