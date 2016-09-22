@@ -239,9 +239,11 @@ class NNSolver:
         logger.info("Running training")
 
         # Before actually doing any training, we'll run whatever pre-training has been specified.
-        # We have no idea here what those models or data look like, so all we can do is call this
-        # method.  If you want to do pretraining, you'll have to load the data and build the model
-        # in this method.
+        # Note that this can have funny interactions with the data indexer, which typically gets
+        # fit to the training data.  We'll take the apporach of having the pre-trainer also fit the
+        # data indexer on whatever data it uses, as pre-trainers typically train encoder models,
+        # which encludes word embeddings.  Fitting the data indexer again when loading the actual
+        # training data won't hurt anything.
         self._pretrain()
 
         # First we need to prepare the data that we'll use for training.

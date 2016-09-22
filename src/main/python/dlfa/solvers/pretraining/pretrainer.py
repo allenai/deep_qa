@@ -1,3 +1,5 @@
+from keras.callbacks import EarlyStopping
+
 class Pretrainer:
     """
     A pretrainer takes a solver, pulls out some of the layers, makes a new model, and trains it on
@@ -10,13 +12,57 @@ class Pretrainer:
     layer, but not actually changing the weights used in the solver itself, because the solver will
     just re-build that layer with new weights during the training step.
     """
-    def __init__(self, solver):
-        self.solver = solver
+    # TODO(matt): this ended up being _really_ similar to the NNSolver code.  I've been wanting to
+    # make the data loading code in NNSolver better, anyway; we should probably pull out all of the
+    # common code here into a Trainer class that both of these can inherit from.
 
-    def train():
+    # While it's not great, we need access to a few of the internals of the solver, so we'll
+    # disable protected access checks.
+    # pylint: disable=protected-access
+    def __init__(self, solver, **kwargs):
+        self.solver = solver
+        self.num_epochs = kwargs.get('num_epochs', 10)
+        self.validation_split = kwargs.get('validation_split', .1)
+        self.early_stopping = kwargs.get('early_stopping', True)
+        self.patience = kwargs.get('patience', 3)
+
+    def _load_dataset(self):
+        """
+        Returns a TextDataset with the data that will be used during pre-training.
+        """
+        raise NotImplementedError
+
+    def _get_model(self):
+        """
+        Build a model for pre-training, by pulling out some pieces of self.solver.
+        """
+        raise NotImplementedError
+
+    def train(self):
         """
         Given some data and training parameters specified in constructor, run pre-training.  When
         this is done, the weights in the solver layers will have been updated during training, and
         you can just keep going with solver.train(), and things will just work.
         """
-        raise NotImplementedError
+        dataset = self._load_dataset()
+        self.solver.data_indexer.fit_word_dictionary(dataset)
+        indexed_dataset = dataset.to_indexed_dataset(self.solver.data_indexer)
+        indexed_dataset.pad_instances(self.solver._get_max_lengths())
+
+        # We need to set these in the solver so that we can build the model correctly.
+        self.solver._set_max_lengths(indexed_dataset.max_lengths())
+        inputs, labels = indexed_dataset.as_training_data()
+
+        model = self._get_model()
+        model.summary()
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        fit_kwargs = {
+                'nb_epoch': self.num_epochs,
+                }
+        if self.validation_split > 0.0:
+            fit_kwargs['validation_split'] = self.validation_split
+        if self.early_stopping:
+            early_stopping = EarlyStopping(monitor='val_loss', patience=self.patience)
+            fit_kwargs['callbacks'] = [early_stopping]
+        model.fit(inputs, labels, **fit_kwargs)
