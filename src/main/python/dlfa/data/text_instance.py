@@ -4,12 +4,13 @@ from overrides import overrides
 
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 from .instance import Instance
-from .indexed_instance import IndexedInstance
-from .indexed_instance import IndexedTrueFalseInstance
 from .indexed_instance import IndexedBackgroundInstance
+from .indexed_instance import IndexedInstance
 from .indexed_instance import IndexedLogicalFormInstance
 from .indexed_instance import IndexedMultipleChoiceInstance
 from .indexed_instance import IndexedQuestionAnswerInstance
+from .indexed_instance import IndexedSnliInstance
+from .indexed_instance import IndexedTrueFalseInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
@@ -58,7 +59,6 @@ class TextInstance(Instance):
         """
         # pylint: disable=unused-argument
         raise RuntimeError("%s instances can't be read from a line!" % str(cls))
-
 
 
 class TrueFalseInstance(TextInstance):
@@ -331,3 +331,92 @@ class QuestionAnswerInstance(TextInstance):
         answer_options = answers.split("###")
         label = int(label_string)
         return cls(question, answer_options, label, index, tokenizer)
+
+
+class SnliInstance(TextInstance):
+    """
+    An SnliInstance is a TextInstance that a pair of (text, hypothesis) from the Stanford Natural
+    Language Inference (SNLI) dataset, with an associated label.
+
+    The label can either be a three-way decision (one of either "entails", "contradicts", or
+    "neutral"), or a binary decision (grouping either "entails" and "contradicts", for relevance
+    decisions, or "contradicts" and "neutral", for entails/not entails decisions.
+    """
+    label_mapping = {
+            "entails": 0,
+            "contradicts": 1,
+            "neutral": 2,
+            # These last two are for easier logic in __init__.
+            True: True,
+            False: False,
+            }
+
+    def __init__(self,
+                 text: str,
+                 hypothesis: str,
+                 label,
+                 index: int=None,
+                 tokenizer: Tokenizer=tokenizers['default']()):
+        # This intentionally crashes if `label` is not one of the keys in `label_mapping`.
+        super(SnliInstance, self).__init__(self.label_mapping[label], index, tokenizer)
+        self.text = text
+        self.hypothesis = hypothesis
+
+    @overrides
+    def words(self) -> List[str]:
+        return self._tokenize(self.text.lower()) + self._tokenize(self.hypothesis.lower())
+
+    @overrides
+    def to_indexed_instance(self, data_indexer: DataIndexer):
+        text = [data_indexer.get_word_index(word) for word in self._tokenize(self.text.lower())]
+        hypothesis = [data_indexer.get_word_index(word) for word in self._tokenize(self.hypothesis.lower())]
+        return IndexedSnliInstance(text, hypothesis, self.label, self.index)
+
+    def to_attention_instance(self):
+        """
+        This returns a new SnliInstance with a different label.
+        """
+        if self.label is 0 or self.label is 1:
+            new_label = True
+        elif self.label is 2:
+            new_label = False
+        else:
+            raise RuntimeError("Can't convert " + str(self.label) + " to an attention label")
+        return SnliInstance(self.text, self.hypothesis, new_label, self.index, self.tokenizer)
+
+    def to_entails_instance(self):
+        """
+        This returns a new SnliInstance with a different label.
+        """
+        if self.label is 0:
+            new_label = True
+        elif self.label is 1 or self.label is 2:
+            new_label = False
+        else:
+            raise RuntimeError("Can't convert " + str(self.label) + " to an entails/not-entails label")
+        return SnliInstance(self.text, self.hypothesis, new_label, self.index, self.tokenizer)
+
+    @classmethod
+    def read_from_line(cls,
+                       line: str,
+                       default_label: bool=None,
+                       tokenizer: Tokenizer=tokenizers['default']()):
+        """
+        Reads an SnliInstance object from a line.  The format has one of two options:
+
+        (1) [example index][tab][text][tab][hypothesis][tab][label]
+        (2) [text][tab][hypothesis][tab][label]
+
+        default_label is ignored, but we keep the argument to match the interface.
+        """
+        fields = line.split("\t")
+
+        if len(fields) == 4:
+            index_string, text, hypothesis, label = fields
+            index = int(index_string)
+        elif len(fields) == 3:
+            text, hypothesis, label = fields
+            index = None
+        else:
+            raise RuntimeError("Unrecognized line format: " + line)
+        return cls(text, hypothesis, label, index, tokenizer)

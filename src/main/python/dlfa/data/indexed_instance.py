@@ -364,3 +364,48 @@ class IndexedQuestionAnswerInstance(IndexedInstance):
         label = numpy.zeros((len(self.option_indices)))
         label[self.label] = 1
         return (question_array, option_array), label
+
+
+class IndexedSnliInstance(IndexedInstance):
+    def __init__(self, text_indices: List[int], hypothesis_indices: List[int], label: int, index: int=None):
+        super(IndexedSnliInstance, self).__init__(label, index)
+        self.text_indices = text_indices
+        self.hypothesis_indices = hypothesis_indices
+
+    @classmethod
+    @overrides
+    def empty_instance(cls):
+        return IndexedSnliInstance([], [], label=None, index=None)
+
+    @overrides
+    def get_lengths(self) -> Dict[str, int]:
+        """
+        This simple IndexedInstance only has one padding dimension: word_indices.
+        """
+        max_length = max(len(self.text_indices), len(self.hypothesis_indices))
+        return {'word_sequence_length': max_length}
+
+    @overrides
+    def pad(self, max_lengths: Dict[str, int]):
+        """
+        Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
+        self.get_lengths() for why max_lengths is a list instead of an int.
+        """
+        sentence_length = max_lengths['word_sequence_length']
+        self.text_indices = self.pad_word_sequence_to_length(self.text_indices, sentence_length)
+        self.hypothesis_indices = self.pad_word_sequence_to_length(self.hypothesis_indices, sentence_length)
+
+    @overrides
+    def as_training_data(self):
+        text_array = numpy.asarray(self.text_indices, dtype='int32')
+        hypothesis_array = numpy.asarray(self.hypothesis_indices, dtype='int32')
+        if self.label is True or self.label is False:
+            label = numpy.zeros((2))
+            if self.label is True:
+                label[1] = 1
+            elif self.label is False:
+                label[0] = 1
+        else:
+            label = numpy.zeros((3))
+            label[self.label] = 1
+        return (text_array, hypothesis_array), label
