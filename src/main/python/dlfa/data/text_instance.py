@@ -346,7 +346,9 @@ class SnliInstance(TextInstance):
             "entails": 0,
             "contradicts": 1,
             "neutral": 2,
-            # These last two are for easier logic in __init__.
+            # These ones are for easier logic in __init__.
+            "attention_true": "attention_true",
+            "attention_false": "attention_false",
             True: True,
             False: False,
             }
@@ -377,9 +379,9 @@ class SnliInstance(TextInstance):
         This returns a new SnliInstance with a different label.
         """
         if self.label is 0 or self.label is 1:
-            new_label = True
+            new_label = "attention_true"
         elif self.label is 2:
-            new_label = False
+            new_label = "attention_false"
         else:
             raise RuntimeError("Can't convert " + str(self.label) + " to an attention label")
         return SnliInstance(self.text, self.hypothesis, new_label, self.index, self.tokenizer)

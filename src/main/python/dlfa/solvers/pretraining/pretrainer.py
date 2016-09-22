@@ -1,4 +1,5 @@
 from keras.callbacks import EarlyStopping
+import numpy
 
 class Pretrainer:
     """
@@ -25,6 +26,8 @@ class Pretrainer:
         self.validation_split = kwargs.get('validation_split', .1)
         self.early_stopping = kwargs.get('early_stopping', True)
         self.patience = kwargs.get('patience', 3)
+        self.max_sentence_length = None
+        self.loss = "categorical_crossentropy"
 
     def _load_dataset(self):
         """
@@ -49,13 +52,20 @@ class Pretrainer:
         indexed_dataset = dataset.to_indexed_dataset(self.solver.data_indexer)
         indexed_dataset.pad_instances(self.solver._get_max_lengths())
 
-        # We need to set these in the solver so that we can build the model correctly.
-        self.solver._set_max_lengths(indexed_dataset.max_lengths())
+        # TODO(matt): this is a huge hack, but will have to do for now.  This should be fixed when
+        # I do the refactoring mentioned above.
+        max_lengths = indexed_dataset.max_lengths()
+        self.max_sentence_length = max_lengths[0]
         inputs, labels = indexed_dataset.as_training_data()
+        if isinstance(inputs[0], tuple):
+            inputs = [numpy.asarray(x) for x in zip(*inputs)]
+        else:
+            inputs = numpy.asarray(inputs)
+        labels = numpy.asarray(labels)
 
         model = self._get_model()
         model.summary()
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss=self.loss, optimizer='adam', metrics=['accuracy'])
 
         fit_kwargs = {
                 'nb_epoch': self.num_epochs,

@@ -405,6 +405,10 @@ class IndexedSnliInstance(IndexedInstance):
                 label[1] = 1
             elif self.label is False:
                 label[0] = 1
+        elif self.label == "attention_true":
+            label = 1
+        elif self.label == "attention_false":
+            label = 0
         else:
             label = numpy.zeros((3))
             label[self.label] = 1
