@@ -1,0 +1,5 @@
+TEST_DIR = './TMP_TEST/'
+TRAIN_FILE = TEST_DIR + 'train_file'
+VALIDATION_FILE = TEST_DIR + 'validation_file'
+TRAIN_BACKGROUND = TEST_DIR + 'train_background'
+VALIDATION_BACKGROUND = TEST_DIR + 'validation_background'
