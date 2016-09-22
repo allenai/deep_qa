@@ -66,14 +66,19 @@ class MemoryNetworkSolver(NNSolver):
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
         self.hard_memory_selection = kwargs['hard_memory_selection']
+        self.knowledge_selector_layers = {}
         self.memory_updater = updaters[kwargs['memory_updater']]
+        self.memory_updater_layers = {}
         self.entailment_combiner = entailment_input_combiners[kwargs['entailment_input_combiner']](
                 self.embedding_size)
-        self.entailment_model = entailment_models[kwargs['entailment_model']](
-                kwargs['entailment_num_hidden_layers'],
-                kwargs['entailment_hidden_layer_width'],
-                kwargs['entailment_hidden_layer_activation']
-                )
+        entailment_args = {
+                'num_hidden_layers': kwargs['entailment_num_hidden_layers'],
+                'hidden_layer_width': kwargs['entailment_hidden_layer_width'],
+                'hidden_layer_activation': kwargs['entailment_hidden_layer_activation'],
+                }
+        if kwargs['entailment_model'] == 'question_answer_mlp':
+            entailment_args['answer_dim'] = self.embedding_size
+        self.entailment_model = entailment_models[kwargs['entailment_model']](**entailment_args)
         self.num_memory_layers = kwargs['num_memory_layers']
 
         self.max_knowledge_length = None
@@ -221,15 +226,21 @@ class MemoryNetworkSolver(NNSolver):
         Instantiates a KnowledgeSelector layer.  This is an overridable method because some
         subclasses might need to TimeDistribute this, for instance.
         """
-        return self.knowledge_selector(name='knowledge_selector_%d' % layer_num,
-                                       hard_selection=self.hard_memory_selection)
+        if layer_num not in self.knowledge_selector_layers:
+            layer = self.knowledge_selector(name='knowledge_selector_%d' % layer_num,
+                                            hard_selection=self.hard_memory_selection)
+            self.knowledge_selector_layers[layer_num] = layer
+        return self.knowledge_selector_layers[layer_num]
 
     def _get_memory_updater(self, layer_num: int):
         """
         Instantiates a MemoryUpdater layer.  This is an overridable method because some subclasses
         might need to TimeDistribute this, for instance.
         """
-        return self.memory_updater(encoding_dim=self.embedding_size, name='memory_updater_%d' % layer_num)
+        if layer_num not in self.memory_updater_layers:
+            layer = self.memory_updater(encoding_dim=self.embedding_size, name='memory_updater_%d' % layer_num)
+            self.memory_updater_layers[layer_num] = layer
+        return self.memory_updater_layers[layer_num]
 
     def _get_entailment_combiner(self):
         """

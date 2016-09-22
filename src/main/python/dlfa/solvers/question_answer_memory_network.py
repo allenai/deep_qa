@@ -67,7 +67,7 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         answer_encoder = TimeDistributed(self._get_new_encoder(), name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
         return ([answer_input_layer],
-                self.entailment_model.classify(combined_input, encoded_answers, self.embedding_size))
+                self.entailment_model.classify(combined_input, encoded_answers))
 
     @overrides
     def _get_validation_data(self):
