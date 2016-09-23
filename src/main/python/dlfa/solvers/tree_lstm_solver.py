@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import Input, Dense, Dropout, merge
@@ -60,13 +60,16 @@ class TreeLSTMSolver(NNSolver):
         return model
 
     @overrides
-    def _get_max_lengths(self) -> List[int]:
-        return [self.max_sentence_length, self.max_transition_length]
+    def _get_max_lengths(self) -> Dict[str, int]:
+        return {
+                'word_sequence_length': self.max_sentence_length,
+                'transition_length': self.max_transition_length,
+                }
 
     @overrides
-    def _set_max_lengths(self, max_lengths: List[int]):
-        self.max_sentence_length = max_lengths[0]
-        self.max_transition_length = max_lengths[1]
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        self.max_sentence_length = max_lengths['word_sequence_length']
+        self.max_transition_length = max_lengths['transition_length']
 
     @overrides
     def _set_max_lengths_from_model(self):

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from overrides import overrides
 
 import numpy
@@ -28,13 +28,13 @@ class IndexedInstance:
     def empty_instance(cls):
         return IndexedInstance([], None)
 
-    def get_lengths(self) -> List[int]:
+    def get_lengths(self) -> Dict[str, int]:
         """
         This simple IndexedInstance only has one padding dimension: word_indices.
         """
-        return [len(self.word_indices)]
+        return {'word_sequence_length': len(self.word_indices)}
 
-    def pad(self, max_lengths: List[int]):
+    def pad(self, max_lengths: Dict[str, int]):
         """
         Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
         self.get_lengths() for why max_lengths is a list instead of an int.
@@ -44,7 +44,7 @@ class IndexedInstance:
         question encoded, which is always at the end, even if we've lost much of the question set
         up.
         """
-        desired_length = max_lengths[0]
+        desired_length = max_lengths['word_sequence_length']
         padded_word_indices = [0] * desired_length
         indices_length = min(len(self.word_indices), desired_length)
         if indices_length != 0:
@@ -64,6 +64,16 @@ class IndexedInstance:
 
 
 class IndexedLogicalFormInstance(IndexedInstance):
+    """
+    An IndexedLogicalFormInstance is a tree-structured instance, which represents a logical form
+    like "for(depend_on(human, plant), oxygen)" as a pair of: (1) a (sequential) list of predicates
+    and arguments, and (2) a list of shift/reduce operations, which allows recovery of the original
+    tree structure from the sequential list of predicates and arguments.  This allows us to do tree
+    composition in a compiled neural network - we just have to pad to the maximum transition
+    length, and we can represent arbitrarily shaped trees.
+
+    Idea taken from the SPINN paper by Sam Bowman and others (http://arxiv.org/pdf/1603.06021.pdf).
+    """
     def __init__(self, word_indices: List[int], transitions: List[int], label: bool, index: int=None):
         super(IndexedLogicalFormInstance, self).__init__(word_indices, label, index)
         self.transitions = transitions
@@ -74,25 +84,24 @@ class IndexedLogicalFormInstance(IndexedInstance):
         return IndexedLogicalFormInstance([], [], None)
 
     @overrides
-    def get_lengths(self) -> List[int]:
+    def get_lengths(self) -> Dict[str, int]:
         """
         Prep for padding; see comment on this method in the super class.  Here we extend the return
         value from our super class with the padding lengths necessary for `transitions`.
         """
         lengths = super(IndexedLogicalFormInstance, self).get_lengths()
-        lengths.append(len(self.transitions))
+        lengths['transition_length'] = len(self.transitions)
         return lengths
 
     @overrides
-    def pad(self, max_lengths: List[int]):
+    def pad(self, max_lengths: Dict[str, int]):
         """
         We let the super class deal with padding word_indices; we'll worry about padding
         transitions.
         """
-        lengths = list(max_lengths)
-        transition_length = lengths.pop()
-        super(IndexedLogicalFormInstance, self).pad(lengths)
+        super(IndexedLogicalFormInstance, self).pad(max_lengths)
 
+        transition_length = max_lengths['transition_length']
         padded_transitions = [0] * transition_length
         indices_length = min(len(self.transitions), transition_length)
         if indices_length != 0:
@@ -125,7 +134,7 @@ class IndexedBackgroundInstance(IndexedInstance):
         return IndexedBackgroundInstance([], [], None)
 
     @overrides
-    def get_lengths(self) -> List[int]:
+    def get_lengths(self) -> Dict[str, int]:
         """
         Prep for padding; see comment on this method in the super class.  Here we extend the return
         value from our super class with the padding lengths necessary for background_indices.
@@ -135,14 +144,14 @@ class IndexedBackgroundInstance(IndexedInstance):
         too.
         """
         lengths = super(IndexedBackgroundInstance, self).get_lengths()
-        lengths.append(len(self.background_indices))
+        lengths['background_sentences'] = len(self.background_indices)
         if self.background_indices:
             max_background_length = max(len(background) for background in self.background_indices)
-            lengths[0] = max(lengths[0], max_background_length)
+            lengths['word_sequence_length'] = max(lengths['word_sequence_length'], max_background_length)
         return lengths
 
     @overrides
-    def pad(self, max_lengths: List[int]):
+    def pad(self, max_lengths: Dict[str, int]):
         """
         We let the super class deal with padding word_indices; we'll worry about padding
         background_indices.  We need to pad it in two ways: (1) we need len(background_indices) to
@@ -150,10 +159,9 @@ class IndexedBackgroundInstance(IndexedInstance):
         for all i, for all instances.  We'll use the word_indices length from the super class for
         (2).
         """
-        lengths = list(max_lengths)
-        background_length = lengths.pop()
-        super(IndexedBackgroundInstance, self).pad(lengths)
-        word_sequence_length = lengths[0]
+        super(IndexedBackgroundInstance, self).pad(max_lengths)
+        background_length = max_lengths['background_sentences']
+        word_sequence_length = max_lengths['word_sequence_length']
 
         # Padding (1): making sure we have the right number of background sentences.  We also need
         # to truncate, if necessary.
@@ -180,6 +188,10 @@ class IndexedBackgroundInstance(IndexedInstance):
 
 
 class IndexedQuestionInstance(IndexedInstance):
+    """
+    A QuestionInstance that has been indexed.  QuestionInstance has a better description of what
+    this represents.
+    """
     def __init__(self, options: List[IndexedInstance], label):
         self.options = options
         super(IndexedQuestionInstance, self).__init__([], label)
@@ -190,22 +202,25 @@ class IndexedQuestionInstance(IndexedInstance):
         return IndexedQuestionInstance([], None)
 
     @overrides
-    def get_lengths(self) -> List[int]:
+    def get_lengths(self) -> Dict[str, int]:
         """
         Here we return the max of get_lengths on all of the Instances in self.options.
         """
+        max_lengths = {}
+        max_lengths['num_options'] = len(self.options)
         lengths = [instance.get_lengths() for instance in self.options]
-        max_lengths = [max(dimension_lengths) for dimension_lengths in zip(*lengths)]
-        max_lengths.append(len(self.options))
+        if not lengths:
+            return max_lengths
+        for key in lengths[0]:
+            max_lengths[key] = max(x[key] for x in lengths)
         return max_lengths
 
     @overrides
-    def pad(self, max_lengths: List[int]):
+    def pad(self, max_lengths: Dict[str, int]):
         """
         This method pads all of the underlying Instances in self.options.
         """
-        lengths = list(max_lengths)
-        num_options = lengths.pop()
+        num_options = max_lengths['num_options']
 
         # First we pad the number of options.
         while len(self.options) < num_options:
@@ -214,7 +229,7 @@ class IndexedQuestionInstance(IndexedInstance):
 
         # Then we pad each option.
         for instance in self.options:  # type: IndexedInstance
-            instance.pad(lengths)
+            instance.pad(max_lengths)
 
     @overrides
     def as_training_data(self):

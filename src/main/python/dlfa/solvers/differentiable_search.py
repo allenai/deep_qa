@@ -122,7 +122,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
             logger.info("Updating the training data background")
             self.training_dataset = self._update_background_dataset(self.training_dataset)
             self.train_input, self.train_labels = self.prep_labeled_data(
-                    self.training_dataset, for_train=False)
+                    self.training_dataset, for_train=False, shuffle=True)
             logger.info("Updating the validation data background")
             self.validation_dataset = self._update_background_dataset(self.validation_dataset)
             self.validation_input, self.validation_labels = self._prep_question_dataset(
@@ -158,9 +158,8 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         # an instance without the label somehow.
         logger.info("Creating dataset")
         dataset = TextDataset.read_from_lines(corpus_lines, label=True, tokenizer=self.tokenizer)
-        max_lengths = [self.max_sentence_length, self.max_knowledge_length]
         logger.info("Indexing and padding dataset")
-        indexed_dataset = self._index_and_pad_dataset(dataset, max_lengths)
+        indexed_dataset = self._index_and_pad_dataset(dataset, self._get_max_lengths())
 
         def _get_generator():
             instances = zip(dataset.instances, indexed_dataset.instances)

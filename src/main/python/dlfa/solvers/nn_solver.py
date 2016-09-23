@@ -2,7 +2,7 @@ import logging
 
 import pickle
 import os
-from typing import List
+from typing import Dict, List
 
 import numpy
 from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
@@ -156,7 +156,7 @@ class NNSolver(object):
                                  "Example: '--cnn_ngram_filter_sizes 2 3 4 5' will use four convolution layers,"
                                  "with filter sizes 2, 3, 4 and 5, corresponding to 2 to 5 grams.")
         parser.add_argument('--cnn_activation', type=str, default='relu',
-                            help='Activation for the convolution layer. Default: ReLU.') 
+                            help='Activation for the convolution layer. Default: ReLU.')
         parser.add_argument('--l1_weight_regularizer', type=float, default=0.0,
                             help="Coefficient for L1 weight regularization for the encoder."
                                  "This will be applied to all parameters. Defaults to 0.")
@@ -374,7 +374,7 @@ class NNSolver(object):
             self._build_sentence_encoder_model()
         instance = TextInstance(sentence, True, tokenizer=self.tokenizer)
         indexed_instance = instance.to_indexed_instance(self.data_indexer)
-        indexed_instance.pad([self.max_sentence_length])
+        indexed_instance.pad({'word_sequence_length': self.max_sentence_length})
         instance_input, _ = indexed_instance.as_training_data()
         encoded_instance = self._sentence_encoder_model.predict(numpy.asarray([instance_input]))
         return encoded_instance[0]
@@ -425,20 +425,20 @@ class NNSolver(object):
         accuracy = float(num_correct) / len(test_predictions)
         return accuracy
 
-    def _get_max_lengths(self) -> List[int]:
+    def _get_max_lengths(self) -> Dict[str, int]:
         """
         This is about padding.  Any solver will have some number of things that need padding in
         order to make a compilable model, like the length of a sentence.  This method returns a
-        list of all of those things.
+        dictionary of all of those things, mapping a length key to an int.
         """
         raise NotImplementedError
 
-    def _set_max_lengths(self, max_lengths: List[int]):
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
         """
         This is about padding.  Any solver will have some number of things that need padding in
         order to make a compilable model, like the length of a sentence.  This method sets those
-        variables given a list of lengths, perhaps computed from training data or loaded from a
-        saved model.
+        variables given a dictionary of lengths, perhaps computed from training data or loaded from
+        a saved model.
         """
         raise NotImplementedError
 
@@ -501,7 +501,7 @@ class NNSolver(object):
         inputs, labels = self.prep_labeled_data(dataset, for_train=False, shuffle=False)
         return inputs, self.group_by_question(labels)
 
-    def _index_and_pad_dataset(self, dataset: TextDataset, max_lengths: List[int]):
+    def _index_and_pad_dataset(self, dataset: TextDataset, max_lengths: Dict[str, int]):
         logger.info("Indexing dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
         logger.info("Padding dataset to lengths %s", str(max_lengths))
