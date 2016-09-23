@@ -26,6 +26,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     entailment_choices = ['multiple_choice_mlp']
     entailment_default = entailment_choices[0]
+    has_binary_entailment = True
     def __init__(self, **kwargs):
         super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
         self.num_options = None

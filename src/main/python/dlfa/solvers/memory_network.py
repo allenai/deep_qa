@@ -11,6 +11,7 @@ from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector,
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from .nn_solver import NNSolver
+from .pretraining.snli_pretrainer import SnliAttentionPretrainer, SnliEntailmentPretrainer
 
 
 # TODO(matt): make this class abstract, and make a TrueFalseMemoryNetwork subclass.
@@ -55,6 +56,7 @@ class MemoryNetworkSolver(NNSolver):
 
     entailment_choices = ['true_false_mlp']
     entailment_default = entailment_choices[0]
+    has_binary_entailment = False
     def __init__(self, **kwargs):
         super(MemoryNetworkSolver, self).__init__(**kwargs)
         self.train_background = kwargs['train_background']
@@ -82,6 +84,13 @@ class MemoryNetworkSolver(NNSolver):
         self.num_memory_layers = kwargs['num_memory_layers']
 
         self.max_knowledge_length = None
+
+        if kwargs['pretrain_entailment']:
+            snli_file = kwargs['snli_file']
+            self.pretrainers.append(SnliEntailmentPretrainer(self, snli_file))
+        if kwargs['pretrain_attention']:
+            snli_file = kwargs['snli_file']
+            self.pretrainers.append(SnliAttentionPretrainer(self, snli_file))
 
     @classmethod
     @overrides
@@ -113,6 +122,12 @@ class MemoryNetworkSolver(NNSolver):
                             choices=cls.entailment_choices,
                             help='The kind of entailment model to use.  See entailment_models.py '
                             'for details.')
+        parser.add_argument('--snli_file', type=str,
+                            help='Path to SNLI data, formatted as three-column tsv')
+        parser.add_argument('--pretrain_attention', action='store_true',
+                            help='Use SNLI data to pretrain the attention model')
+        parser.add_argument('--pretrain_entailment', action='store_true',
+                            help='Use SNLI data to pretrain the entailment model')
         # TODO(matt): I wish there were a better way to do this...  You really want the entailment
         # model object to specify these arguments, and deal with them, instead of having NNSolver
         # have to know about them...  Not sure how to solve this.

@@ -222,6 +222,15 @@ class NNSolver:
         """
         return self.test_file is not None
 
+    def _load_pretraining_data(self):
+        """
+        Adds words to the vocabulary based on the data used by the pretrainers.  We want this to
+        happen before loading the training data so that we can use pretraining to expand our
+        applicable vocabulary.
+        """
+        for pretrainer in self.pretrainers:
+            pretrainer.fit_data_indexer(self.data_indexer)
+
     def _pretrain(self):
         """
         Runs whatever pre-training has been specified in the constructor.
@@ -244,13 +253,18 @@ class NNSolver:
         # data indexer on whatever data it uses, as pre-trainers typically train encoder models,
         # which encludes word embeddings.  Fitting the data indexer again when loading the actual
         # training data won't hurt anything.
-        self._pretrain()
+        self._load_pretraining_data()
 
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
         self.train_input, self.train_labels = self._get_training_data()
         logger.info("Getting validation data")
         self.validation_input, self.validation_labels = self._get_validation_data()
+
+        # We need to actually do pretraining _after_ we've loaded the training data, though, as we
+        # need to build the models to be consistent between training and pretraining.  The training
+        # data tells us a max sentence length, which we need for the pretrainer.
+        self._pretrain()
 
         # Then we build the model and compile it.
         logger.info("Building the model")

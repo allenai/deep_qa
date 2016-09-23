@@ -26,14 +26,27 @@ class Pretrainer:
         self.validation_split = kwargs.get('validation_split', .1)
         self.early_stopping = kwargs.get('early_stopping', True)
         self.patience = kwargs.get('patience', 3)
-        self.max_sentence_length = None
         self.loss = "categorical_crossentropy"
+        self.dataset = None
+
+    def fit_data_indexer(self, data_indexer):
+        dataset = self.get_dataset()
+        data_indexer.fit_word_dictionary(dataset)
 
     def _load_dataset(self):
         """
-        Returns a TextDataset with the data that will be used during pre-training.
+        Actually does the work for self.get_dataset(), reading a file and returning a TextDataset
+        object.
         """
         raise NotImplementedError
+
+    def get_dataset(self):
+        """
+        Returns a TextDataset with the data that will be used during pre-training.
+        """
+        if self.dataset is None:
+            self.dataset = self._load_dataset()
+        return self.dataset
 
     def _get_model(self):
         """
@@ -47,15 +60,10 @@ class Pretrainer:
         this is done, the weights in the solver layers will have been updated during training, and
         you can just keep going with solver.train(), and things will just work.
         """
-        dataset = self._load_dataset()
-        self.solver.data_indexer.fit_word_dictionary(dataset)
+        dataset = self.get_dataset()
         indexed_dataset = dataset.to_indexed_dataset(self.solver.data_indexer)
         indexed_dataset.pad_instances(self.solver._get_max_lengths())
 
-        # TODO(matt): this is a huge hack, but will have to do for now.  This should be fixed when
-        # I do the refactoring mentioned above.
-        max_lengths = indexed_dataset.max_lengths()
-        self.max_sentence_length = max_lengths[0]
         inputs, labels = indexed_dataset.as_training_data()
         if isinstance(inputs[0], tuple):
             inputs = [numpy.asarray(x) for x in zip(*inputs)]
