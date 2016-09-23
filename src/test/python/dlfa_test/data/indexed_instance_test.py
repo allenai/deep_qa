@@ -260,3 +260,9 @@ class TestIndexedSnliInstance:
         instance.label = 2
         _, label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 0, 1]))
+        instance.label = "attention_true"
+        _, label = instance.as_training_data()
+        assert numpy.all(label == 1)
+        instance.label = "attention_false"
+        _, label = instance.as_training_data()
+        assert numpy.all(label == 0)

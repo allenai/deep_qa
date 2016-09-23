@@ -187,9 +187,9 @@ class TestSnliInstance:
         assert SnliInstance("", "", False).label is False
 
     def test_to_attention_instance_maps_label_correctly(self):
-        assert SnliInstance("", "", "entails").to_attention_instance().label is True
-        assert SnliInstance("", "", "contradicts").to_attention_instance().label is True
-        assert SnliInstance("", "", "neutral").to_attention_instance().label is False
+        assert SnliInstance("", "", "entails").to_attention_instance().label is "attention_true"
+        assert SnliInstance("", "", "contradicts").to_attention_instance().label is "attention_true"
+        assert SnliInstance("", "", "neutral").to_attention_instance().label is "attention_false"
         with pytest.raises(Exception):
             SnliInstance("", "", True).to_attention_instance()
         with pytest.raises(Exception):
