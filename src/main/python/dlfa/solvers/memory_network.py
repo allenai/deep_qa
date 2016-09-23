@@ -62,6 +62,7 @@ class MemoryNetworkSolver(NNSolver):
         self.debug_background = kwargs['debug_background']
 
         self.knowledge_selector = selectors[kwargs['knowledge_selector']]
+        self.hard_memory_selection = kwargs['hard_memory_selection']
         self.memory_updater = updaters[kwargs['memory_updater']]
         self.entailment_combiner = entailment_input_combiners[kwargs['entailment_input_combiner']](
                 self.embedding_size)
@@ -90,6 +91,8 @@ class MemoryNetworkSolver(NNSolver):
                             choices=selectors.keys(),
                             help='The kind of knowledge selector to use.  See '
                             'knowledge_selectors.py for details.')
+        parser.add_argument('--hard_memory_selection', action='store_true',
+                            help='Make hard choices instead of using softmax.')
         parser.add_argument('--memory_updater', type=str, default='dense_concat',
                             choices=updaters.keys(),
                             help='The kind of memory updaters to use.  See memory_updaters.py '
@@ -200,7 +203,8 @@ class MemoryNetworkSolver(NNSolver):
         Instantiates a KnowledgeSelector layer.  This is an overridable method because some
         subclasses might need to TimeDistribute this, for instance.
         """
-        return self.knowledge_selector(name='knowledge_selector_%d' % layer_num)
+        return self.knowledge_selector(name='knowledge_selector_%d' % layer_num,
+                                                         hard_selection=self.hard_memory_selection)
 
     def _get_memory_updater(self, layer_num: int):
         """
