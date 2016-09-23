@@ -18,21 +18,15 @@ class TestQuestionAnswerMemoryNetworkSolver(TestCase):
         self.validation_file = self.test_dir + 'validation_file'
         with codecs.open(self.validation_file, 'w', 'utf-8') as train_file:
             train_file.write('1\tquestion1\tanswer1###answer2\t0\n')
-            train_file.write('2\tquestion2\tanswer3###answer4\t1\n')
-            train_file.write('3\tquestion3\tanswer5###answer6###answer9\t2\n')
-            train_file.write('4\tquestion4\tanswer7###answer8\t0\n')
         self.validation_background = self.test_dir + 'validation_background'
         with codecs.open(self.validation_background, 'w', 'utf-8') as validation_background:
             validation_background.write('1\tvb1\tvb2\n')
-            validation_background.write('2\tvb3\tvb4\tvb5\n')
-            validation_background.write('3\tvb6\n')
-            validation_background.write('4\tvb7\tvb8\tvb9\n')
         self.train_file = self.test_dir + 'train_file'
         with codecs.open(self.train_file, 'w', 'utf-8') as train_file:
-            train_file.write('1\tquestion1\tanswer1###answer2\t0\n')
-            train_file.write('2\tquestion2\tanswer3###answer4\t1\n')
-            train_file.write('3\tquestion3\tanswer5###answer6###answer9\t2\n')
-            train_file.write('4\tquestion4\tanswer7###answer8\t0\n')
+            train_file.write('1\ta b e i d\tanswer1###answer2\t0\n')
+            train_file.write('2\ta b c d\tanswer3###answer4\t1\n')
+            train_file.write('3\te d w f d s a\tanswer5###answer6###answer9\t2\n')
+            train_file.write('4\te fj k w q\tanswer7###answer8\t0\n')
         self.train_background = self.test_dir + 'train_background'
         with codecs.open(self.train_background, 'w', 'utf-8') as train_background:
             train_background.write('1\tsb1\tsb2\n')

@@ -57,7 +57,7 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
     def _get_entailment_output(self, combined_input):
         answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
                 input_shape=(self.num_options, self.max_answer_length), name_prefix="answer")
-        answer_encoder = TimeDistributed(self._get_sentence_encoder(), name="answer_encoder")
+        answer_encoder = TimeDistributed(self._get_new_encoder(), name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
         return ([answer_input_layer],
                 self.entailment_model.classify(combined_input, encoded_answers, self.embedding_size))

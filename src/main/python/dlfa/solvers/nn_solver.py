@@ -607,26 +607,29 @@ class NNSolver(object):
         could be more complex, if the "sentence" is actually a logical form.
         """
         if self.sentence_encoder_layer is None:
-            # The encoder will use only those arguments that are relevant to it. For example,
-            # BOWEncoder will use nothing except the name.
-            # Assuming we will not need a different kind of regularizer for each parameter.
-            encoder_arguments = {"name": "sentence_encoder"}
-            if self.encoder in ["lstm", "tree_lstm", "cnn"]:
-                # BOWEncoder does not need to know the output dim
-                encoder_arguments["output_dim"] = self.embedding_size
-            if self.encoder_regularizer is not None:
-                encoder_arguments["W_regularizer"] = self.encoder_regularizer
-                encoder_arguments["b_regularizer"] = self.encoder_regularizer
-                if self.encoder in ["lstm", "tree_lstm"]:
-                    encoder_arguments["U_regularizer"] = self.encoder_regularizer
-                if self.encoder == "tree_lstm":
-                    encoder_arguments["V_regularizer"] = self.encoder_regularizer
-            if self.encoder == "cnn":
-                encoder_arguments["filter_output_dim"] = self.cnn_num_filters
-                encoder_arguments["ngram_filter_sizes"] = self.cnn_ngram_filter_sizes
-                encoder_arguments["conv_layer_activation"] = self.cnn_activation
-            self.sentence_encoder_layer = encoders[self.encoder](**encoder_arguments)
+            self.sentence_encoder_layer = self._get_new_encoder()
         return self.sentence_encoder_layer
+
+    def _get_new_encoder(self):
+        # The encoder will use only those arguments that are relevant to it. For example,
+        # BOWEncoder will use nothing except the name.
+        # Assuming we will not need a different kind of regularizer for each parameter.
+        encoder_arguments = {"name": "sentence_encoder"}
+        if self.encoder in ["lstm", "tree_lstm", "cnn"]:
+            # BOWEncoder does not need to know the output dim
+            encoder_arguments["output_dim"] = self.embedding_size
+        if self.encoder_regularizer is not None:
+            encoder_arguments["W_regularizer"] = self.encoder_regularizer
+            encoder_arguments["b_regularizer"] = self.encoder_regularizer
+            if self.encoder in ["lstm", "tree_lstm"]:
+                encoder_arguments["U_regularizer"] = self.encoder_regularizer
+            if self.encoder == "tree_lstm":
+                encoder_arguments["V_regularizer"] = self.encoder_regularizer
+        if self.encoder == "cnn":
+            encoder_arguments["filter_output_dim"] = self.cnn_num_filters
+            encoder_arguments["ngram_filter_sizes"] = self.cnn_ngram_filter_sizes
+            encoder_arguments["conv_layer_activation"] = self.cnn_activation
+        return encoders[self.encoder](**encoder_arguments)
 
     def _build_sentence_encoder_model(self):
         """
