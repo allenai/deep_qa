@@ -343,14 +343,15 @@ class SnliInstance(TextInstance):
     decisions, or "contradicts" and "neutral", for entails/not entails decisions.
     """
     label_mapping = {
-            "entails": 0,
-            "contradicts": 1,
-            "neutral": 2,
-            # These ones are for easier logic in __init__.
-            "attention_true": "attention_true",
-            "attention_false": "attention_false",
-            True: True,
-            False: False,
+            "entails": [1, 0, 0],
+            "contradicts": [0, 1, 0],
+            "neutral": [0, 0, 1],
+            "attention_true": [1],
+            "attention_false": [0],
+            "entails_softmax": [0, 1],
+            "not_entails_softmax": [1, 0],
+            "entails_sigmoid": [1],
+            "not_entails_sigmoid": [0],
             }
 
     def __init__(self,
@@ -378,24 +379,32 @@ class SnliInstance(TextInstance):
         """
         This returns a new SnliInstance with a different label.
         """
-        if self.label is 0 or self.label is 1:
+        if self.label == self.label_mapping["entails"] or self.label == self.label_mapping["contradicts"]:
             new_label = "attention_true"
-        elif self.label is 2:
+        elif self.label == self.label_mapping["neutral"]:
             new_label = "attention_false"
         else:
             raise RuntimeError("Can't convert " + str(self.label) + " to an attention label")
         return SnliInstance(self.text, self.hypothesis, new_label, self.index, self.tokenizer)
 
-    def to_entails_instance(self):
+    def to_entails_instance(self, activation: str):
         """
-        This returns a new SnliInstance with a different label.
+        This returns a new SnliInstance with a different label.  The new label will be binary
+        (entails / not entails), but we need to distinguish between two different label types.
+        Sometimes we need the label to be encoded in a single dimension (i.e., either `0` or `1`),
+        and sometimes we need it to be encoded in two dimensions (i.e., either `[0, 1]` or `[1,
+        0]`).  This depends on the activation function of the final layer in our network - a
+        sigmoid activation will need the former, while a softmax activation will need the later.
+        So, we encode these differently, as strings, which will be converted to the right array
+        later, in IndexedSnliInstance.
         """
-        if self.label is 0:
-            new_label = True
-        elif self.label is 1 or self.label is 2:
-            new_label = False
+        if self.label == self.label_mapping["entails"]:
+            new_label = "entails"
+        elif self.label == self.label_mapping["neutral"] or self.label == self.label_mapping["contradicts"]:
+            new_label = "not_entails"
         else:
             raise RuntimeError("Can't convert " + str(self.label) + " to an entails/not-entails label")
+        new_label += '_' + activation
         return SnliInstance(self.text, self.hypothesis, new_label, self.index, self.tokenizer)
 
     @classmethod

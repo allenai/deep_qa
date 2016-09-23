@@ -399,17 +399,4 @@ class IndexedSnliInstance(IndexedInstance):
     def as_training_data(self):
         text_array = numpy.asarray(self.text_indices, dtype='int32')
         hypothesis_array = numpy.asarray(self.hypothesis_indices, dtype='int32')
-        if self.label is True or self.label is False:
-            label = numpy.zeros((2))
-            if self.label is True:
-                label[1] = 1
-            elif self.label is False:
-                label[0] = 1
-        elif self.label == "attention_true":
-            label = 1
-        elif self.label == "attention_false":
-            label = 0
-        else:
-            label = numpy.zeros((3))
-            label[self.label] = 1
-        return (text_array, hypothesis_array), label
+        return (text_array, hypothesis_array), numpy.asarray(self.label)

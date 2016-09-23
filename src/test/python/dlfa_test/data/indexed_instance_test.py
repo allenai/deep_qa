@@ -241,28 +241,10 @@ class TestIndexedSnliInstance:
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
         # pylint: disable=redefined-variable-type
-        instance = IndexedSnliInstance([1, 2], [3, 4], True)
+        instance = IndexedSnliInstance([1, 2], [3, 4], [0, 1, 0])
         inputs, label = instance.as_training_data()
         assert isinstance(inputs, tuple)
         assert len(inputs) == 2
         assert numpy.all(inputs[0] == numpy.asarray([1, 2]))
         assert numpy.all(inputs[1] == numpy.asarray([3, 4]))
-        assert numpy.all(label == numpy.asarray([0, 1]))
-        instance.label = False
-        _, label = instance.as_training_data()
-        assert numpy.all(label == numpy.asarray([1, 0]))
-        instance.label = 0
-        _, label = instance.as_training_data()
-        assert numpy.all(label == numpy.asarray([1, 0, 0]))
-        instance.label = 1
-        _, label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 1, 0]))
-        instance.label = 2
-        _, label = instance.as_training_data()
-        assert numpy.all(label == numpy.asarray([0, 0, 1]))
-        instance.label = "attention_true"
-        _, label = instance.as_training_data()
-        assert numpy.all(label == 1)
-        instance.label = "attention_false"
-        _, label = instance.as_training_data()
-        assert numpy.all(label == 0)
