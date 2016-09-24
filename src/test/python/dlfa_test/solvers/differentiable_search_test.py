@@ -6,7 +6,7 @@ import os
 from unittest import TestCase
 
 from dlfa.solvers.differentiable_search import DifferentiableSearchSolver
-from dlfa.data.instance import TextInstance
+from dlfa.data.text_instance import TrueFalseInstance
 
 class FakeEncoder:
     def predict(self, instances):
@@ -48,4 +48,4 @@ class TestDifferentiableSearchSolver(TestCase):
         solver._initialize_lsh()
         solver.max_sentence_length = 5
         solver.max_knowledge_length = 2
-        solver.get_nearest_neighbors(TextInstance("this is a sentence", True))
+        solver.get_nearest_neighbors(TrueFalseInstance("this is a sentence", True))

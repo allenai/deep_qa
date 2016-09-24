@@ -4,25 +4,27 @@ from unittest import TestCase
 
 import numpy
 
-from dlfa.data.instance import IndexedInstance, IndexedBackgroundInstance, IndexedQuestionInstance
+from dlfa.data.indexed_instance import IndexedBackgroundInstance
+from dlfa.data.indexed_instance import IndexedMultipleChoiceInstance
+from dlfa.data.indexed_instance import IndexedTrueFalseInstance
 
-class TestIndexedInstance:
+class TestIndexedTrueFalseInstance:
     def test_get_lengths_returns_length_of_word_indices(self):
-        instance = IndexedInstance([1, 2, 3, 4], True)
+        instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
         assert instance.get_lengths() == {'word_sequence_length': 4}
 
     def test_pad_adds_zeros_on_left(self):
-        instance = IndexedInstance([1, 2, 3, 4], True)
+        instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
         instance.pad({'word_sequence_length': 5})
         assert instance.word_indices == [0, 1, 2, 3, 4]
 
     def test_pad_truncates_from_right(self):
-        instance = IndexedInstance([1, 2, 3, 4], True)
+        instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
         instance.pad({'word_sequence_length': 3})
         assert instance.word_indices == [2, 3, 4]
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
-        instance = IndexedInstance([1, 2, 3, 4], True)
+        instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
         inputs, label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 1]))
         assert numpy.all(inputs == numpy.asarray([1, 2, 3, 4]))
@@ -31,60 +33,67 @@ class TestIndexedInstance:
         assert numpy.all(label == numpy.asarray([1, 0]))
 
 
-class TestIndexedBackgroundInstance:
+class TestIndexedBackgroundInstance(TestCase):
+    def setUp(self):
+        self.base_instance = IndexedTrueFalseInstance([1, 2], True)
+
     def test_get_lengths_returns_max_of_background_and_word_indices(self):
-        instance = IndexedBackgroundInstance([1, 2], [[2, 3, 4], [4, 5]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2, 3, 4], [4, 5]])
         assert instance.get_lengths()['word_sequence_length'] == 3
 
     def test_get_lengths_returns_correct_background_length(self):
-        instance = IndexedBackgroundInstance([1, 2], [[2, 3, 4], [4, 5]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2, 3, 4], [4, 5]])
         assert instance.get_lengths() == {'word_sequence_length': 3, 'background_sentences': 2}
 
     def test_pad_adds_zeros_on_left_to_background(self):
-        instance = IndexedBackgroundInstance([1, 2], [[2, 3]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2, 3]])
         instance.pad({'word_sequence_length': 3, 'background_sentences': 1})
-        assert instance.word_indices == [0, 1, 2]
+        assert instance.indexed_instance.word_indices == [0, 1, 2]
         assert instance.background_indices == [[0, 2, 3]]
 
     def test_pad_truncates_from_right_on_background(self):
-        instance = IndexedBackgroundInstance([1, 2], [[2, 3]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2, 3]])
         instance.pad({'word_sequence_length': 1, 'background_sentences': 1})
-        assert instance.word_indices == [2]
+        assert instance.indexed_instance.word_indices == [2]
         assert instance.background_indices == [[3]]
 
     def test_pad_adds_padded_background_at_end(self):
-        instance = IndexedBackgroundInstance([1, 2], [[2]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2]])
         instance.pad({'word_sequence_length': 2, 'background_sentences': 2})
-        assert instance.word_indices == [1, 2]
+        assert instance.indexed_instance.word_indices == [1, 2]
         assert instance.background_indices == [[0, 2], [0, 0]]
 
     def test_pad_truncates_background_from_left(self):
-        instance = IndexedBackgroundInstance([1], [[2], [3]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2], [3]])
         instance.pad({'word_sequence_length': 1, 'background_sentences': 1})
-        assert instance.word_indices == [1]
+        assert instance.indexed_instance.word_indices == [2]
         assert instance.background_indices == [[2]]
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
-        instance = IndexedBackgroundInstance([1, 2], [[2, 3], [4, 5]], True)
+        instance = IndexedBackgroundInstance(self.base_instance, [[2, 3], [4, 5]])
         (word_array, background_array), label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 1]))
         assert numpy.all(word_array == numpy.asarray([1, 2]))
         assert numpy.all(background_array == numpy.asarray([[2, 3], [4, 5]]))
-        instance.label = False
+        instance.indexed_instance.label = False
+        _, label = instance.as_training_data()
+        assert numpy.all(label == numpy.asarray([1, 0]))
+        instance.label = True  # we ignore this label, only using the indexed_instance label
         _, label = instance.as_training_data()
         assert numpy.all(label == numpy.asarray([1, 0]))
 
 
-class TestIndexedQuestionInstance(TestCase):
+class TestIndexedMultipleChoiceInstance(TestCase):
 
     def setUp(self):
-        # We'll just test with underlying IndexedInstances for most of these, because it's simpler
-        self.instance = IndexedQuestionInstance(
+        # We'll just test with underlying IndexedTrueFalseInstances for most of these, because it's
+        # simpler.
+        self.instance = IndexedMultipleChoiceInstance(
                 [
-                        IndexedInstance([1], False),
-                        IndexedInstance([2, 3, 4], False),
-                        IndexedInstance([5, 6], True),
-                        IndexedInstance([7, 8], False)
+                        IndexedTrueFalseInstance([1], False),
+                        IndexedTrueFalseInstance([2, 3, 4], False),
+                        IndexedTrueFalseInstance([5, 6], True),
+                        IndexedTrueFalseInstance([7, 8], False)
                 ],
                 2)
 
@@ -119,12 +128,16 @@ class TestIndexedQuestionInstance(TestCase):
         assert numpy.all(inputs == numpy.asarray([[0, 0, 1], [2, 3, 4], [0, 5, 6], [0, 7, 8]]))
 
     def test_as_training_data_produces_correct_numpy_arrays_with_background_instances(self):
-        instance = IndexedQuestionInstance(
+        instance = IndexedMultipleChoiceInstance(
                 [
-                        IndexedBackgroundInstance([1, 2], [[2], [3]], False),
-                        IndexedBackgroundInstance([3, 4], [[5], [6]], False),
-                        IndexedBackgroundInstance([5, 6], [[8], [9]], False),
-                        IndexedBackgroundInstance([7, 8], [[11], [12]], True),
+                        IndexedBackgroundInstance(IndexedTrueFalseInstance([1, 2], False),
+                                                  [[2], [3]]),
+                        IndexedBackgroundInstance(IndexedTrueFalseInstance([3, 4], False),
+                                                  [[5], [6]]),
+                        IndexedBackgroundInstance(IndexedTrueFalseInstance([5, 6], False),
+                                                  [[8], [9]]),
+                        IndexedBackgroundInstance(IndexedTrueFalseInstance([7, 8], True),
+                                                  [[11], [12]]),
                 ],
                 3)
         (word_arrays, background_arrays), label = instance.as_training_data()

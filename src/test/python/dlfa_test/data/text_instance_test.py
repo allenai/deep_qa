@@ -1,8 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 
-from dlfa.data.instance import TextInstance
+from dlfa.data.text_instance import TrueFalseInstance
 
-class TestTextInstance:
+class TestTrueFalseInstance:
     @staticmethod
     def instance_to_line(text, label=None, index=None):
         line = ''
@@ -16,7 +16,7 @@ class TestTextInstance:
 
     def test_read_from_line_handles_one_column(self):
         text = "this is a sentence"
-        instance = TextInstance.read_from_line(text)
+        instance = TrueFalseInstance.read_from_line(text)
         assert instance.text == text
         assert instance.label is None
         assert instance.index is None
@@ -27,7 +27,7 @@ class TestTextInstance:
         label = True
         line = self.instance_to_line(text, label, index)
 
-        instance = TextInstance.read_from_line(line)
+        instance = TrueFalseInstance.read_from_line(line)
         assert instance.text == text
         assert instance.label is label
         assert instance.index == index
@@ -38,7 +38,7 @@ class TestTextInstance:
         label = True
         line = self.instance_to_line(text, label, index)
 
-        instance = TextInstance.read_from_line(line)
+        instance = TrueFalseInstance.read_from_line(line)
         assert instance.text == text
         assert instance.label is label
         assert instance.index == index
@@ -49,7 +49,7 @@ class TestTextInstance:
         label = None
         line = self.instance_to_line(text, label, index)
 
-        instance = TextInstance.read_from_line(line)
+        instance = TrueFalseInstance.read_from_line(line)
         assert instance.text == text
         assert instance.label is label
         assert instance.index == index
@@ -60,7 +60,7 @@ class TestTextInstance:
         label = None
         line = self.instance_to_line(text, label, index)
 
-        instance = TextInstance.read_from_line(line, default_label=True)
+        instance = TrueFalseInstance.read_from_line(line, default_label=True)
         assert instance.text == text
         assert instance.label is True
         assert instance.index == index
@@ -71,15 +71,15 @@ class TestTextInstance:
         label = None
         line = self.instance_to_line(text, label, index)
 
-        instance = TextInstance.read_from_line(line, default_label=False)
+        instance = TrueFalseInstance.read_from_line(line, default_label=False)
         assert instance.text == text
         assert instance.label is False
         assert instance.index == index
 
     def test_words_tokenizes_the_sentence_correctly(self):
-        t = TextInstance("This is a sentence.", None)
+        t = TrueFalseInstance("This is a sentence.", None)
         assert t.words() == ['this', 'is', 'a', 'sentence', '.']
-        t = TextInstance("This isn't a sentence.", None)
+        t = TrueFalseInstance("This isn't a sentence.", None)
         assert t.words() == ['this', 'is', "n't", 'a', 'sentence', '.']
-        t = TextInstance("And, I have commas.", None)
+        t = TrueFalseInstance("And, I have commas.", None)
         assert t.words() == ['and', ',', 'i', 'have', 'commas', '.']

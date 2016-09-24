@@ -6,6 +6,7 @@ from keras.layers import TimeDistributed, Dropout, merge
 from keras.models import Model
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
+from ..data.text_instance import TrueFalseInstance
 from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector, ParameterizedKnowledgeSelector
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
@@ -128,6 +129,10 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def can_test(self) -> bool:
         return self.test_background is not None and super(MemoryNetworkSolver, self).can_test()
+
+    @overrides
+    def _instance_type(self):
+        return TrueFalseInstance
 
     @classmethod
     @overrides
@@ -325,24 +330,23 @@ class MemoryNetworkSolver(NNSolver):
 
     @overrides
     def _get_training_data(self):
+        instance_type = self._instance_type()
         if self.train_file:
-            dataset = TextDataset.read_from_file(self.train_file, tokenizer=self.tokenizer)
-            background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                       self.train_background,
-                                                                       tokenizer=self.tokenizer)
+            dataset = TextDataset.read_from_file(self.train_file, instance_type, tokenizer=self.tokenizer)
+            background_dataset = TextDataset.read_background_from_file(dataset, self.train_background)
         else:
             positive_dataset = TextDataset.read_from_file(self.positive_train_file,
+                                                          instance_type,
                                                           label=True,
                                                           tokenizer=self.tokenizer)
             positive_background = TextDataset.read_background_from_file(positive_dataset,
-                                                                        self.positive_train_background,
-                                                                        tokenizer=self.tokenizer)
+                                                                        self.positive_train_background)
             negative_dataset = TextDataset.read_from_file(self.negative_train_file,
+                                                          instance_type,
                                                           label=False,
                                                           tokenizer=self.tokenizer)
             negative_background = TextDataset.read_background_from_file(negative_dataset,
-                                                                        self.negative_train_background,
-                                                                        tokenizer=self.tokenizer)
+                                                                        self.negative_train_background)
             background_dataset = positive_background.merge(negative_background)
         if self.max_training_instances is not None:
             background_dataset = background_dataset.truncate(self.max_training_instances)
@@ -352,27 +356,21 @@ class MemoryNetworkSolver(NNSolver):
 
     @overrides
     def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file, tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.validation_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.validation_file, self._instance_type(), tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
         self.validation_dataset = background_dataset
         return self._prep_question_dataset(background_dataset)
 
     @overrides
     def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.test_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.test_file, self._instance_type(), tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
         return self._prep_question_dataset(background_dataset)
 
     @overrides
     def _get_debug_dataset_and_input(self):
-        dataset = TextDataset.read_from_file(self.debug_file)
-        background_dataset = TextDataset.read_background_from_file(dataset,
-                                                                   self.debug_background,
-                                                                   tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_file(self.debug_file, self._instance_type(), tokenizer=self.tokenizer)
+        background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
         # Now get inputs, and ignore the labels (background_dataset has them)
         inputs, _ = self.prep_labeled_data(background_dataset, for_train=False, shuffle=False)
         return background_dataset, inputs

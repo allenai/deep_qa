@@ -9,11 +9,11 @@ import dlfa.sentence_corruption  # pylint: disable=unused-import
 import dlfa.solvers  # pylint: disable=unused-import
 
 from dlfa.data.dataset import Dataset, TextDataset
-from dlfa.data.instance import TextInstance
+from dlfa.data.text_instance import TrueFalseInstance
 
 class TestDataset:
     def test_merge(self):
-        instances = [TextInstance("testing", None, None), TextInstance("testing1", None, None)]
+        instances = [TrueFalseInstance("testing", None, None), TrueFalseInstance("testing1", None, None)]
         dataset1 = Dataset(instances[:1])
         dataset2 = Dataset(instances[1:])
         merged = dataset1.merge(dataset2)
@@ -29,7 +29,7 @@ class TestTextDataset(fake_filesystem_unittest.TestCase):
             datafile.write("1\tinstance1\t0\n")
             datafile.write("2\tinstance2\t1\n")
             datafile.write("3\tinstance3\n")
-        dataset = TextDataset.read_from_file(filename)
+        dataset = TextDataset.read_from_file(filename, TrueFalseInstance)
         assert len(dataset.instances) == 3
         instance = dataset.instances[0]
         assert instance.index == 1

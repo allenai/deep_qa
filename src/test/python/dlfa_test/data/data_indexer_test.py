@@ -2,11 +2,11 @@
 
 from dlfa.data.data_indexer import DataIndexer
 from dlfa.data.dataset import TextDataset
-from dlfa.data.instance import TextInstance
+from dlfa.data.text_instance import TrueFalseInstance
 
 class TestDataIndexer:
     def test_fit_word_dictionary_respects_min_count(self):
-        instance = TextInstance("a a a a b b c c c", True)
+        instance = TrueFalseInstance("a a a a b b c c c", True)
         dataset = TextDataset([instance])
         data_indexer = DataIndexer()
         data_indexer.fit_word_dictionary(dataset, min_count=4)

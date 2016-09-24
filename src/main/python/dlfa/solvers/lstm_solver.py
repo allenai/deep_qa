@@ -4,6 +4,7 @@ from overrides import overrides
 from keras.layers import Dense, Dropout
 from keras.models import Model
 
+from ..data.text_instance import TrueFalseInstance
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from .nn_solver import NNSolver
 
@@ -49,6 +50,9 @@ class LSTMSolver(NNSolver):
         # Step 4: Define crossentropy against labels as the loss.
         model = Model(input=input_layer, output=output_probabilities)
         return model
+
+    def _instance_type(self):
+        return TrueFalseInstance
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
