@@ -132,7 +132,7 @@ class SnliAttentionPretrainer(SnliPretrainer):
                                              axis=1)
         merged_encoded_rep = merge([hypothesis_encoding, text_encoding],
                                    mode=merge_mode,
-                                   output_shape=(2,) + sentence_shape,
+                                   output_shape=(2, self.solver.embedding_size),
                                    name='concat_hypothesis_with_text')
         knowledge_selector = self.solver._get_knowledge_selector(0)
         while isinstance(knowledge_selector, TimeDistributed):
