@@ -53,7 +53,7 @@ class TextInstance(Instance):
                        default_label: bool=None,
                        tokenizer: Tokenizer=tokenizers['default']()):
         """
-        Reads an instance of this type from a a line.  We throw a RuntimeError here instead of a
+        Reads an instance of this type from a line.  We throw a RuntimeError here instead of a
         NotImplementedError, because it's not expected that all subclasses will implement this.
         """
         # pylint: disable=unused-argument
