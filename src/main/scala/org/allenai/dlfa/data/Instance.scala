@@ -38,3 +38,16 @@ case class BackgroundInstance[T <: Instance](
     containedInstance.asStrings() ++ Seq(backgroundString)
   }
 }
+
+/**
+ * An Instance created from the Stanford Natural Language Inference corpus.
+ */
+case class SnliInstance(
+  text: String,
+  hypothesis: String,
+  label: String
+) extends Instance {
+  def asStrings(): Seq[String] = {
+    Seq(s"$text\t$hypothesis\t$label")
+  }
+}

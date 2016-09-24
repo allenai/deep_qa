@@ -33,6 +33,8 @@ class ChildrensBookDatasetReader(fileUtil: FileUtil) {
   }
 }
 
+// TODO(matt): Move this somewhere else, or just remove it, once this is integrated as a Step in
+// the pipeline.
 object ChildrensBookDatasetReader {
   def main(args: Array[String]) {
     val fileUtil = new FileUtil
