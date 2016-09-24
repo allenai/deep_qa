@@ -2,7 +2,7 @@ import codecs
 import logging
 import random
 
-from typing import List
+from typing import Dict, List
 
 from .instance import BackgroundTextInstance, Instance, IndexedInstance, TextInstance, QuestionInstance
 from .tokenizer import tokenizers, Tokenizer
@@ -166,10 +166,15 @@ class IndexedDataset(Dataset):
         super(IndexedDataset, self).__init__(instances)
 
     def max_lengths(self):
+        max_lengths = {}
         lengths = [instance.get_lengths() for instance in self.instances]
-        return [max(dimension_lengths) for dimension_lengths in zip(*lengths)]
+        if not lengths:
+            return max_lengths
+        for key in lengths[0]:
+            max_lengths[key] = max(x[key] for x in lengths)
+        return max_lengths
 
-    def pad_instances(self, max_lengths: List[int]):
+    def pad_instances(self, max_lengths: Dict[str, int]):
         """
         Make all of the IndexedInstances in the dataset have the same length by padding them (in
         the front) with zeros.
@@ -189,17 +194,16 @@ class IndexedDataset(Dataset):
         logger.info("Getting max lengths from instances")
         instance_max_lengths = self.max_lengths()
         logger.info("Instance max lengths: %s", str(instance_max_lengths))
-        zipped_maxes = zip(max_lengths, instance_max_lengths)
-        max_lengths = []
-        for given, from_instance in zipped_maxes:
-            if given is not None:
-                max_lengths.append(given)
+        lengths_to_use = {}
+        for key in instance_max_lengths:
+            if max_lengths[key] is not None:
+                lengths_to_use[key] = max_lengths[key]
             else:
-                max_lengths.append(from_instance)
+                lengths_to_use[key] = instance_max_lengths[key]
 
-        logger.info("Now actually padding instances to length: %s", str(max_lengths))
+        logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
         for instance in self.instances:
-            instance.pad(max_lengths)
+            instance.pad(lengths_to_use)
 
     def as_training_data(self, shuffle=True):
         """

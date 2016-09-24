@@ -1,5 +1,4 @@
-import numpy
-
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import Input, Dense, Dropout, merge
@@ -14,6 +13,10 @@ from ..layers.encoders import TreeCompositionLSTM
 class TreeLSTMSolver(NNSolver):
     def __init__(self, **kwargs):
         super(TreeLSTMSolver, self).__init__(**kwargs)
+        self.max_transition_length = None
+
+    # TODO(matt): need to override the methods that read datasets to use logical form instances,
+    # instead of TextInstances.
 
     @overrides
     def _build_model(self):
@@ -57,31 +60,21 @@ class TreeLSTMSolver(NNSolver):
         return model
 
     @overrides
-    def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
+    def _get_max_lengths(self) -> Dict[str, int]:
+        return {
+                'word_sequence_length': self.max_sentence_length,
+                'transition_length': self.max_transition_length,
+                }
 
     @overrides
-    def prep_labeled_data(self, dataset: TextDataset, for_train: bool):
-        processed_dataset = self._index_and_pad_dataset(dataset, [self.max_sentence_length])
-        sentence_inputs, labels = processed_dataset.as_training_data()
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        self.max_sentence_length = max_lengths['word_sequence_length']
+        self.max_transition_length = max_lengths['transition_length']
 
-        # TODO(matt): we need to pad the transitions / element sequences to the same length.  As it
-        # is, this code does not work.  Probably the right thing to do is to have a new kind of
-        # Instance, a TreeInstance, or something, and it computes the shift/reduce sequences, and
-        # does the padding correctly.  Then as_training_data() on that dataset gives the
-        # transitions, elements, and labels, and none of this has to be done here.
-        transitions, elements = self.data_indexer.get_shift_reduce_sequences(sentence_inputs)
-        if for_train:
-            self.max_sentence_length = max(len(t) for t in transitions)
-
-        # Make int32 array so that Keras will view them as indices.
-        elements = numpy.asarray(elements, dtype='int32')
-
-        # TreeLSTM's transitions input has an extra trailing dimension for
-        # concatenation. This has to match.
-        transitions = numpy.expand_dims(transitions, axis=-1)
-
-        return (transitions, elements), numpy.asarray(labels)
+    @overrides
+    def _set_max_lengths_from_model(self):
+        self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
+        # TODO(matt): set the max transition length.
 
     @classmethod
     @overrides

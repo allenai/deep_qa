@@ -1,5 +1,4 @@
-import numpy
-
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import Dense, Dropout
@@ -52,13 +51,13 @@ class LSTMSolver(NNSolver):
         return model
 
     @overrides
-    def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[1]
+    def _get_max_lengths(self) -> Dict[str, int]:
+        return {'word_sequence_length': self.max_sentence_length}
 
     @overrides
-    def prep_labeled_data(self, dataset: TextDataset, for_train: bool, shuffle: bool):
-        processed_dataset = self._index_and_pad_dataset(dataset, [self.max_sentence_length])
-        if for_train:
-            self.max_sentence_length = processed_dataset.max_lengths()[0]
-        inputs, labels = processed_dataset.as_training_data(shuffle)
-        return numpy.asarray(inputs), numpy.asarray(labels)
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        self.max_sentence_length = max_lengths['word_sequence_length']
+
+    @overrides
+    def _set_max_lengths_from_model(self):
+        self.max_sentence_length = self.model.get_input_shape_at(0)[1]

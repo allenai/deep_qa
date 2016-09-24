@@ -1,5 +1,4 @@
-import numpy
-
+from typing import Dict
 from overrides import overrides
 
 from keras import backend as K
@@ -139,10 +138,21 @@ class MemoryNetworkSolver(NNSolver):
         return custom_objects
 
     @overrides
+    def _get_max_lengths(self) -> Dict[str, int]:
+        return {
+                'word_sequence_length': self.max_sentence_length,
+                'background_sentences': self.max_knowledge_length,
+                }
+
+    @overrides
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        self.max_sentence_length = max_lengths['word_sequence_length']
+        self.max_knowledge_length = max_lengths['background_sentences']
+
+    @overrides
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
-        # TODO(matt): set the background length too, or does it matter?  Maybe the model doesn't
-        # actually care?
+        # TODO(matt): set the background length too.
 
     def _get_question_shape(self):
         """
@@ -204,7 +214,7 @@ class MemoryNetworkSolver(NNSolver):
         subclasses might need to TimeDistribute this, for instance.
         """
         return self.knowledge_selector(name='knowledge_selector_%d' % layer_num,
-                                                         hard_selection=self.hard_memory_selection)
+                                       hard_selection=self.hard_memory_selection)
 
     def _get_memory_updater(self, layer_num: int):
         """
@@ -366,23 +376,6 @@ class MemoryNetworkSolver(NNSolver):
         # Now get inputs, and ignore the labels (background_dataset has them)
         inputs, _ = self.prep_labeled_data(background_dataset, for_train=False, shuffle=False)
         return background_dataset, inputs
-
-    @overrides
-    def prep_labeled_data(self, dataset: Dataset, for_train: bool, shuffle: bool):
-        """
-        Not much to do here, as IndexedBackgroundInstance does most of the work.
-        """
-        max_lengths = [self.max_sentence_length, self.max_knowledge_length]
-        processed_dataset = self._index_and_pad_dataset(dataset, max_lengths)
-        if for_train:
-            max_lengths = processed_dataset.max_lengths()
-            self.max_sentence_length = max_lengths[0]
-            self.max_knowledge_length = max_lengths[1]
-        inputs, labels = processed_dataset.as_training_data(shuffle)
-        sentences, background = zip(*inputs)
-        sentences = numpy.asarray(sentences)
-        background = numpy.asarray(background)
-        return [sentences, background], numpy.asarray(labels)
 
     def get_debug_layer_names(self):
         debug_layer_names = []

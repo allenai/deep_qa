@@ -1,3 +1,4 @@
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import TimeDistributed
@@ -24,7 +25,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     def __init__(self, **kwargs):
         super(MultipleChoiceMemoryNetworkSolver, self).__init__(**kwargs)
-        self.num_options = 4  # TODO(matt): we'll handle the more general case later
+        self.num_options = None
 
     @overrides
     def can_train(self) -> bool:
@@ -38,6 +39,20 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         has_train = self.train_file is not None and self.train_background is not None
         has_validation = self.validation_file is not None and self.validation_background is not None
         return has_train and has_validation
+
+    @overrides
+    def _get_max_lengths(self) -> Dict[str, int]:
+        return {
+                'word_sequence_length': self.max_sentence_length,
+                'background_sentences': self.max_knowledge_length,
+                'num_options': self.num_options,
+                }
+
+    @overrides
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        self.max_sentence_length = max_lengths['word_sequence_length']
+        self.max_knowledge_length = max_lengths['background_sentences']
+        self.num_options = max_lengths['num_options']
 
     @overrides
     def _get_question_shape(self):

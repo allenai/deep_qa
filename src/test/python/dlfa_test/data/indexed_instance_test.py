@@ -9,16 +9,16 @@ from dlfa.data.instance import IndexedInstance, IndexedBackgroundInstance, Index
 class TestIndexedInstance:
     def test_get_lengths_returns_length_of_word_indices(self):
         instance = IndexedInstance([1, 2, 3, 4], True)
-        assert instance.get_lengths() == [4]
+        assert instance.get_lengths() == {'word_sequence_length': 4}
 
     def test_pad_adds_zeros_on_left(self):
         instance = IndexedInstance([1, 2, 3, 4], True)
-        instance.pad([5])
+        instance.pad({'word_sequence_length': 5})
         assert instance.word_indices == [0, 1, 2, 3, 4]
 
     def test_pad_truncates_from_right(self):
         instance = IndexedInstance([1, 2, 3, 4], True)
-        instance.pad([3])
+        instance.pad({'word_sequence_length': 3})
         assert instance.word_indices == [2, 3, 4]
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
@@ -34,33 +34,33 @@ class TestIndexedInstance:
 class TestIndexedBackgroundInstance:
     def test_get_lengths_returns_max_of_background_and_word_indices(self):
         instance = IndexedBackgroundInstance([1, 2], [[2, 3, 4], [4, 5]], True)
-        assert instance.get_lengths()[0] == 3
+        assert instance.get_lengths()['word_sequence_length'] == 3
 
     def test_get_lengths_returns_correct_background_length(self):
         instance = IndexedBackgroundInstance([1, 2], [[2, 3, 4], [4, 5]], True)
-        assert instance.get_lengths() == [3, 2]
+        assert instance.get_lengths() == {'word_sequence_length': 3, 'background_sentences': 2}
 
     def test_pad_adds_zeros_on_left_to_background(self):
         instance = IndexedBackgroundInstance([1, 2], [[2, 3]], True)
-        instance.pad([3, 1])
+        instance.pad({'word_sequence_length': 3, 'background_sentences': 1})
         assert instance.word_indices == [0, 1, 2]
         assert instance.background_indices == [[0, 2, 3]]
 
     def test_pad_truncates_from_right_on_background(self):
         instance = IndexedBackgroundInstance([1, 2], [[2, 3]], True)
-        instance.pad([1, 1])
+        instance.pad({'word_sequence_length': 1, 'background_sentences': 1})
         assert instance.word_indices == [2]
         assert instance.background_indices == [[3]]
 
     def test_pad_adds_padded_background_at_end(self):
         instance = IndexedBackgroundInstance([1, 2], [[2]], True)
-        instance.pad([2, 2])
+        instance.pad({'word_sequence_length': 2, 'background_sentences': 2})
         assert instance.word_indices == [1, 2]
         assert instance.background_indices == [[0, 2], [0, 0]]
 
     def test_pad_truncates_background_from_left(self):
         instance = IndexedBackgroundInstance([1], [[2], [3]], True)
-        instance.pad([1, 1])
+        instance.pad({'word_sequence_length': 1, 'background_sentences': 1})
         assert instance.word_indices == [1]
         assert instance.background_indices == [[2]]
 
@@ -89,17 +89,31 @@ class TestIndexedQuestionInstance(TestCase):
                 2)
 
     def test_get_lengths_returns_max_of_options(self):
-        assert self.instance.get_lengths() == [3]
+        assert self.instance.get_lengths() == {'word_sequence_length': 3, 'num_options': 4}
 
     def test_pad_calls_pad_on_all_options(self):
-        self.instance.pad([3])
+        self.instance.pad({'word_sequence_length': 3, 'num_options': 4})
         assert self.instance.options[0].word_indices == [0, 0, 1]
         assert self.instance.options[1].word_indices == [2, 3, 4]
         assert self.instance.options[2].word_indices == [0, 5, 6]
         assert self.instance.options[3].word_indices == [0, 7, 8]
 
+    def test_pad_adds_empty_options_when_necessary(self):
+        self.instance.pad({'word_sequence_length': 2, 'num_options': 5})
+        assert self.instance.options[0].word_indices == [0, 1]
+        assert self.instance.options[1].word_indices == [3, 4]
+        assert self.instance.options[2].word_indices == [5, 6]
+        assert self.instance.options[3].word_indices == [7, 8]
+        assert self.instance.options[4].word_indices == [0, 0]
+        assert len(self.instance.options) == 5
+
+    def test_pad_removes_options_when_necessary(self):
+        self.instance.pad({'word_sequence_length': 1, 'num_options': 1})
+        assert self.instance.options[0].word_indices == [1]
+        assert len(self.instance.options) == 1
+
     def test_as_training_data_produces_correct_numpy_arrays_with_simple_instances(self):
-        self.instance.pad([3])
+        self.instance.pad({'word_sequence_length': 3, 'num_options': 4})
         inputs, label = self.instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 0, 1, 0]))
         assert numpy.all(inputs == numpy.asarray([[0, 0, 1], [2, 3, 4], [0, 5, 6], [0, 7, 8]]))
