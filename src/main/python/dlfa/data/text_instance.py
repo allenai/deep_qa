@@ -9,6 +9,7 @@ from .indexed_instance import IndexedTrueFalseInstance
 from .indexed_instance import IndexedBackgroundInstance
 from .indexed_instance import IndexedLogicalFormInstance
 from .indexed_instance import IndexedMultipleChoiceInstance
+from .indexed_instance import IndexedQuestionAnswerInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
@@ -46,7 +47,25 @@ class TextInstance(Instance):
         """
         raise NotImplementedError
 
+    @classmethod
+    def read_from_line(cls,
+                       line: str,
+                       default_label: bool=None,
+                       tokenizer: Tokenizer=tokenizers['default']()):
+        """
+        Reads an instance of this type from a line.  We throw a RuntimeError here instead of a
+        NotImplementedError, because it's not expected that all subclasses will implement this.
+        """
+        # pylint: disable=unused-argument
+        raise RuntimeError("%s instances can't be read from a line!" % str(cls))
+
+
+
 class TrueFalseInstance(TextInstance):
+    """
+    A TrueFalseInstance is a TextInstance that is a statement, where the statement is either true
+    or false.
+    """
     def __init__(self,
                  text: str,
                  label: bool,
@@ -121,8 +140,9 @@ class TrueFalseInstance(TextInstance):
 
 class LogicalFormInstance(TrueFalseInstance):
     """
-    This is an instance for use with TreeLSTMs.  Instead of a sequence of words, this Instance is a
-    tree-structured logical form, encoded as something like "for(depend_on(human, plant), oxygen)".
+    A LogicalFormInstance is a TrueFalseInstance where the statement is a logical statement.  We
+    use these instances with TreeLSTMs.  Statements are assumed to be encoded as something like
+    "for(depend_on(human, plant), oxygen)".
     """
     @overrides
     def words(self) -> List[str]:
@@ -215,9 +235,12 @@ class BackgroundInstance(TextInstance):
 class MultipleChoiceInstance(TextInstance):
     """
     A MultipleChoiceInstance is a grouping of other Instances, where exactly one of those Instances
-    must have label True.  When this is converted to training data, it will group all of those
-    option Instances into a single training instance, with a label that is an index to the answer
-    option that is correct for its label.
+    must have label True.  This means that this really needs to be backed by TrueFalseInstances,
+    though those could have already been wrapped in BackgroundInstances.
+
+    When this is converted to training data, it will group all of those option Instances into a
+    single training instance, with a label that is an index to the answer option that is correct
+    for its label.
     """
     def __init__(self, options: List[TextInstance]):
         self.options = options
@@ -238,3 +261,73 @@ class MultipleChoiceInstance(TextInstance):
     def to_indexed_instance(self, data_indexer: DataIndexer):
         indexed_options = [option.to_indexed_instance(data_indexer) for option in self.options]
         return IndexedMultipleChoiceInstance(indexed_options, self.label)
+
+
+class QuestionAnswerInstance(TextInstance):
+    """
+    A QuestionAnswerInstance has question text and a list of options, where one of those options is
+    the answer to the question.  The question and answers are separate data structures and used as
+    separate inputs to a model.  This differs from a MultipleChoiceInstance in that there is no
+    associated question text in the MultipleChoiceInstance, just a list of true/false statements,
+    one of which is true.
+    """
+    def __init__(self,
+                 question_text: str,
+                 answer_options: List[str],
+                 label: int,
+                 index: int=None,
+                 tokenizer: Tokenizer=tokenizers['default']()):
+        super(QuestionAnswerInstance, self).__init__(label, index, tokenizer)
+        self.question_text = question_text
+        self.answer_options = answer_options
+
+    @overrides
+    def words(self) -> List[str]:
+        words = []
+        words.extend(self._tokenize(self.question_text.lower()))
+        for option in self.answer_options:
+            words.extend(self._tokenize(option.lower()))
+        return words
+
+    @overrides
+    def to_indexed_instance(self, data_indexer: DataIndexer):
+        question_indices = [data_indexer.get_word_index(word) for word in self._tokenize(self.question_text)]
+        option_indices = []
+        for option in self.answer_options:
+            indices = [data_indexer.get_word_index(word) for word in self._tokenize(option)]
+            option_indices.append(indices)
+        return IndexedQuestionAnswerInstance(question_indices, option_indices, self.label, self.index)
+
+    @classmethod
+    @overrides
+    def read_from_line(cls,
+                       line: str,
+                       default_label: bool=None,
+                       tokenizer: Tokenizer=tokenizers['default']()):
+        """
+        Reads a QuestionAnswerInstance object from a line.  The format has two options:
+
+        (1) [question][tab][answer_options][tab][correct_answer]
+        (2) [instance index][tab][question][tab][answer_options][tab][correct_answer]
+
+        The `answer_options` column is assumed formatted as: [option]###[option]###[option]...
+        That is, we split on three hashes ("###").
+
+        default_label is ignored, but we keep the argument to match the interface.
+        """
+        fields = line.split("\t")
+
+        if len(fields) == 3:
+            question, answers, label_string = fields
+            index = None
+        elif len(fields) == 4:
+            if fields[0].isdecimal():
+                index_string, question, answers, label_string = fields
+                index = int(index_string)
+            else:
+                raise RuntimeError("Unrecognized line format: " + line)
+        else:
+            raise RuntimeError("Unrecognized line format: " + line)
+        answer_options = answers.split("###")
+        label = int(label_string)
+        return cls(question, answer_options, label, index, tokenizer)

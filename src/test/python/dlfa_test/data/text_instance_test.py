@@ -1,6 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 
-from dlfa.data.text_instance import TrueFalseInstance
+from typing import List
+
+from dlfa.data.data_indexer import DataIndexer
+from dlfa.data.text_instance import QuestionAnswerInstance, TrueFalseInstance
 
 class TestTrueFalseInstance:
     @staticmethod
@@ -83,3 +86,56 @@ class TestTrueFalseInstance:
         assert t.words() == ['this', 'is', "n't", 'a', 'sentence', '.']
         t = TrueFalseInstance("And, I have commas.", None)
         assert t.words() == ['and', ',', 'i', 'have', 'commas', '.']
+
+
+class TestQuestionAnswerInstance:
+    @staticmethod
+    def instance_to_line(question: str, answers: List[str], label: int, index=None):
+        line = ''
+        if index is not None:
+            line += str(index) + '\t'
+        line += question
+        line += '\t'
+        line += '###'.join(answers)
+        line += '\t'
+        line += str(label)
+        return line
+
+    def test_read_from_line_handles_three_column(self):
+        question = "what is the answer"
+        answers = ['a', 'b', 'c']
+        label = 1
+        line = self.instance_to_line(question, answers, label)
+        instance = QuestionAnswerInstance.read_from_line(line)
+        assert instance.question_text == question
+        assert instance.answer_options == answers
+        assert instance.label is label
+        assert instance.index is None
+
+    def test_read_from_line_handles_four_column(self):
+        question = "what is the answer"
+        answers = ['a', 'b', 'c']
+        label = 1
+        index = 23
+        line = self.instance_to_line(question, answers, label, index)
+        instance = QuestionAnswerInstance.read_from_line(line)
+        assert instance.question_text == question
+        assert instance.answer_options == answers
+        assert instance.label is label
+        assert instance.index is index
+
+    def test_words_includes_question_and_answers(self):
+        instance = QuestionAnswerInstance("a b c", ["d", "e f"], 1)
+        assert instance.words() == ['a', 'b', 'c', 'd', 'e', 'f']
+
+    def test_to_indexed_instance_converts_correctly(self):
+        instance = QuestionAnswerInstance("a b", ["d", "e f"], 1)
+        data_indexer = DataIndexer()
+        a_index = data_indexer.add_word_to_index("a")
+        d_index = data_indexer.add_word_to_index("d")
+        oov_index = data_indexer.get_word_index(data_indexer._oov_token)  # pylint: disable=protected-access
+        indexed_instance = instance.to_indexed_instance(data_indexer)
+        assert indexed_instance.question_indices == [a_index, oov_index]
+        assert len(indexed_instance.option_indices) == 2
+        assert indexed_instance.option_indices[0] == [d_index]
+        assert indexed_instance.option_indices[1] == [oov_index, oov_index]

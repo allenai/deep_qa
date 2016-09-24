@@ -86,6 +86,6 @@ class TestMemoryNetworkSolver(TestCase):
         solver.train()
 
     def test_train_does_not_crash_with_cnn_encoder(self):
-        args = {'encoder': 'cnn', 'cnn_ngram_filter_sizes': '1', 'cnn_num_filters': '5'}
+        args = {'encoder': 'cnn', 'cnn_ngram_filter_sizes': '1', 'cnn_num_filters': '1'}
         solver = self._get_solver(args)
         solver.train()
