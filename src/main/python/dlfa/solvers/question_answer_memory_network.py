@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import TimeDistributed
@@ -43,15 +43,20 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         return QuestionAnswerInstance
 
     @overrides
-    def _get_max_lengths(self) -> List[int]:
-        return [self.max_sentence_length, self.max_answer_length, self.num_options, self.max_knowledge_length]
+    def _get_max_lengths(self) -> Dict[str, int]:
+        return {
+                'word_sequence_length': self.max_sentence_length,
+                'answer_length': self.max_answer_length,
+                'num_options': self.num_options,
+                'background_sentences': self.max_knowledge_length,
+                }
 
     @overrides
-    def _set_max_lengths(self, max_lengths: List[int]):
-        self.max_sentence_length = max_lengths[0]
-        self.max_answer_length = max_lengths[1]
-        self.num_options = max_lengths[2]
-        self.max_knowledge_length = max_lengths[3]
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        self.max_sentence_length = max_lengths['word_sequence_length']
+        self.max_answer_length = max_lengths['answer_length']
+        self.num_options = max_lengths['num_options']
+        self.max_knowledge_length = max_lengths['background_sentences']
 
     @overrides
     def _get_entailment_output(self, combined_input):

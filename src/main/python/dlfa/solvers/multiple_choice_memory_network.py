@@ -4,6 +4,7 @@ from overrides import overrides
 from keras.layers import TimeDistributed
 
 from ..data.dataset import TextDataset
+from ..data.text_instance import TrueFalseInstance
 from .memory_network import MemoryNetworkSolver
 
 

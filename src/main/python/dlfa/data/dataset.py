@@ -120,7 +120,7 @@ class TextDataset(Dataset):
                         tokenizer: Tokenizer=tokenizers['default']()) -> 'TextDataset':
         instances = [instance_class.read_from_line(x, label, tokenizer) for x in lines]
         labels = [(x.label, x) for x in instances]
-        labels.sort(key=lambda x: x[0])
+        labels.sort(key=lambda x: str(x[0]))
         label_counts = [(label, len([x for x in group]))
                         for label, group in itertools.groupby(labels, lambda x: x[0])]
         logger.info("Finished reading dataset; label counts: %s", str(label_counts))
