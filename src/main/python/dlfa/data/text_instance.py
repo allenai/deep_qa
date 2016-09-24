@@ -266,7 +266,7 @@ class MultipleChoiceInstance(TextInstance):
 class QuestionAnswerInstance(TextInstance):
     """
     A QuestionAnswerInstance has question text and a list of options, where one of those options is
-    athe answer to the question.  The question and answers are separate data structures and used as
+    the answer to the question.  The question and answers are separate data structures and used as
     separate inputs to a model.  This differs from a MultipleChoiceInstance in that there is no
     associated question text in the MultipleChoiceInstance, just a list of true/false statements,
     one of which is true.
