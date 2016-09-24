@@ -49,6 +49,7 @@ class IndexedInstance(Instance):
         Returns a tuple of (inputs, label).  `inputs` might itself be a complex tuple, depending on
         the Instance type.
         """
+        raise NotImplementedError
 
 class IndexedTrueFalseInstance(IndexedInstance):
     def __init__(self, word_indices: List[int], label, index: int=None):
