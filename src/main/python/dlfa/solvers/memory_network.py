@@ -324,6 +324,11 @@ class MemoryNetworkSolver(NNSolver):
             current_memory = memory_updater(updater_input)
 
 
+        # TODO(matt): we now have subclasses that do answer selection, instead of entailment, and
+        # it's not very nice to shoehorn them into the same "entailment" model.  It would be nice
+        # to generalize this into some "final output" section, but I'm not sure how to do that
+        # cleanly.
+
         # Step 5: Finally, run the sentence encoding, the current memory, and the attended
         # background knowledge through an entailment model to get a final true/false score.
         entailment_input = merge([encoded_question, current_memory, attended_knowledge],
