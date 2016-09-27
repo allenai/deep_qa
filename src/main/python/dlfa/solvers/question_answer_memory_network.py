@@ -60,6 +60,8 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_entailment_output(self, combined_input):
+        # TODO(matt): allow this to have a separate embedding from the main embedding, which allows
+        # for a closer re-implementation of prior memory networks.
         answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
                 input_shape=(self.num_options, self.max_answer_length), name_prefix="answer")
         answer_encoder = TimeDistributed(self._get_new_encoder(), name="answer_encoder")
