@@ -16,7 +16,7 @@ from keras import backend as K
 from keras.layers import Dense, Layer, TimeDistributed, Lambda
 
 
-class BasicEntailmentModel:
+class TrueFalseEntailmentModel:
     """
     This entailment model assumes that we merge the three inputs in some way at the beginning into
     a single vector, then pass that vector through an MLP.  How we actually merge the three inputs
@@ -30,35 +30,112 @@ class BasicEntailmentModel:
         self.hidden_layer_width = hidden_layer_width
         self.hidden_layer_activation = hidden_layer_activation
 
-    def classify(self, combined_input, multiple_choice: bool=False):
+    def classify(self, combined_input):
         """
-        Here we take the combined entailment input and decide whether it is true or false (or, in
-        the case of multiple choice input, we do a softmax over the final entailment decisions for
-        each choice).
-
-        The combined input has shape (batch_size, combined_input_dim), or (batch_size, num_options,
-        combined_input_dim) for multiple choice questions.  We do not know what combined_input_dim
-        is, as it depends on the combiner.
+        Here we take the combined entailment input and decide whether it is true or false.  The
+        combined input has shape (batch_size, combined_input_dim).  We do not know what
+        combined_input_dim is, as it depends on the combiner.
         """
-        # pylint: disable=redefined-variable-type
         hidden_input = combined_input
         for i in range(self.num_hidden_layers):
             layer = Dense(output_dim=self.hidden_layer_width,
                           activation=self.hidden_layer_activation,
                           name='entailment_hidden_layer_%d' % i)
-            if multiple_choice:
-                layer = TimeDistributed(layer)
             hidden_input = layer(hidden_input)
-        if multiple_choice:
-            # (batch_size, num_options, 1)
-            score_layer = Dense(output_dim=1, activation='sigmoid', name='entailment_score')
-            scores = TimeDistributed(score_layer)(hidden_input)
-            softmax_layer = Lambda(lambda x: K.softmax(K.squeeze(scores, axis=2)),
-                                   output_shape=lambda input_shape: (input_shape[0], input_shape[1]))
-            softmax_output = softmax_layer(scores)
-        else:
-            softmax_layer = Dense(output_dim=2, activation='softmax', name='entailment_softmax')
-            softmax_output = softmax_layer(hidden_input)
+        softmax_layer = Dense(output_dim=2, activation='softmax', name='entailment_softmax')
+        softmax_output = softmax_layer(hidden_input)
+        return softmax_output
+
+
+class QuestionAnswerEntailmentModel:
+    """
+    In addition to the three combined inputs mentioned at the top of this file, this entailment
+    model also takes a list of answer encodings.  Instead of going to a final softmax for the
+    combined input, as the TrueFalseEntailmentModel does, this model projects the combined input
+    into the same dimension as the answer encoding, does a dot product between the combined input
+    encoding and the answer encoding, and does a final softmax over those similar scores.
+    """
+    def __init__(self,
+                 num_hidden_layers: int,
+                 hidden_layer_width: int,
+                 hidden_layer_activation: str):
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_layer_width = hidden_layer_width
+        self.hidden_layer_activation = hidden_layer_activation
+
+    def classify(self, combined_input, encoded_answers, answer_dim: int):
+        """
+        This method takes the combined_input (of shape (batch_size, combined_input_dim)), passes it
+        through some layers, then matches it to one of the encoded answers (of shape (batch_size,
+        num_options, answer_dim)).  The final score is a softmax over a dot product similarity
+        between the final combined input and the answer options.
+        """
+        hidden_input = combined_input
+        for i in range(self.num_hidden_layers):
+            layer = Dense(output_dim=self.hidden_layer_width,
+                          activation=self.hidden_layer_activation,
+                          name='entailment_hidden_layer_%d' % i)
+            hidden_input = layer(hidden_input)
+        projection_layer = Dense(output_dim=answer_dim, activation='linear', name='entailment_projection')
+        projected_input = projection_layer(hidden_input)
+
+        def tile_projection(inputs):
+            # We need to tile the projected_input so that we can easily do a dot product with the
+            # encoded_answers.  This follows the logic in knowledge_selectors.tile_sentence_encoding.
+            answers, projected = inputs
+            # Shape: (num_options, batch_size, answer_dim)
+            ones = K.permute_dimensions(K.ones_like(answers), [1, 0, 2])
+            # Shape: (batch_size, num_options, answer_dim)
+            return K.permute_dimensions(ones * projected, [1, 0, 2])
+
+        tile_layer = Lambda(tile_projection,
+                            output_shape=lambda input_shapes: input_shapes[0],
+                            name='tile_entailment_input')
+        tiled_projected_input = tile_layer([encoded_answers, projected_input])
+
+        softmax_similarity = Lambda(lambda x: K.softmax(K.sum(x[0] * x[1], axis=2)),
+                                    output_shape=lambda input_shapes: (input_shapes[0][0], input_shapes[0][1]),
+                                    name='answer_similarity_softmax')
+        # Shape: (batch_size, num_options)
+        softmax_output = softmax_similarity([tiled_projected_input, encoded_answers])
+        return softmax_output
+
+
+class MultipleChoiceEntailmentModel:
+    """
+    This entailment model assumes that we merge the three inputs in some way at the beginning into
+    a single vector, then pass that vector through an MLP, once for each of the multiple choices,
+    then have a final softmax over answer options.
+    """
+    def __init__(self,
+                 num_hidden_layers: int,
+                 hidden_layer_width: int,
+                 hidden_layer_activation: str):
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_layer_width = hidden_layer_width
+        self.hidden_layer_activation = hidden_layer_activation
+
+    def classify(self, combined_input):
+        """
+        Here we take the combined entailment input for each option, decide whether it is true or
+        false, then do a final softmax over the true/false scores for each option.
+
+        The combined input has shape (batch_size, num_options, combined_input_dim).
+        """
+        # pylint: disable=redefined-variable-type
+        hidden_input = combined_input
+        for i in range(self.num_hidden_layers):
+            layer = TimeDistributed(Dense(output_dim=self.hidden_layer_width,
+                                          activation=self.hidden_layer_activation),
+                                    name='entailment_hidden_layer_%d' % i)
+            hidden_input = layer(hidden_input)
+        # (batch_size, num_options, 1)
+        score_layer = TimeDistributed(Dense(output_dim=1, activation='sigmoid'), name='entailment_score')
+        scores = score_layer(hidden_input)
+        softmax_layer = Lambda(lambda x: K.softmax(K.squeeze(x, axis=2)),
+                               output_shape=lambda input_shape: (input_shape[0], input_shape[1]),
+                               name='answer_option_softmax')
+        softmax_output = softmax_layer(scores)
         return softmax_output
 
 
@@ -111,7 +188,9 @@ class HeuristicMatchingCombiner(Layer):
 
 
 entailment_models = {  # pylint: disable=invalid-name
-        'basic_mlp': BasicEntailmentModel,
+        'true_false_mlp': TrueFalseEntailmentModel,
+        'multiple_choice_mlp': MultipleChoiceEntailmentModel,
+        'question_answer_mlp': QuestionAnswerEntailmentModel,
         }
 
 entailment_input_combiners = {  # pylint: disable=invalid-name

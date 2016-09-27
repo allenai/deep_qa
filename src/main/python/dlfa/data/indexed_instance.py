@@ -227,10 +227,21 @@ class IndexedBackgroundInstance(IndexedInstance):
 
     @overrides
     def as_training_data(self):
+        """
+        This returns a complex output.  In the simplest case, the contained instance is just a
+        TrueFalseInstance, with a single sentence input.  In this case, we'll return a tuple of
+        (sentence_array, background_array) as the inputs (and, as always, the label from the
+        contained instance).
+
+        If the contained instance itself has multiple inputs it returns, we need the
+        background_array to be second in the list (because that makes the implementation in the
+        memory network solver much easier).  That means we need to change the order of things
+        around a bit.
+        """
         instance_inputs, label = self.indexed_instance.as_training_data()
         background_array = numpy.asarray(self.background_indices, dtype='int32')
         if isinstance(instance_inputs, tuple):
-            final_inputs = instance_inputs + (background_array,)
+            final_inputs = (instance_inputs[0],) + (background_array,) + instance_inputs[1:]
         else:
             final_inputs = (instance_inputs, background_array)
         return final_inputs, label
