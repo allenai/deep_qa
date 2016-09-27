@@ -65,9 +65,10 @@ class QuestionAnswerEntailmentModel:
 
     def classify(self, combined_input, encoded_answers, answer_dim: int):
         """
-        Here we take the combined entailment input and decide whether it is true or false.  The
-        combined input has shape (batch_size, combined_input_dim).  We do not know what
-        combined_input_dim is, as it depends on the combiner.
+        This method takes the combined_input (of shape (batch_size, combined_input_dim)), passes it
+        through some layers, then matches it to one of the encoded answers (of shape (batch_size,
+        num_options, answer_dim)).  The final score is a softmax over a dot product similarity
+        between the final combined input and the answer options.
         """
         hidden_input = combined_input
         for i in range(self.num_hidden_layers):
