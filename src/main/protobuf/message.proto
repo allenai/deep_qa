@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option java_package = "org.allenai.dlfa";
+
+package dlfa;
+
+// The service definition
+service SolverService {
+  rpc AnswerQuestion (QuestionRequest) returns (QuestionResponse) {}
+}
+
+message Instance {
+  repeated string fields = 1;
+}
+
+message QuestionRequest {
+  Instance question = 1;
+}
+
+message QuestionResponse {
+  repeated double scores = 1;
+}

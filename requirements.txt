@@ -19,6 +19,10 @@ theano
 # https://developer.nvidia.com/cuda-downloads
 # https://developer.nvidia.com/cudnn
 
+# These are for running this as an Aristo solver using gRPC.
+grpcio
+grpcio-tools
+pyhocon
 
 #### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
 
