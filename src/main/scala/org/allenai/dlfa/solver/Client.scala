@@ -1,7 +1,12 @@
 package org.allenai.dlfa.solver
 
+import org.allenai.dlfa.data.
 import org.allenai.dlfa.message.SolverServiceGrpc.SolverServiceBlockingStub
-import org.allenai.dlfa.message.{ Instance, SolverServiceGrpc, QuestionRequest, QuestionResponse }
+import org.allenai.dlfa.message.{Instance => MessageInstance}
+import org.allenai.dlfa.message.InstanceType
+import org.allenai.dlfa.message.SolverServiceGrpc
+import org.allenai.dlfa.message.QuestionRequest
+import org.allenai.dlfa.message.QuestionResponse
 
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
@@ -37,8 +42,14 @@ class Client(
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
   }
 
-  def compute(fields: Array[String]) = {
-    val request: QuestionRequest = QuestionRequest(Some(Instance(fields)))
+  def compute(
+    instanceType: InstanceType,
+    questionText: String,
+    answerOptions: Seq[String],
+    background: Seq[String]
+  ) = {
+    val instance = MessageInstance(instanceType, questionText, answerOptions, background)
+    val request: QuestionRequest = QuestionRequest(Some(instance))
     blockingStub.answerQuestion(request)
   }
 }
