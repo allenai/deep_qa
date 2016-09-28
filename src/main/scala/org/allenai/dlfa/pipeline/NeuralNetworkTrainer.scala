@@ -94,7 +94,7 @@ abstract class NeuralNetworkTrainer(
   val negativeTrainingFile = negativeDataProducer.outputFile
   val negativeDataInput = (negativeTrainingFile, Some(negativeDataProducer))
 
-  val questionInterpreter = new QuestionInterpreter(params \ "validation questions", fileUtil)
+  val questionInterpreter = new QuestionInterpreterStep(params \ "validation questions", fileUtil)
   val validationQuestionsFile = questionInterpreter.outputFile
   val validationInput = (validationQuestionsFile, Some(questionInterpreter))
 

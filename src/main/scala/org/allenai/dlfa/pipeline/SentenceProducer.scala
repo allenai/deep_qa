@@ -58,7 +58,7 @@ object SentenceProducer {
       case JString("sentence selector") => new SentenceSelector(params, fileUtil)
       case JString("sentence corruptor") => new SentenceCorruptor(params, fileUtil)
       case JString("kb sentence corruptor") => new CorruptedSentenceSelector(params, fileUtil)
-      case JString("question interpreter") => new QuestionInterpreter(params, fileUtil)
+      case JString("question interpreter") => new QuestionInterpreterStep(params, fileUtil)
       case JString("manually provided") => new ManuallyProvidedSentences(params, fileUtil)
       case jval => throw new IllegalStateException(s"unrecognized SentenceProducer parameters: $jval")
     }
