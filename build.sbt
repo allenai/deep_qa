@@ -31,8 +31,8 @@ version in PB.protobufConfig := "3.0.0-beta-2"
 libraryDependencies ++= Seq(
   //"org.allenai.ari" %% "ari-controller" % "0.0.4-SNAPSHOT",
   "org.apache.commons" % "commons-lang3" % "3.0",
-  "org.apache.spark" %% "spark-core" % "1.6.0",
-  "org.elasticsearch" % "elasticsearch" % "2.3.4",
+  "org.apache.spark" %% "spark-core" % "1.6.0" exclude("io.netty", "netty"),
+  "org.elasticsearch" % "elasticsearch" % "2.3.4" exclude("io.netty", "netty"),
   "org.json4s" %% "json4s-native" % "3.2.11",
   "com.jayantkrish.jklol" % "jklol" % "1.1",
   "edu.cmu.ml.rtw" %%  "pra" % "3.4",
@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" %  "logback-classic" % "1.1.7",  // backend for scala-logging
 
   // These are for running this as a solver with gRPC
-  "io.grpc" % "grpc-netty" % "0.14.0",
+  "io.grpc" % "grpc-netty" % "1.0.1",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
   "com.typesafe" % "config" % "1.2.1"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
