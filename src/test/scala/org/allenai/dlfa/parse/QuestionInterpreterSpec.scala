@@ -7,6 +7,21 @@ import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
+class AppendAnswerInterpreterSpec extends FlatSpecLike with Matchers {
+  val interpreter = new AppendAnswerInterpreter(JNothing)
+
+  "processQuestion" should "append each answer to the question" in {
+    val questionLine = "B\tSentence 1. Sentence 2 ___. (A) answer 1 (B) answer 2 (C) answer 3 (D) answer 4"
+    val expected = Seq(
+      "Sentence 1. Sentence 2 ___. ||| answer 1\t0",
+      "Sentence 1. Sentence 2 ___. ||| answer 2\t1",
+      "Sentence 1. Sentence 2 ___. ||| answer 3\t0",
+      "Sentence 1. Sentence 2 ___. ||| answer 4\t0"
+    )
+    interpreter.processQuestion(questionLine) should be(expected)
+  }
+}
+
 class FillInTheBlankInterpreterSpec extends FlatSpecLike with Matchers {
   val params: JValue = ("wh-movement" -> "matt's")
   val interpreter = new FillInTheBlankInterpreter(params)

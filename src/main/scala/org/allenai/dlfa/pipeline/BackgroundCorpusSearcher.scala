@@ -35,9 +35,9 @@ trait BackgroundCorpusSearcher {
   def params: JValue
   def fileUtil: FileUtil
 
-  val baseParams = Seq("searcher type", "sentences", "num passages per sentence")
+  val baseParams = Seq("searcher type", "sentences", "num passages per query")
 
-  val numPassagesPerSentence = JsonHelper.extractWithDefault(params, "num passages per sentence", 10)
+  val numPassagesPerQuery = JsonHelper.extractWithDefault(params, "num passages per query", 10)
 
   lazy val sentenceProducer = {
     val producer = SentenceProducer.create(params \ "sentences", fileUtil)
@@ -89,6 +89,7 @@ class LuceneBackgroundCorpusSearcher(
   override val name = "Lucene Background Knowledge Searcher"
 
   val validParams = baseParams ++ Seq(
+    "sentence format",
     "max sentence length",
     "min sentence length",
     "hit multiplier",
@@ -101,6 +102,13 @@ class LuceneBackgroundCorpusSearcher(
   )
   JsonHelper.ensureNoExtras(params, name, validParams)
 
+  val formatChoices = Seq("plain sentence", "question and answer")
+  val sentenceFormat = JsonHelper.extractChoiceWithDefault(
+    params,
+    "sentence format",
+    formatChoices,
+    formatChoices(0)
+  )
   val maxSentenceLength = JsonHelper.extractWithDefault(params, "max sentence length", 100)
   val minSentenceLength = JsonHelper.extractWithDefault(params, "min sentence length", 3)
 
@@ -138,40 +146,49 @@ class LuceneBackgroundCorpusSearcher(
     val lines = fileUtil.readLinesFromFile(sentencesFile)
     val indexedSentences = lines.map(line => {
       val fields = line.split("\t")
-      (fields(0).toInt, fields(1))
+      sentenceFormat match {
+        case "plain sentence" => (fields(0).toInt, Seq(fields(1)))
+        case "question and answer" => {
+          val answers = fields(2).split("###")
+          val queries = answers.map(fields(1) + " " + _).toSeq
+          (fields(0).toInt, Seq(fields(1)) ++ queries)
+        }
+      }
     })
     val backgroundPassages = indexedSentences.par.map(indexedSentence => {
-      val (index, sentence) = indexedSentence
-      val response = esClient.prepareSearch(esIndexName)
-        .setTypes("sentence")
-        .setQuery(QueryBuilders.matchQuery("text", sentence))
-        .setFrom(0).setSize(numPassagesPerSentence * hitMultiplier).setExplain(true)
-        .execute()
-        .actionGet()
-      val passages = response.getHits().getHits().map(hit => {
-        hit.sourceAsMap().get("text").asInstanceOf[String]
-      })
-      val keptPassages = consolidateHits(sentence, passages, numPassagesPerSentence)
+      val (index, queries) = indexedSentence
+      val keptPassages = queries.flatMap(query => {
+        val response = esClient.prepareSearch(esIndexName)
+          .setTypes("sentence")
+          .setQuery(QueryBuilders.matchQuery("text", query))
+          .setFrom(0).setSize(numPassagesPerQuery * hitMultiplier).setExplain(true)
+          .execute()
+          .actionGet()
+        val passages = response.getHits().getHits().map(hit => {
+          hit.sourceAsMap().get("text").asInstanceOf[String]
+        })
+        consolidateHits(query, passages, numPassagesPerQuery)
+      }).toSet.toSeq
       (index, keptPassages)
     }).seq
     outputBackground(backgroundPassages)
   }
 
   def consolidateHits(query: String, hits: Seq[String], maxToKeep: Int): Seq[String] = {
-    val kept = new mutable.ArrayBuffer[String]
+    val kept = new mutable.HashSet[String]
     var i = 0
     while (kept.size < maxToKeep && i < hits.size) {
       // Unicode character 0085 is a "next line" character that isn't caught by \s for some reason.
       val hit = hits(i).replaceAll("\\s+", " ").replace("\u0085", " ")
-      if (shouldKeep(query, hit, kept)) {
+      if (shouldKeep(query, hit, kept.toSet)) {
         kept += hit
       }
       i += 1
     }
-    kept
+    kept.toSeq
   }
 
-  private def shouldKeep(query: String, hit: String, keptSoFar: Seq[String]): Boolean = {
+  private def shouldKeep(query: String, hit: String, keptSoFar: Set[String]): Boolean = {
     if (removeQuery && hit == query) return false
     if (removeQueryNearDuplicates) {
       val queryWords = query.split(" ").map(_.toLowerCase).toSet

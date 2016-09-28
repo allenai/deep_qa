@@ -103,10 +103,7 @@ class QuestionAndAnswerInterpreter extends QuestionInterpreter {
  */
 abstract class QuestionToStatementInterpreter(params: JValue) extends QuestionInterpreter {
 
-  val baseParams = Seq("type", "last sentence only")
-
-  val lastSentenceOnly = JsonHelper.extractWithDefault(params, "last sentence only", true)
-  val whMover = WhMover.create(params \ "wh-movement")
+  val baseParams = Seq("type")
 
   override def interpretQuestion(question: ScienceQuestion): Seq[String] = {
     val filledOptions = fillInAnswerOptions(question)
@@ -123,8 +120,11 @@ abstract class QuestionToStatementInterpreter(params: JValue) extends QuestionIn
 class FillInTheBlankInterpreter(params: JValue) extends QuestionToStatementInterpreter(params) {
 
   val name = "Fill-in-the-blank Interpreter"
-  val validParams = baseParams ++ Seq("wh-movement")
+  val validParams = baseParams ++ Seq("wh-movement", "last sentence only")
   JsonHelper.ensureNoExtras(params, name, validParams)
+
+  val lastSentenceOnly = JsonHelper.extractWithDefault(params, "last sentence only", true)
+  val whMover = WhMover.create(params \ "wh-movement")
 
   /**
    * Takes a question, finds the place where the answer option goes, and fills in that place with
@@ -177,12 +177,7 @@ class AppendAnswerInterpreter(params: JValue) extends QuestionToStatementInterpr
   override def fillInAnswerOptions(question: ScienceQuestion): Option[Seq[(String, Boolean)]] = {
     val lastSentence = question.sentences.last
     Some(question.answers.map(a => {
-      val questionAndAnswer = lastSentence + answerSeparator + a
-      val answerSentence = if (lastSentenceOnly) {
-        questionAndAnswer
-      } else {
-        question.sentences.dropRight(1).mkString(" ") + " " + questionAndAnswer
-      }
+      val answerSentence = question.sentences.mkString(" ") + answerSeparator + a.text
       (answerSentence, a.isCorrect)
     }))
   }

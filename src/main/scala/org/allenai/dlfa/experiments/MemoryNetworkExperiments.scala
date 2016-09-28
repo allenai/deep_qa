@@ -13,7 +13,7 @@ object MemoryNetworkExperiments {
   // These parameters define where the elastic search index is that we'll get background data from,
   // and how many results to request from the index per query.
   val baseElasticSearchParams: JValue =
-    ("num passages per sentence" -> 10) ~
+    ("num passages per query" -> 3) ~
     ("elastic search index url" -> "aristo-es1.dev.ai2") ~
     ("elastic search index port" -> 9300) ~
     ("elastic search cluster name" -> "aristo-es") ~
@@ -102,16 +102,16 @@ object MemoryNetworkExperiments {
     ("sentence producer type" -> "question interpreter") ~
     ("create sentence indices" -> true) ~
     ("question file" -> "/home/mattg/data/questions/omnibus_train_raw.tsv") ~
-    ("output file" -> "data/science/omnibus_questions/processed_questions.tsv") ~
-    ("last sentence only" -> false) ~
-    ("wh-movement" -> "matt's")
+    ("output file" -> "data/science/omnibus_questions/processed_questions_and_answers.tsv") ~
+    ("interpreter" -> ("type" -> "question and answer"))
 
   //////////////////////////////////////////////////////////
   // Step 5: Get background passages for the validation data
   //////////////////////////////////////////////////////////
 
   val validationBackgroundParams: JValue = baseElasticSearchParams merge
-    (("sentences" -> validationQuestionParams): JValue)
+    ("sentences" -> validationQuestionParams) ~
+    ("sentence format" -> "question and answer")
 
   ////////////////////////////////////////////////////////////////
   // Step 6: Train a model
@@ -173,7 +173,7 @@ object MemoryNetworkExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    new LuceneBackgroundCorpusSearcher(generatedQuestionBackgroundParams, fileUtil).runPipeline()
+    new LuceneBackgroundCorpusSearcher(validationBackgroundParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()
