@@ -99,13 +99,14 @@ class IndexedTrueFalseInstance(IndexedInstance):
     @overrides
     def as_training_data(self):
         word_array = numpy.asarray(self.word_indices, dtype='int32')
-        label = numpy.zeros((2))
         if self.label is True:
+            label = numpy.zeros((2))
             label[1] = 1
         elif self.label is False:
+            label = numpy.zeros((2))
             label[0] = 1
         else:
-            raise RuntimeError("Cannot make training data out of instances without labels!")
+            label = None
         return word_array, label
 
 
@@ -302,8 +303,11 @@ class IndexedMultipleChoiceInstance(IndexedInstance):
             inputs.append(option_input)
         if unzip_inputs:
             inputs = tuple(zip(*inputs))  # pylint: disable=redefined-variable-type
-        label = numpy.zeros(len(self.options))
-        label[self.label] = 1
+        if self.label is None:
+            label = None
+        else:
+            label = numpy.zeros(len(self.options))
+            label[self.label] = 1
         return inputs, label
 
 
@@ -361,8 +365,11 @@ class IndexedQuestionAnswerInstance(IndexedInstance):
     def as_training_data(self):
         question_array = numpy.asarray(self.question_indices, dtype='int32')
         option_array = numpy.asarray(self.option_indices, dtype='int32')
-        label = numpy.zeros((len(self.option_indices)))
-        label[self.label] = 1
+        if self.label is None:
+            label = None
+        else:
+            label = numpy.zeros((len(self.option_indices)))
+            label[self.label] = 1
         return (question_array, option_array), label
 
 

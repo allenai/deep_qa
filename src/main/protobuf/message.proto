@@ -9,8 +9,29 @@ service SolverService {
   rpc AnswerQuestion (QuestionRequest) returns (QuestionResponse) {}
 }
 
+// It would be nice if we could match the Instance hierarchy seen in the python and scala code, but
+// that didn't really look feasible to do cleanly in a protobuf.  So, we'll just have this enum,
+// and a few general fields in Instance.
+enum InstanceType {
+  UNDEFINED = 0;
+  TRUE_FALSE = 1;
+  MULTIPLE_TRUE_FALSE = 2;
+  QUESTION_ANSWER = 3;
+}
+
 message Instance {
-  repeated string fields = 1;
+  InstanceType type = 1;
+
+  // For TRUE_FALSE and QUESTION_ANSWER instance types, this holds the question text (combined with
+  // the answer text, for TRUE_FALSE).  For MULTIPLE_TRUE_FALSE instance types, this will be empty.
+  string question = 2;
+
+  // Empty for TRUE_FALSE instances, holds answer options for MULTIPLE_TRUE_FALSE and
+  // QUESTION_ANSWER instances (in the MTF case, this is combined with the question text).
+  repeated string answer_options = 3;
+
+  // Any of the instance types could also have associated background sentences.  This stores that.
+  repeated string background = 4;
 }
 
 message QuestionRequest {
@@ -18,5 +39,8 @@ message QuestionRequest {
 }
 
 message QuestionResponse {
+  // This returns one double for each answer option, in the same order in which the answer options
+  // were given.  If there were no answer options (e.g., for TRUE_FALSE instances), this will be a
+  // single double, giving the score of "true".
   repeated double scores = 1;
 }

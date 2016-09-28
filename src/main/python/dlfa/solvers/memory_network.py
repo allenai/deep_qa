@@ -7,7 +7,7 @@ from keras.models import Model
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from ..data.text_instance import TrueFalseInstance
-from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector, ParameterizedKnowledgeSelector
+from ..layers.knowledge_selectors import selectors
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from .nn_solver import NNSolver
@@ -161,8 +161,12 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(MemoryNetworkSolver, cls)._get_custom_objects()
-        custom_objects['DotProductKnowledgeSelector'] = DotProductKnowledgeSelector
-        custom_objects['ParameterizedKnowledgeSelector'] = ParameterizedKnowledgeSelector
+        for value in updaters.values():
+            custom_objects[value.__name__] = value
+        for value in selectors.values():
+            custom_objects[value.__name__] = value
+        for value in entailment_input_combiners.values():
+            custom_objects[value.__name__] = value
         return custom_objects
 
     @overrides

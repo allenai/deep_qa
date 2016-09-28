@@ -10,7 +10,7 @@ from keras.regularizers import l1l2
 from keras.models import Model, model_from_json
 
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
-from ..data.text_instance import TrueFalseInstance
+from ..data.text_instance import TrueFalseInstance, TextInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizer import tokenizers
 from ..data.data_indexer import DataIndexer
@@ -390,6 +390,12 @@ class NNSolver:
             if layer.name == "embedding":
                 logger.info("  Found embedding layer")
                 self.embedding_layer = layer
+            elif layer.name == "sentence_embedding":
+                logger.info("  Found wrapped embedding layer")
+                if self.embedding_layer is None:
+                    self.embedding_layer = layer.layer
+                else:
+                    logger.warning("  FOUND DUPLICATE EMBEDDING LAYER!  NOT SURE WHAT TO DO!")
             elif layer.name == "embedding_projection":
                 logger.info("  Found projection layer")
                 self.projection_layer = layer
@@ -414,6 +420,12 @@ class NNSolver:
         instance_input, _ = indexed_instance.as_training_data()
         encoded_instance = self._sentence_encoder_model.predict(numpy.asarray([instance_input]))
         return encoded_instance[0]
+
+    def score_instance(self, instance: TextInstance):
+        indexed_instance = instance.to_indexed_instance(self.data_indexer)
+        indexed_instance.pad(self._get_max_lengths())
+        inputs, _ = indexed_instance.as_training_data()
+        return self.score(inputs)
 
     def score(self, test_input):
         return self.model.predict(test_input)
@@ -718,4 +730,8 @@ class NNSolver:
 
     @classmethod
     def _get_custom_objects(cls):
-        return {}
+        custom_objects = {}
+        for value in encoders.values():
+            if value.__name__ not in ['LSTM']:
+                custom_objects[value.__name__] = value
+        return custom_objects

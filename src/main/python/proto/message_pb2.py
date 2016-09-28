@@ -3,6 +3,7 @@
 
 import sys
 _b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
+from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
@@ -19,10 +20,45 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='message.proto',
   package='dlfa',
   syntax='proto3',
-  serialized_pb=_b('\n\rmessage.proto\x12\x04\x64lfa\"\x1a\n\x08Instance\x12\x0e\n\x06\x66ields\x18\x01 \x03(\t\"3\n\x0fQuestionRequest\x12 \n\x08question\x18\x01 \x01(\x0b\x32\x0e.dlfa.Instance\"\"\n\x10QuestionResponse\x12\x0e\n\x06scores\x18\x01 \x03(\x01\x32R\n\rSolverService\x12\x41\n\x0e\x41nswerQuestion\x12\x15.dlfa.QuestionRequest\x1a\x16.dlfa.QuestionResponse\"\x00\x42\x12\n\x10org.allenai.dlfab\x06proto3')
+  serialized_pb=_b('\n\rmessage.proto\x12\x04\x64lfa\"j\n\x08Instance\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.dlfa.InstanceType\x12\x10\n\x08question\x18\x02 \x01(\t\x12\x16\n\x0e\x61nswer_options\x18\x03 \x03(\t\x12\x12\n\nbackground\x18\x04 \x03(\t\"3\n\x0fQuestionRequest\x12 \n\x08question\x18\x01 \x01(\x0b\x32\x0e.dlfa.Instance\"\"\n\x10QuestionResponse\x12\x0e\n\x06scores\x18\x01 \x03(\x01*[\n\x0cInstanceType\x12\r\n\tUNDEFINED\x10\x00\x12\x0e\n\nTRUE_FALSE\x10\x01\x12\x17\n\x13MULTIPLE_TRUE_FALSE\x10\x02\x12\x13\n\x0fQUESTION_ANSWER\x10\x03\x32R\n\rSolverService\x12\x41\n\x0e\x41nswerQuestion\x12\x15.dlfa.QuestionRequest\x1a\x16.dlfa.QuestionResponse\"\x00\x42\x12\n\x10org.allenai.dlfab\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
+_INSTANCETYPE = _descriptor.EnumDescriptor(
+  name='InstanceType',
+  full_name='dlfa.InstanceType',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='UNDEFINED', index=0, number=0,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='TRUE_FALSE', index=1, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='MULTIPLE_TRUE_FALSE', index=2, number=2,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='QUESTION_ANSWER', index=3, number=3,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=220,
+  serialized_end=311,
+)
+_sym_db.RegisterEnumDescriptor(_INSTANCETYPE)
+
+InstanceType = enum_type_wrapper.EnumTypeWrapper(_INSTANCETYPE)
+UNDEFINED = 0
+TRUE_FALSE = 1
+MULTIPLE_TRUE_FALSE = 2
+QUESTION_ANSWER = 3
 
 
 
@@ -34,8 +70,29 @@ _INSTANCE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='fields', full_name='dlfa.Instance.fields', index=0,
-      number=1, type=9, cpp_type=9, label=3,
+      name='type', full_name='dlfa.Instance.type', index=0,
+      number=1, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='question', full_name='dlfa.Instance.question', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='answer_options', full_name='dlfa.Instance.answer_options', index=2,
+      number=3, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='background', full_name='dlfa.Instance.background', index=3,
+      number=4, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -53,7 +110,7 @@ _INSTANCE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=23,
-  serialized_end=49,
+  serialized_end=129,
 )
 
 
@@ -83,8 +140,8 @@ _QUESTIONREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=51,
-  serialized_end=102,
+  serialized_start=131,
+  serialized_end=182,
 )
 
 
@@ -114,14 +171,16 @@ _QUESTIONRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=104,
-  serialized_end=138,
+  serialized_start=184,
+  serialized_end=218,
 )
 
+_INSTANCE.fields_by_name['type'].enum_type = _INSTANCETYPE
 _QUESTIONREQUEST.fields_by_name['question'].message_type = _INSTANCE
 DESCRIPTOR.message_types_by_name['Instance'] = _INSTANCE
 DESCRIPTOR.message_types_by_name['QuestionRequest'] = _QUESTIONREQUEST
 DESCRIPTOR.message_types_by_name['QuestionResponse'] = _QUESTIONRESPONSE
+DESCRIPTOR.enum_types_by_name['InstanceType'] = _INSTANCETYPE
 
 Instance = _reflection.GeneratedProtocolMessageType('Instance', (_message.Message,), dict(
   DESCRIPTOR = _INSTANCE,

@@ -192,8 +192,8 @@ class MemoryOnlyCombiner(Layer):
     """
     This "combiner" just selects the current memory and returns it.
     """
-    def __init__(self, encoding_dim, name="entailment_combiner"):
-        super(MemoryOnlyCombiner, self).__init__(name=name)
+    def __init__(self, encoding_dim, name="entailment_combiner", **kwargs):
+        super(MemoryOnlyCombiner, self).__init__(name=name, **kwargs)
         self.encoding_dim = encoding_dim
 
     def call(self, x, mask=None):
@@ -203,14 +203,20 @@ class MemoryOnlyCombiner(Layer):
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], self.encoding_dim)
 
+    def get_config(self):
+        base_config = super(MemoryOnlyCombiner, self).get_config()
+        config = {'encoding_dim': self.encoding_dim}
+        config.update(base_config)
+        return config
+
 
 class HeuristicMatchingCombiner(Layer):
     """
     This class is an implementation of the heuristic matching algorithm proposed in the following paper:
     "Natural Language Inference by Tree-Based Convolution and Heuristic Matching", Mou et al, ACL 2016.
     """
-    def __init__(self, encoding_dim, name="entailment_combiner"):
-        super(HeuristicMatchingCombiner, self).__init__(name=name)
+    def __init__(self, encoding_dim, name="entailment_combiner", **kwargs):
+        super(HeuristicMatchingCombiner, self).__init__(name=name, **kwargs)
         self.encoding_dim = encoding_dim
 
     def call(self, x, mask=None):
@@ -227,6 +233,12 @@ class HeuristicMatchingCombiner(Layer):
         # current memory, (3) the elementwise product of these two, and (4) their difference.  Each
         # of these has dimension `self.encoding_dim`.
         return (input_shape[0], self.encoding_dim * 4)
+
+    def get_config(self):
+        base_config = super(HeuristicMatchingCombiner, self).get_config()
+        config = {'encoding_dim': self.encoding_dim}
+        config.update(base_config)
+        return config
 
 
 entailment_models = {  # pylint: disable=invalid-name

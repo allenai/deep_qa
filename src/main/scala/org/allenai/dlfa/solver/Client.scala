@@ -3,7 +3,8 @@ package org.allenai.dlfa.solver
 import org.allenai.dlfa.message.SolverServiceGrpc.SolverServiceBlockingStub
 import org.allenai.dlfa.message.{ Instance, SolverServiceGrpc, QuestionRequest, QuestionResponse }
 
-import io.grpc.{ ManagedChannel, ManagedChannelBuilder }
+import io.grpc.ManagedChannel
+import io.grpc.okhttp.OkHttpChannelBuilder
 
 import java.util.concurrent.TimeUnit
 
@@ -20,7 +21,7 @@ object Client {
 
   def main(args: Array[String]) {
     val channel: ManagedChannel =
-      ManagedChannelBuilder.forAddress(host, port).usePlaintext(true).build
+      OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).build
     val blockingStub = SolverServiceGrpc.blockingStub(channel)
     val client: Client = new Client(channel, blockingStub)
 
