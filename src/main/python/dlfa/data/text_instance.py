@@ -341,6 +341,18 @@ class SnliInstance(TextInstance):
     The label can either be a three-way decision (one of either "entails", "contradicts", or
     "neutral"), or a binary decision (grouping either "entails" and "contradicts", for relevance
     decisions, or "contradicts" and "neutral", for entails/not entails decisions.
+
+    The input label must be one of the strings in the label_mapping field below.  The difference
+    between the *_softmax and *_sigmoid labels are just for implementation reasons.  A softmax over
+    two dimensions is exactly equivalent to a sigmoid, but to make our lives easier in building
+    models, sometimes we use a sigmoid and sometimes we use a softmax over two dimensions.  Having
+    separate labels for these cases makes it easier to use this data in whatever kind of model you
+    want.
+
+    It might make sense to push this difference more generally into some common place, so that we
+    can separate the label itself from how it's encoded for training.  But that might also be
+    complicated to implement, and it's not needed right now.  TODO(matt): if we find ourselves
+    doing this kind of thing in several places, we should think about making that change.
     """
     label_mapping = {
             "entails": [1, 0, 0],

@@ -22,10 +22,14 @@ class Pretrainer:
     # pylint: disable=protected-access
     def __init__(self, solver, **kwargs):
         self.solver = solver
-        self.num_epochs = kwargs.get('num_epochs', 10)
+        self.num_epochs = kwargs.get('num_epochs', 30)
         self.validation_split = kwargs.get('validation_split', .1)
         self.early_stopping = kwargs.get('early_stopping', True)
         self.patience = kwargs.get('patience', 3)
+
+        # We're expecting most pretrainers to want this loss function.  You can override it in a
+        # subclass if you want.  The loss depends on the data and model you're using, so it makes
+        # more sense to specify as a member variable (or a private method) than as a parameter.
         self.loss = "categorical_crossentropy"
         self.dataset = None
 
