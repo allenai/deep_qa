@@ -173,7 +173,7 @@ class IndexedDataset(Dataset):
             max_lengths[key] = max(x[key] for x in lengths)
         return max_lengths
 
-    def pad_instances(self, max_lengths: Dict[str, int]):
+    def pad_instances(self, max_lengths: Dict[str, int]=None):
         """
         Make all of the IndexedInstances in the dataset have the same length by padding them (in
         the front) with zeros.
@@ -195,7 +195,7 @@ class IndexedDataset(Dataset):
         logger.info("Instance max lengths: %s", str(instance_max_lengths))
         lengths_to_use = {}
         for key in instance_max_lengths:
-            if max_lengths[key] is not None:
+            if max_lengths and max_lengths[key] is not None:
                 lengths_to_use[key] = max_lengths[key]
             else:
                 lengths_to_use[key] = instance_max_lengths[key]

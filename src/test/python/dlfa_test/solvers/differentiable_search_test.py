@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use
-import argparse
 import gzip
 import os
 
@@ -7,6 +6,7 @@ from unittest import TestCase
 
 from dlfa.solvers.differentiable_search import DifferentiableSearchSolver
 from dlfa.data.text_instance import TrueFalseInstance
+from ..common.solvers import get_solver
 
 class FakeEncoder:
     def predict(self, instances):
@@ -28,22 +28,15 @@ class TestDifferentiableSearchSolver(TestCase):
     def tearDown(self):
         os.remove(self.corpus_path)
 
-    def get_solver(self) -> DifferentiableSearchSolver:
-        # It's easiest to get default values for all of the parameters this way.
-        parser = argparse.ArgumentParser()
-        DifferentiableSearchSolver.update_arg_parser(parser)
-        additional_arguments = ['--corpus_path', self.corpus_path,
-                                '--model_serialization_prefix', './']
-        args = parser.parse_args(additional_arguments)
-        return DifferentiableSearchSolver(**vars(args))
-
     def test_initialize_lsh_does_not_crash(self):
-        solver = self.get_solver()
+        args = {'corpus_path': self.corpus_path, 'model_serialization_prefix': './'}
+        solver = get_solver(DifferentiableSearchSolver, args)
         solver.encoder_model = FakeEncoder()
         solver._initialize_lsh()
 
     def test_get_nearest_neighbors_does_not_crash(self):
-        solver = self.get_solver()
+        args = {'corpus_path': self.corpus_path, 'model_serialization_prefix': './'}
+        solver = get_solver(DifferentiableSearchSolver, args)
         solver.encoder_model = FakeEncoder()
         solver._initialize_lsh()
         solver.max_sentence_length = 5
