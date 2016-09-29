@@ -425,6 +425,10 @@ class NNSolver:
         indexed_instance = instance.to_indexed_instance(self.data_indexer)
         indexed_instance.pad(self._get_max_lengths())
         inputs, _ = indexed_instance.as_training_data()
+        if isinstance(inputs, tuple):
+            inputs = [numpy.expand_dims(x, axis=0) for x in inputs]
+        else:
+            inputs = numpy.expand_dims(inputs, axis=0)
         return self.score(inputs)
 
     def score(self, test_input):

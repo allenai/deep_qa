@@ -63,6 +63,12 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         self.num_options = max_lengths['num_options']
 
     @overrides
+    def _set_max_lengths_from_model(self):
+        self.max_sentence_length = self.model.get_input_shape_at(0)[0][2]
+        self.max_knowledge_length = self.model.get_input_shape_at(0)[1][2]
+        self.num_options = self.model.get_input_shape_at(0)[0][1]
+
+    @overrides
     def _get_question_shape(self):
         return (self.num_options, self.max_sentence_length,)
 

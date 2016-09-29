@@ -184,7 +184,7 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
-        # TODO(matt): set the background length too.
+        self.max_knowledge_length = self.model.get_input_shape_at(0)[1][1]
 
     def _get_question_shape(self):
         """

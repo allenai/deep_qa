@@ -41,22 +41,24 @@ class SolverServer(message_pb2.SolverServiceServicer):
         self.solver.load_model(0)
 
     def AnswerQuestion(self, request, context):
-        instance = self.read_instance_message(request.instance)
+        instance = self.read_instance_message(request.question)
         scores = self.solver.score_instance(instance)
         response = message_pb2.QuestionResponse()
-        response.scores.extend(scores)
+        for score in scores.tolist():
+            response.scores.extend(score)
         return response
 
     def read_instance_message(self, instance_message):
         # pylint: disable=redefined-variable-type
         instance_type = instance_message.type
+        print("Instance type:", instance_type)
         if instance_type == message_pb2.TRUE_FALSE:
             text = instance_message.question
             instance = TrueFalseInstance(text, None, None, self.solver.tokenizer)
         elif instance_type == message_pb2.MULTIPLE_TRUE_FALSE:
             options = []
-            for option in instance_message.answer_options:
-                options.append(TrueFalseInstance(option, None, None, self.solver.tokenizer))
+            for instance in instance_message.contained_instances:
+                options.append(self.read_instance_message(instance))
             instance = MultipleChoiceInstance(options)
         elif instance_type == message_pb2.QUESTION_ANSWER:
             question = instance_message.question
@@ -67,6 +69,7 @@ class SolverServer(message_pb2.SolverServiceServicer):
         if instance_message.background:
             background = instance_message.background
             instance = BackgroundInstance(instance, background)
+        print(instance.__class__.__name__)
         return instance
 
 

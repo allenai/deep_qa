@@ -244,9 +244,13 @@ class MultipleChoiceInstance(TextInstance):
     """
     def __init__(self, options: List[TextInstance]):
         self.options = options
-        positive_index = [index for index, instance in enumerate(options) if instance.label is True]
-        assert len(positive_index) == 1
-        label = positive_index[0]
+        no_label = len(list([i for i in options if i.label is not None])) == 0
+        if no_label:
+            label = None
+        else:
+            positive_index = [index for index, instance in enumerate(options) if instance.label is True]
+            assert len(positive_index) == 1
+            label = positive_index[0]
         tokenizer = self.options[0].tokenizer if self.options else None
         super(MultipleChoiceInstance, self).__init__(label, None, tokenizer)
 

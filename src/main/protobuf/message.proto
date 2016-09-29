@@ -22,16 +22,21 @@ enum InstanceType {
 message Instance {
   InstanceType type = 1;
 
-  // For TRUE_FALSE and QUESTION_ANSWER instance types, this holds the question text (combined with
-  // the answer text, for TRUE_FALSE).  For MULTIPLE_TRUE_FALSE instance types, this will be empty.
+  // For TRUE_FALSE and QUESTION_ANSWER instance types, this holds the question text.  For
+  // MULTIPLE_TRUE_FALSE instance types, this will be empty.
   string question = 2;
 
-  // Empty for TRUE_FALSE instances, holds answer options for MULTIPLE_TRUE_FALSE and
-  // QUESTION_ANSWER instances (in the MTF case, this is combined with the question text).
+  // Empty for TRUE_FALSE and MULTIPLE_TRUE_FALSE instances, holds answer options for
+  // QUESTION_ANSWER instances.
   repeated string answer_options = 3;
 
   // Any of the instance types could also have associated background sentences.  This stores that.
   repeated string background = 4;
+
+  // MULTIPLE_TRUE_FALSE instances need to be represented this way, to properly deal with
+  // background sentences.  In these instances, all other fields will be empty (except the type),
+  // and this will be populated.
+  repeated Instance contained_instances = 5;
 }
 
 message QuestionRequest {

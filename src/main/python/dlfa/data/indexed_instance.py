@@ -303,6 +303,9 @@ class IndexedMultipleChoiceInstance(IndexedInstance):
             inputs.append(option_input)
         if unzip_inputs:
             inputs = tuple(zip(*inputs))  # pylint: disable=redefined-variable-type
+            inputs = tuple([numpy.asarray(x) for x in inputs])
+        else:
+            inputs = numpy.asarray(inputs)
         if self.label is None:
             label = None
         else:

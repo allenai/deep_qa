@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='message.proto',
   package='dlfa',
   syntax='proto3',
-  serialized_pb=_b('\n\rmessage.proto\x12\x04\x64lfa\"j\n\x08Instance\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.dlfa.InstanceType\x12\x10\n\x08question\x18\x02 \x01(\t\x12\x16\n\x0e\x61nswer_options\x18\x03 \x03(\t\x12\x12\n\nbackground\x18\x04 \x03(\t\"3\n\x0fQuestionRequest\x12 \n\x08question\x18\x01 \x01(\x0b\x32\x0e.dlfa.Instance\"\"\n\x10QuestionResponse\x12\x0e\n\x06scores\x18\x01 \x03(\x01*[\n\x0cInstanceType\x12\r\n\tUNDEFINED\x10\x00\x12\x0e\n\nTRUE_FALSE\x10\x01\x12\x17\n\x13MULTIPLE_TRUE_FALSE\x10\x02\x12\x13\n\x0fQUESTION_ANSWER\x10\x03\x32R\n\rSolverService\x12\x41\n\x0e\x41nswerQuestion\x12\x15.dlfa.QuestionRequest\x1a\x16.dlfa.QuestionResponse\"\x00\x42\x12\n\x10org.allenai.dlfab\x06proto3')
+  serialized_pb=_b('\n\rmessage.proto\x12\x04\x64lfa\"\x97\x01\n\x08Instance\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.dlfa.InstanceType\x12\x10\n\x08question\x18\x02 \x01(\t\x12\x16\n\x0e\x61nswer_options\x18\x03 \x03(\t\x12\x12\n\nbackground\x18\x04 \x03(\t\x12+\n\x13\x63ontained_instances\x18\x05 \x03(\x0b\x32\x0e.dlfa.Instance\"3\n\x0fQuestionRequest\x12 \n\x08question\x18\x01 \x01(\x0b\x32\x0e.dlfa.Instance\"\"\n\x10QuestionResponse\x12\x0e\n\x06scores\x18\x01 \x03(\x01*[\n\x0cInstanceType\x12\r\n\tUNDEFINED\x10\x00\x12\x0e\n\nTRUE_FALSE\x10\x01\x12\x17\n\x13MULTIPLE_TRUE_FALSE\x10\x02\x12\x13\n\x0fQUESTION_ANSWER\x10\x03\x32R\n\rSolverService\x12\x41\n\x0e\x41nswerQuestion\x12\x15.dlfa.QuestionRequest\x1a\x16.dlfa.QuestionResponse\"\x00\x42\x12\n\x10org.allenai.dlfab\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -49,8 +49,8 @@ _INSTANCETYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=220,
-  serialized_end=311,
+  serialized_start=266,
+  serialized_end=357,
 )
 _sym_db.RegisterEnumDescriptor(_INSTANCETYPE)
 
@@ -97,6 +97,13 @@ _INSTANCE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='contained_instances', full_name='dlfa.Instance.contained_instances', index=4,
+      number=5, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -109,8 +116,8 @@ _INSTANCE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=23,
-  serialized_end=129,
+  serialized_start=24,
+  serialized_end=175,
 )
 
 
@@ -140,8 +147,8 @@ _QUESTIONREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=131,
-  serialized_end=182,
+  serialized_start=177,
+  serialized_end=228,
 )
 
 
@@ -171,11 +178,12 @@ _QUESTIONRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=184,
-  serialized_end=218,
+  serialized_start=230,
+  serialized_end=264,
 )
 
 _INSTANCE.fields_by_name['type'].enum_type = _INSTANCETYPE
+_INSTANCE.fields_by_name['contained_instances'].message_type = _INSTANCE
 _QUESTIONREQUEST.fields_by_name['question'].message_type = _INSTANCE
 DESCRIPTOR.message_types_by_name['Instance'] = _INSTANCE
 DESCRIPTOR.message_types_by_name['QuestionRequest'] = _QUESTIONREQUEST

@@ -29,7 +29,7 @@ class ChildrensBookDatasetReader(fileUtil: FileUtil) {
     val answerOptionString = questionFields(3)
     val answerOptions = answerOptionString.split("\\|")
     val label = answerOptions.indexOf(answerString)
-    BackgroundInstance(QuestionAnswerInstance(questionText, answerOptions, label), background)
+    BackgroundInstance(QuestionAnswerInstance(questionText, answerOptions, Some(label)), background)
   }
 }
 
