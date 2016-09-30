@@ -165,7 +165,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
             label = instance.label
             print("Correct answer: %s" % label, file=debug_output_file)
             for option_id, option_instance in enumerate(instance.options):
-                option_sentence = option_instance.text
+                option_sentence = option_instance.instance.text
                 option_background_info = option_instance.background
                 option_score = question_scores[option_id]
                 # Remove the attention values for padding
