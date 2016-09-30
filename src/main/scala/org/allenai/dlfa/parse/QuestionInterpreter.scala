@@ -72,7 +72,7 @@ object QuestionInterpreter {
   def create(params: JValue): QuestionInterpreter = {
     (params \ "type") match {
       case JString("fill in the blank") => new FillInTheBlankInterpreter(params)
-      case JString("append answer") => new AppendAnswerInterpreter(params)
+      case JString("append answer") => new AppendAnswerInterpreter
       case JString("question and answer") => new QuestionAndAnswerInterpreter
       case _ => throw new IllegalStateException("unrecognized wh-mover parameters")
     }
@@ -165,11 +165,9 @@ class FillInTheBlankInterpreter(params: JValue) extends QuestionToStatementInter
   }
 }
 
-class AppendAnswerInterpreter(params: JValue) extends QuestionToStatementInterpreter(params) {
+class AppendAnswerInterpreter extends QuestionToStatementInterpreter(JNothing) {
 
   val name = "Append Answer Interpreter"
-  val validParams = baseParams
-  JsonHelper.ensureNoExtras(params, name, validParams)
 
   val answerSeparator = " ||| "
 

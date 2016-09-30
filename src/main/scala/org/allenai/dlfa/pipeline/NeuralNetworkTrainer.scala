@@ -174,13 +174,13 @@ abstract class MemoryNetworkBase(
     "num memory layers"
   )
 
-  val positiveBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "positive background", fileUtil)
+  val positiveBackgroundSearcher = BackgroundCorpusSearcherStep.create(params \ "positive background", fileUtil)
   val positiveBackgroundFile = positiveBackgroundSearcher.outputFile
 
-  val negativeBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "negative background", fileUtil)
+  val negativeBackgroundSearcher = BackgroundCorpusSearcherStep.create(params \ "negative background", fileUtil)
   val negativeBackgroundFile = negativeBackgroundSearcher.outputFile
 
-  val validationBackgroundSearcher = BackgroundCorpusSearcher.create(params \ "validation background", fileUtil)
+  val validationBackgroundSearcher = BackgroundCorpusSearcherStep.create(params \ "validation background", fileUtil)
   val validationBackgroundFile = validationBackgroundSearcher.outputFile
 
   val numMemoryLayers = JsonHelper.extractWithDefault(params, "num memory layers", 1)

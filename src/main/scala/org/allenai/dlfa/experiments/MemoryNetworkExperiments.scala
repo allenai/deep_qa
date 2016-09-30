@@ -173,7 +173,7 @@ object MemoryNetworkExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    new LuceneBackgroundCorpusSearcher(validationBackgroundParams, fileUtil).runPipeline()
+    BackgroundCorpusSearcherStep.create(validationBackgroundParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()

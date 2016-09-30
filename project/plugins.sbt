@@ -1,5 +1,7 @@
 addSbtPlugin("de.johoop" % "jacoco4sbt" % "2.1.6")
 
+addSbtPlugin("me.lessis" % "bintray-sbt" % "0.3.0")
+
 addSbtPlugin("com.trueaccord.scalapb" % "sbt-scalapb" % "0.5.26")
 
 libraryDependencies ++= Seq(

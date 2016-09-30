@@ -50,3 +50,9 @@ libraryDependencies ++= Seq(
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
 instrumentSettings
+
+licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
+
+bintrayOrganization := Some("allenai")
+
+bintrayRepository := "private"
