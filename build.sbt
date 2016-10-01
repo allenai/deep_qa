@@ -34,16 +34,4 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" %  "logback-classic" % "1.1.7"  // backend for scala-logging
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
-lazy val testPython = TaskKey[Unit]("testPython")
-
-testPython := {
-  val exitCode = { "bash py.test.sh" ! }
-  if (exitCode != 0) {
-     error("Python tests failed")
-  }
-}
-
-// TODO(matt): it'd be nicer if this would still execute scala tests if python tests fail...
-(test in Test) <<= (test in Test) dependsOn (testPython)
-
 instrumentSettings
