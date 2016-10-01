@@ -30,6 +30,8 @@ case class ScienceQuestion(sentences: Seq[String], answers: Seq[Answer])
  *
  * In all cases, the input/output spec of a QuestionInterpreter is String => Seq(String), where the
  * input string is formatted as [correct option][tab][question text, including answer options].
+ *
+ * TODO(matt): it might make more sense to return an Instance here, instead of a Seq[String].
  */
 abstract class QuestionInterpreter {
 
