@@ -49,9 +49,9 @@ class SolverServer(message_pb2.SolverServiceServicer):
         return response
 
     def read_instance_message(self, instance_message):
+        print("Reading message:", instance_message)
         # pylint: disable=redefined-variable-type
         instance_type = instance_message.type
-        print("Instance type:", instance_type)
         if instance_type == message_pb2.TRUE_FALSE:
             text = instance_message.question
             instance = TrueFalseInstance(text, None, None, self.solver.tokenizer)
@@ -69,7 +69,6 @@ class SolverServer(message_pb2.SolverServiceServicer):
         if instance_message.background:
             background = instance_message.background
             instance = BackgroundInstance(instance, background)
-        print(instance.__class__.__name__)
         return instance
 
 
