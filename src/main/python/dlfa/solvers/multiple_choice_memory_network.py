@@ -72,7 +72,11 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_sentence_encoder(self):
-        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_sentence_encoder())
+        # TODO(matt): add tests for saving and loading these models, to be sure that these names
+        # actually work as expected.  There are currently some Keras bugs stopping those tests from
+        # working, though.
+        base_sentence_encoder = super(MultipleChoiceMemoryNetworkSolver, self)._get_sentence_encoder()
+        return TimeDistributed(base_sentence_encoder, name="timedist_%s" % base_sentence_encoder.name)
 
     @overrides
     def _get_knowledge_axis(self):
@@ -81,15 +85,18 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_knowledge_selector(self, layer_num: int):
-        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_knowledge_selector(layer_num))
+        base_knowledge_selector = super(MultipleChoiceMemoryNetworkSolver, self)._get_knowledge_selector(layer_num)
+        return TimeDistributed(base_knowledge_selector, name="timedist_%s" % base_knowledge_selector.name)
 
     @overrides
     def _get_memory_updater(self, layer_num: int):
-        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_memory_updater(layer_num))
+        base_memory_updater = super(MultipleChoiceMemoryNetworkSolver, self)._get_memory_updater(layer_num)
+        return TimeDistributed(base_memory_updater, name="timedist_%s" % base_memory_updater.name)
 
     @overrides
     def _get_entailment_combiner(self):
-        return TimeDistributed(super(MultipleChoiceMemoryNetworkSolver, self)._get_entailment_combiner())
+        base_entailment_combiner = super(MultipleChoiceMemoryNetworkSolver, self)._get_entailment_combiner()
+        return TimeDistributed(base_entailment_combiner, name="timedist_%s" % base_entailment_combiner.name)
 
     @overrides
     def _get_entailment_output(self, combined_input):
@@ -161,7 +168,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
             label = instance.label
             print("Correct answer: %s" % label, file=debug_output_file)
             for option_id, option_instance in enumerate(instance.options):
-                option_sentence = option_instance.text
+                option_sentence = option_instance.instance.text
                 option_background_info = option_instance.background
                 option_score = question_scores[option_id]
                 # Remove the attention values for padding
