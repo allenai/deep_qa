@@ -103,7 +103,7 @@ class QuestionAndAnswerInterpreter extends QuestionInterpreter {
  * QuestionToStatementInterpreters convert each answer option into separate statements.  The list
  * returned by processQuestion() will have length equal to the number of options in the question.
  */
-abstract class QuestionToStatementInterpreter(params: JValue) extends QuestionInterpreter {
+abstract class QuestionToStatementInterpreter extends QuestionInterpreter {
 
   val baseParams = Seq("type")
 
@@ -119,7 +119,7 @@ abstract class QuestionToStatementInterpreter(params: JValue) extends QuestionIn
   def fillInAnswerOptions(question: ScienceQuestion): Option[Seq[(String, Boolean)]]
 }
 
-class FillInTheBlankInterpreter(params: JValue) extends QuestionToStatementInterpreter(params) {
+class FillInTheBlankInterpreter(params: JValue) extends QuestionToStatementInterpreter {
 
   val name = "Fill-in-the-blank Interpreter"
   val validParams = baseParams ++ Seq("wh-movement", "last sentence only")
@@ -165,7 +165,7 @@ class FillInTheBlankInterpreter(params: JValue) extends QuestionToStatementInter
   }
 }
 
-class AppendAnswerInterpreter extends QuestionToStatementInterpreter(JNothing) {
+class AppendAnswerInterpreter extends QuestionToStatementInterpreter {
 
   val name = "Append Answer Interpreter"
 

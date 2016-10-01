@@ -161,12 +161,9 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(MemoryNetworkSolver, cls)._get_custom_objects()
-        for value in updaters.values():
-            custom_objects[value.__name__] = value
-        for value in selectors.values():
-            custom_objects[value.__name__] = value
-        for value in entailment_input_combiners.values():
-            custom_objects[value.__name__] = value
+        for object_dict in [updaters, selectors, entailment_input_combiners]:
+            for value in object_dict.values():
+                custom_objects[value.__name__] = value
         return custom_objects
 
     @overrides

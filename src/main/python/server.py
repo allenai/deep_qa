@@ -40,6 +40,7 @@ class SolverServer(message_pb2.SolverServiceServicer):
         self.solver = solver_class(**vars(args))
         self.solver.load_model(0)
 
+    # The name of this method is specified in message.proto.
     def AnswerQuestion(self, request, context):
         instance = self.read_instance_message(request.question)
         scores = self.solver.score_instance(instance)

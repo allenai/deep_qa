@@ -13,6 +13,10 @@ import scala.collection.mutable
 
 import org.json4s._
 
+/**
+ * A BackgroundCorpusSearcher takes a statement/question/query and does a search over some corpus
+ * to find relevant background information to the query, in the form of a Seq[String].
+ */
 abstract class BackgroundCorpusSearcher(params: JValue) {
   val baseParams = Seq("searcher type", "num passages per query")
 
@@ -31,6 +35,9 @@ object BackgroundCorpusSearcher {
   }
 }
 
+/**
+ * This BackgroundCorpusSearcher uses a Lucene index to do the background information lookup.
+ */
 class LuceneBackgroundCorpusSearcher(params: JValue) extends BackgroundCorpusSearcher(params) {
   implicit val formats = DefaultFormats
   val name = "Lucene Background Knowledge Searcher"

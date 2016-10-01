@@ -17,33 +17,11 @@ import io.grpc.okhttp.OkHttpChannelBuilder
 
 import java.util.concurrent.TimeUnit
 
-object Client {
-
-  val config = com.typesafe.config.ConfigFactory.load()
-
-  val host = config.getString("grpc.dlfa.server")
-  val port = config.getInt("grpc.dlfa.port")
-
-  def showScores(scores: Seq[Double]) = {
-    println(s"Scores: [${scores.mkString(" ")}]")
-  }
-
-  def main(args: Array[String]) {
-    val channel: ManagedChannel =
-      OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).build
-    val blockingStub = SolverServiceGrpc.blockingStub(channel)
-    val client: Client = new Client(channel, blockingStub)
-
-    val instance = MultipleTrueFalseInstance(Seq(
-      BackgroundInstance(TrueFalseInstance("statement 1", None), Seq("background 1")),
-      BackgroundInstance(TrueFalseInstance("statement 2", None), Seq("background 2")),
-      BackgroundInstance(TrueFalseInstance("statement 3", None), Seq("background 3")),
-      BackgroundInstance(TrueFalseInstance("statement 4", None), Seq("background 4"))
-    ), None)
-    showScores(client.answerQuestion(instance))
-  }
-}
-
+/**
+ * This Client connects to a python server that returns predictions from a trained model.  The only
+ * thing we do here is convert between an Instance object and an Instance proto, then send the
+ * proto off to the server, returning the scores we get back.
+ */
 class Client(
   private val channel: ManagedChannel,
   private val blockingStub: SolverServiceBlockingStub
@@ -90,5 +68,34 @@ class Client(
   def sendMessage(message: MessageInstance): QuestionResponse = {
     val request: QuestionRequest = QuestionRequest(Some(message))
     blockingStub.answerQuestion(request)
+  }
+}
+
+/**
+ * This is just for testing things, and showing how to instantiate a Client object and have it
+ * answer questions.
+ */
+object Client {
+
+  def main(args: Array[String]) {
+    val config = com.typesafe.config.ConfigFactory.load()
+
+    val host = config.getString("grpc.dlfa.server")
+    val port = config.getInt("grpc.dlfa.port")
+
+    val channel: ManagedChannel =
+      OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).build
+    val blockingStub = SolverServiceGrpc.blockingStub(channel)
+    val client: Client = new Client(channel, blockingStub)
+
+    val instance = MultipleTrueFalseInstance(Seq(
+      BackgroundInstance(TrueFalseInstance("statement 1", None), Seq("background 1")),
+      BackgroundInstance(TrueFalseInstance("statement 2", None), Seq("background 2")),
+      BackgroundInstance(TrueFalseInstance("statement 3", None), Seq("background 3")),
+      BackgroundInstance(TrueFalseInstance("statement 4", None), Seq("background 4"))
+    ), None)
+
+    val scores = client.answerQuestion(instance)
+    println(s"Scores: [${scores.mkString(" ")}]")
   }
 }
