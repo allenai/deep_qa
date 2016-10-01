@@ -31,7 +31,7 @@ class ChildrensBookDatasetReaderSpec extends FlatSpecLike with Matchers {
     val dataset = reader.readFile(datasetFile)
     dataset should be(Dataset(Seq(
       BackgroundInstance(
-        QuestionAnswerInstance("sentence with XXXXX answer", Seq("in", "of", "the"), 2),
+        QuestionAnswerInstance("sentence with XXXXX answer", Seq("in", "of", "the"), Some(2)),
         Seq(
           "sentence 1",
           "sentence 2",
@@ -41,7 +41,7 @@ class ChildrensBookDatasetReaderSpec extends FlatSpecLike with Matchers {
         )
       ),
       BackgroundInstance(
-        QuestionAnswerInstance("sentence has XXXXX response", Seq("a", "no", "neither"), 1),
+        QuestionAnswerInstance("sentence has XXXXX response", Seq("a", "no", "neither"), Some(1)),
         Seq(
           "sentence 6",
           "sentence 7",

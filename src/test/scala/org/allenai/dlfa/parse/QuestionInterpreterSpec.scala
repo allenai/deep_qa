@@ -8,7 +8,7 @@ import org.json4s.JsonDSL._
 import com.mattg.util.FileUtil
 
 class AppendAnswerInterpreterSpec extends FlatSpecLike with Matchers {
-  val interpreter = new AppendAnswerInterpreter(JNothing)
+  val interpreter = new AppendAnswerInterpreter
 
   "processQuestion" should "append each answer to the question" in {
     val questionLine = "B\tSentence 1. Sentence 2 ___. (A) answer 1 (B) answer 2 (C) answer 3 (D) answer 4"

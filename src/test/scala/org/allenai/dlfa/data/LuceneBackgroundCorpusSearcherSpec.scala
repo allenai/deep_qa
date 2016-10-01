@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.dlfa.data
 
 import org.scalatest._
 
@@ -15,14 +15,8 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
   val different2 = "Another very different sentence containing all kinds of misinformation."
   val longSentence = "a b c " * 100
 
-  val params: JValue =
-    ("remove query near duplicates" -> true) ~
-    ("sentences" ->
-      ("sentence producer type" -> "sentence selector") ~
-      ("create sentence indices" -> true) ~
-      ("data name" -> "fake") ~
-      ("data directory" -> "also fake"))
-  val searcher = new LuceneBackgroundCorpusSearcher(params, new FileUtil)
+  val params: JValue = ("remove query near duplicates" -> true)
+  val searcher = new LuceneBackgroundCorpusSearcher(params)
 
   "consolidateHits" should "remove duplicates" in {
     val hits = Seq(sentence, sentence, sentence)

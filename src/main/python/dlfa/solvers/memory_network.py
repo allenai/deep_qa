@@ -7,7 +7,7 @@ from keras.models import Model
 
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from ..data.text_instance import TrueFalseInstance
-from ..layers.knowledge_selectors import selectors, DotProductKnowledgeSelector, ParameterizedKnowledgeSelector
+from ..layers.knowledge_selectors import selectors
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from .nn_solver import NNSolver
@@ -161,8 +161,9 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(MemoryNetworkSolver, cls)._get_custom_objects()
-        custom_objects['DotProductKnowledgeSelector'] = DotProductKnowledgeSelector
-        custom_objects['ParameterizedKnowledgeSelector'] = ParameterizedKnowledgeSelector
+        for object_dict in [updaters, selectors, entailment_input_combiners]:
+            for value in object_dict.values():
+                custom_objects[value.__name__] = value
         return custom_objects
 
     @overrides
@@ -180,7 +181,7 @@ class MemoryNetworkSolver(NNSolver):
     @overrides
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
-        # TODO(matt): set the background length too.
+        self.max_knowledge_length = self.model.get_input_shape_at(0)[1][1]
 
     def _get_question_shape(self):
         """

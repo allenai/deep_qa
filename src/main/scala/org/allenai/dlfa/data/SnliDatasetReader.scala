@@ -16,7 +16,7 @@ class SnliDatasetReader(fileUtil: FileUtil) {
       }
       val text = fields(5)
       val hypothesis = fields(6)
-      label.map(l => SnliInstance(text, hypothesis, l)).toSeq
+      label.map(l => SnliInstance(text, hypothesis, Some(l))).toSeq
     })
     Dataset(instances)
   }
