@@ -72,6 +72,9 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_sentence_encoder(self):
+        # TODO(matt): add tests for saving and loading these models, to be sure that these names
+        # actually work as expected.  There are currently some Keras bugs stopping those tests from
+        # working, though.
         base_sentence_encoder = super(MultipleChoiceMemoryNetworkSolver, self)._get_sentence_encoder()
         return TimeDistributed(base_sentence_encoder, name="timedist_%s" % base_sentence_encoder.name)
 
