@@ -14,6 +14,7 @@ random.seed(13370)
 numpy.random.seed(1337)  # pylint: disable=no-member
 
 # pylint: disable=wrong-import-position
+from deep_qa.common.checks import ensure_pythonhashseed_set
 from deep_qa.solvers import concrete_solvers
 
 from deep_qa.data.text_instance import TrueFalseInstance
@@ -106,4 +107,5 @@ def serve():
 
 
 if __name__ == '__main__':
+    ensure_pythonhashseed_set()
     serve()
