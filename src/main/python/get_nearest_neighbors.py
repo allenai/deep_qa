@@ -2,6 +2,7 @@ import argparse
 import codecs
 import logging
 
+from deep_qa.common.checks import ensure_pythonhashseed_set
 from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
 from deep_qa.data.text_instance import TextInstance
 
@@ -38,6 +39,7 @@ def main():
 
 
 if __name__ == "__main__":
+    ensure_pythonhashseed_set()
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         level=logging.INFO)
     main()
