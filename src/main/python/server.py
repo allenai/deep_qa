@@ -14,12 +14,12 @@ random.seed(13370)
 numpy.random.seed(1337)  # pylint: disable=no-member
 
 # pylint: disable=wrong-import-position
-from dlfa.solvers import concrete_solvers
+from deep_qa.solvers import concrete_solvers
 
-from dlfa.data.text_instance import TrueFalseInstance
-from dlfa.data.text_instance import MultipleChoiceInstance
-from dlfa.data.text_instance import QuestionAnswerInstance
-from dlfa.data.text_instance import BackgroundInstance
+from deep_qa.data.text_instance import TrueFalseInstance
+from deep_qa.data.text_instance import MultipleChoiceInstance
+from deep_qa.data.text_instance import QuestionAnswerInstance
+from deep_qa.data.text_instance import BackgroundInstance
 from proto import message_pb2
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
@@ -77,8 +77,8 @@ class SolverServer(message_pb2.SolverServiceServicer):
 def serve():
     # read in the Typesafe-style config file and lookup the port to run on.
     conf = ConfigFactory.parse_file('src/main/resources/application.conf')
-    port = conf["grpc.dlfa.port"]
-    model_type = conf["grpc.dlfa.model_class"]
+    port = conf["grpc.deep_qa.port"]
+    model_type = conf["grpc.deep_qa.model_class"]
 
     # create the server and add our RPC "servicer" to it
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

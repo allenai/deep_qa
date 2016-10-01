@@ -2,8 +2,8 @@ import argparse
 import codecs
 import logging
 
-from dlfa.solvers.differentiable_search import DifferentiableSearchSolver
-from dlfa.data.instance import TextInstance
+from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
+from deep_qa.data.text_instance import TextInstance
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

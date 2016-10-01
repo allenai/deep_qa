@@ -10,7 +10,7 @@ import numpy
 random.seed(13370)
 numpy.random.seed(1337)  # pylint: disable=no-member
 
-from dlfa.solvers import concrete_solvers  # pylint: disable=wrong-import-position
+from deep_qa.solvers import concrete_solvers  # pylint: disable=wrong-import-position
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
