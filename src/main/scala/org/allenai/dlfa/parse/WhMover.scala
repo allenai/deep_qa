@@ -4,7 +4,16 @@ import com.typesafe.scalalogging.LazyLogging
 
 import org.json4s._
 
-abstract class WhMover(params: JValue) extends LazyLogging {
+/**
+ * WhMovers undo wh-movement, converting a wh-question into a declarative sentence involving a
+ * blank ("___").  For example, it might change "Which of the following is best?" to "___ is best.",
+ * or "What can you use to do this?" to "You can use ___ to do this."
+ *
+ * The idea is that we can then trivially fill in the blank with other words (like answer options).
+ * Our current code for doing this, though, isn't great, so if you can devise a model that doesn't
+ * need to rely on this, it will be less brittle.
+ */
+abstract class WhMover extends LazyLogging {
   def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String]
 }
 
@@ -18,13 +27,24 @@ object WhMover {
   }
 }
 
-class MattsWhMover(parser: Parser) extends WhMover(JNothing) {
+/**
+ * An attempt at undoing wh-movement, written by me (Matt Gardner).  It kind of works, sometimes.
+ * You can see some of the cases where it works in QuestionInterpreterSpec (TODO(matt): move some
+ * of those tests into a WhMoverSpec, where they belong).
+ *
+ * One of the huge problems with this is that it relies on a correct dependency parse of the
+ * sentence, and the Stanford parser doesn't do a great job on questions.
+ */
+class MattsWhMover(parser: Parser) extends WhMover {
 
   def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String] = {
     val parse = parser.parseSentence(lastSentence)
     parse.dependencyTree match {
       case None => { logger.error(s"couldn't parse question: $question"); return None }
       case Some(tree) => {
+        // These lines are for development; I uncomment them when I'm trying to fix a bug.
+        // TODO(matt): I really should change DependencyTree.print() to a method that returns a
+        // string, and call logger.debug() on these statements.
         //println("Original tree:")
         //tree.print()
         val fixedCopula = transformers.MakeCopulaHead.transform(tree)
@@ -98,7 +118,12 @@ class MattsWhMover(parser: Parser) extends WhMover(JNothing) {
   }
 }
 
-class MarksWhMover extends WhMover(JNothing) {
+/**
+ * This is supposed to be the wh-movement code in the AI2 codebase, written by Mark Hopkins.  The
+ * trouble is that the code isn't public, so I can't include it in here yet.  These lines are
+ * commented out until such time as that code is made public.
+ */
+class MarksWhMover extends WhMover {
   //val fillInTheBlankGenerator = FillInTheBlankGenerator.mostRecent
   //val fillInTheBlankProcessor = new FillInTheBlankQuestionProcessor
   override def whQuestionToFillInTheBlank(question: ScienceQuestion, lastSentence: String): Option[String] = {
