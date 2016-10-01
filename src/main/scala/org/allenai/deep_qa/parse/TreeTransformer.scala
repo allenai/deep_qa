@@ -1,4 +1,4 @@
-package org.allenai.dlfa.parse
+package org.allenai.deep_qa.parse
 
 trait TreeTransformer {
   def transform(tree: DependencyTree): DependencyTree

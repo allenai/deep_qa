@@ -1,11 +1,11 @@
-package org.allenai.dlfa.experiments
+package org.allenai.deep_qa.experiments
 
 import org.json4s._
 import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
-import org.allenai.dlfa.pipeline._
+import org.allenai.deep_qa.pipeline._
 
 object KbTreeLstmExperiments {
   val fileUtil = new FileUtil

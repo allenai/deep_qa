@@ -18,15 +18,15 @@ _sym_db = _symbol_database.Default()
 
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='message.proto',
-  package='dlfa',
+  package='deep_qa',
   syntax='proto3',
-  serialized_pb=_b('\n\rmessage.proto\x12\x04\x64lfa\"\x97\x01\n\x08Instance\x12 \n\x04type\x18\x01 \x01(\x0e\x32\x12.dlfa.InstanceType\x12\x10\n\x08question\x18\x02 \x01(\t\x12\x16\n\x0e\x61nswer_options\x18\x03 \x03(\t\x12\x12\n\nbackground\x18\x04 \x03(\t\x12+\n\x13\x63ontained_instances\x18\x05 \x03(\x0b\x32\x0e.dlfa.Instance\"3\n\x0fQuestionRequest\x12 \n\x08question\x18\x01 \x01(\x0b\x32\x0e.dlfa.Instance\"\"\n\x10QuestionResponse\x12\x0e\n\x06scores\x18\x01 \x03(\x01*[\n\x0cInstanceType\x12\r\n\tUNDEFINED\x10\x00\x12\x0e\n\nTRUE_FALSE\x10\x01\x12\x17\n\x13MULTIPLE_TRUE_FALSE\x10\x02\x12\x13\n\x0fQUESTION_ANSWER\x10\x03\x32R\n\rSolverService\x12\x41\n\x0e\x41nswerQuestion\x12\x15.dlfa.QuestionRequest\x1a\x16.dlfa.QuestionResponse\"\x00\x42\x12\n\x10org.allenai.dlfab\x06proto3')
+  serialized_pb=_b('\n\rmessage.proto\x12\x07\x64\x65\x65p_qa\"\x9d\x01\n\x08Instance\x12#\n\x04type\x18\x01 \x01(\x0e\x32\x15.deep_qa.InstanceType\x12\x10\n\x08question\x18\x02 \x01(\t\x12\x16\n\x0e\x61nswer_options\x18\x03 \x03(\t\x12\x12\n\nbackground\x18\x04 \x03(\t\x12.\n\x13\x63ontained_instances\x18\x05 \x03(\x0b\x32\x11.deep_qa.Instance\"6\n\x0fQuestionRequest\x12#\n\x08question\x18\x01 \x01(\x0b\x32\x11.deep_qa.Instance\"\"\n\x10QuestionResponse\x12\x0e\n\x06scores\x18\x01 \x03(\x01*[\n\x0cInstanceType\x12\r\n\tUNDEFINED\x10\x00\x12\x0e\n\nTRUE_FALSE\x10\x01\x12\x17\n\x13MULTIPLE_TRUE_FALSE\x10\x02\x12\x13\n\x0fQUESTION_ANSWER\x10\x03\x32X\n\rSolverService\x12G\n\x0e\x41nswerQuestion\x12\x18.deep_qa.QuestionRequest\x1a\x19.deep_qa.QuestionResponse\"\x00\x42\x15\n\x13org.allenai.deep_qab\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 _INSTANCETYPE = _descriptor.EnumDescriptor(
   name='InstanceType',
-  full_name='dlfa.InstanceType',
+  full_name='deep_qa.InstanceType',
   filename=None,
   file=DESCRIPTOR,
   values=[
@@ -49,8 +49,8 @@ _INSTANCETYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=266,
-  serialized_end=357,
+  serialized_start=278,
+  serialized_end=369,
 )
 _sym_db.RegisterEnumDescriptor(_INSTANCETYPE)
 
@@ -64,41 +64,41 @@ QUESTION_ANSWER = 3
 
 _INSTANCE = _descriptor.Descriptor(
   name='Instance',
-  full_name='dlfa.Instance',
+  full_name='deep_qa.Instance',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='type', full_name='dlfa.Instance.type', index=0,
+      name='type', full_name='deep_qa.Instance.type', index=0,
       number=1, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='question', full_name='dlfa.Instance.question', index=1,
+      name='question', full_name='deep_qa.Instance.question', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='answer_options', full_name='dlfa.Instance.answer_options', index=2,
+      name='answer_options', full_name='deep_qa.Instance.answer_options', index=2,
       number=3, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='background', full_name='dlfa.Instance.background', index=3,
+      name='background', full_name='deep_qa.Instance.background', index=3,
       number=4, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='contained_instances', full_name='dlfa.Instance.contained_instances', index=4,
+      name='contained_instances', full_name='deep_qa.Instance.contained_instances', index=4,
       number=5, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -116,20 +116,20 @@ _INSTANCE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=24,
-  serialized_end=175,
+  serialized_start=27,
+  serialized_end=184,
 )
 
 
 _QUESTIONREQUEST = _descriptor.Descriptor(
   name='QuestionRequest',
-  full_name='dlfa.QuestionRequest',
+  full_name='deep_qa.QuestionRequest',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='question', full_name='dlfa.QuestionRequest.question', index=0,
+      name='question', full_name='deep_qa.QuestionRequest.question', index=0,
       number=1, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -147,20 +147,20 @@ _QUESTIONREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=177,
-  serialized_end=228,
+  serialized_start=186,
+  serialized_end=240,
 )
 
 
 _QUESTIONRESPONSE = _descriptor.Descriptor(
   name='QuestionResponse',
-  full_name='dlfa.QuestionResponse',
+  full_name='deep_qa.QuestionResponse',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='scores', full_name='dlfa.QuestionResponse.scores', index=0,
+      name='scores', full_name='deep_qa.QuestionResponse.scores', index=0,
       number=1, type=1, cpp_type=5, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -178,8 +178,8 @@ _QUESTIONRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=230,
-  serialized_end=264,
+  serialized_start=242,
+  serialized_end=276,
 )
 
 _INSTANCE.fields_by_name['type'].enum_type = _INSTANCETYPE
@@ -193,27 +193,27 @@ DESCRIPTOR.enum_types_by_name['InstanceType'] = _INSTANCETYPE
 Instance = _reflection.GeneratedProtocolMessageType('Instance', (_message.Message,), dict(
   DESCRIPTOR = _INSTANCE,
   __module__ = 'message_pb2'
-  # @@protoc_insertion_point(class_scope:dlfa.Instance)
+  # @@protoc_insertion_point(class_scope:deep_qa.Instance)
   ))
 _sym_db.RegisterMessage(Instance)
 
 QuestionRequest = _reflection.GeneratedProtocolMessageType('QuestionRequest', (_message.Message,), dict(
   DESCRIPTOR = _QUESTIONREQUEST,
   __module__ = 'message_pb2'
-  # @@protoc_insertion_point(class_scope:dlfa.QuestionRequest)
+  # @@protoc_insertion_point(class_scope:deep_qa.QuestionRequest)
   ))
 _sym_db.RegisterMessage(QuestionRequest)
 
 QuestionResponse = _reflection.GeneratedProtocolMessageType('QuestionResponse', (_message.Message,), dict(
   DESCRIPTOR = _QUESTIONRESPONSE,
   __module__ = 'message_pb2'
-  # @@protoc_insertion_point(class_scope:dlfa.QuestionResponse)
+  # @@protoc_insertion_point(class_scope:deep_qa.QuestionResponse)
   ))
 _sym_db.RegisterMessage(QuestionResponse)
 
 
 DESCRIPTOR.has_options = True
-DESCRIPTOR._options = _descriptor._ParseOptions(descriptor_pb2.FileOptions(), _b('\n\020org.allenai.dlfa'))
+DESCRIPTOR._options = _descriptor._ParseOptions(descriptor_pb2.FileOptions(), _b('\n\023org.allenai.deep_qa'))
 import grpc
 from grpc.beta import implementations as beta_implementations
 from grpc.beta import interfaces as beta_interfaces
@@ -232,7 +232,7 @@ class SolverServiceStub(object):
       channel: A grpc.Channel.
     """
     self.AnswerQuestion = channel.unary_unary(
-        '/dlfa.SolverService/AnswerQuestion',
+        '/deep_qa.SolverService/AnswerQuestion',
         request_serializer=QuestionRequest.SerializeToString,
         response_deserializer=QuestionResponse.FromString,
         )
@@ -257,7 +257,7 @@ def add_SolverServiceServicer_to_server(servicer, server):
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
-      'dlfa.SolverService', rpc_method_handlers)
+      'deep_qa.SolverService', rpc_method_handlers)
   server.add_generic_rpc_handlers((generic_handler,))
 
 
@@ -278,13 +278,13 @@ class BetaSolverServiceStub(object):
 
 def beta_create_SolverService_server(servicer, pool=None, pool_size=None, default_timeout=None, maximum_timeout=None):
   request_deserializers = {
-    ('dlfa.SolverService', 'AnswerQuestion'): QuestionRequest.FromString,
+    ('deep_qa.SolverService', 'AnswerQuestion'): QuestionRequest.FromString,
   }
   response_serializers = {
-    ('dlfa.SolverService', 'AnswerQuestion'): QuestionResponse.SerializeToString,
+    ('deep_qa.SolverService', 'AnswerQuestion'): QuestionResponse.SerializeToString,
   }
   method_implementations = {
-    ('dlfa.SolverService', 'AnswerQuestion'): face_utilities.unary_unary_inline(servicer.AnswerQuestion),
+    ('deep_qa.SolverService', 'AnswerQuestion'): face_utilities.unary_unary_inline(servicer.AnswerQuestion),
   }
   server_options = beta_implementations.server_options(request_deserializers=request_deserializers, response_serializers=response_serializers, thread_pool=pool, thread_pool_size=pool_size, default_timeout=default_timeout, maximum_timeout=maximum_timeout)
   return beta_implementations.server(method_implementations, options=server_options)
@@ -292,14 +292,14 @@ def beta_create_SolverService_server(servicer, pool=None, pool_size=None, defaul
 
 def beta_create_SolverService_stub(channel, host=None, metadata_transformer=None, pool=None, pool_size=None):
   request_serializers = {
-    ('dlfa.SolverService', 'AnswerQuestion'): QuestionRequest.SerializeToString,
+    ('deep_qa.SolverService', 'AnswerQuestion'): QuestionRequest.SerializeToString,
   }
   response_deserializers = {
-    ('dlfa.SolverService', 'AnswerQuestion'): QuestionResponse.FromString,
+    ('deep_qa.SolverService', 'AnswerQuestion'): QuestionResponse.FromString,
   }
   cardinalities = {
     'AnswerQuestion': cardinality.Cardinality.UNARY_UNARY,
   }
   stub_options = beta_implementations.stub_options(host=host, metadata_transformer=metadata_transformer, request_serializers=request_serializers, response_deserializers=response_deserializers, thread_pool=pool, thread_pool_size=pool_size)
-  return beta_implementations.dynamic_stub(channel, 'dlfa.SolverService', cardinalities, options=stub_options)
+  return beta_implementations.dynamic_stub(channel, 'deep_qa.SolverService', cardinalities, options=stub_options)
 # @@protoc_insertion_point(module_scope)

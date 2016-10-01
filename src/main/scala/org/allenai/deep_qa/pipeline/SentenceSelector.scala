@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
@@ -9,7 +9,7 @@ import org.json4s._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
-import org.allenai.dlfa.parse.Parser
+import org.allenai.deep_qa.parse.Parser
 
 /**
  * The job of this Step is to select sentences from a large corpus that are suitable for training a

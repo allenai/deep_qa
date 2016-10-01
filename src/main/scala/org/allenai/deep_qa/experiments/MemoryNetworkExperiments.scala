@@ -1,11 +1,11 @@
-package org.allenai.dlfa.experiments
+package org.allenai.deep_qa.experiments
 
 import org.json4s._
 import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
-import org.allenai.dlfa.pipeline._
+import org.allenai.deep_qa.pipeline._
 
 object MemoryNetworkExperiments {
   val fileUtil = new FileUtil
@@ -38,7 +38,7 @@ object MemoryNetworkExperiments {
   val manualGeneratedQuestions: JValue =
     ("sentence producer type" -> "manually provided") ~
     ("create sentence indices" -> true) ~
-    ("filename" -> "/home/mattg/clone/dlfa/generated_questions.tsv")
+    ("filename" -> "/home/mattg/clone/deep_qa/generated_questions.tsv")
 
   val generatedQuestionBackgroundParams: JValue = baseElasticSearchParams merge
     (("sentences" -> manualGeneratedQuestions) ~ ("remove query near duplicates" -> true): JValue)

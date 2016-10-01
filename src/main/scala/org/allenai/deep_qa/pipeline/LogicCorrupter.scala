@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import org.json4s._
 
@@ -9,10 +9,10 @@ import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
 
-import org.allenai.dlfa.parse.Atom
-import org.allenai.dlfa.parse.Conjunction
-import org.allenai.dlfa.parse.Logic
-import org.allenai.dlfa.parse.Predicate
+import org.allenai.deep_qa.parse.Atom
+import org.allenai.deep_qa.parse.Conjunction
+import org.allenai.deep_qa.parse.Logic
+import org.allenai.deep_qa.parse.Predicate
 
 import scala.util.Random
 

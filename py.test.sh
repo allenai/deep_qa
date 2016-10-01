@@ -1,11 +1,11 @@
 
 # run tests with specific backend, save exit codes so we can combine later
 echo 'Python tests - THEANO BACKEND'
-KERAS_BACKEND=theano py.test -v --cov=dlfa "$@"
+KERAS_BACKEND=theano py.test -v --cov=deep_qa "$@"
 THEANO_TEST=$?
 
 echo 'Python tests - TENSORFLOW BACKEND'
-KERAS_BACKEND=tensorflow py.test -v --cov=dlfa "$@"
+KERAS_BACKEND=tensorflow py.test -v --cov=deep_qa "$@"
 TF_TEST=$?
 
 # print individual backend test outcomes

@@ -4,8 +4,8 @@ import os
 
 from unittest import TestCase
 
-from dlfa.solvers.differentiable_search import DifferentiableSearchSolver
-from dlfa.data.text_instance import TrueFalseInstance
+from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
+from deep_qa.data.text_instance import TrueFalseInstance
 from ..common.solvers import get_solver
 
 class FakeEncoder:

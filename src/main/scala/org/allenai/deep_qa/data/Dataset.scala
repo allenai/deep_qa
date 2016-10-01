@@ -1,4 +1,4 @@
-package org.allenai.dlfa.data
+package org.allenai.deep_qa.data
 
 import com.mattg.util.FileUtil
 

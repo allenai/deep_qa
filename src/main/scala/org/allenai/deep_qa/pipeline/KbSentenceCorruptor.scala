@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import org.json4s._
 
@@ -62,7 +62,7 @@ class CorruptedSentenceSelector(
   override val outputFile = kbSentenceCorruptor.positiveDataFile.dropRight(4) + "_corrupted.tsv"
 
   override val binary = "python"
-  override val scriptFile = Some("src/main/python/dlfa/sentence_corruption/language_model.py")
+  override val scriptFile = Some("src/main/python/deep_qa/sentence_corruption/language_model.py")
   override val arguments = Seq(
     "--candidates_file", possibleCorruptions,
     "--output_file", outputFile,
@@ -110,7 +110,7 @@ class KbSentenceCorruptor(
   val outputFile = positiveDataFile.dropRight(4) + "_potential_corruptions.tsv"
 
   override val binary = "python"
-  override val scriptFile = Some("src/main/python/dlfa/sentence_corruption/kb_sentence_corruptor.py")
+  override val scriptFile = Some("src/main/python/deep_qa/sentence_corruption/kb_sentence_corruptor.py")
   override val arguments = Seq(
     "--input_file", positiveDataFile,
     "--output_file", outputFile,

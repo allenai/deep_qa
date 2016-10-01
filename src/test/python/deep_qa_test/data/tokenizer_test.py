@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 
-from dlfa.data.tokenizer import SimpleTokenizer
+from deep_qa.data.tokenizer import SimpleTokenizer
 
 
 class TestSimpleTokenizer:

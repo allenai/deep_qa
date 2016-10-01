@@ -4,11 +4,11 @@ from unittest import TestCase
 import os
 import shutil
 
-from dlfa.solvers.pretraining.snli_pretrainer import SnliEntailmentPretrainer
-from dlfa.solvers.pretraining.snli_pretrainer import SnliAttentionPretrainer
-from dlfa.solvers.memory_network import MemoryNetworkSolver
-from dlfa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
-from dlfa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
+from deep_qa.solvers.pretraining.snli_pretrainer import SnliEntailmentPretrainer
+from deep_qa.solvers.pretraining.snli_pretrainer import SnliAttentionPretrainer
+from deep_qa.solvers.memory_network import MemoryNetworkSolver
+from deep_qa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
+from deep_qa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 from ...common.constants import TEST_DIR
 from ...common.constants import SNLI_FILE
 from ...common.solvers import get_solver

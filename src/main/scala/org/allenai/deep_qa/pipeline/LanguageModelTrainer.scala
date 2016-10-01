@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import org.json4s._
 
@@ -41,7 +41,7 @@ class LanguageModelTrainer(
 
   // TODO(matt): might want to change the name of this file to something more general, if we're
   // using this to train general language models.
-  override val scriptFile = Some("src/main/python/dlfa/sentence_corruption/language_model.py")
+  override val scriptFile = Some("src/main/python/deep_qa/sentence_corruption/language_model.py")
   override val arguments = Seq(
     "--train_file", positiveDataFile,
     "--word_dim", wordDimensionality.toString,

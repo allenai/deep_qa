@@ -2,10 +2,10 @@
 import argparse
 import codecs
 
-from dlfa.solvers.memory_network import MemoryNetworkSolver
-from dlfa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
-from dlfa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
-from dlfa.solvers.differentiable_search import DifferentiableSearchSolver
+from deep_qa.solvers.memory_network import MemoryNetworkSolver
+from deep_qa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
+from deep_qa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
+from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
 
 from .constants import TEST_DIR
 from .constants import TRAIN_FILE

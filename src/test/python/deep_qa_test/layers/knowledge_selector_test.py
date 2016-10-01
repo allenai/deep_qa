@@ -2,7 +2,7 @@ import numpy
 from keras import initializations
 from keras import backend as K
 
-from dlfa.layers.knowledge_selectors import hardmax
+from deep_qa.layers.knowledge_selectors import hardmax
 
 class TestKnowledgeSelector:
     def test_hardmax(self):

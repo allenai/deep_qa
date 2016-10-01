@@ -2,7 +2,7 @@ import numpy
 from keras.layers import Input, Embedding
 from keras.models import Model
 
-from dlfa.layers.encoders import BOWEncoder
+from deep_qa.layers.encoders import BOWEncoder
 
 class TestBOWEncoder:
     def test_on_unmasked_input(self):

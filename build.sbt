@@ -1,6 +1,6 @@
 organization := "org.allenai"
 
-name := "deep-learning-for-aristo"
+name := "deep-qa"
 
 version := "0.1"
 

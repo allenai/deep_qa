@@ -4,11 +4,11 @@ from unittest import TestCase
 
 import numpy
 
-from dlfa.data.indexed_instance import IndexedBackgroundInstance
-from dlfa.data.indexed_instance import IndexedMultipleChoiceInstance
-from dlfa.data.indexed_instance import IndexedQuestionAnswerInstance
-from dlfa.data.indexed_instance import IndexedSnliInstance
-from dlfa.data.indexed_instance import IndexedTrueFalseInstance
+from deep_qa.data.indexed_instance import IndexedBackgroundInstance
+from deep_qa.data.indexed_instance import IndexedMultipleChoiceInstance
+from deep_qa.data.indexed_instance import IndexedQuestionAnswerInstance
+from deep_qa.data.indexed_instance import IndexedSnliInstance
+from deep_qa.data.indexed_instance import IndexedTrueFalseInstance
 
 
 class TestIndexedTrueFalseInstance:

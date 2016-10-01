@@ -1,8 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 
-from dlfa.data.data_indexer import DataIndexer
-from dlfa.data.dataset import TextDataset
-from dlfa.data.text_instance import TrueFalseInstance
+from deep_qa.data.data_indexer import DataIndexer
+from deep_qa.data.dataset import TextDataset
+from deep_qa.data.text_instance import TrueFalseInstance
 
 class TestDataIndexer:
     def test_fit_word_dictionary_respects_min_count(self):

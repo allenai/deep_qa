@@ -1,4 +1,4 @@
-package org.allenai.dlfa.parse
+package org.allenai.deep_qa.parse
 
 import org.scalatest._
 

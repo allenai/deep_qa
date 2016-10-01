@@ -4,7 +4,7 @@ from unittest import TestCase
 import os
 import shutil
 
-from dlfa.solvers.memory_network import MemoryNetworkSolver
+from deep_qa.solvers.memory_network import MemoryNetworkSolver
 from ..common.constants import TEST_DIR
 from ..common.solvers import get_solver
 from ..common.solvers import write_memory_network_files

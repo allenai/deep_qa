@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option java_package = "org.allenai.dlfa";
+option java_package = "org.allenai.deep_qa";
 
-package dlfa;
+package deep_qa;
 
 // The service definition
 service SolverService {

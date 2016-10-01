@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import java.net.InetSocketAddress
 import org.apache.commons.lang3.StringUtils
@@ -15,7 +15,7 @@ import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
 
-import org.allenai.dlfa.data.BackgroundCorpusSearcher
+import org.allenai.deep_qa.data.BackgroundCorpusSearcher
 
 
 /**

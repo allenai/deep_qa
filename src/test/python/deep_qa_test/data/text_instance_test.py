@@ -4,8 +4,8 @@ from typing import List
 
 import pytest
 
-from dlfa.data.data_indexer import DataIndexer
-from dlfa.data.text_instance import QuestionAnswerInstance, TrueFalseInstance, SnliInstance
+from deep_qa.data.data_indexer import DataIndexer
+from deep_qa.data.text_instance import QuestionAnswerInstance, TrueFalseInstance, SnliInstance
 
 class TestTrueFalseInstance:
     @staticmethod

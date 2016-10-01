@@ -1,15 +1,15 @@
 # pylint: disable=no-self-use
 from pyfakefs import fake_filesystem_unittest
 
-# These lines are just here so that `py.test --cov=dlfa` produces a report for all dlfa submodules.
-# It's not perfect (some files are still missing), but at least it's an improvement.  These imports
-# can be removed once there are actual tests for code in these modules.
-import dlfa.layers  # pylint: disable=unused-import
-import dlfa.sentence_corruption  # pylint: disable=unused-import
-import dlfa.solvers  # pylint: disable=unused-import
+# These lines are just here so that `py.test --cov=deep_qa` produces a report for all deep_qa
+# submodules.  It's not perfect (some files are still missing), but at least it's an improvement.
+# These imports can be removed once there are actual tests for code in these modules.
+import deep_qa.layers  # pylint: disable=unused-import
+import deep_qa.sentence_corruption  # pylint: disable=unused-import
+import deep_qa.solvers  # pylint: disable=unused-import
 
-from dlfa.data.dataset import Dataset, TextDataset
-from dlfa.data.text_instance import TrueFalseInstance
+from deep_qa.data.dataset import Dataset, TextDataset
+from deep_qa.data.text_instance import TrueFalseInstance
 
 class TestDataset:
     def test_merge(self):

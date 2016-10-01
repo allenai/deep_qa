@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
@@ -6,11 +6,11 @@ import com.mattg.util.JsonHelper
 
 import org.json4s._
 
-import org.allenai.dlfa.parse.DependencyTree
-import org.allenai.dlfa.parse.QuestionInterpreter
-import org.allenai.dlfa.parse.StanfordParser
-import org.allenai.dlfa.parse.Token
-import org.allenai.dlfa.parse.transformers
+import org.allenai.deep_qa.parse.DependencyTree
+import org.allenai.deep_qa.parse.QuestionInterpreter
+import org.allenai.deep_qa.parse.StanfordParser
+import org.allenai.deep_qa.parse.Token
+import org.allenai.deep_qa.parse.transformers
 
 class QuestionInterpreterStep(
   val params: JValue,

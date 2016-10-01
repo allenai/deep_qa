@@ -1,16 +1,16 @@
-package org.allenai.dlfa.solver
+package org.allenai.deep_qa.solver
 
-import org.allenai.dlfa.data.Instance
-import org.allenai.dlfa.data.BackgroundInstance
-import org.allenai.dlfa.data.QuestionAnswerInstance
-import org.allenai.dlfa.data.MultipleTrueFalseInstance
-import org.allenai.dlfa.data.TrueFalseInstance
-import org.allenai.dlfa.message.SolverServiceGrpc.SolverServiceBlockingStub
-import org.allenai.dlfa.message.{Instance => MessageInstance}
-import org.allenai.dlfa.message.InstanceType
-import org.allenai.dlfa.message.SolverServiceGrpc
-import org.allenai.dlfa.message.QuestionRequest
-import org.allenai.dlfa.message.QuestionResponse
+import org.allenai.deep_qa.data.Instance
+import org.allenai.deep_qa.data.BackgroundInstance
+import org.allenai.deep_qa.data.QuestionAnswerInstance
+import org.allenai.deep_qa.data.MultipleTrueFalseInstance
+import org.allenai.deep_qa.data.TrueFalseInstance
+import org.allenai.deep_qa.message.SolverServiceGrpc.SolverServiceBlockingStub
+import org.allenai.deep_qa.message.{Instance => MessageInstance}
+import org.allenai.deep_qa.message.InstanceType
+import org.allenai.deep_qa.message.SolverServiceGrpc
+import org.allenai.deep_qa.message.QuestionRequest
+import org.allenai.deep_qa.message.QuestionResponse
 
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
@@ -80,8 +80,8 @@ object Client {
   def main(args: Array[String]) {
     val config = com.typesafe.config.ConfigFactory.load()
 
-    val host = config.getString("grpc.dlfa.server")
-    val port = config.getInt("grpc.dlfa.port")
+    val host = config.getString("grpc.deep_qa.server")
+    val port = config.getInt("grpc.deep_qa.port")
 
     val channel: ManagedChannel =
       OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).build

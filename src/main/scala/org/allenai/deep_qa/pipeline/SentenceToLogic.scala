@@ -1,4 +1,4 @@
-package org.allenai.dlfa.pipeline
+package org.allenai.deep_qa.pipeline
 
 import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
@@ -9,12 +9,12 @@ import org.json4s._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
-import org.allenai.dlfa.parse.Conjunction
-import org.allenai.dlfa.parse.DependencyTree
-import org.allenai.dlfa.parse.Logic
-import org.allenai.dlfa.parse.LogicalFormGenerator
-import org.allenai.dlfa.parse.Predicate
-import org.allenai.dlfa.parse.StanfordParser
+import org.allenai.deep_qa.parse.Conjunction
+import org.allenai.deep_qa.parse.DependencyTree
+import org.allenai.deep_qa.parse.Logic
+import org.allenai.deep_qa.parse.LogicalFormGenerator
+import org.allenai.deep_qa.parse.Predicate
+import org.allenai.deep_qa.parse.StanfordParser
 
 import java.io.File
 

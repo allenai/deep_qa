@@ -9,11 +9,11 @@ import pytest
 
 import numpy
 
-from dlfa.data.dataset import TextDataset
-from dlfa.data.data_indexer import DataIndexer
-from dlfa.data.text_instance import TrueFalseInstance
-from dlfa.data.tokenizer import NltkTokenizer, SimpleTokenizer
-from dlfa.solvers.lstm_solver import LSTMSolver
+from deep_qa.data.dataset import TextDataset
+from deep_qa.data.data_indexer import DataIndexer
+from deep_qa.data.text_instance import TrueFalseInstance
+from deep_qa.data.tokenizer import NltkTokenizer, SimpleTokenizer
+from deep_qa.solvers.lstm_solver import LSTMSolver
 
 
 class TestNNSolver(fake_filesystem_unittest.TestCase):
