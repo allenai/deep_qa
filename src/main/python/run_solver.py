@@ -10,7 +10,9 @@ import numpy
 random.seed(13370)
 numpy.random.seed(1337)  # pylint: disable=no-member
 
-from deep_qa.solvers import concrete_solvers  # pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
+from deep_qa.common.checks import ensure_pythonhashseed_set
+from deep_qa.solvers import concrete_solvers
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -45,6 +47,7 @@ def main():
 
 
 if __name__ == "__main__":
+    ensure_pythonhashseed_set()
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         level=logging.INFO)
     main()
