@@ -1,5 +1,4 @@
 # pylint: disable=invalid-name
-import argparse
 import codecs
 
 from deep_qa.solvers.memory_network import MemoryNetworkSolver
@@ -15,32 +14,24 @@ from .constants import VALIDATION_BACKGROUND
 from .constants import SNLI_FILE
 
 def get_solver(cls, additional_arguments=None):
-    parser = argparse.ArgumentParser()
-    cls.update_arg_parser(parser)
-    arguments = {}
-    arguments['model_serialization_prefix'] = TEST_DIR
-    arguments['train_file'] = TRAIN_FILE
-    arguments['validation_file'] = VALIDATION_FILE
-    arguments['embedding_size'] = '5'
-    arguments['encoder'] = 'bow'
-    arguments['num_epochs'] = '1'
-    arguments['keras_validation_split'] = '0.0'
+    params = {}
+    params['model_serialization_prefix'] = TEST_DIR
+    params['train_file'] = TRAIN_FILE
+    params['validation_file'] = VALIDATION_FILE
+    params['embedding_size'] = 5
+    params['encoder'] = {'type': 'bow'}
+    params['num_epochs'] = 1
+    params['keras_validation_split'] = 0.0
     if is_memory_network_solver(cls):
-        arguments['train_background'] = TRAIN_BACKGROUND
-        arguments['validation_background'] = VALIDATION_BACKGROUND
-        arguments['knowledge_selector'] = 'dot_product'
-        arguments['memory_updater'] = 'sum'
-        arguments['entailment_input_combiner'] = 'memory_only'
+        params['train_background'] = TRAIN_BACKGROUND
+        params['validation_background'] = VALIDATION_BACKGROUND
+        params['knowledge_selector'] = {'type': 'dot_product'}
+        params['memory_updater'] = {'type': 'sum'}
+        params['entailment_input_combiner'] = {'type': 'memory_only'}
     if additional_arguments:
         for key, value in additional_arguments.items():
-            arguments[key] = value
-    argument_list = []
-    for key, value in arguments.items():
-        argument_list.append('--' + key)
-        if value is not None:
-            argument_list.append(value)
-    args = parser.parse_args(argument_list)
-    return cls(**vars(args))
+            params[key] = value
+    return cls(params)
 
 
 def write_snli_file():
@@ -51,6 +42,29 @@ def write_snli_file():
         snli_file.write('4\ttext4\thypothesis4\tneutral\n')
         snli_file.write('5\ttext5\thypothesis5\tentails\n')
         snli_file.write('6\ttext6\thypothesis6\tcontradicts\n')
+
+
+def write_lstm_solver_files():
+    with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+        validation_file.write('1\tq1a1\t0\n')
+        validation_file.write('2\tq1a2\t1\n')
+        validation_file.write('3\tq1a3\t0\n')
+        validation_file.write('4\tq1a4\t0\n')
+        validation_file.write('5\tq2a1\t0\n')
+        validation_file.write('6\tq2a2\t0\n')
+        validation_file.write('7\tq2a3\t1\n')
+        validation_file.write('8\tq2a4\t0\n')
+        validation_file.write('9\tq3a1\t0\n')
+        validation_file.write('10\tq3a2\t0\n')
+        validation_file.write('11\tq3a3\t0\n')
+        validation_file.write('12\tq3a4\t1\n')
+    with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
+        train_file.write('1\tsentence1\t0\n')
+        train_file.write('2\tsentence2\t1\n')
+        train_file.write('3\tsentence3\t0\n')
+        train_file.write('4\tsentence4\t1\n')
+        train_file.write('5\tsentence5\t0\n')
+        train_file.write('6\tsentence6\t0\n')
 
 
 def write_memory_network_files():

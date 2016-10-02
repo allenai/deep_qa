@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Any
 from overrides import overrides
 
 from keras.layers import TimeDistributed
@@ -18,10 +18,15 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
     similarity with encoded answer options, or something similar.
     '''
 
-    entailment_choices = ['question_answer_mlp']
-    entailment_default = entailment_choices[0]
-    def __init__(self, **kwargs):
-        super(QuestionAnswerMemoryNetworkSolver, self).__init__(**kwargs)
+    def __init__(self, params: Dict[str, Any]):
+        # We don't have any parameters to set that are specific to this class, so we just call the
+        # superclass constructor.
+        super(QuestionAnswerMemoryNetworkSolver, self).__init__(params)
+
+        # Now we set some class-specific member variables.
+        self.entailment_choices = ['question_answer_mlp']
+
+        # And declare some model-specific variables that will be set later.
         self.num_options = None
         self.max_answer_length = None
 
@@ -67,7 +72,7 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         answer_encoder = TimeDistributed(self._get_new_encoder(), name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
         return ([answer_input_layer],
-                self.entailment_model.classify(combined_input, encoded_answers))
+                self._get_entailment_model().classify(combined_input, encoded_answers))
 
     @overrides
     def _get_validation_data(self):

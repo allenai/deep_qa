@@ -1,10 +1,12 @@
-from typing import Dict
+from copy import deepcopy
+from typing import Dict, Any
 from overrides import overrides
 
 from keras import backend as K
 from keras.layers import TimeDistributed, Dropout, merge
 from keras.models import Model
 
+from ..common.params import get_choice_with_default
 from ..data.dataset import Dataset, IndexedDataset, TextDataset  # pylint: disable=unused-import
 from ..data.text_instance import TrueFalseInstance
 from ..layers.knowledge_selectors import selectors
@@ -54,91 +56,61 @@ class MemoryNetworkSolver(NNSolver):
     so they used simpler models "entailment".
     '''
 
-    entailment_choices = ['true_false_mlp']
-    entailment_default = entailment_choices[0]
-    has_binary_entailment = False
-    def __init__(self, **kwargs):
-        super(MemoryNetworkSolver, self).__init__(**kwargs)
-        self.train_background = kwargs['train_background']
-        self.positive_train_background = kwargs['positive_train_background']
-        self.negative_train_background = kwargs['negative_train_background']
-        self.validation_background = kwargs['validation_background']
-        self.test_background = kwargs['test_background']
-        self.debug_background = kwargs['debug_background']
+    def __init__(self, params: Dict[str, Any]):
+        self.train_background = params.pop('train_background', None)
+        self.positive_train_background = params.pop('positive_train_background', None)
+        self.negative_train_background = params.pop('negative_train_background', None)
+        self.validation_background = params.pop('validation_background', None)
+        self.test_background = params.pop('test_background', None)
+        self.debug_background = params.pop('debug_background', None)
 
-        self.knowledge_selector = selectors[kwargs['knowledge_selector']]
-        self.hard_memory_selection = kwargs['hard_memory_selection']
-        self.knowledge_selector_layers = {}
-        self.memory_updater = updaters[kwargs['memory_updater']]
-        self.memory_updater_layers = {}
-        self.entailment_combiner = entailment_input_combiners[kwargs['entailment_input_combiner']](
-                self.embedding_size)
-        entailment_args = {
-                'num_hidden_layers': kwargs['entailment_num_hidden_layers'],
-                'hidden_layer_width': kwargs['entailment_hidden_layer_width'],
-                'hidden_layer_activation': kwargs['entailment_hidden_layer_activation'],
-                }
-        if kwargs['entailment_model'] == 'question_answer_mlp':
-            entailment_args['answer_dim'] = self.embedding_size
-        self.entailment_model = entailment_models[kwargs['entailment_model']](**entailment_args)
-        self.num_memory_layers = kwargs['num_memory_layers']
+        self.num_memory_layers = params.pop('num_memory_layers', 1)
 
-        self.max_knowledge_length = None
+        # We need to pop these parameters now, but use them after we've called the superclass
+        # constructor.  We don't need to save them to self; see below.
+        pretrain_entailment = params.pop('pretrain_entailment', False)
+        pretrain_attention = params.pop('pretrain_attention', False)
+        snli_file = params.pop('snli_file', None)
 
-        if kwargs['pretrain_entailment']:
-            snli_file = kwargs['snli_file']
+        # These parameters specify the kind of knowledge selector, used to compute an attention
+        # over a collection of background information.
+        # If given, this must be a dict.  We will use the "type" key in this dict (which must match
+        # one of the keys in `selectors`) to determine the type of the selector, then pass the
+        # remaining args to the selector constructor.
+        self.knowledge_selector_params = params.pop('knowledge_selector', {})
+
+        # Same deal with these three as with the knowledge selector params.
+        self.memory_updater_params = params.pop('memory_updater', {})
+        self.entailment_combiner_params = params.pop('entailment_input_combiner', {})
+        self.entailment_model_params = params.pop('entailment_model', {})
+
+        # Now that we've processed all of our parameters, we can call the superclass constructor.
+        # The superclass will check that there are no unused parameters, so we need to call this
+        # _after_ we've popped everything we use.
+        super(MemoryNetworkSolver, self).__init__(params)
+
+        # self.pretrainers gets set in the superclass constructor, so now we can append to it.
+        if pretrain_entailment:
             self.pretrainers.append(SnliEntailmentPretrainer(self, snli_file))
-        if kwargs['pretrain_attention']:
-            snli_file = kwargs['snli_file']
+        if pretrain_attention:
             self.pretrainers.append(SnliAttentionPretrainer(self, snli_file))
 
-    @classmethod
-    @overrides
-    def update_arg_parser(cls, parser):
-        super(MemoryNetworkSolver, cls).update_arg_parser(parser)
+        # These are the entailment models that are compatible with this solver.
+        self.entailment_choices = ['true_false_mlp']
 
-        parser.add_argument('--train_background', type=str)
-        parser.add_argument('--positive_train_background', type=str)
-        parser.add_argument('--negative_train_background', type=str)
-        parser.add_argument('--validation_background', type=str)
-        parser.add_argument('--test_background', type=str)
-        parser.add_argument('--debug_background', type=str)
+        # This specifies whether the entailment decision made my this solver (if any) has a sigmoid
+        # activation or a softmax activation.  This value is read by some pre-trainers, which need
+        # to know how to construct data for training a model.
+        self.has_sigmoid_entailment = False
 
-        parser.add_argument('--knowledge_selector', type=str, default='parameterized',
-                            choices=selectors.keys(),
-                            help='The kind of knowledge selector to use.  See '
-                            'knowledge_selectors.py for details.')
-        parser.add_argument('--hard_memory_selection', action='store_true',
-                            help='Make hard choices instead of using softmax.')
-        parser.add_argument('--memory_updater', type=str, default='dense_concat',
-                            choices=updaters.keys(),
-                            help='The kind of memory updaters to use.  See memory_updaters.py '
-                            'for details.')
-        parser.add_argument('--entailment_input_combiner', type=str, default='heuristic_matching',
-                            choices=entailment_input_combiners.keys(),
-                            help='The kind of entailment input combiner.  See entailment_models.py '
-                            'for details.')
-        parser.add_argument('--entailment_model', type=str, default=cls.entailment_default,
-                            choices=cls.entailment_choices,
-                            help='The kind of entailment model to use.  See entailment_models.py '
-                            'for details.')
-        parser.add_argument('--snli_file', type=str,
-                            help='Path to SNLI data, formatted as three-column tsv')
-        parser.add_argument('--pretrain_attention', action='store_true',
-                            help='Use SNLI data to pretrain the attention model')
-        parser.add_argument('--pretrain_entailment', action='store_true',
-                            help='Use SNLI data to pretrain the entailment model')
-        # TODO(matt): I wish there were a better way to do this...  You really want the entailment
-        # model object to specify these arguments, and deal with them, instead of having NNSolver
-        # have to know about them...  Not sure how to solve this.
-        parser.add_argument('--entailment_num_hidden_layers', type=int, default=1,
-                            help='Number of hidden layers in the entailment model')
-        parser.add_argument('--entailment_hidden_layer_width', type=int, default=50,
-                            help='Width of hidden layers in the entailment model')
-        parser.add_argument('--entailment_hidden_layer_activation', type=str, default='relu',
-                            help='Activation function for hidden layers in the entailment model')
-        parser.add_argument('--num_memory_layers', type=int, default=1,
-                            help="Number of memory layers in the network. (default 1)")
+        # Model-specific variables that will get set and used later.  For many of these, we don't
+        # want to set them now, because they use max length information that only gets set after
+        # reading the training data.
+        self.knowledge_selector_layers = {}
+        self.memory_updater_layers = {}
+        self.entailment_input_combiner = None
+        self.entailment_model = None
+        self.max_knowledge_length = None
 
     @overrides
     def can_train(self) -> bool:
@@ -243,10 +215,18 @@ class MemoryNetworkSolver(NNSolver):
         subclasses might need to TimeDistribute this, for instance.
         """
         if layer_num not in self.knowledge_selector_layers:
-            layer = self.knowledge_selector(name='knowledge_selector_%d' % layer_num,
-                                            hard_selection=self.hard_memory_selection)
+            layer = self._get_new_knowledge_selector(name='knowledge_selector_%d' % layer_num)
             self.knowledge_selector_layers[layer_num] = layer
         return self.knowledge_selector_layers[layer_num]
+
+    def _get_new_knowledge_selector(self, name='knowledge_selector'):
+        # The code that follows would be destructive to self.knowledge_selector_params (lots of
+        # calls to params.pop()), but it's possible we'll want to call this more than once.  So
+        # we'll make a copy and use that instead of self.knowledge_selector_params.
+        params = deepcopy(self.knowledge_selector_params)
+        selector_type = get_choice_with_default(params, "type", list(selectors.keys()))
+        params['name'] = name
+        return selectors[selector_type](**params)
 
     def _get_memory_updater(self, layer_num: int):
         """
@@ -254,16 +234,37 @@ class MemoryNetworkSolver(NNSolver):
         might need to TimeDistribute this, for instance.
         """
         if layer_num not in self.memory_updater_layers:
-            layer = self.memory_updater(encoding_dim=self.embedding_size, name='memory_updater_%d' % layer_num)
+            layer = self._get_new_memory_updater(name='memory_updater_%d' % layer_num)
             self.memory_updater_layers[layer_num] = layer
         return self.memory_updater_layers[layer_num]
 
-    def _get_entailment_combiner(self):
+    def _get_new_memory_updater(self, name='memory_updater'):
+        # The code that follows would be destructive to self.memory_updater_params (lots of calls
+        # to params.pop()), but it's possible we'll want to call this more than once.  So we'll
+        # make a copy and use that instead of self.memory_updater_params.
+        params = deepcopy(self.memory_updater_params)
+        updater_type = get_choice_with_default(params, "type", list(updaters.keys()))
+        params['name'] = name
+        params['encoding_dim'] = self.embedding_size
+        return updaters[updater_type](**params)
+
+    def _get_entailment_input_combiner(self):
         """
         Instantiates an EntailmentCombiner layer.  This is an overridable method because some
         subclasses might need to TimeDistribute this, for instance.
         """
-        return self.entailment_combiner
+        if self.entailment_input_combiner is None:
+            self.entailment_input_combiner = self._get_new_entailment_input_combiner()
+        return self.entailment_input_combiner
+
+    def _get_new_entailment_input_combiner(self):
+        # The code that follows would be destructive to self.entailment_combiner_params (lots of
+        # calls to params.pop()), but it's possible we'll want to call this more than once.  So
+        # we'll make a copy and use that instead of self.entailment_combiner_params.
+        params = deepcopy(self.entailment_combiner_params)
+        params['encoding_dim'] = self.embedding_size
+        combiner_type = get_choice_with_default(params, "type", list(entailment_input_combiners.keys()))
+        return entailment_input_combiners[combiner_type](**params)
 
     def _get_entailment_output(self, combined_input):
         """
@@ -275,7 +276,23 @@ class MemoryNetworkSolver(NNSolver):
         is a tuple of ([additional input layers], output layer).  For instance, this is where
         answer options go, for models that separate the question text from the answer options.
         """
-        return [], self.entailment_model.classify(combined_input)
+        return [], self._get_entailment_model().classify(combined_input)
+
+    def _get_entailment_model(self):
+        if self.entailment_model is None:
+            self.entailment_model = self._get_new_entailment_model()
+        return self.entailment_model
+
+    def _get_new_entailment_model(self):
+        # The code that follows would be destructive to self.entailment_model_params (lots of calls
+        # to params.pop()), but it's possible we'll want to call this more than once.  So we'll
+        # make a copy and use that instead of self.entailment_model_params.
+        entailment_params = deepcopy(self.entailment_model_params)
+        model_type = get_choice_with_default(entailment_params, "type", self.entailment_choices)
+        # TODO(matt): Not great to have these two lines here.
+        if model_type == 'question_answer_mlp':
+            entailment_params['answer_dim'] = self.embedding_size
+        return entailment_models[model_type](entailment_params)
 
     @overrides
     def _build_model(self):
@@ -362,7 +379,7 @@ class MemoryNetworkSolver(NNSolver):
                                  mode='concat',
                                  concat_axis=knowledge_axis,
                                  name='concat_entailment_inputs')
-        combined_input = self._get_entailment_combiner()(entailment_input)
+        combined_input = self._get_entailment_input_combiner()(entailment_input)
         extra_entailment_inputs, entailment_output = self._get_entailment_output(combined_input)
 
         # Step 6: Define the model, and return it. The model will be compiled and trained by the

@@ -1,5 +1,4 @@
 from concurrent import futures
-import argparse
 import random
 import time
 
@@ -27,19 +26,9 @@ _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
 class SolverServer(message_pb2.SolverServiceServicer):
-    def __init__(self, solver_class, args):
-        # TODO(matt): having to go through argparse is pretty ugly.  We need to make a better
-        # system for specifying arguments, likely using a json or hocon library.
-        argparser = argparse.ArgumentParser()
-        solver_class.update_arg_parser(argparser)
-        argument_list = []
-        for key, value in args.items():
-            argument_list.append('--' + key)
-            if value is not None:
-                argument_list.append(value)
-        args = argparser.parse_args(argument_list)
-        self.solver = solver_class(**vars(args))
-        self.solver.load_model(0)
+    def __init__(self, solver):
+        self.solver = solver
+        self.solver.load_model()
 
     # The name of this method is specified in message.proto.
     def AnswerQuestion(self, request, context):
@@ -74,7 +63,6 @@ class SolverServer(message_pb2.SolverServiceServicer):
         return instance
 
 
-
 def serve():
     # read in the Typesafe-style config file and lookup the port to run on.
     conf = ConfigFactory.parse_file('src/main/resources/application.conf')
@@ -83,17 +71,21 @@ def serve():
 
     # create the server and add our RPC "servicer" to it
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    args = {
-            'model_serialization_prefix': 'models/testing',
-            'encoder': 'bow',
-            'knowledge_selector': 'dot_product',
-            'memory_updater': 'sum',
-            'entailment_input_combiner': 'memory_only',
-            'num_memory_layers': '1',
-            'max_sentence_length': '125',
+
+    # TODO(matt): read this from a file somewhere, ideally the same conf file as above.
+    params = {
+            'model_serialization_prefix': 'models/example',
+            'encoder': {'type': 'bow'},
+            'knowledge_selector': {'type': 'dot_product'},
+            'memory_updater': {'type': 'sum'},
+            'entailment_input_combiner': {'type': 'memory_only'},
+            'num_memory_layers': 1,
+            'max_sentence_length': 125,
             }
+
     solver_class = concrete_solvers[model_type]
-    message_pb2.add_SolverServiceServicer_to_server(SolverServer(solver_class, args), server)
+    solver = solver_class(params)
+    message_pb2.add_SolverServiceServicer_to_server(SolverServer(solver), server)
 
     # start the server on the specified port
     server.add_insecure_port('[::]:{0}'.format(port))

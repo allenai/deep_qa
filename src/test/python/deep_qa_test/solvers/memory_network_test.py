@@ -25,11 +25,11 @@ class TestMemoryNetworkSolver(TestCase):
         solver.train()
 
     def test_train_does_not_crash_with_parameterized_knowledge_selector(self):
-        args = {'knowledge_selector': 'parameterized'}
+        args = {'knowledge_selector': {'type': 'parameterized'}}
         solver = get_solver(MemoryNetworkSolver, args)
         solver.train()
 
     def test_train_does_not_crash_with_cnn_encoder(self):
-        args = {'encoder': 'cnn', 'cnn_ngram_filter_sizes': '1', 'cnn_num_filters': '1'}
+        args = {'encoder': {'type': 'cnn', 'ngram_filter_sizes': [1], 'num_filters': 1}}
         solver = get_solver(MemoryNetworkSolver, args)
         solver.train()

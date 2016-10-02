@@ -2,70 +2,97 @@ import logging
 
 import pickle
 import os
-from typing import Dict, List, Tuple
+from copy import deepcopy
+from typing import Any, Dict, List, Tuple
 
 import numpy
 from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
-from keras.regularizers import l1l2
 from keras.models import Model, model_from_json
 
+from ..common.params import get_choice_with_default
 from ..data.dataset import TextDataset, IndexedDataset  # pylint: disable=unused-import
 from ..data.text_instance import TrueFalseInstance, TextInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizer import tokenizers
 from ..data.data_indexer import DataIndexer
-from ..layers.encoders import encoders
+from ..layers.encoders import encoders, set_regularization_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class NNSolver:
-    def __init__(self, **kwargs):
-        """
-        Allowed kwargs are specified in update_arg_parser()
-        """
-        # Note that because of how we called vars() on the parsed arguments, the defaults specified
-        # in update_arg_parser() will already be present here, including None values, so we can
-        # just grab these directly without worrying if they're there or not.
-        self.model_prefix = kwargs['model_serialization_prefix']
+    def __init__(self, params: Dict[str, Any]):
+        # Prefix for saving and loading model files
+        self.model_prefix = params.pop('model_serialization_prefix')
         parent_directory = os.path.dirname(self.model_prefix)
         os.makedirs(parent_directory, exist_ok=True)
 
-        self.pretrained_embeddings_file = kwargs['pretrained_embeddings_file']
-        self.fine_tune_embeddings = kwargs['fine_tune_embeddings']
-        self.project_embeddings = kwargs['project_embeddings']
-        self.embedding_size = kwargs['embedding_size']
-        self.embedding_dropout = kwargs['embedding_dropout']
-        self.max_sentence_length = kwargs['max_sentence_length']
-        self.max_training_instances = kwargs['max_training_instances']
+        # If specified, we will use the vectors in this file and learn a projection matrix to get
+        # word vectors of dimension `embedding_size`, instead of learning the embedding matrix
+        # ourselves.
+        self.pretrained_embeddings_file = params.pop('pretrained_embeddings_file', None)
 
-        self.train_file = kwargs['train_file']
-        self.positive_train_file = kwargs['positive_train_file']
-        self.negative_train_file = kwargs['negative_train_file']
-        self.validation_file = kwargs['validation_file']
-        self.test_file = kwargs['test_file']
-        self.debug_file = kwargs['debug_file']
+        # If we're using pre-trained embeddings, should we fine tune them?
+        self.fine_tune_embeddings = params.pop('fine_tune_embeddings', False)
 
-        self.tokenizer = tokenizers[kwargs['tokenizer']]()
+        # Should we have a projection layer on top of our embedding layer? (mostly useful with
+        # pre-trained embeddings)
+        self.project_embeddings = params.pop('project_embeddings', False)
 
-        self.keras_validation_split = kwargs['keras_validation_split']
-        self.num_epochs = kwargs['num_epochs']
-        self.patience = kwargs['patience']
+        # Number of dimensions to use for word embeddings
+        self.embedding_size = params.pop('embedding_size', 50)
+
+        # Dropout parameter to apply to the word embedding layer
+        self.embedding_dropout = params.pop('embedding_dropout', 0.5)
+
+        # Upper limit on length of word sequences in the training data. Ignored during testing (we
+        # use the value set at training time, either from this parameter or from a loaded model).
+        # If this is not set, we'll calculate a max length from the data.
+        self.max_sentence_length = params.pop('max_sentence_length', None)
+
+        # Upper limit on the number of training instances.  If this is set, and we get more than
+        # this, we will truncate the data.
+        self.max_training_instances = params.pop('max_training_instances', None)
+
+        self.train_file = params.pop('train_file', None)
+        self.positive_train_file = params.pop('positive_train_file', None)
+        self.negative_train_file = params.pop('negative_train_file', None)
+        self.validation_file = params.pop('validation_file', None)
+        self.test_file = params.pop('test_file', None)
+
+        # Visualize the intermediate outputs of the trained model. Output will be written to
+        # <model_serialization_prefix>_debug_<epoch>.txt
+        self.debug_file = params.pop('debug_file', None)
+
+        # Which tokenizer to use for TextInstances
+        tokenizer_choice = get_choice_with_default(params, 'tokenizer', list(tokenizers.keys()))
+        self.tokenizer = tokenizers[tokenizer_choice]()
+
+        # Amount of training data to use for Keras' validation (not our QA validation, set by
+        # the validation_file param, which is separate).  This value is passed as
+        # 'validation_split' to Keras' model.fit().
+        self.keras_validation_split = params.pop('keras_validation_split', 0.1)
+        # Number of train epochs.
+        self.num_epochs = params.pop('num_epochs', 20)
+        # Number of epochs to be patient before early stopping.
+        self.patience = params.pop('patience', 1)
+
+        # These parameters specify the kind of encoder used to encode any word sequence input.
+        # If given, this must be a dict.  We will use the "type" key in this dict (which must match
+        # one of the keys in `encoders`) to determine the type of the encoder, then pass the
+        # remaining args to the encoder constructor.
+        # Hint: Use lstm or cnn for sentences, treelstm for logical forms, and bow for either.
+        self.encoder_params = params.pop('encoder', {})
+
+        # We've now processed all of the parameters, and we're the base class, so there should not
+        # be anything left.
+        assert len(params.keys()) == 0, "You passed unrecognized parameters: " + str(params)
 
         self.data_indexer = DataIndexer()
 
-        self.encoder = kwargs['encoder']
-        if self.encoder == "cnn":
-            self.cnn_num_filters = kwargs['cnn_num_filters']
-            self.cnn_ngram_filter_sizes = tuple(kwargs['cnn_ngram_filter_sizes'])
-            self.cnn_activation = kwargs['cnn_activation']
-        if kwargs["l1_weight_regularizer"] > 0 or kwargs["l2_weight_regularizer"] > 0:
-            self.encoder_regularizer = l1l2(l1=kwargs["l1_weight_regularizer"],
-                                            l2=kwargs["l2_weight_regularizer"])
-        else:
-            self.encoder_regularizer = None
-
-        # Model-specific member variables that will get set and used later.
+        # Model-specific member variables that will get set and used later.  For many of these, we
+        # don't want to set them now, because they use max length information that only gets set
+        # after reading the training data.
         self.model = None
         self.debug_model = None
         self.embedding_layer = None
@@ -84,101 +111,6 @@ class NNSolver:
         self.validation_dataset = None
         self.validation_input = None
         self.validation_labels = None
-
-    @classmethod
-    def update_arg_parser(cls, parser):
-        """
-        MODEL SPECIFICATION:
-            embedding_size: int. Size of word vectors (default 50).
-            pretrained_embeddings_file: str.
-            max_sentence_length: max length of training sentences (ignored at test time).
-
-        DATA SPECIFICATION:
-            train_file: path to training data.
-            positive_train_file: path to positive training data.
-            negative_train_file: path to negative training data.
-            validation_file: path to validation data.
-
-            NOTE on train file arguments: if `train_file` is given, the other two arguments are
-            ignored, and the file is assumed to have instance labels.  If `positive_train_file` is
-            given, it is assumed to not have labels (or all labels must be "1").  Similarly for
-            `negative_train_file`, except label must be "0" if present.  If `positive_train_file` is
-            given and `negative_train_file` isn't, we will try to generate negative data, but the
-            method to do so is poor and won't work for all subclasses.
-
-        TRAINING HYPER-PARAMETERS:
-            max_training_instances: if this is given and we have more training instances than this,
-                trunction them.
-            num_epochs: how many epochs to train for (default 20).
-            patience: number of epochs to be patient before stopping early (default 1).
-        """
-        # TODO(matt): move comments in the docstring into help text, so we're not repeating
-        # ourselves.
-
-        # Input files
-        parser.add_argument('--train_file', type=str)
-        parser.add_argument('--positive_train_file', type=str)
-        parser.add_argument('--negative_train_file', type=str)
-        parser.add_argument('--validation_file', type=str)
-        parser.add_argument('--test_file', type=str)
-        parser.add_argument('--debug_file', type=str,
-                            help='Visualize the intermediate outputs of the trained model.'
-                                 'Output will be written to <model_serialization_prefix>_debug_<epoch>.txt')
-
-        parser.add_argument('--tokenizer', type=str, choices=tokenizers.keys(), default='default',
-                            help='Which tokenizer to use for TextInstances')
-
-        # Model specification
-        parser.add_argument("--model_serialization_prefix", required=True,
-                            help="Prefix for saving and loading model files")
-        parser.add_argument('--embedding_size', type=int, default=50,
-                            help="Number of dimensions to use for word embeddings")
-        parser.add_argument('--pretrained_embeddings_file', type=str,
-                            help="If specified, we will use the vectors in this file and learn a "
-                            "projection matrix to get word vectors of dimension `embedding_size`, "
-                            "instead of learning the embedding matrix ourselves.")
-        parser.add_argument('--fine_tune_embeddings', action='store_true',
-                            help="If we're using pre-trained embeddings, should we fine tune them?")
-        parser.add_argument('--project_embeddings', action='store_true',
-                            help="Should we have a projection layer on top of our embedding layer? "
-                            "(mostly useful with pre-trained embeddings)")
-        parser.add_argument('--embedding_dropout', type=float, default=0.5,
-                            help="Dropout parameter to apply to the word embedding layer")
-        parser.add_argument('--max_sentence_length', type=int,
-                            help="Upper limit on length of training data. Ignored during testing.")
-        parser.add_argument('--encoder', type=str, choices=encoders.keys(), default='lstm',
-                            help="Kind of encoder used to encode all kinds of inputs and background."
-                                 "Hint: Use lstm or cnn for sentences, treelstm for logical forms,"
-                                 "and bow for either.")
-        parser.add_argument('--cnn_num_filters', type=int, default=20,
-                            help="Output dimensionality of each convolution layer")
-        parser.add_argument('--cnn_ngram_filter_sizes', type=int, nargs='+', default=[2, 3, 4, 5],
-                            help="ngram sizes that will be used as filter sizes in convolution layers."
-                                 "Example: '--cnn_ngram_filter_sizes 2 3 4 5' will use four convolution layers,"
-                                 "with filter sizes 2, 3, 4 and 5, corresponding to 2 to 5 grams.")
-        parser.add_argument('--cnn_activation', type=str, default='relu',
-                            help='Activation for the convolution layer. Default: ReLU.')
-        parser.add_argument('--l1_weight_regularizer', type=float, default=0.0,
-                            help="Coefficient for L1 weight regularization for the encoder."
-                                 "This will be applied to all parameters. Defaults to 0.")
-        parser.add_argument('--l2_weight_regularizer', type=float, default=0.0,
-                            help="Coefficient for L2 weight regularization for the encoder."
-                                 "This will be applied to all parameters. Defaults to 0.")
-
-        # Training details
-        parser.add_argument('--max_training_instances', type=int,
-                            help="Upper limit on the size of training data")
-        parser.add_argument('--keras_validation_split', type=float, default=0.1,
-                            help="Amount of training data to use for Keras' validation (not our "
-                            "QA validation, with --validation_file, which is separate)")
-        parser.add_argument('--num_epochs', type=int, default=20,
-                            help="Number of train epochs (20 by default)")
-        parser.add_argument('--patience', type=int, default=1,
-                            help="Number of epochs to be patient before early stopping (1 by default)")
-
-        # Testing details
-        parser.add_argument('--use_model_from_epoch', type=int,
-                            help="Use model from a particular epoch (use best saved model if empty)")
 
     def _instance_type(self):
         """
@@ -402,6 +334,12 @@ class NNSolver:
             elif layer.name == "sentence_encoder":
                 logger.info("  Found sentence encoder")
                 self.sentence_encoder_layer = layer
+            elif layer.name == "timedist_sentence_encoder":
+                logger.info("  Found sentence encoder")
+                if self.sentence_encoder_layer is None:
+                    self.sentence_encoder_layer = layer
+                else:
+                    logger.warning("  FOUND DUPLICATE SENTENCE ENCODER LAYER!  NOT SURE WHAT TO DO!")
         assert self.embedding_layer is not None, "Embedding layer not found"
         assert self.sentence_encoder_layer is not None, "Sentence encoder not found"
         if self.project_embeddings:
@@ -656,26 +594,16 @@ class NNSolver:
             self.sentence_encoder_layer = self._get_new_encoder()
         return self.sentence_encoder_layer
 
-    def _get_new_encoder(self):
-        # The encoder will use only those arguments that are relevant to it. For example,
-        # BOWEncoder will use nothing except the name.
-        # Assuming we will not need a different kind of regularizer for each parameter.
-        encoder_arguments = {"name": "sentence_encoder"}
-        if self.encoder in ["lstm", "tree_lstm", "cnn"]:
-            # BOWEncoder does not need to know the output dim
-            encoder_arguments["output_dim"] = self.embedding_size
-        if self.encoder_regularizer is not None:
-            encoder_arguments["W_regularizer"] = self.encoder_regularizer
-            encoder_arguments["b_regularizer"] = self.encoder_regularizer
-            if self.encoder in ["lstm", "tree_lstm"]:
-                encoder_arguments["U_regularizer"] = self.encoder_regularizer
-            if self.encoder == "tree_lstm":
-                encoder_arguments["V_regularizer"] = self.encoder_regularizer
-        if self.encoder == "cnn":
-            encoder_arguments["filter_output_dim"] = self.cnn_num_filters
-            encoder_arguments["ngram_filter_sizes"] = self.cnn_ngram_filter_sizes
-            encoder_arguments["conv_layer_activation"] = self.cnn_activation
-        return encoders[self.encoder](**encoder_arguments)
+    def _get_new_encoder(self, name="sentence_encoder"):
+        # The code that follows would be destructive to self.encoder_params (lots of calls to
+        # params.pop()), but we may need to create several encoders.  So we'll make a copy and use
+        # that instead of self.encoder_params.
+        encoder_params = deepcopy(self.encoder_params)
+        encoder_type = get_choice_with_default(encoder_params, "type", list(encoders.keys()))
+        encoder_params["name"] = name
+        encoder_params["output_dim"] = self.embedding_size
+        set_regularization_params(encoder_type, encoder_params)
+        return encoders[encoder_type](**encoder_params)
 
     def _build_sentence_encoder_model(self):
         """
