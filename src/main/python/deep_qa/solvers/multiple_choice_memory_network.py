@@ -1,9 +1,9 @@
-from typing import Dict, Any
+from typing import Any, Dict, List
 from overrides import overrides
 
 from keras.layers import TimeDistributed
 
-from ..data.dataset import TextDataset
+from ..data.dataset import Dataset
 from ..data.text_instance import TrueFalseInstance
 from .memory_network import MemoryNetworkSolver
 
@@ -110,66 +110,24 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         return TimeDistributed(base_entailment_combiner, name="timedist_%s" % base_entailment_combiner.name)
 
     @overrides
-    def evaluate(self, labels, test_input):
-        """
-        We need to override this method, because our test input is already grouped by question.
-        """
-        scores = self.model.evaluate(test_input, labels)
-        return scores[1]  # NOTE: depends on metrics=['accuracy'] in self.model.compile()
+    def _load_dataset_from_files(self, files: List[str]):
+        dataset = super(MultipleChoiceMemoryNetworkSolver, self)._load_dataset_from_files(files)
+        return dataset.to_question_dataset()
 
     @overrides
-    def _get_training_data(self):
-        dataset = TextDataset.read_from_file(self.train_file, self._instance_type(), tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.train_background)
-        self.data_indexer.fit_word_dictionary(background_dataset)
-        question_dataset = background_dataset.to_question_dataset()
-        if self.max_training_instances is not None:
-            question_dataset = question_dataset.truncate(self.max_training_instances)
-        self.training_dataset = background_dataset
-        return self.prep_labeled_data(question_dataset, for_train=True, shuffle=True)
-
-    @overrides
-    def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
-        question_dataset = background_dataset.to_question_dataset()
-        self.validation_dataset = question_dataset
-        return self.prep_labeled_data(question_dataset, for_train=False, shuffle=True)
-
-    @overrides
-    def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
-        question_dataset = background_dataset.to_question_dataset()
-        return self.prep_labeled_data(question_dataset, for_train=False, shuffle=True)
-
-    @overrides
-    def _get_debug_dataset_and_input(self):
-        dataset = TextDataset.read_from_file(self.debug_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
-        question_dataset = background_dataset.to_question_dataset()
-        inputs, _ = self.prep_labeled_data(question_dataset, for_train=False, shuffle=False)
-        return question_dataset, inputs
-
-    @overrides
-    def debug(self, debug_dataset, debug_inputs, epoch: int):
-        """
-        A debug_model must be defined by now. Run it on debug data and print the
-        appropriate information to the debug output.
-        """
+    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], scores, epoch: int):
         debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
-        all_question_scores = self.score(debug_inputs)
-        all_question_attention_outputs = self.debug_model.predict(debug_inputs)
-        if self.num_memory_layers == 1:
-            all_question_attention_outputs = [all_question_attention_outputs]
+        all_question_scores = None
+        all_question_attention_outputs = []
+        for i, layer_name in enumerate(layer_names):
+            if layer_name.endswith('softmax'):
+                all_question_scores = scores[i]
+            elif 'knowledge_selector' in layer_name:
+                all_question_attention_outputs.append(scores[i])
+        assert all_question_scores is not None, "You must include the softmax layer in the debug output!"
+        assert len(all_question_attention_outputs) > 0, "No attention layer specified; what are you debugging?"
         # Collect values from all hops of attention for a given instance into attention_values.
-        for instance, question_scores, *question_attention_values in zip(debug_dataset.instances,
+        for instance, question_scores, *question_attention_values in zip(dataset.instances,
                                                                          all_question_scores,
                                                                          *all_question_attention_outputs):
             label = instance.label

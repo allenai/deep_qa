@@ -3,7 +3,6 @@ from overrides import overrides
 
 from keras.layers import TimeDistributed
 
-from ..data.dataset import TextDataset
 from ..data.text_instance import QuestionAnswerInstance
 from .memory_network import MemoryNetworkSolver
 
@@ -73,28 +72,3 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         encoded_answers = answer_encoder(answer_embedding)
         return ([answer_input_layer],
                 self._get_entailment_model().classify(combined_input, encoded_answers))
-
-    @overrides
-    def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
-        self.validation_dataset = background_dataset
-        return self.prep_labeled_data(background_dataset, for_train=False, shuffle=True)
-
-    @overrides
-    def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
-        return self.prep_labeled_data(background_dataset, for_train=False, shuffle=True)
-
-    @overrides
-    def evaluate(self, labels, test_input):
-        """
-        We need to override this method, because our test input is already grouped by question.
-        """
-        scores = self.model.evaluate(test_input, labels)
-        return scores[1]  # NOTE: depends on metrics=['accuracy'] in self.model.compile()

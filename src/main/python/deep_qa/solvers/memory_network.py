@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, Any
+from typing import Any, Dict, List
 from overrides import overrides
 
 from keras import backend as K
@@ -58,11 +58,7 @@ class MemoryNetworkSolver(NNSolver):
 
     def __init__(self, params: Dict[str, Any]):
         self.train_background = params.pop('train_background', None)
-        self.positive_train_background = params.pop('positive_train_background', None)
-        self.negative_train_background = params.pop('negative_train_background', None)
         self.validation_background = params.pop('validation_background', None)
-        self.test_background = params.pop('test_background', None)
-        self.debug_background = params.pop('debug_background', None)
 
         self.num_memory_layers = params.pop('num_memory_layers', 1)
 
@@ -114,16 +110,23 @@ class MemoryNetworkSolver(NNSolver):
 
     @overrides
     def can_train(self) -> bool:
-        has_train_background = (self.train_background is not None) or (
-                self.positive_train_background is not None and
-                self.negative_train_background is not None)
-        has_validation_background = self.validation_background is not None
-        has_background = has_train_background and has_validation_background
-        return has_background and super(MemoryNetworkSolver, self).can_train()
+        return self.train_background is not None and super(MemoryNetworkSolver, self).can_train()
 
     @overrides
-    def can_test(self) -> bool:
-        return self.test_background is not None and super(MemoryNetworkSolver, self).can_test()
+    def _get_training_files(self):
+        return [self.train_file, self.train_background]
+
+    @overrides
+    def _get_validation_files(self):
+        if self.validation_file:
+            return [self.validation_file, self.validation_background]
+        else:
+            return None
+
+    @overrides
+    def _load_dataset_from_files(self, files: List[str]):
+        dataset = super(MemoryNetworkSolver, self)._load_dataset_from_files(files)
+        return TextDataset.read_background_from_file(dataset, files[1])
 
     @overrides
     def _instance_type(self):
@@ -390,72 +393,19 @@ class MemoryNetworkSolver(NNSolver):
         return memory_network
 
     @overrides
-    def _get_training_data(self):
-        instance_type = self._instance_type()
-        if self.train_file:
-            dataset = TextDataset.read_from_file(self.train_file, instance_type, tokenizer=self.tokenizer)
-            background_dataset = TextDataset.read_background_from_file(dataset, self.train_background)
-        else:
-            positive_dataset = TextDataset.read_from_file(self.positive_train_file,
-                                                          instance_type,
-                                                          label=True,
-                                                          tokenizer=self.tokenizer)
-            positive_background = TextDataset.read_background_from_file(positive_dataset,
-                                                                        self.positive_train_background)
-            negative_dataset = TextDataset.read_from_file(self.negative_train_file,
-                                                          instance_type,
-                                                          label=False,
-                                                          tokenizer=self.tokenizer)
-            negative_background = TextDataset.read_background_from_file(negative_dataset,
-                                                                        self.negative_train_background)
-            background_dataset = positive_background.merge(negative_background)
-        if self.max_training_instances is not None:
-            background_dataset = background_dataset.truncate(self.max_training_instances)
-        self.data_indexer.fit_word_dictionary(background_dataset)
-        self.training_dataset = background_dataset
-        return self.prep_labeled_data(background_dataset, for_train=True, shuffle=True)
-
-    @overrides
-    def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file, self._instance_type(), tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
-        self.validation_dataset = background_dataset
-        return self._prep_question_dataset(background_dataset)
-
-    @overrides
-    def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file, self._instance_type(), tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
-        return self._prep_question_dataset(background_dataset)
-
-    @overrides
-    def _get_debug_dataset_and_input(self):
-        dataset = TextDataset.read_from_file(self.debug_file, self._instance_type(), tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.debug_background)
-        # Now get inputs, and ignore the labels (background_dataset has them)
-        inputs, _ = self.prep_labeled_data(background_dataset, for_train=False, shuffle=False)
-        return background_dataset, inputs
-
-    def get_debug_layer_names(self):
-        debug_layer_names = []
-        for layer in self.model.layers:
-            if "knowledge_selector" in layer.name:
-                debug_layer_names.append(layer.name)
-        return debug_layer_names
-
-    def debug(self, debug_dataset, debug_inputs, epoch: int):
-        """
-        A debug_model must be defined by now. Run it on debug data and print the
-        appropriate information to the debug output.
-        """
+    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], scores, epoch: int):
         debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
-        scores = self.score(debug_inputs)
-        attention_outputs = self.debug_model.predict(debug_inputs)
-        if self.num_memory_layers == 1:
-            attention_outputs = [attention_outputs]
+        final_scores = None
+        attention_outputs = []
+        for i, layer_name in enumerate(layer_names):
+            if layer_name.endswith('softmax'):
+                final_scores = scores[i]
+            elif 'knowledge_selector' in layer_name:
+                attention_outputs.append(scores[i])
+        assert final_scores is not None, "You must include the softmax layer in the debug output!"
+        assert len(attention_outputs) > 0, "No attention layer specified; what are you debugging?"
         # Collect values from all hops of attention for a given instance into attention_values.
-        for instance, score, *attention_values in zip(debug_dataset.instances,
-                                                      scores, *attention_outputs):
+        for instance, score, *attention_values in zip(dataset.instances, scores, *attention_outputs):
             sentence = instance.text
             background_info = instance.background
             label = instance.label
