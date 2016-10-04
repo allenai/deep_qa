@@ -34,3 +34,7 @@ And more to come...  In the near future, we hope to also include easy experiment
 # Usage Guide
 
 TODO.  Sorry.
+
+# License
+
+This code is released under the terms of the [Apache 2 license](https://www.apache.org/licenses/LICENSE-2.0).
