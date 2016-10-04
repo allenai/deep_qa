@@ -1,3 +1,5 @@
+# pylint: disable=no-self-use,invalid-name
+
 import numpy
 from keras.layers import Input, Embedding
 from keras.models import Model

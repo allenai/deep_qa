@@ -48,7 +48,7 @@ class DenseConcatMemoryUpdater(Dense):
 
     def get_config(self):
         base_config = super(DenseConcatMemoryUpdater, self).get_config()
-        config = {'encoding_dim': self.encoding_dim}
+        config = {'encoding_dim': self.output_dim}
         config.update(base_config)
         return config
 

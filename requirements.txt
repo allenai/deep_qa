@@ -29,6 +29,10 @@ pyhocon
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 overrides
 
+# Used by some old code.  We moved away from it because it's too slow, but some old code still
+# imports this.
+nltk
+
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors
