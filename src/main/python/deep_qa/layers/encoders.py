@@ -2,7 +2,7 @@ import warnings
 import copy
 from keras import backend as K
 from keras import activations, initializations, regularizers
-from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, Flatten, merge, Dense
+from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, merge, Dense
 from keras.engine import InputSpec
 import numpy as np
 
@@ -444,6 +444,7 @@ class BOWEncoder(Layer):
         return (input_shape[0], input_shape[2])  # removing second dimension
 
     def call(self, x, mask=None):
+        # pylint: disable=redefined-variable-type
         if mask is None:
             return K.mean(x, axis=1)
         else:
@@ -459,7 +460,7 @@ class BOWEncoder(Layer):
             weighted_mask = K.expand_dims(weighted_mask)  # (samples, num_words, 1)
             return K.sum(x * weighted_mask, axis=1)  # (samples, word_dim)
 
-    def compute_mask(self, input, mask):
+    def compute_mask(self, input, input_mask=None):  # pylint: disable=redefined-builtin
         # We need to override this method because Layer passes the input mask unchanged since this layer
         # supports masking. We don't want that. After the input is averaged, we can stop propagating
         # the mask.
@@ -468,18 +469,22 @@ class BOWEncoder(Layer):
 
 class CNNEncoder(Layer):
     '''
-    CNNEncoder is a combination of multiple convolution layers and max pooling layers. This is defined as
-    a single layer to be consistent with the other encoders in terms of input and output specifications.
-    The input to this "layer" is of shape (batch_size, num_words, embedding_size) and the output is of size
-    (batch_size, input_dim).
-    The CNN has one convolution layer per each ngram filter size. Each convolution operation gives out a vector
-    of size filter_output_dim. The number of times a convolution layer will be used depends on the ngram size:
-    input_length - ngram_size + 1. The corresponding maxpooling layer aggregates all these outputs from the 
-    convolution layer and outputs the max. This operation is repeated for every ngram size passed, and consequently
-    the dimensionality of the output after maxpooling is len(ngram_filter_sizes) * filter_output_dim. We then use
-    a fully connected layer to project in back to the desired output_dim.
-    For more details, refer to "A Sensitivity Analysis of (and Practitioners’ Guide to) Convolutional Neural Networks 
-    for Sentence Classification", Zhang and Wallace 2016, particularly Figure 1.
+    CNNEncoder is a combination of multiple convolution layers and max pooling layers. This is
+    defined as a single layer to be consistent with the other encoders in terms of input and output
+    specifications.  The input to this "layer" is of shape (batch_size, num_words, embedding_size)
+    and the output is of size (batch_size, input_dim).
+
+    The CNN has one convolution layer per each ngram filter size. Each convolution operation gives
+    out a vector of size filter_output_dim. The number of times a convolution layer will be used
+    depends on the ngram size: input_length - ngram_size + 1. The corresponding maxpooling layer
+    aggregates all these outputs from the convolution layer and outputs the max.
+
+    This operation is repeated for every ngram size passed, and consequently the dimensionality of
+    the output after maxpooling is len(ngram_filter_sizes) * filter_output_dim.
+
+    We then use a fully connected layer to project in back to the desired output_dim.  For more
+    details, refer to "A Sensitivity Analysis of (and Practitioners’ Guide to) Convolutional Neural
+    Networks for Sentence Classification", Zhang and Wallace 2016, particularly Figure 1.
     '''
     def __init__(self, weights=None, **kwargs):
         self.supports_masking = True
@@ -492,10 +497,16 @@ class CNNEncoder(Layer):
         self.output_dim = kwargs['output_dim']
         conv_layer_activation = kwargs.get('conv_layer_activation', 'relu')
         self.conv_layer_activation = conv_layer_activation
-        self.W_regularizer = kwargs.get("W_regularizer", None)
+        self.W_regularizer = kwargs.get("W_regularizer", None)  # pylint: disable=invalid-name
         self.b_regularizer = kwargs.get("b_regularizer", None)
         self.input_spec = [InputSpec(ndim=3)]
         self.initial_weights = weights
+
+        # These are member variables that will be defined during self.build().
+        self.convolution_layers = None
+        self.max_pooling_layers = None
+        self.projection_layer = None
+
         layer_kwargs = {}
         # Layer complains if it gets unexpected kwargs.
         for arg in kwargs:
@@ -517,19 +528,19 @@ class CNNEncoder(Layer):
         self.max_pooling_layers = [MaxPooling1D(pool_length=input_length - ngram_size + 1)
                                    for ngram_size in self.ngram_filter_sizes]
         self.projection_layer = Dense(input_dim)
-        # Building all layers because these sub-layers are not explitly part of the computatonal graph. 
+        # Building all layers because these sub-layers are not explitly part of the computatonal graph.
         for convolution_layer, max_pooling_layer in zip(self.convolution_layers, self.max_pooling_layers):
             convolution_layer.build(input_shape)
             max_pooling_layer.build(convolution_layer.get_output_shape_for(input_shape))
         maxpool_output_dim = self.filter_output_dim * len(self.ngram_filter_sizes)
         projection_input_shape = (input_shape[0], maxpool_output_dim)
         self.projection_layer.build(projection_input_shape)
-        # Defining the weights of this "layer" as the set of weights from all convolution 
+        # Defining the weights of this "layer" as the set of weights from all convolution
         # and maxpooling layers.
         self.trainable_weights = []
         for layer in self.convolution_layers + self.max_pooling_layers + [self.projection_layer]:
             self.trainable_weights.extend(layer.trainable_weights)
-        
+
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
@@ -548,7 +559,7 @@ class CNNEncoder(Layer):
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], self.output_dim)
 
-    def compute_mask(self, input, mask):
+    def compute_mask(self, input, input_mask=None):  # pylint: disable=redefined-builtin
         # By default Keras propagates the mask from a layer that supports masking. We don't need it
         # anymore. So eliminating it from the flow.
         return None
@@ -566,8 +577,8 @@ class CNNEncoder(Layer):
 
 
 encoders = {  # pylint:  disable=invalid-name
-    "lstm": LSTM,
-    "tree_lstm": TreeCompositionLSTM,
-    "bow": BOWEncoder,
-    "cnn": CNNEncoder,
-    }
+        "lstm": LSTM,
+        "tree_lstm": TreeCompositionLSTM,
+        "bow": BOWEncoder,
+        "cnn": CNNEncoder,
+        }

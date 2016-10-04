@@ -26,11 +26,11 @@ def tile_sentence_encoding(sentence_encoding, knowledge_encoding):
 def hardmax(unnormalized_attention, knowledge_length):
     # (num_samples, knowledge_length)
     tiled_max_values = K.tile(K.expand_dims(K.max(unnormalized_attention, axis=1)), (1, knowledge_length))
-    # We now have a matrix where every column in each row has the max knowledge score value from the
-    # corresponding row in the unnormalized attention matrix.
-    # Next, we will compare that all-max matrix with the original input, resulting in ones where the 
-    # column equals max and zero everywhere else.
-    # (num_samples, knowledge_length)
+    # We now have a matrix where every column in each row has the max knowledge score value from
+    # the corresponding row in the unnormalized attention matrix.  Next, we will compare that
+    # all-max matrix with the original input, resulting in ones where the column equals max and
+    # zero everywhere else.
+    # Shape: (num_samples, knowledge_length)
     bool_max_attention = K.equal(unnormalized_attention, tiled_max_values)
     # Needs to be cast to be compatible with TensorFlow
     max_attention = K.cast(bool_max_attention, 'float32')

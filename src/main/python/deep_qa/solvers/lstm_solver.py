@@ -20,6 +20,7 @@ class LSTMSolver(NNSolver):
     confident that this does that job better than Salience.  We've implemented this mostly as a
     simple baseline.
     """
+    # TODO(matt): this will be fixed very soon; pylint: disable=abstract-method
     def __init__(self, **kwargs):
         super(LSTMSolver, self).__init__(**kwargs)
 
@@ -31,7 +32,8 @@ class LSTMSolver(NNSolver):
         '''
         # Step 1: Convert the sentence input into sequences of word vectors.
         input_layer, word_embeddings = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,))
+                input_shape=(self.max_sentence_length,),
+                name_prefix="sentence")
 
         # Step 2: Pass the sequences of word vectors through the sentence encoder to get a sentence
         # vector..

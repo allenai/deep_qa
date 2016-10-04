@@ -12,6 +12,7 @@ from ..layers.encoders import TreeCompositionLSTM
 
 
 class TreeLSTMSolver(NNSolver):
+    # TODO(matt): this will be fixed very soon; pylint: disable=abstract-method
     def __init__(self, **kwargs):
         super(TreeLSTMSolver, self).__init__(**kwargs)
         self.max_transition_length = None
@@ -37,7 +38,7 @@ class TreeLSTMSolver(NNSolver):
 
         # Step 2: Convert the logical form input to word vectors.
         logical_form_input_layer, logical_form_embeddings = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,))
+                input_shape=(self.max_sentence_length,), name_prefix="sentence")
 
         # Step 3: Merge transitions and buffer.
         lstm_input = merge([transitions_input, logical_form_embeddings], mode='concat')
