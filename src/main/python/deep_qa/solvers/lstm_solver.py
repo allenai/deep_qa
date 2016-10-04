@@ -20,6 +20,7 @@ class LSTMSolver(NNSolver):
     confident that this does that job better than Salience.  We've implemented this mostly as a
     simple baseline.
     """
+    # TODO(matt): this will be fixed in the next PR; pylint: disable=abstract-method
     def __init__(self, params: Dict[str, Any]):
         super(LSTMSolver, self).__init__(params)
 
