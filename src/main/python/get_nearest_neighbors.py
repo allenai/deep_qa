@@ -27,7 +27,7 @@ def main():
 
     param_file = args.param_file
     params = ConfigFactory.parse_file(param_file)
-    solver = DifferentiableSearchSolver(params)
+    solver = DifferentiableSearchSolver(**params)  # TODO(matt): fix this in the next PR
     solver.load_model()
 
     with codecs.open(args.output_file, 'w', 'utf-8') as outfile:
