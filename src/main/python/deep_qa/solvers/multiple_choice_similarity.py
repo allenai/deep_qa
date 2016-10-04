@@ -1,4 +1,3 @@
-from typing import Dict
 from overrides import overrides
 
 from keras import backend as K
@@ -21,17 +20,20 @@ class MultipleChoiceSimilaritySolver(MultipleChoiceMemoryNetworkSolver):
     and encoding steps from that class that are reused here.
 
     '''
-    
+   
     @overrides
     def _build_model(self):
-        question_input_layer, question_embedding = self._get_embedded_sentence_input(input_shape=self._get_question_shape(),
-                                                                                     name_prefix="sentence")
-        knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(input_shape=self._get_background_shape(),
-                                                                                     name_prefix="background")
+        question_input_layer, question_embedding = self._get_embedded_sentence_input(
+            input_shape=self._get_question_shape(),
+            name_prefix="sentence")
+        knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
+            input_shape=self._get_background_shape(),
+            name_prefix="background")
         question_encoder = self._get_sentence_encoder()
         knowledge_encoder = TimeDistributed(question_encoder, name='knowledge_encoder')
-        encoded_question = question_encoder(question_embedding)  # (samples, num_options, word_dim) 
-        encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, num_options, knowledge_length, word_dim)
+        encoded_question = question_encoder(question_embedding)  # (samples, num_options, word_dim)
+        # (samples, num_options, knowledge_length, word_dim)
+        encoded_knowledge = knowledge_encoder(knowledge_embedding)
         knowledge_axis = self._get_knowledge_axis()
         merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=knowledge_axis),
                                                        layer_outs[1]], axis=knowledge_axis)
@@ -42,15 +44,17 @@ class MultipleChoiceSimilaritySolver(MultipleChoiceMemoryNetworkSolver):
         def _similarity_function(merged_question_knowledge):
             expanded_questions = merged_question_knowledge[:, :, :1, :]  # (samples, num_options, 1, word_dim)
             # (samples, num_options, word_dim, knowledge_length)
-            tiled_questions = K.tile(K.permute_dimensions(expanded_questions, (0, 1, 3, 2)), (self.max_knowledge_length,))
-            tiled_questions = K.permute_dimensions(tiled_questions, (0, 1, 3, 2))  # (samples, num_options, knowledge_length, word_dim)
+            tiled_questions = K.tile(K.permute_dimensions(expanded_questions, (0, 1, 3, 2)),
+                                     (self.max_knowledge_length,))
+            # (samples, num_options, knowledge_length, word_dim)
+            tiled_questions = K.permute_dimensions(tiled_questions, (0, 1, 3, 2))
             knowledge = merged_question_knowledge[:, :, 1:, :]  # (samples, num_options, knowledge_length, word_dim)
-            question_knowledge_product = K.sum(tiled_questions * knowledge, axis=-1)  # (samples, num_options, knowledge_length)
+            # (samples, num_options, knowledge_length)
+            question_knowledge_product = K.sum(tiled_questions * knowledge, axis=-1)
             max_knowledge_similarity = K.max(question_knowledge_product, axis=-1)  # (samples, num_options)
             return K.softmax(max_knowledge_similarity)
-        option_knowledge_similarity_layer = Lambda(_similarity_function, output_shape=(self.num_options,), name="similarity_layer")
-        option_probabilities = option_knowledge_similarity_layer(merged_question_knowledge)
+        similarity_layer = Lambda(_similarity_function, output_shape=(self.num_options,), name="similarity_layer")
+        option_probabilities = similarity_layer(merged_question_knowledge)
         input_layers = [question_input_layer, knowledge_input_layer]
         similarity_solver = Model(input=input_layers, output=option_probabilities)
         return similarity_solver
-        
