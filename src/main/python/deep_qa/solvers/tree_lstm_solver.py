@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import Input, Dense, Dropout, merge
@@ -12,9 +12,9 @@ from ..layers.encoders import TreeCompositionLSTM
 
 
 class TreeLSTMSolver(NNSolver):
-    # TODO(matt): this will be fixed very soon; pylint: disable=abstract-method
-    def __init__(self, **kwargs):
-        super(TreeLSTMSolver, self).__init__(**kwargs)
+    # TODO(matt): this will be fixed in the next PR; pylint: disable=abstract-method
+    def __init__(self, params: Dict[str, Any]):
+        super(TreeLSTMSolver, self).__init__(params)
         self.max_transition_length = None
 
     def _instance_type(self):

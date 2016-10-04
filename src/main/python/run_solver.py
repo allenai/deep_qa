@@ -1,4 +1,3 @@
-import argparse
 import logging
 import sys
 
@@ -11,36 +10,37 @@ random.seed(13370)
 numpy.random.seed(1337)  # pylint: disable=no-member
 
 # pylint: disable=wrong-import-position
+
+# Unless I find a better way to do this, we'll use ConfigFactory to read in a parameter file.
+# ConfigFactory.parse_file() returns a ConfigTree, which is a subclass of OrderedDict, so the
+# return value actually matches the type our code expects, anyway.
+from pyhocon import ConfigFactory
+
 from deep_qa.common.checks import ensure_pythonhashseed_set
+from deep_qa.common.params import get_choice
 from deep_qa.solvers import concrete_solvers
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def main():
-    # The first argument to this script must be a model type.  We will use that model type to
-    # construct an argument parser, which will only allow arguments relevant to the model type.
-    model_type = sys.argv[1]
-    if model_type not in concrete_solvers:
-        print("First argument must be model class, one of", concrete_solvers.keys())
+    if len(sys.argv) != 2:
+        print('USAGE: run_solver.py [param_file]')
         sys.exit(-1)
+
+    param_file = sys.argv[1]
+    params = ConfigFactory.parse_file(param_file)
+
+    model_type = get_choice(params, 'solver_class', concrete_solvers.keys())
     solver_class = concrete_solvers[model_type]
-
-    argparser = argparse.ArgumentParser(description="Neural Network Solver")
-    solver_class.update_arg_parser(argparser)
-
-    # We already handled the first argument, so we just parse the remaining ones.
-    args = argparser.parse_args(sys.argv[2:])
-
-    # The solver class got to update the argument parser, so it will just grab whatever arguments
-    # it needs directly from the parsed arguments.
-    solver = solver_class(**vars(args))
+    solver = solver_class(params)
 
     if solver.can_train():
         logger.info("Training model")
         solver.train()
     else:
         logger.info("Not enough training inputs.  Assuming you wanted to load a model instead.")
-        solver.load_model(args.use_model_from_epoch)
+        # TODO(matt): figure out a way to specify which epoch you want to load a model from.
+        solver.load_model()
 
     if solver.can_test():
         solver.test()

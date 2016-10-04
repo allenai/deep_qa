@@ -3,7 +3,7 @@ import logging
 import pickle
 
 from itertools import zip_longest
-from typing import List
+from typing import Any, Dict, List
 
 from overrides import overrides
 import numpy
@@ -35,41 +35,35 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
     file, using the standard MemoryNetworkSolver code.  It is only in subsequent epochs that we
     will override that and use our differentiable search to find background knowledge.
     """
-    def __init__(self, **kwargs):
-        super(DifferentiableSearchSolver, self).__init__(**kwargs)
-        self.corpus_path = kwargs['corpus_path']
-        self.num_background = kwargs['num_background']
-        self.num_epochs_delay = kwargs['num_epochs_delay']
-        self.num_epochs_per_encoding = kwargs['num_epochs_per_encoding']
-        self.load_saved_lsh = kwargs['load_saved_lsh']
+    def __init__(self, params: Dict[str, Any]):
+        # Location of corpus to use for background knowledge search. This corpus is assumed to be
+        # gzipped, one sentence per line.
+        self.corpus_path = params.pop('corpus_path', None)
 
-        self.lsh = LSHForest(random_state=12345)
-        self.instance_index = {}  # type: Dict[int, str]
+        # Number of background sentences to collect for each input.
+        self.num_background = params.pop('num_background', 10)
+        # Wait this many epochs before running differentiable search. This lets you train with the
+        # base memory network code using external background knowledge for a time, then, once the
+        # encoder is trained sufficiently, you can turn on the differentiable search.
+        self.num_epochs_delay = params.pop('num_epochs_delay', 10)
 
-    @classmethod
-    @overrides
-    def update_arg_parser(cls, parser):
-        super(DifferentiableSearchSolver, cls).update_arg_parser(parser)
-        parser.add_argument('--corpus_path', type=str,
-                            help="Location of corpus to use for background knowledge search. "
-                            "This corpus is assumed to be gzipped, one sentence per line.")
-        parser.add_argument('--load_saved_lsh', action='store_true',
-                            help="Only meaningful if you are loading a model.  When loading, "
-                            "should we load a pickled LSH, or should we re-initialize the LSH "
-                            "from the input corpus?  Note that if you give a corpus path, and you "
-                            "load a saved LSH that was constructed from a _different_ corpus, you "
-                            "could end up with really weird behavior.")
-        parser.add_argument('--num_background', type=int, default=10,
-                            help="Number of background sentences to collect for each input")
-        parser.add_argument('--num_epochs_delay', type=int, default=10,
-                            help="Wait this many epochs before running differentiable search. "
-                            "This lets you train with the base memory network code using external "
-                            "background knowledge for a time, then, once the encoder is trained "
-                            "sufficiently, you can turn on the differentiable search.")
+        # Number of epochs we wait in between re-encoding the corpus.
         # TODO(matt): consider only re-encoding at early stopping, instead of a
         # number-of-epoch-based parameter.
-        parser.add_argument('--num_epochs_per_encoding', type=int, default=2,
-                            help="Number of epochs we wait in between re-encoding the corpus")
+        self.num_epochs_per_encoding = params.pop('num_epochs_per_encoding', 2)
+
+        # Only meaningful if you are loading a model.  When loading, should we load a pickled LSH,
+        # or should we re-initialize the LSH from the input corpus?  Note that if you give a corpus
+        # path, and you load a saved LSH that was constructed from a _different_ corpus, you could
+        # end up with really weird behavior.
+        self.load_saved_lsh = params.pop('load_saved_lsh', False)
+
+        # Now that we've popped our parameters, we can call the superclass constructor.
+        super(DifferentiableSearchSolver, self).__init__(params)
+
+        # And then set some member variables.
+        self.lsh = LSHForest(random_state=12345)
+        self.instance_index = {}  # type: Dict[int, str]
 
     @overrides
     def load_model(self, epoch: int=None):

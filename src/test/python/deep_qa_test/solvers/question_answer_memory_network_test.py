@@ -25,6 +25,6 @@ class TestQuestionAnswerMemoryNetworkSolver(TestCase):
         solver.train()
 
     def test_train_does_not_crash_with_parameterized_knowledge_selector(self):
-        args = {'knowledge_selector': 'parameterized'}
+        args = {'knowledge_selector': {'type': 'parameterized'}}
         solver = get_solver(QuestionAnswerMemoryNetworkSolver, args)
         solver.train()

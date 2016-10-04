@@ -1,9 +1,15 @@
-import warnings
 import copy
+import warnings
+from collections import OrderedDict
+from typing import Dict, Any
+
+from overrides import overrides
+
 from keras import backend as K
 from keras import activations, initializations, regularizers
-from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, merge, Dense
 from keras.engine import InputSpec
+from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, merge, Dense
+from keras.regularizers import l1l2
 import numpy as np
 
 from ..data.constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
@@ -429,6 +435,7 @@ class TreeCompositionLSTM(Recurrent):
         base_config = super(TreeCompositionLSTM, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+
 class BOWEncoder(Layer):
     '''
     Bag of Words Encoder takes a matrix of shape (num_words, word_dim) and returns a vector of size (word_dim),
@@ -438,11 +445,17 @@ class BOWEncoder(Layer):
     def __init__(self, **kwargs):
         self.supports_masking = True
         self.input_spec = [InputSpec(ndim=3)]
+
+        # For consistency of handling sentence encoders, we will often get passed this parameter.
+        # We don't use it, but Layer will complain if it's there, so we get rid of it here.
+        kwargs.pop('output_dim', None)
         super(BOWEncoder, self).__init__(**kwargs)
 
+    @overrides
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], input_shape[2])  # removing second dimension
 
+    @overrides
     def call(self, x, mask=None):
         # pylint: disable=redefined-variable-type
         if mask is None:
@@ -460,6 +473,7 @@ class BOWEncoder(Layer):
             weighted_mask = K.expand_dims(weighted_mask)  # (samples, num_words, 1)
             return K.sum(x * weighted_mask, axis=1)  # (samples, word_dim)
 
+    @overrides
     def compute_mask(self, input, input_mask=None):  # pylint: disable=redefined-builtin
         # We need to override this method because Layer passes the input mask unchanged since this layer
         # supports masking. We don't want that. After the input is averaged, we can stop propagating
@@ -472,15 +486,15 @@ class CNNEncoder(Layer):
     CNNEncoder is a combination of multiple convolution layers and max pooling layers. This is
     defined as a single layer to be consistent with the other encoders in terms of input and output
     specifications.  The input to this "layer" is of shape (batch_size, num_words, embedding_size)
-    and the output is of size (batch_size, input_dim).
+    and the output is of size (batch_size, output_dim).
 
     The CNN has one convolution layer per each ngram filter size. Each convolution operation gives
-    out a vector of size filter_output_dim. The number of times a convolution layer will be used
+    out a vector of size num_filters. The number of times a convolution layer will be used
     depends on the ngram size: input_length - ngram_size + 1. The corresponding maxpooling layer
     aggregates all these outputs from the convolution layer and outputs the max.
 
     This operation is repeated for every ngram size passed, and consequently the dimensionality of
-    the output after maxpooling is len(ngram_filter_sizes) * filter_output_dim.
+    the output after maxpooling is len(ngram_filter_sizes) * num_filters.
 
     We then use a fully connected layer to project in back to the desired output_dim.  For more
     details, refer to "A Sensitivity Analysis of (and Practitioners’ Guide to) Convolutional Neural
@@ -488,38 +502,39 @@ class CNNEncoder(Layer):
     '''
     def __init__(self, weights=None, **kwargs):
         self.supports_masking = True
-        # This is the output dim for each filter
-        assert 'filter_output_dim' in kwargs, "Specify filter_output_dim"
-        assert 'output_dim' in kwargs, "Specify output_dim"
-        self.filter_output_dim = kwargs['filter_output_dim']
-        ngram_filter_sizes = kwargs.get('ngram_filter_sizes', (2, 3, 4, 5))
+
+        # This is the output dim for each convolutional layer, which is the same as the number of
+        # "filters" learned by that layer.
+        self.num_filters = kwargs.pop('num_filters')
+
+        # This specifies both the number of convolutional layers we will create and their sizes.
+        # Must be a List[int].  The default of (2, 3, 4, 5) will have four convolutional layers,
+        # corresponding to encoding ngrams of size 2 to 5 with some number of filters.
+        ngram_filter_sizes = kwargs.pop('ngram_filter_sizes', (2, 3, 4, 5))
         self.ngram_filter_sizes = ngram_filter_sizes
-        self.output_dim = kwargs['output_dim']
-        conv_layer_activation = kwargs.get('conv_layer_activation', 'relu')
+
+        self.output_dim = kwargs.pop('output_dim')
+
+        conv_layer_activation = kwargs.pop('conv_layer_activation', 'relu')
         self.conv_layer_activation = conv_layer_activation
-        self.W_regularizer = kwargs.get("W_regularizer", None)  # pylint: disable=invalid-name
-        self.b_regularizer = kwargs.get("b_regularizer", None)
-        self.input_spec = [InputSpec(ndim=3)]
-        self.initial_weights = weights
+
+        self.W_regularizer = kwargs.pop("W_regularizer", None)  # pylint: disable=invalid-name
+        self.b_regularizer = kwargs.pop("b_regularizer", None)
 
         # These are member variables that will be defined during self.build().
         self.convolution_layers = None
         self.max_pooling_layers = None
         self.projection_layer = None
 
-        layer_kwargs = {}
-        # Layer complains if it gets unexpected kwargs.
-        for arg in kwargs:
-            if arg not in ["output_dim", "filter_output_dim", "ngram_filter_sizes",
-                           "conv_layer_activation", "W_regularizer", "b_regularizer"]:
-                layer_kwargs[arg] = kwargs[arg]
-        super(CNNEncoder, self).__init__(**layer_kwargs)
+        self.input_spec = [InputSpec(ndim=3)]
+        self.initial_weights = weights
+        super(CNNEncoder, self).__init__(**kwargs)
 
     def build(self, input_shape):
         input_length = input_shape[1]  # number of words
         input_dim = input_shape[-1]
         # We define convolution, maxpooling and dense layers first.
-        self.convolution_layers = [Convolution1D(nb_filter=self.filter_output_dim,
+        self.convolution_layers = [Convolution1D(nb_filter=self.num_filters,
                                                  filter_length=ngram_size,
                                                  activation=self.conv_layer_activation,
                                                  W_regularizer=self.W_regularizer,
@@ -532,7 +547,7 @@ class CNNEncoder(Layer):
         for convolution_layer, max_pooling_layer in zip(self.convolution_layers, self.max_pooling_layers):
             convolution_layer.build(input_shape)
             max_pooling_layer.build(convolution_layer.get_output_shape_for(input_shape))
-        maxpool_output_dim = self.filter_output_dim * len(self.ngram_filter_sizes)
+        maxpool_output_dim = self.num_filters * len(self.ngram_filter_sizes)
         projection_input_shape = (input_shape[0], maxpool_output_dim)
         self.projection_layer.build(projection_input_shape)
         # Defining the weights of this "layer" as the set of weights from all convolution
@@ -546,9 +561,9 @@ class CNNEncoder(Layer):
             del self.initial_weights
 
     def call(self, x, mask=None):
-        # Each convolution layer returns output of size (samples, pool_length, filter_output_dim),
+        # Each convolution layer returns output of size (samples, pool_length, num_filters),
         #       where pool_length = num_words - ngram_size + 1
-        # Each maxpooling layer returns output of size (samples, 1, filter_output_dim).
+        # Each maxpooling layer returns output of size (samples, 1, num_filters).
         # We need to flatten to remove the second dimension of length 1 from the maxpooled output.
         filter_outputs = [K.batch_flatten(max_pooling_layer.call(convolution_layer.call(x, mask)))
                           for max_pooling_layer, convolution_layer in zip(self.max_pooling_layers,
@@ -565,7 +580,7 @@ class CNNEncoder(Layer):
         return None
 
     def get_config(self):
-        config = {"filter_output_dim": self.filter_output_dim,
+        config = {"num_filters": self.num_filters,
                   "ngram_filter_sizes": self.ngram_filter_sizes,
                   "conv_layer_activation": self.conv_layer_activation,
                   "W_regularizer": self.W_regularizer.get_config() if self.W_regularizer else None,
@@ -576,9 +591,36 @@ class CNNEncoder(Layer):
         return config
 
 
-encoders = {  # pylint:  disable=invalid-name
-        "lstm": LSTM,
-        "tree_lstm": TreeCompositionLSTM,
-        "bow": BOWEncoder,
-        "cnn": CNNEncoder,
-        }
+def set_regularization_params(encoder_type: str, params: Dict[str, Any]):
+    """
+    This method takes regularization parameters that are specified in `params` and converts them
+    into Keras regularization objects, modifying `params` to contain the correct keys for the given
+    encoder_type.
+
+    Currently, we only allow specifying a consistent regularization across all the weights of a
+    layer.
+    """
+    l1_regularization = params.pop("l1_regularization", None)
+    l2_regularization = params.pop("l2_regularization", None)
+    regularizer = lambda: l1l2(l1=l1_regularization, l2=l2_regularization)
+    if encoder_type == 'cnn':
+        params["W_regularizer"] = regularizer()
+        params["b_regularizer"] = regularizer()
+    elif encoder_type == 'lstm':
+        params["W_regularizer"] = regularizer()
+        params["U_regularizer"] = regularizer()
+        params["b_regularizer"] = regularizer()
+    elif encoder_type == 'tree_lstm':
+        params["W_regularizer"] = regularizer()
+        params["U_regularizer"] = regularizer()
+        params["V_regularizer"] = regularizer()
+        params["b_regularizer"] = regularizer()
+    return params
+
+
+# The first item added here will be used as the default in some cases.
+encoders = OrderedDict()  # pylint:  disable=invalid-name
+encoders["bow"] = BOWEncoder
+encoders["lstm"] = LSTM
+encoders["tree_lstm"] = TreeCompositionLSTM
+encoders["cnn"] = CNNEncoder

@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from overrides import overrides
 
 class Tokenizer:
@@ -82,8 +84,7 @@ class NltkTokenizer(Tokenizer):
         from nltk.tokenize import word_tokenize
         return word_tokenize(sentence)
 
-tokenizers = {  # pylint: disable=invalid-name
-        'default': SimpleTokenizer,
-        'simple': SimpleTokenizer,
-        'nltk': NltkTokenizer,
-        }
+tokenizers = OrderedDict()  # pylint: disable=invalid-name
+tokenizers['default'] = SimpleTokenizer
+tokenizers['simple'] = SimpleTokenizer
+tokenizers['nltk'] = NltkTokenizer

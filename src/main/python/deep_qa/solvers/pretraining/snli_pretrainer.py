@@ -36,7 +36,7 @@ class SnliEntailmentPretrainer(SnliPretrainer):
     # pylint: disable=protected-access
     def __init__(self, solver, snli_file, **kwargs):
         super(SnliEntailmentPretrainer, self).__init__(solver, snli_file, **kwargs)
-        if self.solver.has_binary_entailment:
+        if self.solver.has_sigmoid_entailment:
             self.loss = 'binary_crossentropy'
 
     @overrides
@@ -45,7 +45,7 @@ class SnliEntailmentPretrainer(SnliPretrainer):
         # The label that we get is always true/false, but some solvers need this encoded as a
         # single output dimension, and some need it encoded as two.  So, when we create our
         # dataset, we need to know which kind of label to output.
-        if self.solver.has_binary_entailment:
+        if self.solver.has_sigmoid_entailment:
             score_activation = 'sigmoid'
         else:
             score_activation = 'softmax'
@@ -67,11 +67,11 @@ class SnliEntailmentPretrainer(SnliPretrainer):
                                output_shape=lambda x: (x[0][0], x[0][1]*3),
                                name='concat_entailment_inputs')
         entailment_input = combine_layer([hypothesis_encoding, text_encoding])
-        entailment_combiner = self.solver._get_entailment_combiner()
+        entailment_combiner = self.solver._get_entailment_input_combiner()
         while isinstance(entailment_combiner, TimeDistributed):
             entailment_combiner = entailment_combiner.layer
         combined_input = entailment_combiner(entailment_input)
-        entailment_model = self.solver.entailment_model
+        entailment_model = self.solver._get_entailment_model()
         hidden_input = combined_input
         for layer in entailment_model.hidden_layers:
             hidden_input = layer(hidden_input)

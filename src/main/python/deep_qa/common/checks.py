@@ -1,6 +1,15 @@
 import os
 
-PYTHONHASHSEED = 2157
+PYTHONHASHSEED = '2157'
+
+class ConfigurationError(Exception):
+    def __init__(self, message):
+        super(ConfigurationError, self).__init__()
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
 
 def ensure_pythonhashseed_set():
     message = """You must set PYTHONHASHSEED so that we get repeatable results.

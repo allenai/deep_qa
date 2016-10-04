@@ -6,6 +6,8 @@ range (0, 1)). But we can optionally pass 'hard_selection=True' to the construct
 hard (values will be all 0, except one).
 '''
 
+from collections import OrderedDict
+
 from keras.engine import InputSpec
 from keras import backend as K
 from keras import activations, initializations
@@ -187,7 +189,7 @@ class ParameterizedKnowledgeSelector(Layer):
         return (input_shape[0], input_shape[1] - 1)  # (num_samples, knowledge_length)
 
 
-selectors = {  # pylint: disable=invalid-name
-        'dot_product': DotProductKnowledgeSelector,
-        'parameterized': ParameterizedKnowledgeSelector,
-        }
+# The first item added here will be used as the default in some cases.
+selectors = OrderedDict()  # pylint: disable=invalid-name
+selectors['parameterized'] = ParameterizedKnowledgeSelector
+selectors['dot_product'] = DotProductKnowledgeSelector
