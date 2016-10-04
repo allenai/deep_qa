@@ -6,7 +6,9 @@ import argparse
 import random
 from nltk.tokenize import word_tokenize
 
-from index_data import DataIndexer
+# TODO(matt): we need to refactor this to match the rest of the code, moving the main() method out
+# of here and using relative imports.  And we should be using deep_qa.data.data_indexer, anyway.
+from index_data import DataIndexer  # pylint: disable=import-error
 from keras.models import Model, model_from_json
 from keras.layers import Input, LSTM, Embedding, Dropout, merge, TimeDistributed, Dense, SimpleRNN
 from keras.callbacks import EarlyStopping
@@ -231,7 +233,8 @@ def select_mostly_likely_candidates(word_replacer: WordReplacer,
     index = 0
     for line in codecs.open(candidates_file, "r", "utf-8"):
         index += 1
-        if index % 10000 == 0: logger.info(index)
+        if index % 10000 == 0:
+            logger.info(index)
         candidates = line.strip().split("\t")
         candidate_scores = word_replacer.score_sentences(candidates, train_sequence_length, tokenize)
         candidate_scores.sort(reverse=True)
@@ -269,7 +272,8 @@ def generate_multiple_choice_questions(word_replacer: WordReplacer,
     index = 0
     for line in codecs.open(candidates_file, "r", "utf-8"):
         index += 1
-        if index % 10 == 0: logger.info(index)
+        if index % 10 == 0:
+            logger.info(index)
         if max_output_sentences is not None and index > max_output_sentences:
             break
         fields = line.strip().split("\t")

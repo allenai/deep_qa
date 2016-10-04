@@ -24,7 +24,8 @@ def get_triples_from_file(filename):
 
 def create_type_dict(filename):
     # Note that this depends on form of the given tensor and where each column is.
-    # The format of input CSV file is source,relation,target, in column 0,1,2 and source_type,target_type in columns
+    # The format of input CSV file is source,relation,target, in column 0,1,2 and
+    # source_type,target_type in columns
     # 8,9, respectively.
     entities = set()
     type_entity_dict = ddict(set)
@@ -46,14 +47,14 @@ def create_type_dict(filename):
 
 def find_replacement(location1, location2, words, type_entity_dict, entity_type_dict,
                      entity_pair_relations, input_sentence):
-    # The method receives the sentence in words list and takes the location of the two words that we want to consider
-    # Given these two words, the goal is to generate two sets of perturbations, by replacing one of these words at a time
-    # Let us call these two, as word1, word2.
-    # We look into triple KB and find a list of predicates->predicate_list that connect word1,word2.
-    # note that we consider both orders
-    # Then, given word1, we look into all the words that have the same type(type1) and make a list of the words
-    # that have type1  but never appeared with word2 and any of the predicates in the KB. These are our candidate replacements.
-    # The same approach is repeated for replacing word2.
+    # The method receives the sentence in words list and takes the location of the two words that
+    # we want to consider Given these two words, the goal is to generate two sets of perturbations,
+    # by replacing one of these words at a time Let us call these two, as word1, word2.  We look
+    # into triple KB and find a list of predicates->predicate_list that connect word1,word2.  note
+    # that we consider both orders Then, given word1, we look into all the words that have the same
+    # type(type1) and make a list of the words that have type1  but never appeared with word2 and
+    # any of the predicates in the KB. These are our candidate replacements.  The same approach is
+    # repeated for replacing word2.
     lemmatizer = WordNetLemmatizer()
     replacement_list = []
 
@@ -72,7 +73,8 @@ def find_replacement(location1, location2, words, type_entity_dict, entity_type_
                     replacement_list.append((words[location1], candidate_item))
 
     for (replacement1, replacement2) in replacement_list:
-        new_sentence = input_sentence.replace(words[location1], replacement1).replace(words[location2], replacement2)
+        new_sentence = input_sentence.replace(words[location1], replacement1)
+        new_sentence = new_sentence.replace(words[location2], replacement2)
         negative_sentences_per_sentence.append(new_sentence)
     return negative_sentences_per_sentence
 
@@ -129,7 +131,8 @@ def main():
     index = 0
     for line in codecs.open(args.input_file, "r", "utf-8"):
         index += 1
-        if index % 1000 == 0: logger.info(index)
+        if index % 1000 == 0:
+            logger.info(index)
         if args.max_sentences and index > args.max_sentences:
             break
         if '\t' in line:

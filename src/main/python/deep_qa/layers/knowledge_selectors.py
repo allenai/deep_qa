@@ -106,7 +106,12 @@ class ParameterizedKnowledgeSelector(Layer):
     a_t = softmax(q_t)
     """
 
-    def __init__(self, activation='tanh', initialization='glorot_uniform', hard_selection=False, weights=None, **kwargs):
+    def __init__(self,
+                 activation='tanh',
+                 initialization='glorot_uniform',
+                 hard_selection=False,
+                 weights=None,
+                 **kwargs):
         self.activation = activations.get(activation)
         self.init = initializations.get(initialization)
         self.hard_selection = hard_selection

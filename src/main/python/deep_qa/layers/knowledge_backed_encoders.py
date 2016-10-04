@@ -97,7 +97,7 @@ class KnowledgeBackedLSTM(LSTM):
 
         # TODO(matt): this variable is not used.  Should we be using the previous hidden state in
         # here?
-        h_tm1 = states[0]  # Output from previous (t-1) timestep
+        h_tm1 = states[0]  # Output from previous (t-1) timestep; pylint: disable=unused-variable
         token_t = x[:, 0, :self.token_dim]  # Current token (batch_size, token_dim)
 
         # Repeated along knowledge_len (batch_size, knowledge_len, token_dim)
@@ -109,12 +109,14 @@ class KnowledgeBackedLSTM(LSTM):
         projected_combination = self.attention_activation(
                 K.dot(knowledge_t, self.knowledge_projector) +
                 K.dot(tiled_token_t, self.token_projector)) # (batch_size, knowledge_len, proj_dim)
-        attention_scores = K.softmax(K.dot(projected_combination, self.attention_scorer))  # (batch_size, knowledge_len)
+        # Shape: (batch_size, knowledge_len)
+        attention_scores = K.softmax(K.dot(projected_combination, self.attention_scorer))
 
         # Add a dimension at the end for attention scores to make the number of
         # dimensions the same as that of knowledge_t, multiply and compute sum along knowledge_len to
         # get a weighted average of all pieces of background information.
-        attended_knowledge = K.sum(knowledge_t * K.expand_dims(attention_scores, -1), axis=1)  # (batch_size, knowledge_dim)
+        # Shape: (batch_size, knowledge_dim)
+        attended_knowledge = K.sum(knowledge_t * K.expand_dims(attention_scores, -1), axis=1)
         lstm_input_t = K.concatenate([token_t, attended_knowledge])  # (batch_size, tok_dim+knowledge_dim)
 
         # Now pass the concatenated input to LSTM's step function like nothing ever happened.
