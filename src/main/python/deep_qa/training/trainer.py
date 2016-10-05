@@ -222,7 +222,6 @@ class Trainer:
                 kwargs['validation_data'] = (self.validation_input, self.validation_labels)
             history = self.model.fit(self.train_input, self.train_labels, **kwargs)
             self._post_epoch_hook(epoch_id, history.history)
-            print(history.history)
             accuracy = history.history[self.validation_metric][-1]
             if accuracy < best_accuracy:
                 num_worse_epochs += 1
