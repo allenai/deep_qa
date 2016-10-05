@@ -59,13 +59,13 @@ class BabiDatasetReader(fileUtil: FileUtil) {
     val question = splitFields(0).split(" ").drop(1).mkString(" ")
     val allAnswers = splitFields(1).split(",")
     val thisBackground = currentBackground.toArray.toList
-		val indicies = allAnswers.map(x => answerVocabulary.indexOf(x)).toSeq
-     BackgroundInstance(
-       QuestionAnswerInstance(
-         question,
-         answerVocabulary,
-         Some(indicies)),
-       thisBackground)
+    val indicies = allAnswers.map(x => answerVocabulary.indexOf(x)).toSeq
+    BackgroundInstance(
+      QuestionAnswerInstance(
+        question,
+        answerVocabulary,
+        Some(indicies)),
+      thisBackground)
   }
 }
 
