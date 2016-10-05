@@ -5,11 +5,11 @@ import com.mattg.util.FileUtil
 
 class BabiDatasetReader(fileUtil: FileUtil) {
 
-    def readFile(filename: String): Dataset[BackgroundInstance[MultipleCorrectQAInstance]] = {
+    def readFile(filename: String): Dataset[BackgroundInstance[QuestionAnswerInstance]] = {
       val answerVocabulary = getAnswerVocabulary(filename)
       val currentBackground = new mutable.ArrayBuffer[String]
       val currentQuestions = new mutable.ArrayBuffer[String]
-      val questions = new mutable.ArrayBuffer[BackgroundInstance[MultipleCorrectQAInstance]]
+      val questions = new mutable.ArrayBuffer[BackgroundInstance[QuestionAnswerInstance]]
 
       for (line <- fileUtil.getLineIterator(filename).filter(x => !x.isEmpty)){
         val splitline = line.split("\t")
@@ -30,7 +30,7 @@ class BabiDatasetReader(fileUtil: FileUtil) {
     }
 
   /**
-    * In order to make all the different Babi question formats fit into MultipleCorrectQAInstances, we first
+    * In order to make all the different Babi question formats fit into QuestionAnswerInstances, we first
     * iterate over the whole file and retrieve all the possible answers. This then forms the set of possible
     * answers for every BackgroundInstance.
     */
@@ -53,7 +53,7 @@ class BabiDatasetReader(fileUtil: FileUtil) {
     */
   def parseQuestion(line: String,
                     currentBackground: mutable.ArrayBuffer[String],
-                    answerVocabulary: Seq[String]): BackgroundInstance[MultipleCorrectQAInstance] = {
+                    answerVocabulary: Seq[String]): BackgroundInstance[QuestionAnswerInstance] = {
 
     val splitFields = line.split("\t")
     val question = splitFields(0).split(" ").drop(1).mkString(" ")
@@ -61,7 +61,7 @@ class BabiDatasetReader(fileUtil: FileUtil) {
     val thisBackground = currentBackground.toArray.toList
 		val indicies = allAnswers.map(x => answerVocabulary.indexOf(x)).toSeq
      BackgroundInstance(
-      MultipleCorrectQAInstance(
+      QuestionAnswerInstance(
         question,
 				answerVocabulary,
 				Some(indicies)),
