@@ -42,9 +42,6 @@ def main():
         # TODO(matt): figure out a way to specify which epoch you want to load a model from.
         solver.load_model()
 
-    if solver.can_test():
-        solver.test()
-
 
 if __name__ == "__main__":
     ensure_pythonhashseed_set()
