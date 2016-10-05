@@ -4,6 +4,7 @@ target/
 /data/
 output/
 models/
+experiments/
 *results*/
 tmp*/
 *.bbl
