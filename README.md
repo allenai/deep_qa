@@ -33,7 +33,7 @@ And more to come...  In the near future, we hope to also include easy experiment
 
 # Usage Guide
 
-TODO.  Sorry.
+TODO.  Sorry.  This will be done soon.
 
 # License
 
