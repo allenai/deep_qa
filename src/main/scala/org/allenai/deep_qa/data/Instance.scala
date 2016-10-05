@@ -54,12 +54,12 @@ case class MultipleTrueFalseInstance[T <: Instance](
 case class QuestionAnswerInstance(
   question: String,
   answers: Seq[String],
-  override val label: Option[Int]
+  override val label: Option[Seq[Int]]
 ) extends Instance {
   def asStrings(): Seq[String] = {
     val answerString = answers.mkString("###")
     label match {
-      case Some(l) => Seq(s"$question\t$answerString\t$l")
+      case Some(l) => Seq(s"$question\t$answerString\t${l.mkString(",")}")
       case None => Seq(s"$question\t$answerString")
     }
   }
@@ -95,3 +95,6 @@ case class SnliInstance(
     }
   }
 }
+
+
+
