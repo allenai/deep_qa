@@ -62,9 +62,9 @@ class BabiDatasetReader(fileUtil: FileUtil) {
 		val indicies = allAnswers.map(x => answerVocabulary.indexOf(x)).toSeq
      BackgroundInstance(
       QuestionAnswerInstance(
-        question,
-				answerVocabulary,
-				Some(indicies)),
+			question,
+			answerVocabulary,
+			Some(indicies)),
 			thisBackground)
   }
 }
