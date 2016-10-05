@@ -95,3 +95,22 @@ case class SnliInstance(
     }
   }
 }
+
+/**
+  * An Instance which can have multiple correct answers from a choice several answer options.
+  */
+case class MultipleCorrectQAInstance(
+  question: String,
+  answers: Seq[String],
+  override val label: Option[Seq[Int]]
+) extends Instance {
+  def asStrings(): Seq[String] = {
+    val answerString = answers.mkString("###")
+    label match {
+        case Some(l) => Seq(s"$question\t$answerString\t${l.mkString(",")}")
+        case None => Seq(s"$question\t$answerString")
+      }
+  }
+}
+
+

@@ -36,7 +36,7 @@ class BabiDatasetReaderSpec extends FlatSpecLike with Matchers {
 
     dataset should be(Dataset(Seq(
       BackgroundInstance(
-        QuestionAnswerInstance("question?", Seq("answer1", "answer2", "answer3"), Some(0)),
+        MultipleCorrectQAInstance("question?", Seq("answer1", "answer2", "answer3"), Some(Seq(0))),
         Seq(
           "background1",
           "background2",
@@ -46,23 +46,14 @@ class BabiDatasetReaderSpec extends FlatSpecLike with Matchers {
         )
       ),
       BackgroundInstance(
-        QuestionAnswerInstance("multiple option question?", Seq("answer1", "answer2", "answer3"), Some(1)),
+        MultipleCorrectQAInstance("multiple option question?", Seq("answer1", "answer2", "answer3"), Some(Seq(1,2))),
         Seq(
           "background6",
           "background7",
           "background8",
           "background9"
         )
-      ),
-      BackgroundInstance(
-        QuestionAnswerInstance("multiple option question?", Seq("answer1", "answer2", "answer3"), Some(2)),
-        Seq(
-          "background6",
-          "background7",
-          "background8",
-          "background9"
-        )
-        )
+      )
     )))
   }
 
