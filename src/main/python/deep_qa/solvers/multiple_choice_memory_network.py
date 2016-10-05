@@ -37,19 +37,6 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         self.num_options = None
 
     @overrides
-    def can_train(self) -> bool:
-        """
-        Where a MemoryNetworkSolver allows separate positive and negative training files, we only
-        allow a single train file, so we need to override this method.
-
-        The train file must be a valid question file, as determined by
-        Dataset.can_be_converted_to_multiple_choice(), but we don't check that here.
-        """
-        has_train = self.train_file is not None and self.train_background is not None
-        has_validation = self.validation_file is not None and self.validation_background is not None
-        return has_train and has_validation
-
-    @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
         return {
                 'word_sequence_length': self.max_sentence_length,
