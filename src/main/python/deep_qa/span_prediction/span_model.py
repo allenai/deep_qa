@@ -16,72 +16,39 @@ from loaders import load_questions, POS_SET, write_sentences, load_parses, \
 read_barrons, get_science_terms
 
 import argparse
-
-
-
-# load fill-the-gap data
-training_statements, training_spans = load_questions()
-barron_statements = read_barrons()
-
-
-# getting parses. Assume CoreNLP is installed.
-# Parse tree annotation must be run before, both for training and new data.
-write_sentences(barron_statements)
-write_sentences(training_statements)
-
-barron_parses = load_parses(barrons=True)
-training_trees = load_parses()
-barron_trees = load_parses(barrons=True)
-
-
-# general characteristics of sentences/ spans
-MAX_SPAN_LENTGH = max([span[1]-span[0] for span in training_spans])     #11
-MAX_SENT_LENGTH = max([len(stmnt) for stmnt in training_statements])    #46
-
-
-WORD_FREQUENCIES = FreqDist([w.lower() for w in reuters.words()])
-
-STOP_WORDS = set(stopwords.words('english'))
-
-### build span dataset: {spans (their feature repr.)} --> {True/False}
-POS_TAGS = POS_SET(training_statements+ barron_statements)
-
-# define extended POS tag set with additional begin and end symbols for bigrams.
-POS_TAGS_B = POS_TAGS + ["POS_BEGIN","POS_END"]
-
-# for POS bigrams.
-POS_TAGS_SQUARE = [x for x in product(POS_TAGS_B, POS_TAGS_B)]
-
-# list of legal constituent labels
-CONSTITUENTS = set()
-for tree in training_trees + barron_trees:
-    for subtree in tree.subtrees(lambda t: t.height() > 1):
-        CONSTITUENTS.add(subtree.label())
-CONSTITUENTS = sorted(list(CONSTITUENTS))
-
-# list of science tokens & science multiword expressions
-SCIENCE_TOKENS = get_science_terms()
-SCIENCE_EXPRESSIONS = get_science_terms(False)
+from typing import List
 
 
 # constrained legal span lengths. Upper diagonal band in begin vs. end matrix.
-def legal_spans():
+def legal_spans(MAX_SENT_LENGTH, MAX_SPAN_LENTGH ):
     for span in product(range(0,MAX_SENT_LENGTH), range(0,MAX_SENT_LENGTH)):
         if span[0] >= span[1] or span[1] - span[0] > MAX_SPAN_LENTGH:
             continue
         yield(span)
 
 
-def create_trainable_set(statement_list, trees, training = True):
+def create_training_examples(statement_list: List[List[str]], trees, training_spans,
+            training: bool, MAX_SPAN_LENTGH, MAX_SENT_LENGTH, args, POS_TAGS, CONSTITUENTS, k=1):
     """
-    This function defines features for spans.
+    This function defines a training set for span prediction.
+    I computes features (inputs) for eveyspans.
     Multiple spans are extracted for a given statement, and features are computed
     for each.
     :input statement_list: list of token lists.
     :input trees: parse tree list, aligned with statement_list
     :training: bool, indicates whether annotation (True/False) is computed.
+    :k: int, number of negative span examples per positive. Default: 1 (1:1 ratio)
     """
     print('building features...')
+
+    WORD_FREQUENCIES = FreqDist([w.lower() for w in reuters.words()])
+    # list of science tokens & science multiword expressions
+    SCIENCE_TOKENS = get_science_terms(args.data_path)
+    SCIENCE_EXPRESSIONS = get_science_terms(args.data_path, False)
+    STOP_WORDS = set(stopwords.words('english'))
+
+
+
     True_Examples, False_Examples, Examples_per_Sentence = [], [], []
     span_indexes = []
 
@@ -98,7 +65,7 @@ def create_trainable_set(statement_list, trees, training = True):
         sentence_candidate_span_examples = []   # when training.
 
         # loop across different spans for given sentence
-        for span in legal_spans():  #globally legal
+        for span in legal_spans(MAX_SENT_LENGTH, MAX_SPAN_LENTGH):  #globally legal
             if span[1] > len(statement):
                 continue
             if span[0] > len(statement):
@@ -154,23 +121,23 @@ def create_trainable_set(statement_list, trees, training = True):
             f_POS_end[POS_TAGS.index(pos_tags_this_statement[span[1]-1][1])] = 1.0
 
             # feature: POS bigram indicator
-            f_POS_bigram = np.zeros([len(POS_TAGS_SQUARE)])
+            #f_POS_bigram = np.zeros([len(POS_TAGS_SQUARE)])
 
             # obtaining the POS bigram
-            for position in range(-1, f_length):
+            #for position in range(-1, f_length):
                 # boundary cases: start of span and end of span.
-                if position == -1:
-                    tag1 = 'POS_BEGIN'
-                    _, tag2 = pos_tags_this_statement[span[0]]
-                elif position == f_length -1:
-                    _, tag1 = pos_tags_this_statement[span[0]+position]
-                    tag2 = 'POS_END'
-                #normal case: inside span.
-                else:
-                    _, tag1 = pos_tags_this_statement[span[0] + position]
-                    _, tag2 = pos_tags_this_statement[span[0] + position + 1]
-
-                f_POS_bigram[POS_TAGS_SQUARE.index( ( tag1, tag2 ) )] += 1.0
+            #    if position == -1:
+            #        tag1 = 'POS_BEGIN'
+            #        _, tag2 = pos_tags_this_statement[span[0]]
+            #    elif position == f_length -1:
+            #        _, tag1 = pos_tags_this_statement[span[0]+position]
+            #        tag2 = 'POS_END'
+            #    #normal case: inside span.
+            #    else:
+            #        _, tag1 = pos_tags_this_statement[span[0] + position]
+            #        _, tag2 = pos_tags_this_statement[span[0] + position + 1]
+            #
+            #    f_POS_bigram[POS_TAGS_SQUARE.index( ( tag1, tag2 ) )] += 1.0
 
             # constituent tree features
             try:
@@ -205,7 +172,7 @@ def create_trainable_set(statement_list, trees, training = True):
                                   f_science_token_count])
 
             # these are all features for this span, in a np array.
-            f = np.concatenate((f_scalars, f_POS, f_POS_beginning, f_POS_end,
+            feature_vector = np.concatenate((f_scalars, f_POS, f_POS_beginning, f_POS_end,
                                 f_span_constituent, f_span_constituent_big))
 
 
@@ -214,14 +181,14 @@ def create_trainable_set(statement_list, trees, training = True):
             if training:
                 if (span == training_spans[i]):
                     #positive example
-                    True_Examples.append(f)
-                    sentence_candidate_span_examples.append((f,True))
+                    True_Examples.append(feature_vector)
+                    sentence_candidate_span_examples.append((feature_vector,True))
                 else:
                     #negative example
-                    False_Examples_this_instance.append(f)
-                    sentence_candidate_span_examples.append((f,False))
+                    False_Examples_this_instance.append(feature_vector)
+                    sentence_candidate_span_examples.append((feature_vector,False))
             else:
-                sentence_candidate_span_examples.append(f)
+                sentence_candidate_span_examples.append(feature_vector)
 
         span_indexes.append(span_index)
         Examples_per_Sentence.append(sentence_candidate_span_examples)
@@ -229,7 +196,6 @@ def create_trainable_set(statement_list, trees, training = True):
 
         # select at random k negative spans as training examples. default 1:1
         if training:
-            k=1
             for random_index in np.random.randint(0, len(False_Examples_this_instance), k):
                 False_Examples.append(False_Examples_this_instance[random_index])
 
@@ -251,10 +217,12 @@ def create_trainable_set(statement_list, trees, training = True):
 
 def main():
     argparser = argparse.ArgumentParser(description="Run span prediction model for fill-the-gap questions")
-    argparser.add_argument("--data_path", type=str,
+    argparser.add_argument("--data_path", type=str, default= '../data/',
                            help="path to Omnibus-Gr04/Omnibus-Gr04/Barron's data. If this doesn't work specify globally in loaders.py")
     argparser.add_argument("--output_file", type=str, default='barrons_predictions-1.txt',
                            help="File with predicted examples, one per line.")
+    argparser.add_argument("--barrons_file", type=str,
+                           help="Filepath of Barrons-1.sentences.txt")
     argparser.add_argument("--evaluate", type=bool, default=True,
                            help="run per-sentence evaluation")
     argparser.add_argument("--barrons", type=bool, default=True,
@@ -267,10 +235,55 @@ def main():
 
 
 
+    # load fill-the-gap data
+    training_examples = load_questions(args.data_path)
+    training_statements, training_spans = zip(*training_examples)
 
-    # load training data
+    #'Barrons-4thGrade.sentences-d1/Barrons-1.sentences.txt'
+    barrons_statements = read_barrons(args.barrons_file)
+
+    # getting parses. Assume CoreNLP is installed.
+    # Parse tree annotation must be run before, both for training and new data.
+    write_sentences(training_statements, filename='training.txt')
+    write_sentences(barrons_statements, filename = 'barrons.txt')
+
+    barron_trees = load_parses(filename='barrons.txt.json')
+    training_trees = load_parses(filename = 'training.txt.json')
+
+
+    # general characteristics of sentences/ spans
+    MAX_SPAN_LENTGH = max([span[1]-span[0] for span in training_spans])     #11
+    MAX_SENT_LENGTH = max([len(stmnt) for stmnt in training_statements])    #46
+
+
+
+
+    ### build span dataset: {spans (their feature repr.)} --> {True/False}
+    POS_TAGS = POS_SET(list(training_statements) + barrons_statements)
+
+    # define extended POS tag set with additional begin and end symbols for bigrams.
+    POS_TAGS_B = POS_TAGS + ["POS_BEGIN","POS_END"]
+
+    # for POS bigrams.
+    POS_TAGS_SQUARE = [x for x in product(POS_TAGS_B, POS_TAGS_B)]
+
+    # list of legal constituent labels
+    CONSTITUENTS = set()
+    for tree in training_trees + barron_trees:
+        for subtree in tree.subtrees(lambda t: t.height() > 1):
+            CONSTITUENTS.add(subtree.label())
+    CONSTITUENTS = sorted(list(CONSTITUENTS))
+
+
+
+
+
+    #### load training data
     all_examples, all_labels, Examples_per_Sentence,_ = \
-                    create_trainable_set(training_statements, training_trees)
+                    create_training_examples(training_statements, training_trees,
+                    training_spans,
+                    True, MAX_SPAN_LENTGH, MAX_SENT_LENGTH, args, POS_TAGS,
+                    CONSTITUENTS)
 
 
     # shuffle training data order
@@ -415,8 +428,9 @@ def main():
                 pass
 
         # compute features for barron's
-        _, _, barron_span_features, span_indexes = create_trainable_set(barron_statements,  \
-                        barron_trees, training=False)
+        _, _, barron_span_features, span_indexes = create_training_examples(barron_statements,  \
+                        barron_trees, False, False, MAX_SPAN_LENTGH, MAX_SENT_LENGTH, args, POS_TAGS,
+                        CONSTITUENTS)
 
 
         # identify span for each sentence with highest score
