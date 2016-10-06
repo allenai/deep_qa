@@ -12,8 +12,8 @@ from nltk import FreqDist
 from nltk.corpus import reuters
 from nltk.corpus import stopwords
 
-from loaders import load_questions, POS_SET, write_sentences, load_parses, \
-read_barrons, get_science_terms
+from loaders import load_questions, POS_SET, write_sentences # pylint: disable=import-error
+from loaders import  load_parses, read_barrons, get_science_terms # pylint: disable=import-error
 
 import argparse
 from typing import List
