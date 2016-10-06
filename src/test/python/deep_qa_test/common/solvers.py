@@ -3,6 +3,7 @@ import codecs
 
 from deep_qa.solvers.memory_network import MemoryNetworkSolver
 from deep_qa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
+from deep_qa.solvers.multiple_choice_similarity import MultipleChoiceSimilaritySolver
 from deep_qa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
 
@@ -22,9 +23,10 @@ def get_solver(cls, additional_arguments=None):
     params['encoder'] = {'type': 'bow'}
     params['num_epochs'] = 1
     params['keras_validation_split'] = 0.0
-    if is_memory_network_solver(cls):
+    if is_solver_with_background(cls):
         params['train_background'] = TRAIN_BACKGROUND
         params['validation_background'] = VALIDATION_BACKGROUND
+    if is_memory_network_solver(cls):
         params['knowledge_selector'] = {'type': 'dot_product'}
         params['memory_updater'] = {'type': 'sum'}
         params['entailment_input_combiner'] = {'type': 'memory_only'}
@@ -141,4 +143,11 @@ def is_memory_network_solver(cls):
     if cls == MultipleChoiceMemoryNetworkSolver: return True
     if cls == QuestionAnswerMemoryNetworkSolver: return True
     if cls == DifferentiableSearchSolver: return True
+    return False
+
+
+def is_solver_with_background(cls):
+    # pylint: disable=multiple-statements
+    if is_memory_network_solver(cls): return True
+    if cls == MultipleChoiceSimilaritySolver: return True
     return False
