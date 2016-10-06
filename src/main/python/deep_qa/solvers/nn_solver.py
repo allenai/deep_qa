@@ -74,6 +74,7 @@ class NNSolver(Trainer):
 
         super(NNSolver, self).__init__(params)
 
+        self.name = "NNSolver"
         self.data_indexer = DataIndexer()
 
         # Model-specific member variables that will get set and used later.  For many of these, we
@@ -132,6 +133,7 @@ class NNSolver(Trainer):
         happen before loading the training data so that we can use pretraining to expand our
         applicable vocabulary.
         """
+        logger.info("Fitting the data indexer using the pretraining data")
         for pretrainer in self.pretrainers:
             pretrainer.fit_data_indexer()
 

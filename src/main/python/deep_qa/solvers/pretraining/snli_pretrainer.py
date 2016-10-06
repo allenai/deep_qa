@@ -29,6 +29,7 @@ class SnliPretrainer(Pretrainer):
             raise ConfigurationError("The SNLI Pretrainer needs a subclass of NNSolver")
         self.snli_file = params.pop("snli_file")
         super(SnliPretrainer, self).__init__(trainer, params)
+        self.name = "SnliPretrainer"
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
@@ -75,6 +76,7 @@ class SnliEntailmentPretrainer(SnliPretrainer):
     # pylint: disable=protected-access
     def __init__(self, trainer, params: Dict[str, any]):
         super(SnliEntailmentPretrainer, self).__init__(trainer, params)
+        self.name = "SnliEntailmentPretrainer"
         if self.trainer.has_sigmoid_entailment:
             self.loss = 'binary_crossentropy'
 
@@ -147,6 +149,7 @@ class SnliAttentionPretrainer(SnliPretrainer):
     # pylint: disable=protected-access
     def __init__(self, trainer, params: Dict[str, any]):
         super(SnliAttentionPretrainer, self).__init__(trainer, params)
+        self.name = "SnliAttentionPretrainer"
         self.loss = 'binary_crossentropy'
 
     @overrides

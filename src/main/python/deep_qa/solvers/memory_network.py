@@ -85,6 +85,7 @@ class MemoryNetworkSolver(NNSolver):
         # The superclass will check that there are no unused parameters, so we need to call this
         # _after_ we've popped everything we use.
         super(MemoryNetworkSolver, self).__init__(params)
+        self.name = "MemoryNetworkSolver"
 
         # These are the entailment models that are compatible with this solver.
         self.entailment_choices = ['true_false_mlp']

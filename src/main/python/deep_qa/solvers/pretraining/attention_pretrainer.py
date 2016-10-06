@@ -49,6 +49,10 @@ class AttentionPretrainer(Pretrainer):
             inputs = numpy.asarray(inputs)
         return inputs, numpy.asarray(labels)
 
+    def fit_data_indexer(self):
+        dataset = self._load_dataset_from_files(self._get_training_files())
+        self.trainer.data_indexer.fit_word_dictionary(dataset)
+
     @overrides
     def _get_training_files(self):
         return [self.train_file, self.background_file]
