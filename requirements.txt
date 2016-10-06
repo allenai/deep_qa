@@ -35,6 +35,7 @@ nltk
 
 # Used by span prediction models.
 numpy
+matplotlib
 
 #### TESTING-RELATED PACKAGES ####
 
