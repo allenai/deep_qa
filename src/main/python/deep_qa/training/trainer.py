@@ -50,6 +50,14 @@ class Trainer:
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
 
+        # This should be a dict, containing the following keys:
+        # - "layer_names", which has as a value a list of names that must match layer names in the
+        #     model build by this Trainer.
+        # - "data", which has as a value either "training", "validation", or a list of file names.
+        #     If you give "training" or "validation", we'll use those datasets, otherwise we'll
+        #     load data from the provided files.  Note that currently "validation" only works if
+        #     you provide validation files, not if you're just using Keras to split the training
+        #     data.
         self.debug_params = params.pop('debug', {})
 
         pretrainer_params = params.pop('pretrainers', [])
@@ -212,14 +220,23 @@ class Trainer:
             # Get the list of layers whose outputs will be visualized as per the
             # solver definition and build a debug model.
             debug_layer_names = self.debug_params['layer_names']
-            debug_files = self.debug_params['files']
+            debug_data = self.debug_params['data']
+            if debug_data == "training":
+                self.debug_dataset = self.training_dataset
+                self.debug_input = self.train_input
+            elif debug_data == "validation":
+                # NOTE: This currently only works if you've specified specific validation data, not
+                # if you are just splitting the training data for validation.
+                self.debug_dataset = self.validation_dataset
+                self.debug_input = self.validation_input
+            else:
+                # If the `data` param is not "training" or "validation", we assume it's a list of
+                # file names.
+                self.debug_dataset = self._load_dataset_from_files(debug_data)
+                self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
             self.debug_model = self._build_debug_model(debug_layer_names)
             self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
 
-            # TODO(matt): if we want to allow for other kinds of debug inputs / outputs, we'll have
-            # to put this into a method that can be overridden.
-            self.debug_dataset = self._load_dataset_from_files(debug_files)
-            self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
