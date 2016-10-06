@@ -276,12 +276,14 @@ class Trainer:
         debug_model = Model(input=debug_inputs, output=debug_outputs)
         return debug_model
 
-    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], scores, epoch: int):
+    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], outputs, epoch: int):
         """
         We can build a simple debug model for you given just some layer names, and we can read some
         debug data.  We can even run the debug model and give you its output.  But if we know
         nothing about your model, we can't really display or save the output of the debug model for
         you.  Sorry.
+
+        The outputs parameter is the model output at each of the layers in layer_names.
 
         The default here is `pass` instead of `raise NotImplementedError`, because you're not
         required to implement debugging for your model.

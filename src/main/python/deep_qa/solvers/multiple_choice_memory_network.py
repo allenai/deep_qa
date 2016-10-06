@@ -102,15 +102,15 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         return dataset.to_question_dataset()
 
     @overrides
-    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], scores, epoch: int):
+    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], outputs, epoch: int):
         debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
         all_question_scores = None
         all_question_attention_outputs = []
         for i, layer_name in enumerate(layer_names):
             if layer_name.endswith('softmax'):
-                all_question_scores = scores[i]
+                all_question_scores = outputs[i]
             elif 'knowledge_selector' in layer_name:
-                all_question_attention_outputs.append(scores[i])
+                all_question_attention_outputs.append(outputs[i])
         assert all_question_scores is not None, "You must include the softmax layer in the debug output!"
         assert len(all_question_attention_outputs) > 0, "No attention layer specified; what are you debugging?"
         # Collect values from all hops of attention for a given instance into attention_values.
