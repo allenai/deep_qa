@@ -4,8 +4,10 @@ from typing import Any, Dict, List
 
 from keras.models import Model, model_from_json
 
+from ..common.params import get_choice
 from ..data.dataset import Dataset
 from ..data.instance import Instance
+from . import concrete_pretrainers
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -21,10 +23,15 @@ class Trainer:
     models.
     """
     def __init__(self, params: Dict[str, Any]):
+        # Should we save the models that we train?  If this is True, you are required to also set
+        # the model_serialization_prefix parameter, or the code will crash.
+        self.save_models = params.pop('save_models', True)
+
         # Prefix for saving and loading model files
-        self.model_prefix = params.pop('model_serialization_prefix')
-        parent_directory = os.path.dirname(self.model_prefix)
-        os.makedirs(parent_directory, exist_ok=True)
+        self.model_prefix = params.pop('model_serialization_prefix', None)
+        if self.model_prefix:
+            parent_directory = os.path.dirname(self.model_prefix)
+            os.makedirs(parent_directory, exist_ok=True)
 
         # Upper limit on the number of training instances.  If this is set, and we get more than
         # this, we will truncate the data.
@@ -45,6 +52,13 @@ class Trainer:
 
         self.debug_params = params.pop('debug', {})
 
+        pretrainer_params = params.pop('pretrainers', [])
+        self.pretrainers = []
+        for pretrainer_param in pretrainer_params:
+            pretrainer_type = get_choice(pretrainer_param, "type", concrete_pretrainers.keys())
+            pretrainer = concrete_pretrainers[pretrainer_type](self, pretrainer_param)
+            self.pretrainers.append(pretrainer)
+
         # We've now processed all of the parameters, and we're the base class, so there should not
         # be anything left.
         assert len(params.keys()) == 0, "You passed unrecognized parameters: " + str(params)
@@ -55,7 +69,6 @@ class Trainer:
 
         # Training-specific member variables that will get set and used later.
         self.best_epoch = -1
-        self.pretrainers = []
 
         # We store the datasets used for training and validation, both before processing and after
         # processing, in case a subclass wants to modify it between epochs for whatever reason.
@@ -125,7 +138,7 @@ class Trainer:
         for pretrainer in self.pretrainers:
             pretrainer.train()
 
-    def _load_pretraining_data(self):
+    def _process_pretraining_data(self):
         """
         Processes the pre-training data in whatever way you want, typically for setting model
         parameters like vocabulary.  This happens _before_ the training data itself is processed.
@@ -168,7 +181,7 @@ class Trainer:
         # Note that this can have funny interactions with model parameters that get fit to the
         # training data.  We don't really know here what you want to do with the data you have for
         # pre-training, if any, so we provide a hook that you can override to do whatever you want.
-        self._load_pretraining_data()
+        self._process_pretraining_data()
 
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
@@ -232,12 +245,14 @@ class Trainer:
                 best_accuracy = accuracy
                 self.best_epoch = epoch_id
                 num_worse_epochs = 0  # Reset the counter.
-                self._save_model(epoch_id)
+                if self.save_models:
+                    self._save_model(epoch_id)
             if self.debug_params:
                 # Shows intermediate outputs of the model on validation data
                 outputs = self.debug_model.predict(self.debug_input)
                 self._handle_debug_output(self.debug_dataset, debug_layer_names, outputs, epoch_id)
-        self._save_best_model()
+        if self.save_models:
+            self._save_best_model()
 
     def _pre_epoch_hook(self, epoch: int):
         """

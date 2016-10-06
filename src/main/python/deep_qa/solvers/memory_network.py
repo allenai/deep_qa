@@ -13,8 +13,6 @@ from ..layers.knowledge_selectors import selectors
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from .nn_solver import NNSolver
-from .pretraining.snli_pretrainer import SnliAttentionPretrainer, SnliEntailmentPretrainer
-from .pretraining.attention_pretrainer import AttentionPretrainer
 
 
 # TODO(matt): make this class abstract, and make a TrueFalseMemoryNetwork subclass.
@@ -57,21 +55,19 @@ class MemoryNetworkSolver(NNSolver):
     so they used simpler models "entailment".
     '''
 
+    # This specifies whether the entailment decision made my this solver (if any) has a sigmoid
+    # activation or a softmax activation.  This value is read by some pre-trainers, which need
+    # to know how to construct data for training a model.  Because it's necessary for pre-training,
+    # and we need to be able to override it in subclasses, it doesn't really work to set this in
+    # the constructor, so we make it a class variable instead.
+    has_sigmoid_entailment = False
+
     def __init__(self, params: Dict[str, Any]):
+
         self.train_background = params.pop('train_background', None)
         self.validation_background = params.pop('validation_background', None)
 
         self.num_memory_layers = params.pop('num_memory_layers', 1)
-
-        # TODO(matt): we need to make the pretraining parameters more sane...
-        # We need to pop these parameters now, but use them after we've called the superclass
-        # constructor.  We don't need to save them to self; see below.
-        pretrain_entailment = params.pop('pretrain_entailment', False)
-        pretrain_attention_with_snli = params.pop('pretrain_attention_with_snli', False)
-        pretrain_attention = params.pop('pretrain_attention', False)
-        attention_instance_file = params.pop('attention_instance_file', None)
-        attention_background_file = params.pop('attention_background_file', None)
-        snli_file = params.pop('snli_file', None)
 
         # These parameters specify the kind of knowledge selector, used to compute an attention
         # over a collection of background information.
@@ -90,22 +86,8 @@ class MemoryNetworkSolver(NNSolver):
         # _after_ we've popped everything we use.
         super(MemoryNetworkSolver, self).__init__(params)
 
-        # self.pretrainers gets set in the superclass constructor, so now we can append to it.
-        if pretrain_entailment:
-            self.pretrainers.append(SnliEntailmentPretrainer(self, snli_file))
-        if pretrain_attention_with_snli:
-            self.pretrainers.append(SnliAttentionPretrainer(self, snli_file))
-        if pretrain_attention:
-            self.pretrainers.append(AttentionPretrainer(self, attention_instance_file,
-                                                        attention_background_file))
-
         # These are the entailment models that are compatible with this solver.
         self.entailment_choices = ['true_false_mlp']
-
-        # This specifies whether the entailment decision made my this solver (if any) has a sigmoid
-        # activation or a softmax activation.  This value is read by some pre-trainers, which need
-        # to know how to construct data for training a model.
-        self.has_sigmoid_entailment = False
 
         # Model-specific variables that will get set and used later.  For many of these, we don't
         # want to set them now, because they use max length information that only gets set after

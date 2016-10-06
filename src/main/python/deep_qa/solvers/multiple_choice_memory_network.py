@@ -24,6 +24,9 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
     and adding a final softmax.
     '''
 
+    # See comments in MemoryNetworkSolver for more info on this.
+    has_sigmoid_entailment = True
+
     def __init__(self, params: Dict[str, Any]):
         # We don't have any parameters to set that are specific to this class, so we just call the
         # superclass constructor.
@@ -31,7 +34,6 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
         # Now we set some class-specific member variables.
         self.entailment_choices = ['multiple_choice_mlp']
-        self.has_sigmoid_entailment = True
 
         # And declare some model-specific variables that will be set later.
         self.num_options = None
