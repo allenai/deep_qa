@@ -13,8 +13,7 @@ import json
 
 from typing import List
 
-np.random.seed(42)
-
+np.random.seed(42) 
 STOP_WORDS = set(stopwords.words('english'))
 
 

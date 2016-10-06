@@ -33,6 +33,9 @@ overrides
 # imports this.
 nltk
 
+# Used by span prediction models.
+numpy
+
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors
