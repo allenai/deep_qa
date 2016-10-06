@@ -1,15 +1,13 @@
-# pylint: disable=no-self-use
-from pyfakefs import fake_filesystem_unittest
+# pylint: disable=no-self-use,invalid-name
 
-# These lines are just here so that `py.test --cov=deep_qa` produces a report for all deep_qa
-# submodules.  It's not perfect (some files are still missing), but at least it's an improvement.
-# These imports can be removed once there are actual tests for code in these modules.
-import deep_qa.layers  # pylint: disable=unused-import
-import deep_qa.sentence_corruption  # pylint: disable=unused-import
-import deep_qa.solvers  # pylint: disable=unused-import
+from unittest import TestCase
+import os
+import shutil
 
 from deep_qa.data.dataset import Dataset, TextDataset
-from deep_qa.data.text_instance import TrueFalseInstance
+from deep_qa.data.text_instance import LabeledBackgroundInstance, TrueFalseInstance
+
+from ..common.constants import TEST_DIR
 
 class TestDataset:
     def test_merge(self):
@@ -19,12 +17,15 @@ class TestDataset:
         merged = dataset1.merge(dataset2)
         assert merged.instances == instances
 
-class TestTextDataset(fake_filesystem_unittest.TestCase):
+class TestTextDataset(TestCase):
     def setUp(self):
-        self.setUpPyfakefs()
+        os.mkdir(TEST_DIR)
+
+    def tearDown(self):
+        shutil.rmtree(TEST_DIR)
 
     def test_read_from_file_with_no_default_label(self):
-        filename = '/test_dataset_file'
+        filename = TEST_DIR + 'test_dataset_file'
         with open(filename, 'w') as datafile:
             datafile.write("1\tinstance1\t0\n")
             datafile.write("2\tinstance2\t1\n")
@@ -43,3 +44,36 @@ class TestTextDataset(fake_filesystem_unittest.TestCase):
         assert instance.index == 3
         assert instance.text == "instance3"
         assert instance.label is None
+
+    def test_read_labeled_background_from_file_loads_correct_instances(self):
+        filename = TEST_DIR + 'test_dataset_file'
+        with open(filename, 'w') as datafile:
+            datafile.write("1\tinstance1\t0\n")
+            datafile.write("2\tinstance2\t1\n")
+            datafile.write("3\tinstance3\n")
+        background_filename = TEST_DIR + 'test_dataset_background'
+        with open(background_filename, 'w') as datafile:
+            datafile.write("1\t2\tb1\tb2\tb3\tb4\n")
+            datafile.write("2\t1,3\tb1\tb2\tb3\tb4\n")
+            datafile.write("3\t0\tb5\tb6\tb7\tb8\n")
+        dataset = TextDataset.read_from_file(filename, TrueFalseInstance)
+        background_dataset = TextDataset.read_labeled_background_from_file(dataset, background_filename)
+        assert len(background_dataset.instances) == 3
+        instance = background_dataset.instances[0]
+        assert isinstance(instance, LabeledBackgroundInstance)
+        assert instance.instance.index == 1
+        assert instance.instance.text == "instance1"
+        assert instance.label == [2]
+        assert instance.background == ['b1', 'b2', 'b3', 'b4']
+        instance = background_dataset.instances[1]
+        assert isinstance(instance, LabeledBackgroundInstance)
+        assert instance.instance.index == 2
+        assert instance.instance.text == "instance2"
+        assert instance.label == [1, 3]
+        assert instance.background == ['b1', 'b2', 'b3', 'b4']
+        instance = background_dataset.instances[2]
+        assert isinstance(instance, LabeledBackgroundInstance)
+        assert instance.instance.index == 3
+        assert instance.instance.text == "instance3"
+        assert instance.label == [0]
+        assert instance.background == ['b5', 'b6', 'b7', 'b8']

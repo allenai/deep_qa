@@ -14,6 +14,7 @@ from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from .nn_solver import NNSolver
 from .pretraining.snli_pretrainer import SnliAttentionPretrainer, SnliEntailmentPretrainer
+from .pretraining.attention_pretrainer import AttentionPretrainer
 
 
 # TODO(matt): make this class abstract, and make a TrueFalseMemoryNetwork subclass.
@@ -62,10 +63,14 @@ class MemoryNetworkSolver(NNSolver):
 
         self.num_memory_layers = params.pop('num_memory_layers', 1)
 
+        # TODO(matt): we need to make the pretraining parameters more sane...
         # We need to pop these parameters now, but use them after we've called the superclass
         # constructor.  We don't need to save them to self; see below.
         pretrain_entailment = params.pop('pretrain_entailment', False)
+        pretrain_attention_with_snli = params.pop('pretrain_attention_with_snli', False)
         pretrain_attention = params.pop('pretrain_attention', False)
+        attention_instance_file = params.pop('attention_instance_file', None)
+        attention_background_file = params.pop('attention_background_file', None)
         snli_file = params.pop('snli_file', None)
 
         # These parameters specify the kind of knowledge selector, used to compute an attention
@@ -88,8 +93,11 @@ class MemoryNetworkSolver(NNSolver):
         # self.pretrainers gets set in the superclass constructor, so now we can append to it.
         if pretrain_entailment:
             self.pretrainers.append(SnliEntailmentPretrainer(self, snli_file))
-        if pretrain_attention:
+        if pretrain_attention_with_snli:
             self.pretrainers.append(SnliAttentionPretrainer(self, snli_file))
+        if pretrain_attention:
+            self.pretrainers.append(AttentionPretrainer(self, attention_instance_file,
+                                                        attention_background_file))
 
         # These are the entailment models that are compatible with this solver.
         self.entailment_choices = ['true_false_mlp']

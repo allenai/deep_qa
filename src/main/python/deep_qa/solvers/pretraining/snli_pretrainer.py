@@ -21,7 +21,7 @@ class SnliPretrainer(Pretrainer):
 
     @overrides
     def _load_dataset(self):
-        return TextDataset.read_from_file(self.snli_file, SnliInstance, self.solver.tokenizer)
+        return TextDataset.read_from_file(self.snli_file, SnliInstance, tokenizer=self.solver.tokenizer)
 
 
 class SnliEntailmentPretrainer(SnliPretrainer):
