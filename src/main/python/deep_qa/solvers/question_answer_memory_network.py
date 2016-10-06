@@ -3,7 +3,6 @@ from overrides import overrides
 
 from keras.layers import TimeDistributed
 
-from ..data.dataset import TextDataset
 from ..data.text_instance import QuestionAnswerInstance
 from .memory_network import MemoryNetworkSolver
 
@@ -29,19 +28,6 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         # And declare some model-specific variables that will be set later.
         self.num_options = None
         self.max_answer_length = None
-
-    @overrides
-    def can_train(self) -> bool:
-        """
-        Where a MemoryNetworkSolver allows separate positive and negative training files, we only
-        allow a single train file, so we need to override this method.
-
-        The train file must be a valid question file, as determined by
-        Dataset.can_be_converted_to_multiple_choice(), but we don't check that here.
-        """
-        has_train = self.train_file is not None and self.train_background is not None
-        has_validation = self.validation_file is not None and self.validation_background is not None
-        return has_train and has_validation
 
     @overrides
     def _instance_type(self):
@@ -73,28 +59,3 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         encoded_answers = answer_encoder(answer_embedding)
         return ([answer_input_layer],
                 self._get_entailment_model().classify(combined_input, encoded_answers))
-
-    @overrides
-    def _get_validation_data(self):
-        dataset = TextDataset.read_from_file(self.validation_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.validation_background)
-        self.validation_dataset = background_dataset
-        return self.prep_labeled_data(background_dataset, for_train=False, shuffle=True)
-
-    @overrides
-    def _get_test_data(self):
-        dataset = TextDataset.read_from_file(self.test_file,
-                                             self._instance_type(),
-                                             tokenizer=self.tokenizer)
-        background_dataset = TextDataset.read_background_from_file(dataset, self.test_background)
-        return self.prep_labeled_data(background_dataset, for_train=False, shuffle=True)
-
-    @overrides
-    def evaluate(self, labels, test_input):
-        """
-        We need to override this method, because our test input is already grouped by question.
-        """
-        scores = self.model.evaluate(test_input, labels)
-        return scores[1]  # NOTE: depends on metrics=['accuracy'] in self.model.compile()

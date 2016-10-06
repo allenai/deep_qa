@@ -111,16 +111,16 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
             # First we encode the corpus and (re-)build an LSH.
             self._initialize_lsh()
 
-            # Finally, we update both self.training_dataset and self.validation_dataset with new
+            # Then we update both self.training_dataset and self.validation_dataset with new
             # background information, taken from a nearest neighbor search over the corpus.
             logger.info("Updating the training data background")
             self.training_dataset = self._update_background_dataset(self.training_dataset)
-            self.train_input, self.train_labels = self.prep_labeled_data(
-                    self.training_dataset, for_train=False, shuffle=True)
-            logger.info("Updating the validation data background")
-            self.validation_dataset = self._update_background_dataset(self.validation_dataset)
-            self.validation_input, self.validation_labels = self._prep_question_dataset(
-                    self.validation_dataset)
+            self.train_input, self.train_labels = self._prepare_data(self.training_dataset, for_train=False)
+            if self.validation_dataset:
+                logger.info("Updating the validation data background")
+                self.validation_dataset = self._update_background_dataset(self.validation_dataset)
+                self.validation_input, self.validation_labels = self._prepare_data(
+                        self.validation_dataset, for_train=False)
 
     @overrides
     def _save_model(self, epoch: int):
@@ -147,20 +147,11 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         corpus_file = gzip.open(self.corpus_path)
         corpus_lines = [line.decode('utf-8') for line in corpus_file.readlines()]
 
-        # Because we're calling as_training_data() on the instances, we need them to have a label,
-        # so we pass label=True here.  TODO(matt): make it so that we can get just the input from
-        # an instance without the label somehow.
         logger.info("Creating dataset")
-        dataset = TextDataset.read_from_lines(corpus_lines,
-                                              self._instance_type(),
-                                              label=True,
-                                              tokenizer=self.tokenizer)
-        logger.info("Indexing and padding dataset")
-        indexed_dataset = self._index_and_pad_dataset(dataset, self._get_max_lengths())
+        dataset = TextDataset.read_from_lines(corpus_lines, self._instance_type(), tokenizer=self.tokenizer)
 
         def _get_generator():
-            instances = zip(dataset.instances, indexed_dataset.instances)
-            grouped_instances = zip_longest(*(iter(instances),) * batch_size)
+            grouped_instances = zip_longest(*(iter(dataset.instances),) * batch_size)
             for batch in grouped_instances:
                 batch = [x for x in batch if x is not None]
                 yield batch
@@ -171,16 +162,15 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         num_batches = len(dataset.instances) / batch_size
         log_every = max(1, int(num_batches / 100))
         batch_num = 0
-        for batch in generator:
+        for instances in generator:
             batch_num += 1
             if batch_num % log_every == 0:
                 logger.info("Processing batch %d / %d", batch_num, num_batches)
-            instances, indexed_instances = zip(*batch)
 
             for instance in instances:
                 self.instance_index[len(self.instance_index)] = instance
 
-            encoder_input = [instance.as_training_data()[0] for instance in indexed_instances]
+            encoder_input = [self._prepare_instance(instance, False)[0] for instance in instances]
             encoder_input = numpy.asarray(encoder_input, dtype='int32')
             current_batch_encoded_sentences = self._sentence_encoder_model.predict(encoder_input)
             for encoded_sentence in current_batch_encoded_sentences:

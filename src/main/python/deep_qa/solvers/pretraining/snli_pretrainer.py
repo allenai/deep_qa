@@ -4,7 +4,7 @@ from keras import backend as K
 from keras.layers import merge, Lambda, TimeDistributed
 from keras.models import Model
 
-from .pretrainer import Pretrainer
+from ...training.pretraining.pretrainer import Pretrainer
 from ...data.dataset import TextDataset
 from ...data.text_instance import SnliInstance
 

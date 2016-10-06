@@ -12,7 +12,6 @@ from ..layers.encoders import TreeCompositionLSTM
 
 
 class TreeLSTMSolver(NNSolver):
-    # TODO(matt): this will be fixed in the next PR; pylint: disable=abstract-method
     def __init__(self, params: Dict[str, Any]):
         super(TreeLSTMSolver, self).__init__(params)
         self.max_transition_length = None

@@ -29,13 +29,21 @@ class TestDifferentiableSearchSolver(TestCase):
         os.remove(self.corpus_path)
 
     def test_initialize_lsh_does_not_crash(self):
-        args = {'corpus_path': self.corpus_path, 'model_serialization_prefix': './'}
+        args = {
+                'corpus_path': self.corpus_path,
+                'model_serialization_prefix': './',
+                'max_sentence_length': 3,
+                }
         solver = get_solver(DifferentiableSearchSolver, args)
         solver.encoder_model = FakeEncoder()
         solver._initialize_lsh()
 
     def test_get_nearest_neighbors_does_not_crash(self):
-        args = {'corpus_path': self.corpus_path, 'model_serialization_prefix': './'}
+        args = {
+                'corpus_path': self.corpus_path,
+                'model_serialization_prefix': './',
+                'max_sentence_length': 5,
+                }
         solver = get_solver(DifferentiableSearchSolver, args)
         solver.encoder_model = FakeEncoder()
         solver._initialize_lsh()

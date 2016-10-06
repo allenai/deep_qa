@@ -13,9 +13,8 @@ class Pretrainer:
     layer, but not actually changing the weights used in the solver itself, because the solver will
     just re-build that layer with new weights during the training step.
     """
-    # TODO(matt): this ended up being _really_ similar to the NNSolver code.  I've been wanting to
-    # make the data loading code in NNSolver better, anyway; we should probably pull out all of the
-    # common code here into a Trainer class that both of these can inherit from.
+    # TODO(matt): Make this inherit from Trainer.  Not sure if that will have any funny effects,
+    # particularly with passing parameters.
 
     # While it's not great, we need access to a few of the internals of the solver, so we'll
     # disable protected access checks.
