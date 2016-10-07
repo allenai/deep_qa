@@ -33,3 +33,8 @@ class TestMemoryNetworkSolver(TestCase):
         args = {'encoder': {'type': 'cnn', 'ngram_filter_sizes': [1], 'num_filters': 1}}
         solver = get_solver(MemoryNetworkSolver, args)
         solver.train()
+
+    def test_train_does_not_crash_with_positional_encoder(self):
+        args = {'encoder': {'type': 'positional'}}
+        solver = get_solver(MemoryNetworkSolver, args)
+        solver.train()
