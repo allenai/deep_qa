@@ -1,7 +1,7 @@
 from overrides import overrides
 
 from keras import backend as K
-from keras.layers import TimeDistributed, Lambda, merge
+from keras.layers import TimeDistributed, Lambda
 from keras.models import Model
 
 from .multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
@@ -13,22 +13,22 @@ class MultipleChoiceSimilaritySolver(MultipleChoiceMemoryNetworkSolver):
     This is a simple solver which chooses the option whose encoding is most similar to the background
     encoding. Whereas in a memory network solver there is a background summarization step based on the
     attention weights, this solver does not have an attention component, and merely compares the maximum
-    of similarity scores with the background of all the options. Accordingly, all the parameters of the 
+    of similarity scores with the background of all the options. Accordingly, all the parameters of the
     solver come from the encoder alone.
 
     While this class inherits MultipleChoiceMemoryNetworkSolver for now, it is only the data preparation
     and encoding steps from that class that are reused here.
 
     '''
-   
+
     @overrides
     def _build_model(self):
         question_input_layer, question_embedding = self._get_embedded_sentence_input(
-            input_shape=self._get_question_shape(),
-            name_prefix="sentence")
+                input_shape=self._get_question_shape(),
+                name_prefix="sentence")
         knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-            input_shape=self._get_background_shape(),
-            name_prefix="background")
+                input_shape=self._get_background_shape(),
+                name_prefix="background")
         question_encoder = self._get_sentence_encoder()
         knowledge_encoder = TimeDistributed(question_encoder, name='knowledge_encoder')
         encoded_question = question_encoder(question_embedding)  # (samples, num_options, encoding_dim)
