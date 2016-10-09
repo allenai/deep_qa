@@ -35,20 +35,24 @@ class MultipleChoiceSimilaritySolver(MultipleChoiceMemoryNetworkSolver):
         # (samples, num_options, knowledge_length, encoding_dim)
         encoded_knowledge = knowledge_encoder(knowledge_embedding)
         knowledge_axis = self._get_knowledge_axis()
-        def _similarity_function(question_knowledge_inputs):
-            questions, knowledge = question_knowledge_inputs
-            expanded_questions = K.expand_dims(questions, dim=knowledge_axis)
-            # (samples, num_options, encoding_dim, knowledge_length)
-            tiled_questions = K.tile(K.permute_dimensions(expanded_questions, (0, 1, 3, 2)),
-                                     (1, 1, 1, self.max_knowledge_length))
-            # (samples, num_options, knowledge_length, encoding_dim)
-            tiled_questions = K.permute_dimensions(tiled_questions, (0, 1, 3, 2))
-            # (samples, num_options, knowledge_length)
-            question_knowledge_product = K.sum(tiled_questions * knowledge, axis=-1)
-            max_knowledge_similarity = K.max(question_knowledge_product, axis=-1)  # (samples, num_options)
-            return K.softmax(max_knowledge_similarity)
-        similarity_layer = Lambda(_similarity_function, output_shape=(self.num_options,), name="similarity_layer")
+        similarity_function = _get_similarity_function(knowledge_axis, self.max_knowledge_length)
+        similarity_layer = Lambda(similarity_function, output_shape=(self.num_options,), name="similarity_layer")
         option_probabilities = similarity_layer([encoded_question, encoded_knowledge])
         input_layers = [question_input_layer, knowledge_input_layer]
         similarity_solver = Model(input=input_layers, output=option_probabilities)
         return similarity_solver
+
+def _get_similarity_function(knowledge_axis, max_knowledge_length):
+    def func(question_knowledge_inputs):
+        questions, knowledge = question_knowledge_inputs
+        expanded_questions = K.expand_dims(questions, dim=knowledge_axis)
+        # (samples, num_options, encoding_dim, knowledge_length)
+        tiled_questions = K.tile(K.permute_dimensions(expanded_questions, (0, 1, 3, 2)),
+                                 (1, 1, 1, max_knowledge_length))
+        # (samples, num_options, knowledge_length, encoding_dim)
+        tiled_questions = K.permute_dimensions(tiled_questions, (0, 1, 3, 2))
+        # (samples, num_options, knowledge_length)
+        question_knowledge_product = K.sum(tiled_questions * knowledge, axis=-1)
+        max_knowledge_similarity = K.max(question_knowledge_product, axis=-1)  # (samples, num_options)
+        return K.softmax(max_knowledge_similarity)
+    return func
