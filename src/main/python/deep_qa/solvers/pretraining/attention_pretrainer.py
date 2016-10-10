@@ -15,6 +15,19 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class AttentionPretrainer(Pretrainer):
+    """
+    This is a generic Pretrainer for the attention mechanism of a MemoryNetworkSolver.
+
+    The data that we take as input here is a train file, just like you would pass to a
+    MemoryNetworkSolver, and a background file that has _labeled_ attention (this is different from
+    what you typically pass to a MemoryNetworkSolver).  See LabeledBackgroundInstance and
+    TextDataset.read_labeled_background_from_file() for more information on the expected input
+    here.
+
+    The label we get from a LabeledBackgroundInstance is the expected attention over the
+    background sentences.  We use that signal to pretrain the attention component of the memory
+    network.
+    """
     # While it's not great, we need access to a few of the internals of the trainer, so we'll
     # disable protected access checks.
     # pylint: disable=protected-access
@@ -25,6 +38,14 @@ class AttentionPretrainer(Pretrainer):
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
+        """
+        This method requires two input files, one with training examples, and one with labeled
+        background corresponding to the training examples.
+
+        Note that we're calling TextDataset.read_labeled_background_from_file() here, not
+        TextDataset.read_background_from_file(), because we want our Instances to have labeled
+        attention for pretraining, not labeled answers.
+        """
         dataset = TextDataset.read_from_file(files[0],
                                              self.trainer._instance_type(),
                                              tokenizer=self.trainer.tokenizer)
@@ -32,11 +53,21 @@ class AttentionPretrainer(Pretrainer):
 
     @overrides
     def _prepare_data(self, dataset: TextDataset, for_train: bool):
-        # We ignore the for_train parameter here, because we're not training, we're pre-training.
-        # So we basically do the same thing as NNSolver._prepare_data(), except for fitting a data
-        # indexer (which already happened), and setting max_lengths.
-        # TODO(matt): might be worth making a TextPretrainer whenever we make a TextTrainer, to
-        # share some of this common data preparation code.
+        """
+        This does basically the same thing as NNSolver._prepare_data(), except for the things done
+        when for_train is True.  We also rely on our contained Trainer instance for some of the
+        variables in here, where NNSolver relies on `self`.
+
+        As mentioned in the class docstring, the inputs returned by this method will be the same as
+        the regular inputs to a (non-time-distributed) MemoryNetworkSolver, and the labels will be
+        labeled attention over the background for each input.  Outputting this correctly is handled
+        by the Instance code (TextInstance.to_indexed_instance() and
+        IndexedInstance.as_training_data()), and by the _load_dataset_from_files() method, which
+        creates the correct TextInstance type with TextDataset.read_labeled_background_from_file().
+
+        TODO(matt): might be worth making a TextPretrainer whenever we make a TextTrainer, to
+        share some of this common data preparation code.
+        """
         logger.info("Indexing pretraining dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.trainer.data_indexer)
         max_lengths = self.trainer._get_max_lengths()
