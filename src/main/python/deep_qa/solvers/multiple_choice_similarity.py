@@ -42,6 +42,8 @@ class MultipleChoiceSimilaritySolver(MultipleChoiceMemoryNetworkSolver):
         similarity_solver = Model(input=input_layers, output=option_probabilities)
         return similarity_solver
 
+# The following function needs to be outside the class definition to properly serialize Lambda layers.
+# See Matt's comment here for more info: https://github.com/allenai/deep_qa/pull/90#issuecomment-252444488
 def _get_similarity_function(knowledge_axis, max_knowledge_length):
     def func(question_knowledge_inputs):
         questions, knowledge = question_knowledge_inputs
