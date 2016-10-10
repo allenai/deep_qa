@@ -248,6 +248,36 @@ class IndexedBackgroundInstance(IndexedInstance):
         return final_inputs, label
 
 
+class IndexedLabeledBackgroundInstance(IndexedBackgroundInstance):
+    """
+    This is an IndexedBackgroundInstance that has a different label.  Instead of passing through
+    the contained instance's label, we have labeled attention over the background data.  So this
+    object behaves identically to IndexedBackgroundInstance in everything except the label.
+
+    See text_instance.LabeledBackgroundInstance for a little more detail.
+    """
+    def __init__(self,
+                 indexed_instance: IndexedInstance,
+                 background_indices: List[List[int]],
+                 label: List[int]):
+        super(IndexedLabeledBackgroundInstance, self).__init__(indexed_instance, background_indices)
+        self.label = label
+
+    @overrides
+    def as_training_data(self):
+        """
+        All we do here is overwrite the label from IndexedBackgroundInstance.
+        """
+        inputs, _ = super(IndexedLabeledBackgroundInstance, self).as_training_data()
+        if self.label is None:
+            label = None
+        else:
+            label = numpy.zeros(len(self.background_indices))
+            for index in self.label:
+                label[index] = 1
+        return inputs, label
+
+
 class IndexedMultipleChoiceInstance(IndexedInstance):
     """
     A MultipleChoiceInstance that has been indexed.  MultipleChoiceInstance has a better

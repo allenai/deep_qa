@@ -3,16 +3,17 @@ from typing import List
 from overrides import overrides
 
 from .constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
-from .instance import Instance
+from .data_indexer import DataIndexer
 from .indexed_instance import IndexedBackgroundInstance
 from .indexed_instance import IndexedInstance
+from .indexed_instance import IndexedLabeledBackgroundInstance
 from .indexed_instance import IndexedLogicalFormInstance
 from .indexed_instance import IndexedMultipleChoiceInstance
 from .indexed_instance import IndexedQuestionAnswerInstance
 from .indexed_instance import IndexedSnliInstance
 from .indexed_instance import IndexedTrueFalseInstance
+from .instance import Instance
 from .tokenizer import tokenizers, Tokenizer
-from .data_indexer import DataIndexer
 
 
 class TextInstance(Instance):
@@ -230,6 +231,32 @@ class BackgroundInstance(TextInstance):
             indices = [data_indexer.get_word_index(word) for word in words]
             background_indices.append(indices)
         return IndexedBackgroundInstance(indexed_instance, background_indices)
+
+
+class LabeledBackgroundInstance(BackgroundInstance):
+    """
+    An Instance that has background knowledge associated with it, where the label is _attention
+    over the background knowledge_.  This is basically identical to BackgroundInstance, except for
+    the label.  In that case, the label is taken from the wrapped instance.  In this case, the
+    label is over the background knowledge itself.
+
+    This kind of instance is used for pre-training the attention component of a memory network (or
+    perhaps for training an answer sentence selection model, though we don't currently have any of
+    those models).
+
+    The label is a List[int], containing the indices of all positive background sentences (e.g.,
+    [5, 8], or [2], etc.).
+    """
+    def __init__(self, instance: TextInstance, background: List[str], label: List[int]):
+        super(LabeledBackgroundInstance, self).__init__(instance, background)
+        self.label = label
+
+    @overrides
+    def to_indexed_instance(self, data_indexer: DataIndexer):
+        instance = super(LabeledBackgroundInstance, self).to_indexed_instance(data_indexer)
+        return IndexedLabeledBackgroundInstance(instance.indexed_instance,
+                                                instance.background_indices,
+                                                self.label)
 
 
 class MultipleChoiceInstance(TextInstance):

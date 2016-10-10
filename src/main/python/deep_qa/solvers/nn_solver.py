@@ -23,6 +23,16 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class NNSolver(Trainer):
+    """
+    This is a Trainer that deals with word sequences as its fundamental data type (any TextDataset
+    or TextInstance subtype is fine).  That means we have to deal with padding, with converting
+    words (or characters) to indices, and encoding word sequences.  This class adds methods on top
+    of Trainer to deal with all of that stuff.
+
+    TODO(matt): renaming this to something like TextTrainer would probably be a good idea, though
+    I'm not thrilled with "TextTrainer", which is why I haven't done it yet.  It could then be
+    moved into the training module, as it's general enough to live there, I think.
+    """
     def __init__(self, params: Dict[str, Any]):
 
         # If specified, we will use the vectors in this file and learn a projection matrix to get
@@ -64,6 +74,7 @@ class NNSolver(Trainer):
 
         super(NNSolver, self).__init__(params)
 
+        self.name = "NNSolver"
         self.data_indexer = DataIndexer()
 
         # Model-specific member variables that will get set and used later.  For many of these, we
@@ -80,11 +91,6 @@ class NNSolver(Trainer):
         Takes dataset, which could be a complex tuple for some classes, and produces as output a
         tuple of (inputs, labels), which can be used directly with Keras to either train or
         evaluate self.model.
-
-        For training and validation data, this method is called internally during self.train().  If
-        you want to evaluate the model on some other test dataset, this is the method you need to
-        call.  However, that dataset has to have labels, or this method will crash.  We don't
-        currently have an API for making predictions on data that doesn't have labels.  TODO(matt)
         """
         if for_train:
             self.data_indexer.fit_word_dictionary(dataset)
@@ -121,14 +127,15 @@ class NNSolver(Trainer):
         return self.train_file is not None
 
     @overrides
-    def _load_pretraining_data(self):
+    def _process_pretraining_data(self):
         """
         Adds words to the vocabulary based on the data used by the pretrainers.  We want this to
         happen before loading the training data so that we can use pretraining to expand our
         applicable vocabulary.
         """
+        logger.info("Fitting the data indexer using the pretraining data")
         for pretrainer in self.pretrainers:
-            pretrainer.fit_data_indexer(self.data_indexer)
+            pretrainer.fit_data_indexer()
 
     def _load_layers(self):
         """
@@ -256,8 +263,7 @@ class NNSolver(Trainer):
         has background information could call this method, then do additional processing on the
         rest of the list, for instance).
         """
-        instance_type = self._instance_type()
-        return TextDataset.read_from_file(files[0], instance_type, tokenizer=self.tokenizer)
+        return TextDataset.read_from_file(files[0], self._instance_type(), tokenizer=self.tokenizer)
 
     def _get_embedded_sentence_input(self, input_shape: Tuple[int], name_prefix: str):
         """

@@ -4,8 +4,11 @@ from typing import Any, Dict, List
 
 from keras.models import Model, model_from_json
 
+from ..common.checks import ConfigurationError
+from ..common.params import get_choice
 from ..data.dataset import Dataset
 from ..data.instance import Instance
+from . import concrete_pretrainers
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -21,10 +24,17 @@ class Trainer:
     models.
     """
     def __init__(self, params: Dict[str, Any]):
+        self.name = "Trainer"
+
+        # Should we save the models that we train?  If this is True, you are required to also set
+        # the model_serialization_prefix parameter, or the code will crash.
+        self.save_models = params.pop('save_models', True)
+
         # Prefix for saving and loading model files
-        self.model_prefix = params.pop('model_serialization_prefix')
-        parent_directory = os.path.dirname(self.model_prefix)
-        os.makedirs(parent_directory, exist_ok=True)
+        self.model_prefix = params.pop('model_serialization_prefix', None)
+        if self.model_prefix:
+            parent_directory = os.path.dirname(self.model_prefix)
+            os.makedirs(parent_directory, exist_ok=True)
 
         # Upper limit on the number of training instances.  If this is set, and we get more than
         # this, we will truncate the data.
@@ -43,11 +53,27 @@ class Trainer:
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
 
+        # This should be a dict, containing the following keys:
+        # - "layer_names", which has as a value a list of names that must match layer names in the
+        #     model build by this Trainer.
+        # - "data", which has as a value either "training", "validation", or a list of file names.
+        #     If you give "training" or "validation", we'll use those datasets, otherwise we'll
+        #     load data from the provided files.  Note that currently "validation" only works if
+        #     you provide validation files, not if you're just using Keras to split the training
+        #     data.
         self.debug_params = params.pop('debug', {})
+
+        pretrainer_params = params.pop('pretrainers', [])
+        self.pretrainers = []
+        for pretrainer_param in pretrainer_params:
+            pretrainer_type = get_choice(pretrainer_param, "type", concrete_pretrainers.keys())
+            pretrainer = concrete_pretrainers[pretrainer_type](self, pretrainer_param)
+            self.pretrainers.append(pretrainer)
 
         # We've now processed all of the parameters, and we're the base class, so there should not
         # be anything left.
-        assert len(params.keys()) == 0, "You passed unrecognized parameters: " + str(params)
+        if len(params.keys()) != 0:
+            raise ConfigurationError("You passed unrecognized parameters: " + str(params))
 
         # Model-specific member variables that will get set and used later.
         self.model = None
@@ -55,7 +81,6 @@ class Trainer:
 
         # Training-specific member variables that will get set and used later.
         self.best_epoch = -1
-        self.pretrainers = []
 
         # We store the datasets used for training and validation, both before processing and after
         # processing, in case a subclass wants to modify it between epochs for whatever reason.
@@ -122,10 +147,11 @@ class Trainer:
         """
         Runs whatever pre-training has been specified in the constructor.
         """
+        logger.info("Running pre-training")
         for pretrainer in self.pretrainers:
             pretrainer.train()
 
-    def _load_pretraining_data(self):
+    def _process_pretraining_data(self):
         """
         Processes the pre-training data in whatever way you want, typically for setting model
         parameters like vocabulary.  This happens _before_ the training data itself is processed.
@@ -162,13 +188,14 @@ class Trainer:
         All training parameters have already been passed to the constructor, so we need no
         arguments to this method.
         '''
-        logger.info("Running training")
+        logger.info("Running training (%s)", self.name)
 
         # Before actually doing any training, we'll run whatever pre-training has been specified.
         # Note that this can have funny interactions with model parameters that get fit to the
         # training data.  We don't really know here what you want to do with the data you have for
         # pre-training, if any, so we provide a hook that you can override to do whatever you want.
-        self._load_pretraining_data()
+        if self.pretrainers:
+            self._process_pretraining_data()
 
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
@@ -187,7 +214,8 @@ class Trainer:
         # We need to actually do pretraining _after_ we've loaded the training data, though, as we
         # need to build the models to be consistent between training and pretraining.  The training
         # data tells us a max sentence length, which we need for the pretrainer.
-        self._pretrain()
+        if self.pretrainers:
+            self._pretrain()
 
         # Then we build the model and compile it.
         logger.info("Building the model")
@@ -199,14 +227,23 @@ class Trainer:
             # Get the list of layers whose outputs will be visualized as per the
             # solver definition and build a debug model.
             debug_layer_names = self.debug_params['layer_names']
-            debug_files = self.debug_params['files']
+            debug_data = self.debug_params['data']
+            if debug_data == "training":
+                self.debug_dataset = self.training_dataset
+                self.debug_input = self.train_input
+            elif debug_data == "validation":
+                # NOTE: This currently only works if you've specified specific validation data, not
+                # if you are just splitting the training data for validation.
+                self.debug_dataset = self.validation_dataset
+                self.debug_input = self.validation_input
+            else:
+                # If the `data` param is not "training" or "validation", we assume it's a list of
+                # file names.
+                self.debug_dataset = self._load_dataset_from_files(debug_data)
+                self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
             self.debug_model = self._build_debug_model(debug_layer_names)
             self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
 
-            # TODO(matt): if we want to allow for other kinds of debug inputs / outputs, we'll have
-            # to put this into a method that can be overridden.
-            self.debug_dataset = self._load_dataset_from_files(debug_files)
-            self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
 
         # Now we actually train the model, with patient early stopping using the validation data.
         best_accuracy = 0.0
@@ -232,12 +269,14 @@ class Trainer:
                 best_accuracy = accuracy
                 self.best_epoch = epoch_id
                 num_worse_epochs = 0  # Reset the counter.
-                self._save_model(epoch_id)
+                if self.save_models:
+                    self._save_model(epoch_id)
             if self.debug_params:
                 # Shows intermediate outputs of the model on validation data
                 outputs = self.debug_model.predict(self.debug_input)
                 self._handle_debug_output(self.debug_dataset, debug_layer_names, outputs, epoch_id)
-        self._save_best_model()
+        if self.save_models:
+            self._save_best_model()
 
     def _pre_epoch_hook(self, epoch: int):
         """
@@ -270,9 +309,13 @@ class Trainer:
         """
         debug_inputs = self.model.get_input_at(0)  # list of all input_layers
         debug_outputs = []
+        layer_names = set(debug_layer_names)
         for layer in self.model.layers:
-            if layer.name in debug_layer_names:
+            if layer.name in layer_names:
                 debug_outputs.append(layer.get_output_at(0))
+                layer_names.remove(layer.name)
+        if len(layer_names) != 0:
+            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names))
         debug_model = Model(input=debug_inputs, output=debug_outputs)
         return debug_model
 
