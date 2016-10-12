@@ -89,6 +89,11 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
         return TimeDistributed(base_knowledge_selector, name="timedist_%s" % base_knowledge_selector.name)
 
     @overrides
+    def _get_knowledge_combiner(self, layer_num: int):
+        base_knowledge_combiner = super(MultipleChoiceMemoryNetworkSolver, self)._get_knowledge_combiner(layer_num)
+        return TimeDistributed(base_knowledge_combiner, name="timedist_%s" % base_knowledge_combiner.name)
+
+    @overrides
     def _get_memory_updater(self, layer_num: int):
         base_memory_updater = super(MultipleChoiceMemoryNetworkSolver, self)._get_memory_updater(layer_num)
         return TimeDistributed(base_memory_updater, name="timedist_%s" % base_memory_updater.name)

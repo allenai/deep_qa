@@ -12,6 +12,7 @@ from ..data.text_instance import TrueFalseInstance
 from ..layers.knowledge_selectors import selectors
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
+from ..layers.knowledge_combiners import knowledge_combiners
 from .nn_solver import NNSolver
 
 
@@ -75,6 +76,7 @@ class MemoryNetworkSolver(NNSolver):
         # one of the keys in `selectors`) to determine the type of the selector, then pass the
         # remaining args to the selector constructor.
         self.knowledge_selector_params = params.pop('knowledge_selector', {})
+        self.knowledge_combiner_params = params.pop('knowledge_combiner', {})
 
         # Same deal with these three as with the knowledge selector params.
         self.memory_updater_params = params.pop('memory_updater', {})
@@ -94,6 +96,7 @@ class MemoryNetworkSolver(NNSolver):
         # want to set them now, because they use max length information that only gets set after
         # reading the training data.
         self.knowledge_selector_layers = {}
+        self.knowledge_combiner_layers = {}
         self.memory_updater_layers = {}
         self.entailment_input_combiner = None
         self.entailment_model = None
@@ -190,17 +193,22 @@ class MemoryNetworkSolver(NNSolver):
             return tuple(background_shape)
         return merged_shape
 
-    def _get_weighted_average_shape(self):
+    def _get_concat_background_shape(self):
         """
-        Similar to _get_merged_background_shape, this method returns the shape of a function that
-        averages over the knowledge axis.  All we have to do is drop the knowledge axis from the
-        shape.
+        This method returns a lambda function, which takes input the shape of the attention weights
+        and the knowledge encoding, and returns as output the shape of the merged attention weights
+        and background encodings.  This merge just stacks the attention weights on top of the
+        background encoding, adding one to the encoding_dim dimension.
         """
         knowledge_axis = self._get_knowledge_axis()
         def merged_shape(input_shapes):
-            shape = [x for x in input_shapes[0]]
-            shape.pop(knowledge_axis)
-            return tuple(shape)
+            background_shape = [x for x in input_shapes[1]]
+            # Note that this assumes that the input tensor shape looks like
+            # (..., knowledge_length, encoding_dim, ...).  That's currently true of the data used
+            # by all of our solvers, but if you get a weird crash from a new kind of solver, this
+            # is something to check.
+            background_shape[knowledge_axis + 1] += 1
+            return tuple(background_shape)
         return merged_shape
 
     def _get_knowledge_selector(self, layer_num: int):
@@ -221,6 +229,29 @@ class MemoryNetworkSolver(NNSolver):
         selector_type = get_choice_with_default(params, "type", list(selectors.keys()))
         params['name'] = name
         return selectors[selector_type](**params)
+
+    def _get_knowledge_combiner(self, layer_num: int):
+        """
+        Instantiates a KnowledgeCombiner layer.  This is an overridable method because some
+        subclasses might need to TimeDistribute this, for instance.
+        """
+        if layer_num not in self.knowledge_combiner_layers:
+            layer = self._get_new_knowledge_combiner(name='knowledge_combiner_%d' % layer_num)
+            self.knowledge_combiner_layers[layer_num] = layer
+        return self.knowledge_combiner_layers[layer_num]
+
+    def _get_new_knowledge_combiner(self, name='knowledge_combiner'):
+        # The code that follows would be destructive to self.knowledge_combiner_params (lots of
+        # calls to params.pop()), but it's possible we'll want to call this more than once.  So
+        # we'll make a copy and use that instead of self.knowledge_combiner_params.
+        params = deepcopy(self.knowledge_combiner_params)
+        params['name'] = name
+        # These are required for the Attentive
+        params['output_dim'] = self.embedding_size
+        params['input_length'] = self.max_knowledge_length
+
+        combiner_type = get_choice_with_default(params, "type", list(knowledge_combiners.keys()))
+        return knowledge_combiners[combiner_type](**params)
 
     def _get_memory_updater(self, layer_num: int):
         """
@@ -315,6 +346,7 @@ class MemoryNetworkSolver(NNSolver):
         # current memory layer.
         current_memory = encoded_question
 
+        knowledge_combiner = self._get_knowledge_combiner(0)
         knowledge_axis = self._get_knowledge_axis()
         for i in range(self.num_memory_layers):
             # We want to merge a matrix and a tensor such that the new tensor will have one
@@ -327,6 +359,7 @@ class MemoryNetworkSolver(NNSolver):
             merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=knowledge_axis),
                                                            layer_outs[1]],
                                                           axis=knowledge_axis)
+
             merged_shape = self._get_merged_background_shape()
             merged_encoded_rep = merge([current_memory, encoded_knowledge],
                                        mode=merge_mode,
@@ -339,15 +372,25 @@ class MemoryNetworkSolver(NNSolver):
             attention_weights = knowledge_selector(regularized_merged_rep)
             # Defining weighted average as a custom merge mode. Takes two inputs: data and weights
             # ndim of weights is one less than data.
-            weighted_average = lambda avg_inputs: K.sum(avg_inputs[0] * K.expand_dims(avg_inputs[1], dim=-1),
-                                                        axis=knowledge_axis)
-            # input shapes: (samples, knowledge_len, input_dim), (samples, knowledge_len)
-            # output shape: (samples, input_dim)
-            weighted_average_shape = self._get_weighted_average_shape()
-            attended_knowledge = merge([encoded_knowledge, attention_weights],
-                                       mode=weighted_average,
-                                       output_shape=weighted_average_shape,
-                                       name='background_weighted_average_%d' % i)
+
+            # We now combine the knowledge and the weights using the knowledge combiner. In order to
+            # make it easy to TimeDistribute these Layers for use with different solvers,
+            # we prepend the attention mask onto the background knowledge.
+            # Note that this merge assumes that the word_dim is always after the background_length dimension.
+            # (samples, knowledge_length, word_dim), (samples, knowledge_length)
+            #                                    => (samples, knowledge_length, 1 + word_dim)
+
+            concat_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=knowledge_axis + 1),
+                                                            layer_outs[1]],
+                                                           axis=knowledge_axis + 1)
+            concat_shape = self._get_concat_background_shape()
+
+            combined_background_with_attention = merge([attention_weights, encoded_knowledge],
+                                                       mode=concat_mode,
+                                                       output_shape=concat_shape,
+                                                       name='concat_attention_with_background_%d' % i)
+
+            attended_knowledge = knowledge_combiner(combined_background_with_attention)
 
             # To make this easier to TimeDistribute, we're going to concatenate the current memory
             # with the attended knowledge, and use that as the input to the memory updater, instead
@@ -360,7 +403,6 @@ class MemoryNetworkSolver(NNSolver):
                                   name='concat_current_memory_with_background_%d' % i)
             memory_updater = self._get_memory_updater(i)
             current_memory = memory_updater(updater_input)
-
 
         # TODO(matt): we now have subclasses that do answer selection, instead of entailment, and
         # it's not very nice to shoehorn them into the same "entailment" model.  It would be nice
