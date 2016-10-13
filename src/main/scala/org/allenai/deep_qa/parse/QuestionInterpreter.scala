@@ -46,20 +46,26 @@ abstract class QuestionInterpreter {
    *  Parses a question line formatted as "[correct_answer]\t[question] [answers]", returning a
    *  ScienceQuestion object.
    *
-   *  TODO(matt): There's code in the question decomposer that will handle this more generally, but
-   *  that code is heavy...
+   *  NOTE: this assumes the answer options always begin with 'A' and go up from there, and are
+   *  formatted like (A).  There's code in the Aristo question decomposer that will handle this
+   *  more generally, but that code is heavy...
    */
   def parseQuestionLine(questionLine: String): ScienceQuestion = {
     val fields = questionLine.split("\t")
-    val correctAnswerOption = fields(0).charAt(0) - 'A'
-    val (questionText, answerOptions) = fields(1).splitAt(fields(1).indexOf("(A)"))
+
+    val (correctAnswerOption, rawQuestion) = if (fields.length == 2) {
+      (Some(fields(0).charAt(0) - 'A'), fields(1))
+    } else {
+      (None, fields(0))
+    }
+    val (questionText, answerOptions) = rawQuestion.splitAt(rawQuestion.indexOf("(A)"))
     val sentences = parser.splitSentences(questionText.trim)
     val options = answerOptions.trim.split("\\(.\\)")
     val answers = options.drop(1).zipWithIndex.map(optionWithIndex => {
       val option = optionWithIndex._1
       val index = optionWithIndex._2
       val text = option.trim
-      val isCorrect = index == correctAnswerOption
+      val isCorrect = correctAnswerOption.map(index == _).getOrElse(false)
       Answer(text, isCorrect)
     }).toSeq
     ScienceQuestion(sentences, answers)

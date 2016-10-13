@@ -78,6 +78,9 @@ class TrueFalseInstance(TextInstance):
         super(TrueFalseInstance, self).__init__(label, index, tokenizer)
         self.text = text
 
+    def __str__(self):
+        return 'TrueFalseInstance(' + self.text + ', ' + str(self.label) + ')'
+
     @overrides
     def words(self) -> List[str]:
         return self._tokenize(self.text.lower())
@@ -214,6 +217,9 @@ class BackgroundInstance(TextInstance):
         self.instance = instance
         self.background = background
 
+    def __str__(self):
+        return 'BackgroundInstance(' + str(self.instance) + ', ' + str(self.background) + ')'
+
     @overrides
     def words(self):
         words = []
@@ -251,6 +257,10 @@ class LabeledBackgroundInstance(BackgroundInstance):
         super(LabeledBackgroundInstance, self).__init__(instance, background)
         self.label = label
 
+    def __str__(self):
+        return 'LabeledBackgroundInstance(' + str(self.instance) + ', ' + str(self.background) + \
+                ', ' + str(self.label) + ')'
+
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
         instance = super(LabeledBackgroundInstance, self).to_indexed_instance(data_indexer)
@@ -280,6 +290,11 @@ class MultipleChoiceInstance(TextInstance):
             label = positive_index[0]
         tokenizer = self.options[0].tokenizer if self.options else None
         super(MultipleChoiceInstance, self).__init__(label, None, tokenizer)
+
+    def __str__(self):
+        options_string = ',\n    '.join([str(x) for x in self.options])
+        return 'MultipleChoiceInstance(  \n(\n    ' + options_string + '\n  ),\n  ' + \
+                str(self.label) + '\n)'
 
     @overrides
     def words(self):
@@ -311,6 +326,10 @@ class QuestionAnswerInstance(TextInstance):
         super(QuestionAnswerInstance, self).__init__(label, index, tokenizer)
         self.question_text = question_text
         self.answer_options = answer_options
+
+    def __str__(self):
+        return 'QuestionAnswerInstance(' + self.question_text + ', ' + \
+                '|'.join(self.answer_options) + ', ' + str(self.label) + ')'
 
     @overrides
     def words(self) -> List[str]:
@@ -407,6 +426,9 @@ class SnliInstance(TextInstance):
         super(SnliInstance, self).__init__(self.label_mapping[label], index, tokenizer)
         self.text = text
         self.hypothesis = hypothesis
+
+    def __str__(self):
+        return 'SnliInstance(' + self.text + ', ' + self.hypothesis + ', ' + str(self.label) + ')'
 
     @overrides
     def words(self) -> List[str]:

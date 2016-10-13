@@ -1,5 +1,6 @@
 from concurrent import futures
 import random
+import sys
 import time
 
 import grpc
@@ -14,6 +15,7 @@ numpy.random.seed(1337)  # pylint: disable=no-member
 
 # pylint: disable=wrong-import-position
 from deep_qa.common.checks import ensure_pythonhashseed_set
+from deep_qa.common.params import get_choice
 from deep_qa.solvers import concrete_solvers
 
 from deep_qa.data.text_instance import TrueFalseInstance
@@ -33,14 +35,17 @@ class SolverServer(message_pb2.SolverServiceServicer):
     # The name of this method is specified in message.proto.
     def AnswerQuestion(self, request, context):
         instance = self.read_instance_message(request.question)
-        scores = self.solver.score_instance(instance)
+        try:
+            scores = self.solver.score_instance(instance)
+        except:
+            print("Instance was: " + str(instance))
+            raise
         response = message_pb2.QuestionResponse()
         for score in scores.tolist():
             response.scores.extend(score)
         return response
 
     def read_instance_message(self, instance_message):
-        print("Reading message:", instance_message)
         # pylint: disable=redefined-variable-type
         instance_type = instance_message.type
         if instance_type == message_pb2.TRUE_FALSE:
@@ -63,28 +68,19 @@ class SolverServer(message_pb2.SolverServiceServicer):
         return instance
 
 
-def serve():
+def serve(config_file: str):
     # read in the Typesafe-style config file and lookup the port to run on.
-    conf = ConfigFactory.parse_file('src/main/resources/application.conf')
-    port = conf["grpc.deep_qa.port"]
-    model_type = conf["grpc.deep_qa.model_class"]
+    params = ConfigFactory.parse_file(config_file)
+    server_params = params['server']
+    port = server_params['port']
 
     # create the server and add our RPC "servicer" to it
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
-    # TODO(matt): read this from a file somewhere, ideally the same conf file as above.
-    params = {
-            'model_serialization_prefix': 'models/example',
-            'encoder': {'type': 'bow'},
-            'knowledge_selector': {'type': 'dot_product'},
-            'memory_updater': {'type': 'sum'},
-            'entailment_input_combiner': {'type': 'memory_only'},
-            'num_memory_layers': 1,
-            'max_sentence_length': 125,
-            }
-
+    solver_params = params['solver']
+    model_type = get_choice(solver_params, 'solver_class', concrete_solvers.keys())
     solver_class = concrete_solvers[model_type]
-    solver = solver_class(params)
+    solver = solver_class(solver_params)
     message_pb2.add_SolverServiceServicer_to_server(SolverServer(solver), server)
 
     # start the server on the specified port
@@ -98,6 +94,14 @@ def serve():
         server.stop(0)
 
 
-if __name__ == '__main__':
+def main():
     ensure_pythonhashseed_set()
-    serve()
+    if len(sys.argv) != 2:
+        print('USAGE: server.py [config_file]')
+        sys.exit(-1)
+    config_file = sys.argv[1]
+    serve(config_file)
+
+
+if __name__ == '__main__':
+    main()

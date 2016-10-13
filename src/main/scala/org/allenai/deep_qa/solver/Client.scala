@@ -1,5 +1,7 @@
 package org.allenai.deep_qa.solver
 
+import scala.sys.process.Process
+
 import org.allenai.deep_qa.data.Instance
 import org.allenai.deep_qa.data.BackgroundInstance
 import org.allenai.deep_qa.data.QuestionAnswerInstance
@@ -12,22 +14,50 @@ import org.allenai.deep_qa.message.SolverServiceGrpc
 import org.allenai.deep_qa.message.QuestionRequest
 import org.allenai.deep_qa.message.QuestionResponse
 
+import com.mattg.util.FileUtil
+import com.typesafe.scalalogging.LazyLogging
+
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 
+import java.io.File
 import java.util.concurrent.TimeUnit
+
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.native.JsonMethods.{parse,pretty,render}
 
 /**
  * This Client connects to a python server that returns predictions from a trained model.  The only
  * thing we do here is convert between an Instance object and an Instance proto, then send the
  * proto off to the server, returning the scores we get back.
  */
-class Client(
-  private val channel: ManagedChannel,
-  private val blockingStub: SolverServiceBlockingStub
-) {
+class Client(serverDirectory: File, modelParams: JValue) extends LazyLogging {
+  val host = "localhost"
+  val port = 50051
+
+  val serverStartTime = 10000
+  val fileUtil = new FileUtil
+  val params: JValue = ("server" -> ("port" -> port)) ~ ("solver" -> modelParams)
+  val modelParamFile = serverDirectory.getAbsolutePath() + "/tmp_model_param_file.json"
+  logger.info("Writing model params to disk")
+  fileUtil.writeContentsToFile(modelParamFile, pretty(render(params)))
+  logger.info("Starting the server process")
+  val serverScript = "src/main/python/server.py"
+  val serverProcess = Process(s"""python ${serverScript} ${modelParamFile}""", serverDirectory).run
+  logger.info(s"Sleeping ${serverStartTime / 1000.0} seconds to give the server time to boot")
+  Thread.sleep(serverStartTime)  // we'll give the server a bit of time to boot up before trying to connect.
+  logger.info("Connecting to the server")
+  val channel = OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).build
+  val blockingStub = SolverServiceGrpc.blockingStub(channel)
+
   def shutdown(): Unit = {
+    logger.info("Closing connection to the server")
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
+    logger.info("Shutting down the server")
+    serverProcess.destroy()
+    logger.info("Deleting model param file")
+    fileUtil.deleteFile(modelParamFile)
   }
 
   def answerQuestion(instance: Instance): Seq[Double] = {
@@ -78,15 +108,15 @@ class Client(
 object Client {
 
   def main(args: Array[String]) {
-    val config = com.typesafe.config.ConfigFactory.load()
+    if (args.length != 1) {
+      println("USAGE: Client.scala [model_param_file]")
+      System.exit(-1)
+    }
+    val fileUtil = new FileUtil
+    val paramFile = args(0)
+    val modelParams = parse(fileUtil.readFileContents(paramFile))
 
-    val host = config.getString("grpc.deep_qa.server")
-    val port = config.getInt("grpc.deep_qa.port")
-
-    val channel: ManagedChannel =
-      OkHttpChannelBuilder.forAddress(host, port).usePlaintext(true).build
-    val blockingStub = SolverServiceGrpc.blockingStub(channel)
-    val client: Client = new Client(channel, blockingStub)
+    val client: Client = new Client(new File("./"), modelParams)
 
     val instance = MultipleTrueFalseInstance(Seq(
       BackgroundInstance(TrueFalseInstance("statement 1", None), Seq("background 1")),
@@ -97,5 +127,6 @@ object Client {
 
     val scores = client.answerQuestion(instance)
     println(s"Scores: [${scores.mkString(" ")}]")
+    client.shutdown()
   }
 }

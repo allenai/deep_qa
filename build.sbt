@@ -2,7 +2,7 @@ organization := "org.allenai"
 
 name := "deep-qa"
 
-version := "0.1"
+version := "0.1.5"
 
 scalaVersion := "2.11.7"
 
@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" %  "logback-classic" % "1.1.7",  // backend for scala-logging
 
   // These are for running this as a solver with gRPC
-  "io.grpc" % "grpc-okhttp" % "1.0.1",
+  "io.grpc" % "grpc-okhttp" % "0.13.2",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % (PB.scalapbVersion in PB.protobufConfig).value,
   "com.typesafe" % "config" % "1.2.1"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))

@@ -7,6 +7,37 @@ import org.json4s.JsonDSL._
 
 import com.mattg.util.FileUtil
 
+class QuestionInterpreterSpec extends FlatSpecLike with Matchers {
+  // We'll just use this concrete interpreter to test the methods of the abstract base class.
+  val interpreter = new AppendAnswerInterpreter
+
+  "parseQuestionLine" should "split answer options from the question text when the correct answer is given" in {
+    val questionLine = "B\tSentence 1. Sentence 2 ___. (A) answer 1 (B) answer 2 (C) answer 3 (D) answer 4"
+    interpreter.parseQuestionLine(questionLine) should be(ScienceQuestion(
+      Seq("Sentence 1.", "Sentence 2 ___."),
+      Seq(
+        Answer("answer 1", false),
+        Answer("answer 2", true),
+        Answer("answer 3", false),
+        Answer("answer 4", false)
+      )
+    ))
+  }
+
+  it should "give all answers as false when no answer is given" in {
+    val questionLine = "Sentence 1. Sentence 2 ___. (A) answer 1 (B) answer 2 (C) answer 3 (D) answer 4"
+    interpreter.parseQuestionLine(questionLine) should be(ScienceQuestion(
+      Seq("Sentence 1.", "Sentence 2 ___."),
+      Seq(
+        Answer("answer 1", false),
+        Answer("answer 2", false),
+        Answer("answer 3", false),
+        Answer("answer 4", false)
+      )
+    ))
+  }
+}
+
 class AppendAnswerInterpreterSpec extends FlatSpecLike with Matchers {
   val interpreter = new AppendAnswerInterpreter
 

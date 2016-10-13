@@ -339,7 +339,11 @@ class Trainer:
 
     def score_instance(self, instance: Instance):
         inputs, _ = self._prepare_instance(instance)
-        return self.model.predict(inputs)
+        try:
+            return self.model.predict(inputs)
+        except:
+            print('Inputs were: ' + str(inputs))
+            raise
 
     def load_model(self, epoch: int=None):
         """
