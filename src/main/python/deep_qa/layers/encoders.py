@@ -10,8 +10,6 @@ from keras import activations, initializations, regularizers
 from keras.engine import InputSpec
 from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, merge, Dense
 from keras.regularizers import l1l2
-import theano.tensor.extra_ops as T
-import tensorflow as tf
 import numpy as np
 
 from ..data.constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
@@ -530,8 +528,10 @@ class PositionalEncoder(Layer):
              https://github.com/fchollet/keras/pull/3791.
              """
             if K.backend() == "tensorflow":
+                import tensorflow as tf
                 return tf.cumsum(tensor, axis=axis)
             else:
+                import theano.tensor.extra_ops as T
                 return T.cumsum(tensor, axis=axis)
 
         # This section implements the positional encoder on all the vectors at once.
