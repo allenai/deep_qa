@@ -9,6 +9,7 @@ from .tree_lstm_solver import TreeLSTMSolver
 from ..training import concrete_pretrainers
 from .pretraining.attention_pretrainer import AttentionPretrainer
 from .pretraining.snli_pretrainer import SnliAttentionPretrainer, SnliEntailmentPretrainer
+from .pretraining.encoder_pretrainer import EncoderPretrainer
 
 concrete_solvers = {  # pylint: disable=invalid-name
         'LSTMSolver': LSTMSolver,
@@ -23,3 +24,4 @@ concrete_solvers = {  # pylint: disable=invalid-name
 concrete_pretrainers['AttentionPretrainer'] = AttentionPretrainer
 concrete_pretrainers['SnliAttentionPretrainer'] = SnliAttentionPretrainer
 concrete_pretrainers['SnliEntailmentPretrainer'] = SnliEntailmentPretrainer
+concrete_pretrainers['EncoderPretrainer'] = EncoderPretrainer

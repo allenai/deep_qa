@@ -406,23 +406,26 @@ class IndexedQuestionAnswerInstance(IndexedInstance):
         return (question_array, option_array), label
 
 
-class IndexedSnliInstance(IndexedInstance):
-    def __init__(self, text_indices: List[int], hypothesis_indices: List[int], label: int, index: int=None):
-        super(IndexedSnliInstance, self).__init__(label, index)
-        self.text_indices = text_indices
-        self.hypothesis_indices = hypothesis_indices
+class IndexedSentencePairInstance(IndexedInstance):
+    """
+    This is an indexed instance that is commonly used for labeled sentence pairs. Examples of this are
+    SnliInstances where we have a labeled pair of text and hypothesis, and a sentence2vec instance where the
+    objective is to train an encoder to predict whether the sentences are in context or not.
+    """
+    def __init__(self, first_sentence_indices: List[int], second_sentence_indices: List[int], label: List[int],
+                 index: int=None):
+        super(IndexedSentencePairInstance, self).__init__(label, index)
+        self.first_sentence_indices = first_sentence_indices
+        self.second_sentence_indices = second_sentence_indices
 
     @classmethod
     @overrides
     def empty_instance(cls):
-        return IndexedSnliInstance([], [], label=None, index=None)
+        return IndexedSentencePairInstance([], [], label=None, index=None)
 
     @overrides
     def get_lengths(self) -> Dict[str, int]:
-        """
-        This simple IndexedInstance only has one padding dimension: word_indices.
-        """
-        max_length = max(len(self.text_indices), len(self.hypothesis_indices))
+        max_length = max(len(self.first_sentence_indices), len(self.second_sentence_indices))
         return {'word_sequence_length': max_length}
 
     @overrides
@@ -432,11 +435,13 @@ class IndexedSnliInstance(IndexedInstance):
         self.get_lengths() for why max_lengths is a list instead of an int.
         """
         sentence_length = max_lengths['word_sequence_length']
-        self.text_indices = self.pad_word_sequence_to_length(self.text_indices, sentence_length)
-        self.hypothesis_indices = self.pad_word_sequence_to_length(self.hypothesis_indices, sentence_length)
+        self.first_sentence_indices = self.pad_word_sequence_to_length(self.first_sentence_indices,
+                                                                       sentence_length)
+        self.second_sentence_indices = self.pad_word_sequence_to_length(self.second_sentence_indices,
+                                                                        sentence_length)
 
     @overrides
     def as_training_data(self):
-        text_array = numpy.asarray(self.text_indices, dtype='int32')
-        hypothesis_array = numpy.asarray(self.hypothesis_indices, dtype='int32')
-        return (text_array, hypothesis_array), numpy.asarray(self.label)
+        first_sentence_array = numpy.asarray(self.first_sentence_indices, dtype='int32')
+        second_sentence_array = numpy.asarray(self.second_sentence_indices, dtype='int32')
+        return (first_sentence_array, second_sentence_array), numpy.asarray(self.label)

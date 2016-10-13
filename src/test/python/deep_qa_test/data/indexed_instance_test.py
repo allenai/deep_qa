@@ -7,7 +7,7 @@ import numpy
 from deep_qa.data.indexed_instance import IndexedBackgroundInstance
 from deep_qa.data.indexed_instance import IndexedMultipleChoiceInstance
 from deep_qa.data.indexed_instance import IndexedQuestionAnswerInstance
-from deep_qa.data.indexed_instance import IndexedSnliInstance
+from deep_qa.data.indexed_instance import IndexedSentencePairInstance
 from deep_qa.data.indexed_instance import IndexedTrueFalseInstance
 
 
@@ -226,22 +226,22 @@ class TestIndexedQuestionAnswerInstance(TestCase):
         assert numpy.all(inputs[1] == numpy.asarray([[2, 3], [0, 4], [5, 6]]))
 
 
-class TestIndexedSnliInstance:
+class TestIndexedSentencePairInstance:
     def test_get_lengths_returns_max_of_text_and_hypothesis(self):
-        instance = IndexedSnliInstance([1, 2, 3], [1], True)
+        instance = IndexedSentencePairInstance([1, 2, 3], [1], True)
         assert instance.get_lengths() == {'word_sequence_length': 3}
-        instance = IndexedSnliInstance([1, 2, 3], [1, 2, 3, 4], True)
+        instance = IndexedSentencePairInstance([1, 2, 3], [1, 2, 3, 4], True)
         assert instance.get_lengths() == {'word_sequence_length': 4}
 
     def test_pad_pads_both_text_and_hypothesis(self):
-        instance = IndexedSnliInstance([1, 2], [3, 4], True)
+        instance = IndexedSentencePairInstance([1, 2], [3, 4], True)
         instance.pad({'word_sequence_length': 3})
-        assert instance.text_indices == [0, 1, 2]
-        assert instance.hypothesis_indices == [0, 3, 4]
+        assert instance.first_sentence_indices == [0, 1, 2]
+        assert instance.second_sentence_indices == [0, 3, 4]
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
         # pylint: disable=redefined-variable-type
-        instance = IndexedSnliInstance([1, 2], [3, 4], [0, 1, 0])
+        instance = IndexedSentencePairInstance([1, 2], [3, 4], [0, 1, 0])
         inputs, label = instance.as_training_data()
         assert isinstance(inputs, tuple)
         assert len(inputs) == 2

@@ -10,7 +10,7 @@ from .indexed_instance import IndexedLabeledBackgroundInstance
 from .indexed_instance import IndexedLogicalFormInstance
 from .indexed_instance import IndexedMultipleChoiceInstance
 from .indexed_instance import IndexedQuestionAnswerInstance
-from .indexed_instance import IndexedSnliInstance
+from .indexed_instance import IndexedSentencePairInstance
 from .indexed_instance import IndexedTrueFalseInstance
 from .instance import Instance
 from .tokenizer import tokenizers, Tokenizer
@@ -400,7 +400,7 @@ class SnliInstance(TextInstance):
     def __init__(self,
                  text: str,
                  hypothesis: str,
-                 label,
+                 label: str,
                  index: int=None,
                  tokenizer: Tokenizer=tokenizers['default']()):
         # This intentionally crashes if `label` is not one of the keys in `label_mapping`.
@@ -416,7 +416,7 @@ class SnliInstance(TextInstance):
     def to_indexed_instance(self, data_indexer: DataIndexer):
         text = [data_indexer.get_word_index(word) for word in self._tokenize(self.text.lower())]
         hypothesis = [data_indexer.get_word_index(word) for word in self._tokenize(self.hypothesis.lower())]
-        return IndexedSnliInstance(text, hypothesis, self.label, self.index)
+        return IndexedSentencePairInstance(text, hypothesis, self.label, self.index)
 
     def to_attention_instance(self):
         """
@@ -474,3 +474,47 @@ class SnliInstance(TextInstance):
         else:
             raise RuntimeError("Unrecognized line format: " + line)
         return cls(text, hypothesis, label, index, tokenizer)
+
+
+class SentenceCooccurrenceInstance(TextInstance):
+    """
+    SentenceCooccurrenceInstance contains a labeled pair of instances accompanied by a binary label that
+    shows whether the given pair occurs in the same context or not. These are used for pretraining the
+    encoder using a word2vec kind of objective.
+    TODO(pradeep): Make a sentence pair abstract class and inherit SnliInstance and this class from it.
+    """
+    def __init__(self,
+                 first_sentence: str,
+                 second_sentence: str,
+                 label: List[int],
+                 tokenizer: Tokenizer=tokenizers['default']()):
+        index = None
+        super(SentenceCooccurrenceInstance, self).__init__(label, index, tokenizer)
+        self.first_sentence = first_sentence
+        self.second_sentence = second_sentence
+
+    @overrides
+    def words(self) -> List[str]:
+        return self._tokenize(self.first_sentence.lower()) + self._tokenize(self.second_sentence.lower())
+
+    # TODO(pradeep): Define this method in the base class and inherit as needed.
+    @overrides
+    def to_indexed_instance(self, data_indexer: DataIndexer):
+        first_sentence = [data_indexer.get_word_index(word) for word in
+                          self._tokenize(self.first_sentence.lower())]
+        second_sentence = [data_indexer.get_word_index(word) for word in
+                           self._tokenize(self.second_sentence.lower())]
+        return IndexedSentencePairInstance(first_sentence, second_sentence, self.label, self.index)
+
+    @classmethod
+    def read_from_line(cls,
+                       line: str,
+                       default_label: bool=None,
+                       tokenizer: Tokenizer=tokenizers['default']()):
+        """
+        Expected format:
+        [sentence1][tab][sentence2][tab][label]
+        """
+        fields = line.split("\t")
+        first_sentence, second_sentence, label = fields
+        return cls(first_sentence, second_sentence, [int(label)], tokenizer)

@@ -222,6 +222,6 @@ class TestSnliInstance:
         d_index = data_indexer.add_word_to_index("d")
         oov_index = data_indexer.get_word_index(data_indexer._oov_token)  # pylint: disable=protected-access
         indexed_instance = instance.to_indexed_instance(data_indexer)
-        assert indexed_instance.text_indices == [a_index, oov_index]
-        assert indexed_instance.hypothesis_indices == [d_index, oov_index, oov_index]
+        assert indexed_instance.first_sentence_indices == [a_index, oov_index]
+        assert indexed_instance.second_sentence_indices == [d_index, oov_index, oov_index]
         assert indexed_instance.label == instance.label
