@@ -43,6 +43,11 @@ class TestMemoryNetworkSolver(TestCase):
         solver.train()
 
     def test_train_does_not_crash_with_attentive_gru_knowledge_combiner(self):
-        args = {'knowledge_combiner' : {'type': 'attentive_gru'}}
+        args = {'knowledge_combiner': {'type': 'attentive_gru'}}
+        solver = get_solver(MemoryNetworkSolver, args)
+        solver.train()
+
+    def test_train_does_not_crash_with_fusion_layer(self):
+        args = {'knowledge_encoder': {'type': 'bi_gru'}}
         solver = get_solver(MemoryNetworkSolver, args)
         solver.train()

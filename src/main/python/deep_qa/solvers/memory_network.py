@@ -2,8 +2,9 @@ from copy import deepcopy
 from typing import Any, Dict, List
 from overrides import overrides
 
+
 from keras import backend as K
-from keras.layers import TimeDistributed, Dropout, merge
+from keras.layers import Dropout, merge
 from keras.models import Model
 
 from ..common.params import get_choice_with_default
@@ -13,6 +14,7 @@ from ..layers.knowledge_selectors import selectors
 from ..layers.memory_updaters import updaters
 from ..layers.entailment_models import entailment_models, entailment_input_combiners
 from ..layers.knowledge_combiners import knowledge_combiners
+from ..layers.knowledge_encoders import knowledge_encoders
 from .nn_solver import NNSolver
 
 
@@ -62,6 +64,7 @@ class MemoryNetworkSolver(NNSolver):
     # and we need to be able to override it in subclasses, it doesn't really work to set this in
     # the constructor, so we make it a class variable instead.
     has_sigmoid_entailment = False
+    has_multiple_backgrounds = False
 
     def __init__(self, params: Dict[str, Any]):
 
@@ -75,6 +78,7 @@ class MemoryNetworkSolver(NNSolver):
         # If given, this must be a dict.  We will use the "type" key in this dict (which must match
         # one of the keys in `selectors`) to determine the type of the selector, then pass the
         # remaining args to the selector constructor.
+        self.knowledge_encoder_params = params.pop('knowledge_encoder', {})
         self.knowledge_selector_params = params.pop('knowledge_selector', {})
         self.knowledge_combiner_params = params.pop('knowledge_combiner', {})
 
@@ -98,6 +102,7 @@ class MemoryNetworkSolver(NNSolver):
         self.knowledge_selector_layers = {}
         self.knowledge_combiner_layers = {}
         self.memory_updater_layers = {}
+        self.knowledge_encoder = None
         self.entailment_input_combiner = None
         self.entailment_model = None
         self.max_knowledge_length = None
@@ -210,6 +215,30 @@ class MemoryNetworkSolver(NNSolver):
             background_shape[knowledge_axis + 1] += 1
             return tuple(background_shape)
         return merged_shape
+
+    def _get_knowledge_encoder(self):
+        '''
+        Instantiates a new KnowledgeEncoder. This can be overridden as in the MultipleChoiceMN case,
+        we would pass is_multiple_choice=True, so that any post-processing after the background has
+        been encoded is TimeDistributed across the possible answer options.
+        '''
+        if self.knowledge_encoder is None:
+            self.knowledge_encoder = self._get_new_knowledge_encoder()
+        return self.knowledge_encoder
+
+    def _get_new_knowledge_encoder(self, name='knowledge_encoder'):
+        # The code that follows would be destructive to self.knowledge_encoder_params (lots of
+        # calls to params.pop()), but it's possible we'll want to call this more than once.  So
+        # we'll make a copy and use that instead of self.knowledge_encoder_params.
+
+        params = deepcopy(self.knowledge_encoder_params)
+        knowledge_encoder_type = get_choice_with_default(params, "type", list(knowledge_encoders.keys()))
+        params['name'] = name
+        params['encoding_dim'] = self.embedding_size
+        params['knowledge_length'] = self.max_knowledge_length
+        params['question_encoder'] = self._get_sentence_encoder()
+        params['has_multiple_backgrounds'] = self.has_multiple_backgrounds
+        return knowledge_encoders[knowledge_encoder_type](params)
 
     def _get_knowledge_selector(self, layer_num: int):
         """
@@ -337,7 +366,7 @@ class MemoryNetworkSolver(NNSolver):
         # and knowledge_encoder: (samples, knowledge_len, num_words, word_dim) ->
         #                       (samples, knowledge_len, word_dim)
         # TimeDistributed generally loops over the second dimension.
-        knowledge_encoder = TimeDistributed(question_encoder, name='knowledge_encoder')
+        knowledge_encoder = self._get_knowledge_encoder()
         encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, word_dim)
 
         # Step 4: Merge the two encoded representations and pass into the knowledge backed scorer.

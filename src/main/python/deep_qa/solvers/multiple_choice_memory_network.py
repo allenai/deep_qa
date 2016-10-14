@@ -2,7 +2,6 @@ from typing import Any, Dict, List
 from overrides import overrides
 
 from keras.layers import TimeDistributed
-
 from ..data.dataset import Dataset
 from ..data.text_instance import TrueFalseInstance
 from .memory_network import MemoryNetworkSolver
@@ -26,6 +25,7 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
 
     # See comments in MemoryNetworkSolver for more info on this.
     has_sigmoid_entailment = True
+    has_multiple_backgrounds = True
 
     def __init__(self, params: Dict[str, Any]):
         # We don't have any parameters to set that are specific to this class, so we just call the

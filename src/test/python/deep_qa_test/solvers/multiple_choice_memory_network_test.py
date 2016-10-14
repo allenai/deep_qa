@@ -28,3 +28,8 @@ class TestMultipleChoiceMemoryNetworkSolver(TestCase):
         args = {'knowledge_selector': {'type': 'parameterized'}}
         solver = get_solver(MultipleChoiceMemoryNetworkSolver, args)
         solver.train()
+
+    def test_train_does_not_crash_with_fusion_layer(self):
+        args = {'knowledge_encoder': {'type': 'bi_gru'}}
+        solver = get_solver(MultipleChoiceMemoryNetworkSolver, args)
+        solver.train()
