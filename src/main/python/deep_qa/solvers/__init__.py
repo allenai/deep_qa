@@ -2,8 +2,9 @@ from .differentiable_search import DifferentiableSearchSolver
 from .lstm_solver import LSTMSolver
 from .memory_network import MemoryNetworkSolver
 from .multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
-from .question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 from .multiple_choice_similarity import MultipleChoiceSimilaritySolver
+from .question_answer_lstm_solver import QuestionAnswerLSTMSolver
+from .question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 from .tree_lstm_solver import TreeLSTMSolver
 
 from ..training import concrete_pretrainers
@@ -19,6 +20,7 @@ concrete_solvers = {  # pylint: disable=invalid-name
         'MultipleChoiceMemoryNetworkSolver': MultipleChoiceMemoryNetworkSolver,
         'QuestionAnswerMemoryNetworkSolver': QuestionAnswerMemoryNetworkSolver,
         'MultipleChoiceSimilaritySolver': MultipleChoiceSimilaritySolver,
+        'QuestionAnswerLSTMSolver': QuestionAnswerLSTMSolver,
         }
 
 concrete_pretrainers['AttentionPretrainer'] = AttentionPretrainer

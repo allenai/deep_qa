@@ -1,0 +1,11 @@
+{
+  "solver_class": "QuestionAnswerLSTMSolver",
+  "model_serialization_prefix": "models/qa/lstm",
+  "encoder": {
+    "type": "gru"
+  },
+  "patience": 5,
+  "max_sentence_length": 70,
+  "max_answer_length": 70,
+  "train_file": "data/science/omnibus_questions/processed_questions_and_answers.tsv"
+}

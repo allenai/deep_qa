@@ -330,6 +330,7 @@ class MemoryNetworkSolver(NNSolver):
 
         # Step 3: Encode the two embedded inputs using the sentence encoder.
         question_encoder = self._get_sentence_encoder()
+        encoded_question = question_encoder(question_embedding)  # (samples, word_dim)
 
         # Knowledge encoder will have the same encoder running on a higher order tensor.
         # i.e., question_encoder: (samples, num_words, word_dim) -> (samples, word_dim)
@@ -337,7 +338,6 @@ class MemoryNetworkSolver(NNSolver):
         #                       (samples, knowledge_len, word_dim)
         # TimeDistributed generally loops over the second dimension.
         knowledge_encoder = TimeDistributed(question_encoder, name='knowledge_encoder')
-        encoded_question = question_encoder(question_embedding)  # (samples, word_dim)
         encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, word_dim)
 
         # Step 4: Merge the two encoded representations and pass into the knowledge backed scorer.

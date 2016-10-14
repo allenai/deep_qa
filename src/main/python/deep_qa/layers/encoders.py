@@ -8,7 +8,7 @@ from overrides import overrides
 from keras import backend as K
 from keras import activations, initializations, regularizers
 from keras.engine import InputSpec
-from keras.layers import Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, merge, Dense
+from keras.layers import GRU, Layer, Recurrent, LSTM, Convolution1D, MaxPooling1D, merge, Dense
 from keras.regularizers import l1l2
 import numpy as np
 
@@ -604,8 +604,9 @@ class CNNEncoder(Layer):
         conv_layer_activation = kwargs.pop('conv_layer_activation', 'relu')
         self.conv_layer_activation = conv_layer_activation
 
-        self.W_regularizer = kwargs.pop("W_regularizer", None)  # pylint: disable=invalid-name
-        self.b_regularizer = kwargs.pop("b_regularizer", None)
+        self.l1_regularization = kwargs.pop("l1_regularization", None)
+        self.l2_regularization = kwargs.pop("l2_regularization", None)
+        self.regularizer = lambda: l1l2(l1=self.l1_regularization, l2=self.l2_regularization)
 
         # These are member variables that will be defined during self.build().
         self.convolution_layers = None
@@ -623,8 +624,8 @@ class CNNEncoder(Layer):
         self.convolution_layers = [Convolution1D(nb_filter=self.num_filters,
                                                  filter_length=ngram_size,
                                                  activation=self.conv_layer_activation,
-                                                 W_regularizer=self.W_regularizer,
-                                                 b_regularizer=self.b_regularizer)
+                                                 W_regularizer=self.regularizer(),
+                                                 b_regularizer=self.regularizer())
                                    for ngram_size in self.ngram_filter_sizes]
         self.max_pooling_layers = [MaxPooling1D(pool_length=input_length - ngram_size + 1)
                                    for ngram_size in self.ngram_filter_sizes]
@@ -669,8 +670,8 @@ class CNNEncoder(Layer):
         config = {"num_filters": self.num_filters,
                   "ngram_filter_sizes": self.ngram_filter_sizes,
                   "conv_layer_activation": self.conv_layer_activation,
-                  "W_regularizer": self.W_regularizer.get_config() if self.W_regularizer else None,
-                  "b_regularizer": self.b_regularizer.get_config() if self.b_regularizer else None
+                  "l1_regularization": self.l1_regularization,
+                  "l2_regularization": self.l2_regularization,
                  }
         base_config = super(CNNEncoder, self).get_config()
         config.update(base_config)
@@ -690,8 +691,10 @@ def set_regularization_params(encoder_type: str, params: Dict[str, Any]):
     l2_regularization = params.pop("l2_regularization", None)
     regularizer = lambda: l1l2(l1=l1_regularization, l2=l2_regularization)
     if encoder_type == 'cnn':
-        params["W_regularizer"] = regularizer()
-        params["b_regularizer"] = regularizer()
+        # Regularization with the CNN encoder is complicated, so we'll just pass in the L1 and L2
+        # values directly, and let the encoder deal with them.
+        params["l1_regularization"] = l1_regularization
+        params["l2_regularization"] = l2_regularization
     elif encoder_type == 'lstm':
         params["W_regularizer"] = regularizer()
         params["U_regularizer"] = regularizer()
@@ -708,6 +711,7 @@ def set_regularization_params(encoder_type: str, params: Dict[str, Any]):
 encoders = OrderedDict()  # pylint:  disable=invalid-name
 encoders["bow"] = BOWEncoder
 encoders["lstm"] = LSTM
+encoders["gru"] = GRU
 encoders["tree_lstm"] = TreeCompositionLSTM
 encoders["cnn"] = CNNEncoder
 encoders["positional"] = PositionalEncoder
