@@ -1,16 +1,25 @@
 """
-Memory updaters take a current memory vector and an aggregated background knowledge vector and
-combine them to produce an updated memory vector.
+Memory updaters takes the original question vector, current memory vector and an
+aggregated background knowledge vector and combines them to produce an updated memory vector.
 
-Both the input vectors should have the same dimensionality, and the output vector should match that
+All three input vectors should have the same dimensionality, and the output vector should match that
 dimensionality.
 """
+from collections import OrderedDict
+
 from keras.layers import Dense, Layer
+
+def split_updater_inputs(x, encoding_dim: int):  # pylint: disable=invalid-name
+    sentence_encoding = x[:, :encoding_dim]
+    current_memory = x[:, encoding_dim:2*encoding_dim]
+    attended_knowledge = x[:, 2*encoding_dim:]
+    return sentence_encoding, current_memory, attended_knowledge
 
 
 class SumMemoryUpdater(Layer):
     """
-    This MemoryUpdater adds the memory vector and the aggregated knowledge vector.
+    This MemoryUpdater adds the memory vector and the aggregated knowledge vector, discarding
+    the original question vector.
 
     We can't just do a merge() here because we want to be able to TimeDistribute this layer, so we
     need to do some fancy footwork with the input vector.
@@ -21,12 +30,11 @@ class SumMemoryUpdater(Layer):
         self.mode = 'sum'
 
     def call(self, x, mask=None):
-        memory_vector = x[:, :self.encoding_dim]
-        aggregated_knowledge_vector = x[:, self.encoding_dim:]
-        return memory_vector + aggregated_knowledge_vector
+        _, current_memory, attended_knowledge = split_updater_inputs(x, self.encoding_dim)
+        return current_memory + attended_knowledge
 
     def get_output_shape_for(self, input_shape):
-        return (input_shape[0], int(input_shape[1] / 2))
+        return (input_shape[0], int(input_shape[1] / 3))
 
     def get_config(self):
         base_config = super(SumMemoryUpdater, self).get_config()
@@ -35,25 +43,52 @@ class SumMemoryUpdater(Layer):
         return config
 
 
-class DenseConcatMemoryUpdater(Dense):
+class DenseConcatNoQuestionMemoryUpdater(Dense):
     """
-    This MemoryUpdater concatenates the memory vector and the aggregated knowledge vector, then
-    passes them through a Dense layer.
+    Sorry for the horrible name.  If you can think of a better one, submit a PR.
 
-    Because the input to the memory updater is already concatenated, we don't have to do anything
-    here, we just subclass Dense.
+    This MemoryUpdater concatenates only the memory vector and the aggregated knowledge vector,
+    then passes them through a Dense layer. The question vector is discarded.
+
+    Because the input to the memory updater is already concatenated, we just remove the question
+    representation and then send this through the Dense layer.
     """
     def __init__(self, encoding_dim, name="dense_concat_memory_updater", **kwargs):
-        super(DenseConcatMemoryUpdater, self).__init__(encoding_dim, name=name, **kwargs)
+        self.encoding_dim = encoding_dim
+        super(DenseConcatNoQuestionMemoryUpdater, self).__init__(encoding_dim, name=name, **kwargs)
+
+    def call(self, x, mask=None):
+        # For this memory update, we don't need the question encoding. This is the first
+        # concatentated vector, so we remove it.
+        x = x[:, self.encoding_dim:]
+        return super(DenseConcatNoQuestionMemoryUpdater, self).call(x)
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], int(input_shape[1] / 3))
 
     def get_config(self):
-        base_config = super(DenseConcatMemoryUpdater, self).get_config()
+        base_config = super(DenseConcatNoQuestionMemoryUpdater, self).get_config()
         config = {'encoding_dim': self.output_dim}
         config.update(base_config)
         return config
 
 
-updaters = {  # pylint: disable=invalid-name
-        'dense_concat': DenseConcatMemoryUpdater,
-        'sum': SumMemoryUpdater,
-        }
+class DenseConcatMemoryUpdater(Dense):
+    """
+    This MemoryUpdater concatenates the question vector, memory vector and the aggregated knowledge
+    vector and then passes them through a Dense layer.
+
+    Because the input to the memory updater is already concatenated, we just remove the question
+    represenation and then send this through the Dense layer.
+    """
+    def __init__(self, encoding_dim, name="dense_concat_memory_updater", **kwargs):
+        self.encoding_dim = encoding_dim
+        super(DenseConcatMemoryUpdater, self).__init__(encoding_dim, name=name, **kwargs)
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], int(input_shape[1] / 3))
+
+updaters = OrderedDict()  # pylint: disable=invalid-name
+updaters['dense_concat'] = DenseConcatMemoryUpdater
+updaters['sum'] = SumMemoryUpdater
+updaters['dense_concat_no_question'] = DenseConcatNoQuestionMemoryUpdater

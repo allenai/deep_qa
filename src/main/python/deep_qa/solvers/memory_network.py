@@ -408,7 +408,7 @@ class MemoryNetworkSolver(NNSolver):
             # of just passing a list.
             # We going from two inputs of (batch_size, encoding_dim) to one input of (batch_size,
             # encoding_dim * 2).
-            updater_input = merge([current_memory, attended_knowledge],
+            updater_input = merge([encoded_question, current_memory, attended_knowledge],
                                   mode='concat',
                                   concat_axis=knowledge_axis,
                                   name='concat_current_memory_with_background_%d' % i)
