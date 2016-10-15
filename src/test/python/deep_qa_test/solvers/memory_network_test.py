@@ -29,6 +29,11 @@ class TestMemoryNetworkSolver(TestCase):
         solver = get_solver(MemoryNetworkSolver, args)
         solver.train()
 
+    def test_train_does_not_crash_with_parameterized_heuristic_matching_knowledge_selector(self):
+        args = {'knowledge_selector': {'type': 'parameterized_heuristic_matching'}}
+        solver = get_solver(MemoryNetworkSolver, args)
+        solver.train()
+
     def test_train_does_not_crash_with_cnn_encoder(self):
         args = {
                 'max_sentence_length': 5,

@@ -129,11 +129,13 @@ class AttentionPretrainer(Pretrainer):
         encoded_background = background_encoder(background_embedding)  # (samples, background_len, word_dim)
 
         merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=1),
-                                                       layer_outs[1]],
+                                                       K.expand_dims(layer_outs[1], dim=1),
+                                                       layer_outs[2]],
                                                       axis=1)
-        merged_encoded_rep = merge([encoded_sentence, encoded_background],
+        # We don't generate a memory representation here so we just pass another encoded_sentence.
+        merged_encoded_rep = merge([encoded_sentence, encoded_sentence, encoded_background],
                                    mode=merge_mode,
-                                   output_shape=(self.trainer.max_knowledge_length + 1,
+                                   output_shape=(self.trainer.max_knowledge_length + 2,
                                                  self.trainer.max_sentence_length),
                                    name='concat_sentence_with_background_%d' % 0)
 

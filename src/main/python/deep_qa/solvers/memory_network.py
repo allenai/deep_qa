@@ -175,8 +175,8 @@ class MemoryNetworkSolver(NNSolver):
         """
         knowledge_axis = self._get_knowledge_axis()
         def merged_shape(input_shapes):
-            background_shape = [x for x in input_shapes[1]]
-            background_shape[knowledge_axis] += 1
+            background_shape = [x for x in input_shapes[2]]
+            background_shape[knowledge_axis] += 2
             return tuple(background_shape)
         return merged_shape
 
@@ -363,19 +363,20 @@ class MemoryNetworkSolver(NNSolver):
             # We want to merge a matrix and a tensor such that the new tensor will have one
             # additional row (at the beginning) in all slices.
             # (samples, word_dim) + (samples, knowledge_len, word_dim)
-            #       -> (samples, 1 + knowledge_len, word_dim)
+            #       -> (samples, 2 + knowledge_len, word_dim)
             # Since this is an unconventional merge, we define a customized lambda merge.
             # Keras cannot infer the shape of the output of a lambda function, so we make
             # that explicit.
             merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=knowledge_axis),
-                                                           layer_outs[1]],
+                                                           K.expand_dims(layer_outs[1], dim=knowledge_axis),
+                                                           layer_outs[2]],
                                                           axis=knowledge_axis)
 
             merged_shape = self._get_merged_background_shape()
-            merged_encoded_rep = merge([current_memory, encoded_knowledge],
+            merged_encoded_rep = merge([encoded_question, current_memory, encoded_knowledge],
                                        mode=merge_mode,
                                        output_shape=merged_shape,
-                                       name='concat_question_with_background_%d' % i)
+                                       name='concat_memory_and_question_with_background_%d' % i)
 
             # Regularize it
             regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
