@@ -8,8 +8,10 @@ from keras import backend as K
 from keras.layers import merge, Dropout, TimeDistributed
 from keras.models import Model
 
+from ...common.checks import ConfigurationError
 from ...training.pretraining.pretrainer import Pretrainer
 from ...data.dataset import TextDataset
+from ..memory_network import MemoryNetworkSolver
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -27,14 +29,28 @@ class AttentionPretrainer(Pretrainer):
     The label we get from a LabeledBackgroundInstance is the expected attention over the
     background sentences.  We use that signal to pretrain the attention component of the memory
     network.
+
+    Because it seems very difficult to get this to train correctly with hard attention, we always
+    do pre-training with soft attention, whatever you set for knowledge selector during actual
+    training.  We'll set it back to what it was when we're done with pre-training.
     """
     # While it's not great, we need access to a few of the internals of the trainer, so we'll
     # disable protected access checks.
     # pylint: disable=protected-access
     def __init__(self, trainer, params: Dict[str, Any]):
-        self.train_file = params.pop('train_file')
-        self.background_file = params.pop('background_file')
+        if not isinstance(trainer, MemoryNetworkSolver):
+            raise ConfigurationError("The AttentionPretrainer needs a subclass of MemoryNetworkSolver")
         super(AttentionPretrainer, self).__init__(trainer, params)
+        # NOTE: the default here needs to match the default in the KnowledgeSelector classes.
+        self._old_hard_attention_setting = self.trainer.knowledge_selector_params.get('hard_selection', False)
+        self.trainer.knowledge_selector_params['hard_selection'] = False
+        self.name = 'AttentionPretrainer'
+
+    @overrides
+    def on_finished(self):
+        self.trainer.knowledge_selector_params['hard_selection'] = self._old_hard_attention_setting
+        for layer in self.trainer.knowledge_selector_layers.values():
+            layer.hard_selection = self._old_hard_attention_setting
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
@@ -81,12 +97,8 @@ class AttentionPretrainer(Pretrainer):
         return inputs, numpy.asarray(labels)
 
     def fit_data_indexer(self):
-        dataset = self._load_dataset_from_files(self._get_training_files())
+        dataset = self._load_dataset_from_files(self.train_files)
         self.trainer.data_indexer.fit_word_dictionary(dataset)
-
-    @overrides
-    def _get_training_files(self):
-        return [self.train_file, self.background_file]
 
     @overrides
     def _build_model(self):

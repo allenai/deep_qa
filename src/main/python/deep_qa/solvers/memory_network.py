@@ -68,9 +68,6 @@ class MemoryNetworkSolver(NNSolver):
 
     def __init__(self, params: Dict[str, Any]):
 
-        self.train_background = params.pop('train_background', None)
-        self.validation_background = params.pop('validation_background', None)
-
         self.num_memory_layers = params.pop('num_memory_layers', 1)
 
         # These parameters specify the kind of knowledge selector, used to compute an attention
@@ -106,21 +103,6 @@ class MemoryNetworkSolver(NNSolver):
         self.entailment_input_combiner = None
         self.entailment_model = None
         self.max_knowledge_length = None
-
-    @overrides
-    def can_train(self) -> bool:
-        return self.train_background is not None and super(MemoryNetworkSolver, self).can_train()
-
-    @overrides
-    def _get_training_files(self):
-        return [self.train_file, self.train_background]
-
-    @overrides
-    def _get_validation_files(self):
-        if self.validation_file:
-            return [self.validation_file, self.validation_background]
-        else:
-            return None
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):

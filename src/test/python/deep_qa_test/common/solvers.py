@@ -17,15 +17,15 @@ from .constants import SNLI_FILE
 def get_solver(cls, additional_arguments=None):
     params = {}
     params['model_serialization_prefix'] = TEST_DIR
-    params['train_file'] = TRAIN_FILE
-    params['validation_file'] = VALIDATION_FILE
+    params['train_files'] = [TRAIN_FILE]
+    params['validation_files'] = [VALIDATION_FILE]
     params['embedding_size'] = 5
     params['encoder'] = {'type': 'bow'}
     params['num_epochs'] = 1
     params['keras_validation_split'] = 0.0
     if is_solver_with_background(cls):
-        params['train_background'] = TRAIN_BACKGROUND
-        params['validation_background'] = VALIDATION_BACKGROUND
+        params['train_files'].append(TRAIN_BACKGROUND)
+        params['validation_files'].append(VALIDATION_BACKGROUND)
     if is_memory_network_solver(cls):
         params['knowledge_selector'] = {'type': 'dot_product'}
         params['memory_updater'] = {'type': 'sum'}

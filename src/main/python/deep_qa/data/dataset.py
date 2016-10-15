@@ -3,6 +3,7 @@ import itertools
 import logging
 import random
 
+from collections import OrderedDict
 from typing import Dict, List
 
 from .instance import Instance
@@ -140,7 +141,7 @@ class TextDataset(Dataset):
         This code will also work if the data is formatted simply as [index][tab][sentence], one per
         line.
         """
-        new_instances = {}
+        new_instances = OrderedDict()
         for instance in dataset.instances:
             background_instance = BackgroundInstance(instance, [])
             new_instances[instance.index] = background_instance

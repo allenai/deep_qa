@@ -105,6 +105,13 @@ object MemoryNetworkExperiments {
     ("output file" -> "data/science/omnibus_questions/processed_questions_and_answers.tsv") ~
     ("interpreter" -> ("type" -> "question and answer"))
 
+  val diagramQuestionParams: JValue =
+    ("sentence producer type" -> "question interpreter") ~
+    ("create sentence indices" -> true) ~
+    ("question file" -> "/home/mattg/data/questions/diagram_questions.tsv") ~
+    ("output file" -> "data/science/diagrams/append_answer/processed_questions.tsv") ~
+    ("interpreter" -> ("type" -> "append answer"))
+
   //////////////////////////////////////////////////////////
   // Step 5: Get background passages for the validation data
   //////////////////////////////////////////////////////////
@@ -112,6 +119,11 @@ object MemoryNetworkExperiments {
   val validationBackgroundParams: JValue = baseElasticSearchParams merge
     ("sentences" -> validationQuestionParams) ~
     ("sentence format" -> "question and answer")
+
+  val diagramQuestionBackgroundParams: JValue =
+    ("searcher" -> baseElasticSearchParams) ~
+    ("sentences" -> diagramQuestionParams) ~
+    ("sentence format" -> "plain sentence")
 
   ////////////////////////////////////////////////////////////////
   // Step 6: Train a model
@@ -173,7 +185,7 @@ object MemoryNetworkExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new SentenceCorruptor(sentenceCorruptorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    BackgroundCorpusSearcherStep.create(validationBackgroundParams, fileUtil).runPipeline()
+    BackgroundCorpusSearcherStep.create(diagramQuestionBackgroundParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(memoryNetworkParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(differentiableSearchParams, fileUtil).runPipeline()
     //NeuralNetworkTrainer.create(simpleLstmModelParams, fileUtil).runPipeline()

@@ -23,7 +23,7 @@ class TestSnliPretrainers(TestCase):
         os.mkdir(TEST_DIR)
         write_snli_file()
         write_memory_network_files()
-        self.pretrainer_params = {"snli_file": SNLI_FILE}
+        self.pretrainer_params = {"train_files": [SNLI_FILE]}
 
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
@@ -61,11 +61,11 @@ class TestSnliPretrainers(TestCase):
                 'pretrainers': [
                         {
                                 'type': 'SnliEntailmentPretrainer',
-                                'snli_file': SNLI_FILE
+                                'train_files': [SNLI_FILE]
                                 },
                         {
                                 'type': 'SnliAttentionPretrainer',
-                                'snli_file': SNLI_FILE
+                                'train_files': [SNLI_FILE]
                                 },
                         ]
                 }

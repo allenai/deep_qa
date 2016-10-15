@@ -58,9 +58,6 @@ class NNSolver(Trainer):
         # If this is not set, we'll calculate a max length from the data.
         self.max_sentence_length = params.pop('max_sentence_length', None)
 
-        self.train_file = params.pop('train_file', None)
-        self.validation_file = params.pop('validation_file', None)
-
         # Which tokenizer to use for TextInstances
         tokenizer_choice = get_choice_with_default(params, 'tokenizer', list(tokenizers.keys()))
         self.tokenizer = tokenizers[tokenizer_choice]()
@@ -119,12 +116,6 @@ class NNSolver(Trainer):
             else:
                 inputs = numpy.expand_dims(inputs, axis=0)
         return inputs, label
-
-    def can_train(self) -> bool:
-        """
-        Returns True if we were given enough inputs to train the model, False otherwise.
-        """
-        return self.train_file is not None
 
     @overrides
     def _process_pretraining_data(self):
@@ -240,15 +231,6 @@ class NNSolver(Trainer):
         can pad the test data if we just loaded a saved model.
         """
         raise NotImplementedError
-
-    def _get_training_files(self) -> List[str]:
-        return [self.train_file]
-
-    def _get_validation_files(self) -> List[str]:
-        if self.validation_file:
-            return [self.validation_file]
-        else:
-            return None
 
     def _instance_type(self) -> Instance:
         """

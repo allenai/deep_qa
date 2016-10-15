@@ -16,7 +16,7 @@ numpy.random.seed(1337)  # pylint: disable=no-member
 # return value actually matches the type our code expects, anyway.
 from pyhocon import ConfigFactory
 
-from deep_qa.common.checks import ensure_pythonhashseed_set
+from deep_qa.common.checks import ensure_pythonhashseed_set, log_keras_version_info
 from deep_qa.common.params import get_choice
 from deep_qa.solvers import concrete_solvers
 
@@ -27,6 +27,7 @@ def main():
         print('USAGE: run_solver.py [param_file]')
         sys.exit(-1)
 
+    log_keras_version_info()
     param_file = sys.argv[1]
     params = ConfigFactory.parse_file(param_file)
 

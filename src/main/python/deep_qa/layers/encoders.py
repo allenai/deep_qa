@@ -115,7 +115,7 @@ class TreeCompositionLSTM(Recurrent):
         return [init_buffer, init_stack]
 
     def build(self, input_shape):
-        # pylint: disable=attribute-defined-outside-init
+        # pylint: disable=attribute-defined-outside-init,redefined-variable-type
         # Defining two classes of parameters:
         # 1) predicate, one argument composition (*2_*)
         # 2) predicate, two arguments composition (*3_*)
@@ -525,8 +525,10 @@ class PositionalEncoder(Layer):
         def my_keras_cumsum(tensor, axis=0):
             """
             Keras doesn't have a cumsum operation yet, but it seems to be nearly there - see this PR:
-             https://github.com/fchollet/keras/pull/3791.
-             """
+            https://github.com/fchollet/keras/pull/3791.
+            """
+            # Putting the imports here so that tests and things don't have to run them, unless
+            # they're using this encoder with the particular backend.
             if K.backend() == "tensorflow":
                 import tensorflow as tf
                 return tf.cumsum(tensor, axis=axis)

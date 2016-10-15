@@ -8,6 +8,7 @@ from ..common.checks import ConfigurationError
 from ..common.params import get_choice
 from ..data.dataset import Dataset
 from ..data.instance import Instance
+from .optimizers import optimizer_from_params
 from . import concrete_pretrainers
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -48,7 +49,17 @@ class Trainer:
         # Number of epochs to be patient before early stopping.
         self.patience = params.pop('patience', 1)
 
-        self.optimizer = params.pop('optimizer', 'adam')
+        # The files containing the data that should be used for training.  See
+        # _load_dataset_from_files().
+        self.train_files = params.pop('train_files', None)
+
+        # The files containing the data that should be used for validation, if you do not want to
+        # use a split of the training data for validation.  The default of None means to just use
+        # the `keras_validation_split` parameter to split the training data for validation.
+        self.validation_files = params.pop('validation_files', None)
+
+        optimizer_params = params.pop('optimizer', 'adam')
+        self.optimizer = optimizer_from_params(optimizer_params)
         self.loss = params.pop('loss', 'categorical_crossentropy')
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
@@ -93,6 +104,9 @@ class Trainer:
         self.debug_dataset = None
         self.debug_input = None
 
+    def can_train(self):
+        return self.train_files is not None
+
     def _load_dataset_from_files(self, files: List[str]) -> Dataset:
         """
         Given a list of file inputs, load a raw dataset from the files.  This is a list because
@@ -100,21 +114,6 @@ class Trainer:
         and a file containing background information about those instances).
         """
         raise NotImplementedError
-
-    def _get_training_files(self) -> List[str]:
-        """
-        Returns the files containing the data that should be used for training.
-        """
-        raise NotImplementedError
-
-    def _get_validation_files(self) -> List[str]:  # pylint: disable=no-self-use
-        """
-        Returns the files containing the data that should be used for validation, if you do not
-        want to use a split of the training data for validation.  The default of returning None
-        means to just use the `keras_validation_split` parameter to split the training data for
-        validation.
-        """
-        return None
 
     def _prepare_data(self, dataset: Dataset, for_train: bool):
         """
@@ -150,6 +149,7 @@ class Trainer:
         logger.info("Running pre-training")
         for pretrainer in self.pretrainers:
             pretrainer.train()
+        self._pretraining_finished_hook()
 
     def _process_pretraining_data(self):
         """
@@ -159,6 +159,18 @@ class Trainer:
         pre-training, so we just pass here by default.
         """
         pass
+
+    def _pretraining_finished_hook(self):
+        """
+        This is called when pre-training finishes (if there were any pre-trainers specified).  You
+        can do whatever you want in here, like changing model parameters based on what happened
+        during pre-training, or saving a pre-trained model, or whatever.
+
+        Default implementation is to call pretrainer._on_finished() for each pre-trainer, which by
+        default is a `pass`.
+        """
+        for pretrainer in self.pretrainers:
+            pretrainer.on_finished()
 
     def _compile_kwargs(self):
         """
@@ -199,15 +211,14 @@ class Trainer:
 
         # First we need to prepare the data that we'll use for training.
         logger.info("Getting training data")
-        self.training_dataset = self._load_dataset_from_files(self._get_training_files())
+        self.training_dataset = self._load_dataset_from_files(self.train_files)
         if self.max_training_instances is not None:
             logger.info("Truncating the training dataset to %d instances", self.max_training_instances)
             self.training_dataset = self.training_dataset.truncate(self.max_training_instances)
         self.train_input, self.train_labels = self._prepare_data(self.training_dataset, for_train=True)
-        validation_files = self._get_validation_files()
-        if validation_files:
+        if self.validation_files:
             logger.info("Getting validation data")
-            self.validation_dataset = self._load_dataset_from_files(validation_files)
+            self.validation_dataset = self._load_dataset_from_files(self.validation_files)
             self.validation_input, self.validation_labels = self._prepare_data(self.validation_dataset,
                                                                                for_train=False)
 
@@ -253,10 +264,13 @@ class Trainer:
             self._pre_epoch_hook(epoch_id)
             logger.info("Epoch %d", epoch_id)
             kwargs = {'nb_epoch': 1}
-            if self.keras_validation_split > 0.0:
-                kwargs['validation_split'] = self.keras_validation_split
-            elif self.validation_input:
+            # We'll check for explicit validation data first; if you provided this, you definitely
+            # wanted to use it for validation.  self.keras_validation_split is non-zero by default,
+            # so you may have left it above zero on accident.
+            if self.validation_input:
                 kwargs['validation_data'] = (self.validation_input, self.validation_labels)
+            elif self.keras_validation_split > 0.0:
+                kwargs['validation_split'] = self.keras_validation_split
             history = self.model.fit(self.train_input, self.train_labels, **kwargs)
             self._post_epoch_hook(epoch_id, history.history)
             accuracy = history.history[self.validation_metric][-1]
@@ -272,8 +286,10 @@ class Trainer:
                 if self.save_models:
                     self._save_model(epoch_id)
             if self.debug_params:
+                logger.info("Running debug model")
                 # Shows intermediate outputs of the model on validation data
                 outputs = self.debug_model.predict(self.debug_input)
+                logger.info("Outputting debug results")
                 self._handle_debug_output(self.debug_dataset, debug_layer_names, outputs, epoch_id)
         if self.save_models:
             self._save_best_model()

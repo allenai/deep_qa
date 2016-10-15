@@ -483,6 +483,8 @@ class SnliInstance(TextInstance):
         (1) [example index][tab][text][tab][hypothesis][tab][label]
         (2) [text][tab][hypothesis][tab][label]
 
+        [label] is assumed to be one of "entails", "contradicts", or "neutral".
+
         default_label is ignored, but we keep the argument to match the interface.
         """
         fields = line.split("\t")

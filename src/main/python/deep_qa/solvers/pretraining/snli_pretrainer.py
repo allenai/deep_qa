@@ -27,17 +27,12 @@ class SnliPretrainer(Pretrainer):
     def __init__(self, trainer, params: Dict[str, Any]):
         if not isinstance(trainer, NNSolver):
             raise ConfigurationError("The SNLI Pretrainer needs a subclass of NNSolver")
-        self.snli_file = params.pop("snli_file")
         super(SnliPretrainer, self).__init__(trainer, params)
         self.name = "SnliPretrainer"
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
         return TextDataset.read_from_file(files[0], SnliInstance, tokenizer=self.trainer.tokenizer)
-
-    @overrides
-    def _get_training_files(self):
-        return [self.snli_file]
 
     @overrides
     def _prepare_data(self, dataset: TextDataset, for_train: bool):
@@ -60,7 +55,7 @@ class SnliPretrainer(Pretrainer):
         return inputs, numpy.asarray(labels)
 
     def fit_data_indexer(self):
-        dataset = self._load_dataset_from_files(self._get_training_files())
+        dataset = self._load_dataset_from_files(self.train_files)
         self.trainer.data_indexer.fit_word_dictionary(dataset)
 
 

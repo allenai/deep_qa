@@ -112,18 +112,23 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
     def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], outputs, epoch: int):
         debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
         all_question_scores = None
+        all_entailment_scores = None
         all_question_attention_outputs = []
         for i, layer_name in enumerate(layer_names):
             if layer_name.endswith('softmax'):
                 all_question_scores = outputs[i]
             elif 'knowledge_selector' in layer_name:
                 all_question_attention_outputs.append(outputs[i])
+            elif layer_name == 'entailment_scorer':
+                all_entailment_scores = outputs[i]
         assert all_question_scores is not None, "You must include the softmax layer in the debug output!"
         assert len(all_question_attention_outputs) > 0, "No attention layer specified; what are you debugging?"
         # Collect values from all hops of attention for a given instance into attention_values.
-        for instance, question_scores, *question_attention_values in zip(dataset.instances,
-                                                                         all_question_scores,
-                                                                         *all_question_attention_outputs):
+        for instance_index, instance in enumerate(dataset.instances):
+            question_scores = all_question_scores[instance_index]
+            question_attention_values = [attention[instance_index] for attention in all_question_attention_outputs]
+            if all_entailment_scores is not None:
+                entailment_scores = all_entailment_scores[instance_index]
             label = instance.label
             print("Correct answer: %s" % label, file=debug_output_file)
             for option_id, option_instance in enumerate(instance.options):
@@ -137,6 +142,9 @@ class MultipleChoiceMemoryNetworkSolver(MemoryNetworkSolver):
                                            for values in option_attention_values]
                 print("\tOption %d: %s" % (option_id, option_sentence), file=debug_output_file)
                 print("\tAssigned score: %.4f" % option_score, file=debug_output_file)
+                if all_entailment_scores is not None:
+                    option_entailment_score = entailment_scores[option_id]
+                    print("\tEntailment score: %.4f" % option_entailment_score, file=debug_output_file)
                 print("\tWeights on background:", file=debug_output_file)
                 for i, background_i in enumerate(option_background_info):
                     if i >= len(option_attention_values[0]):

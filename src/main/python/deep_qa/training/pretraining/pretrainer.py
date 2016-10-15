@@ -29,6 +29,13 @@ class Pretrainer(Trainer):
         super(Pretrainer, self).__init__(params)
         self.trainer = trainer
 
+    def on_finished(self):
+        """
+        This method is called when all of the pre-training is finished.  You can do whatever clean
+        up or whatever you need to here.  Default implementation is a no-op.
+        """
+        pass
+
     @overrides
     def _prepare_instance(self, instance: Instance, make_batch: bool=True):
         """

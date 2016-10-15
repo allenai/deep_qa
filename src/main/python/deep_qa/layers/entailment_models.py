@@ -155,7 +155,7 @@ class MultipleChoiceEntailmentModel:
             self.hidden_layers.append(Dense(output_dim=self.hidden_layer_width,
                                             activation=self.hidden_layer_activation,
                                             name='entailment_hidden_layer_%d' % i))
-        self.score_layer = Dense(output_dim=1, activation='sigmoid', name='entailment_score')
+        self.score_layer = Dense(output_dim=1, activation='sigmoid')
 
     def classify(self, combined_input):
         """
@@ -167,10 +167,10 @@ class MultipleChoiceEntailmentModel:
         # pylint: disable=redefined-variable-type
         hidden_input = combined_input
         for layer in self.hidden_layers:
-            hidden_input = TimeDistributed(layer)(hidden_input)
+            hidden_input = TimeDistributed(layer, name=layer.name)(hidden_input)
 
         # (batch_size, num_options, 1)
-        scores = TimeDistributed(self.score_layer)(hidden_input)
+        scores = TimeDistributed(self.score_layer, name='entailment_scorer')(hidden_input)
 
         # This layer has no parameters, so it doesn't need to go into self._init_layers().
         softmax_layer = Lambda(lambda x: K.softmax(K.squeeze(x, axis=2)),
