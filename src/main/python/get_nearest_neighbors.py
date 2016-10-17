@@ -5,8 +5,8 @@ import logging
 from pyhocon import ConfigFactory
 
 from deep_qa.common.checks import ensure_pythonhashseed_set
-from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
-from deep_qa.data.text_instance import TextInstance
+from deep_qa.data.instances.instance import TextInstance
+from deep_qa.solvers.with_memory.differentiable_search import DifferentiableSearchSolver
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

@@ -6,9 +6,10 @@ import random
 from collections import OrderedDict
 from typing import Dict, List
 
-from .instance import Instance
-from .text_instance import BackgroundInstance, LabeledBackgroundInstance, MultipleChoiceInstance, TextInstance
-from .indexed_instance import IndexedInstance
+from .instances.instance import Instance, TextInstance, IndexedInstance
+from .instances.background_instance import BackgroundInstance
+from .instances.labeled_background_instance import LabeledBackgroundInstance
+from .instances.multiple_true_false_instance import MultipleTrueFalseInstance
 from .tokenizer import tokenizers, Tokenizer
 from .data_indexer import DataIndexer
 
@@ -42,7 +43,7 @@ class Dataset:
         labels are False (i.e., no None labels for validation data).
         """
         for instance in self.instances:
-            if isinstance(instance, MultipleChoiceInstance):
+            if isinstance(instance, MultipleTrueFalseInstance):
                 return False
         if len(self.instances) % 4 != 0:
             return False
@@ -103,7 +104,7 @@ class TextDataset(Dataset):
         questions = zip(*[self.instances[i::4] for i in range(4)])
         question_instances = []
         for question in questions:
-            question_instances.append(MultipleChoiceInstance(question))
+            question_instances.append(MultipleTrueFalseInstance(question))
         return TextDataset(question_instances)
 
     @staticmethod

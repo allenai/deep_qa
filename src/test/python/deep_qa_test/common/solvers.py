@@ -1,11 +1,8 @@
 # pylint: disable=invalid-name
 import codecs
 
-from deep_qa.solvers.memory_network import MemoryNetworkSolver
-from deep_qa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
-from deep_qa.solvers.multiple_choice_similarity import MultipleChoiceSimilaritySolver
-from deep_qa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
-from deep_qa.solvers.differentiable_search import DifferentiableSearchSolver
+from deep_qa.solvers.with_memory.memory_network import MemoryNetworkSolver
+from deep_qa.solvers.with_memory.multiple_true_false_similarity import MultipleTrueFalseSimilaritySolver
 
 from .constants import TEST_DIR
 from .constants import TRAIN_FILE
@@ -46,7 +43,7 @@ def write_snli_file():
         snli_file.write('6\ttext6\thypothesis6\tcontradicts\n')
 
 
-def write_lstm_solver_files():
+def write_true_false_solver_files():
     with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as validation_file:
         validation_file.write('1\tq1a1\t0\n')
         validation_file.write('2\tq1a2\t1\n')
@@ -96,7 +93,7 @@ def write_memory_network_files():
         train_background.write('6\tsb9\n')
 
 
-def write_multiple_choice_memory_network_files():
+def write_multiple_true_false_memory_network_files():
     with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as validation_file:
         validation_file.write('1\tq1a1\t0\n')
         validation_file.write('2\tq1a2\t1\n')
@@ -137,17 +134,13 @@ def write_question_answer_memory_network_files():
 
 
 def is_memory_network_solver(cls):
-    # pylint: disable=multiple-statements
-    # TODO(matt): figure out how to do this with a call to isinstance()
-    if cls == MemoryNetworkSolver: return True
-    if cls == MultipleChoiceMemoryNetworkSolver: return True
-    if cls == QuestionAnswerMemoryNetworkSolver: return True
-    if cls == DifferentiableSearchSolver: return True
+    if issubclass(cls, MemoryNetworkSolver):
+        return True
     return False
 
 
 def is_solver_with_background(cls):
     # pylint: disable=multiple-statements
     if is_memory_network_solver(cls): return True
-    if cls == MultipleChoiceSimilaritySolver: return True
+    if cls == MultipleTrueFalseSimilaritySolver: return True
     return False

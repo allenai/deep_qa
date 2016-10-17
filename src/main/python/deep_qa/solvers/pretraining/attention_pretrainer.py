@@ -2,21 +2,20 @@ import logging
 from typing import Any, Dict, List
 
 from overrides import overrides
-import numpy
 
 from keras import backend as K
 from keras.layers import merge, Dropout, TimeDistributed
 from keras.models import Model
 
 from ...common.checks import ConfigurationError
-from ...training.pretraining.pretrainer import Pretrainer
+from ...training.pretraining.text_pretrainer import TextPretrainer
 from ...data.dataset import TextDataset
-from ..memory_network import MemoryNetworkSolver
+from ..with_memory.memory_network import MemoryNetworkSolver
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class AttentionPretrainer(Pretrainer):
+class AttentionPretrainer(TextPretrainer):
     """
     This is a generic Pretrainer for the attention mechanism of a MemoryNetworkSolver.
 
@@ -36,7 +35,6 @@ class AttentionPretrainer(Pretrainer):
     """
     # While it's not great, we need access to a few of the internals of the trainer, so we'll
     # disable protected access checks.
-    # pylint: disable=protected-access
     def __init__(self, trainer, params: Dict[str, Any]):
         if not isinstance(trainer, MemoryNetworkSolver):
             raise ConfigurationError("The AttentionPretrainer needs a subclass of MemoryNetworkSolver")
@@ -53,6 +51,11 @@ class AttentionPretrainer(Pretrainer):
             layer.hard_selection = self._old_hard_attention_setting
 
     @overrides
+    def _instance_type(self):
+        # pylint: disable=protected-access
+        return self.trainer._instance_type()
+
+    @overrides
     def _load_dataset_from_files(self, files: List[str]):
         """
         This method requires two input files, one with training examples, and one with labeled
@@ -62,43 +65,8 @@ class AttentionPretrainer(Pretrainer):
         TextDataset.read_background_from_file(), because we want our Instances to have labeled
         attention for pretraining, not labeled answers.
         """
-        dataset = TextDataset.read_from_file(files[0],
-                                             self.trainer._instance_type(),
-                                             tokenizer=self.trainer.tokenizer)
+        dataset = super(AttentionPretrainer, self)._load_dataset_from_files(files)
         return TextDataset.read_labeled_background_from_file(dataset, files[1])
-
-    @overrides
-    def _prepare_data(self, dataset: TextDataset, for_train: bool):
-        """
-        This does basically the same thing as NNSolver._prepare_data(), except for the things done
-        when for_train is True.  We also rely on our contained Trainer instance for some of the
-        variables in here, where NNSolver relies on `self`.
-
-        As mentioned in the class docstring, the inputs returned by this method will be the same as
-        the regular inputs to a (non-time-distributed) MemoryNetworkSolver, and the labels will be
-        labeled attention over the background for each input.  Outputting this correctly is handled
-        by the Instance code (TextInstance.to_indexed_instance() and
-        IndexedInstance.as_training_data()), and by the _load_dataset_from_files() method, which
-        creates the correct TextInstance type with TextDataset.read_labeled_background_from_file().
-
-        TODO(matt): might be worth making a TextPretrainer whenever we make a TextTrainer, to
-        share some of this common data preparation code.
-        """
-        logger.info("Indexing pretraining dataset")
-        indexed_dataset = dataset.to_indexed_dataset(self.trainer.data_indexer)
-        max_lengths = self.trainer._get_max_lengths()
-        logger.info("Padding pretraining dataset to lengths %s", str(max_lengths))
-        indexed_dataset.pad_instances(max_lengths)
-        inputs, labels = indexed_dataset.as_training_data()
-        if isinstance(inputs[0], tuple):
-            inputs = [numpy.asarray(x) for x in zip(*inputs)]
-        else:
-            inputs = numpy.asarray(inputs)
-        return inputs, numpy.asarray(labels)
-
-    def fit_data_indexer(self):
-        dataset = self._load_dataset_from_files(self.train_files)
-        self.trainer.data_indexer.fit_word_dictionary(dataset)
 
     @overrides
     def _build_model(self):
@@ -112,6 +80,7 @@ class AttentionPretrainer(Pretrainer):
         """
         # What follows is a lightly-edited version of the code from
         # MemoryNetworkSolver._build_model().
+        # pylint: disable=protected-access
         sentence_shape = (self.trainer.max_sentence_length,)
         background_shape = (self.trainer.max_knowledge_length, self.trainer.max_sentence_length)
 

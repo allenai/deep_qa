@@ -2,78 +2,34 @@ import logging
 from typing import Any, Dict, List
 
 from overrides import overrides
-import numpy
 
 from keras import backend as K
 from keras.layers import merge, Lambda, TimeDistributed
 from keras.models import Model
 
-from ...common.checks import ConfigurationError
 from ...data.dataset import TextDataset
-from ...data.text_instance import SnliInstance
-from ...training.pretraining.pretrainer import Pretrainer
-from ..nn_solver import NNSolver
+from ...data.instances.snli_instance import SnliInstance
+from ...training.pretraining.text_pretrainer import TextPretrainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class SnliPretrainer(Pretrainer):
-    # pylint: disable=abstract-method
-    """
-    An SNLI pretrainer is a Pretrainer that uses the Stanford Natural Language Inference dataset in
-    some way.  This is still an abstract class; the only thing we do is add a load_data() method
-    for easily getting SNLI inputs.
-    """
-    def __init__(self, trainer, params: Dict[str, Any]):
-        if not isinstance(trainer, NNSolver):
-            raise ConfigurationError("The SNLI Pretrainer needs a subclass of NNSolver")
-        super(SnliPretrainer, self).__init__(trainer, params)
-        self.name = "SnliPretrainer"
-
-    @overrides
-    def _load_dataset_from_files(self, files: List[str]):
-        return TextDataset.read_from_file(files[0], SnliInstance, tokenizer=self.trainer.tokenizer)
-
-    @overrides
-    def _prepare_data(self, dataset: TextDataset, for_train: bool):
-        # We ignore the for_train parameter here, because we're not training, we're pre-training.
-        # So we basically do the same thing as NNSolver._prepare_data(), except for fitting a data
-        # indexer (which already happened), and setting max_lengths.
-
-        # While it's not great, we need access to a few of the internals of the trainer, so we'll
-        # disable protected access checks.  pylint: disable=protected-access
-        logger.info("Indexing pretraining dataset")
-        indexed_dataset = dataset.to_indexed_dataset(self.trainer.data_indexer)
-        max_lengths = self.trainer._get_max_lengths()
-        logger.info("Padding pretraining dataset to lengths %s", str(max_lengths))
-        indexed_dataset.pad_instances(max_lengths)
-        inputs, labels = indexed_dataset.as_training_data()
-        if isinstance(inputs[0], tuple):
-            inputs = [numpy.asarray(x) for x in zip(*inputs)]
-        else:
-            inputs = numpy.asarray(inputs)
-        return inputs, numpy.asarray(labels)
-
-    def fit_data_indexer(self):
-        dataset = self._load_dataset_from_files(self.train_files)
-        self.trainer.data_indexer.fit_word_dictionary(dataset)
-
-
-class SnliEntailmentPretrainer(SnliPretrainer):
+class SnliEntailmentPretrainer(TextPretrainer):
     """
     This pretrainer uses SNLI data to train the encoder and entailment portions of the model.  We
     construct a simple model that uses the text and hypothesis and input, passes them through the
     sentence encoder and then the entailment layer, and predicts the SNLI label (entails,
     contradicts, neutral).
     """
-    # While it's not great, we need access to a few of the internals of the trainer, so we'll
-    # disable protected access checks.
-    # pylint: disable=protected-access
-    def __init__(self, trainer, params: Dict[str, any]):
+    def __init__(self, trainer, params: Dict[str, Any]):
         super(SnliEntailmentPretrainer, self).__init__(trainer, params)
         self.name = "SnliEntailmentPretrainer"
         if self.trainer.has_sigmoid_entailment:
             self.loss = 'binary_crossentropy'
+
+    @overrides
+    def _instance_type(self):
+        return SnliInstance
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
@@ -90,6 +46,7 @@ class SnliEntailmentPretrainer(SnliPretrainer):
 
     @overrides
     def _build_model(self):
+        # pylint: disable=protected-access
         sentence_shape = (self.trainer.max_sentence_length,)
         text_input, embedded_text = self.trainer._get_embedded_sentence_input(sentence_shape, "text")
         hypothesis_input, embedded_hypothesis = self.trainer._get_embedded_sentence_input(sentence_shape,
@@ -122,7 +79,7 @@ class SnliEntailmentPretrainer(SnliPretrainer):
         return entailment_input
 
 
-class SnliAttentionPretrainer(SnliPretrainer):
+class SnliAttentionPretrainer(TextPretrainer):
     """
     This pretrainer uses SNLI data to train the attention component of the model.  Because the
     attention component doesn't have a whole lot of parameters (none in some cases), this is
@@ -139,13 +96,14 @@ class SnliAttentionPretrainer(SnliPretrainer):
     layers, though, actually...  Pradeep: shouldn't we be doing that?  Using the same layers for
     the knowledge selector and the memory updater at each memory step?
     """
-    # While it's not great, we need access to a few of the internals of the trainer, so we'll
-    # disable protected access checks.
-    # pylint: disable=protected-access
-    def __init__(self, trainer, params: Dict[str, any]):
+    def __init__(self, trainer, params: Dict[str, Any]):
         super(SnliAttentionPretrainer, self).__init__(trainer, params)
         self.name = "SnliAttentionPretrainer"
         self.loss = 'binary_crossentropy'
+
+    @overrides
+    def _instance_type(self):
+        return SnliInstance
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
@@ -155,6 +113,7 @@ class SnliAttentionPretrainer(SnliPretrainer):
 
     @overrides
     def _build_model(self):
+        # pylint: disable=protected-access
         sentence_shape = (self.trainer.max_sentence_length,)
         text_input, embedded_text = self.trainer._get_embedded_sentence_input(sentence_shape, "text")
         hypothesis_input, embedded_hypothesis = self.trainer._get_embedded_sentence_input(sentence_shape,

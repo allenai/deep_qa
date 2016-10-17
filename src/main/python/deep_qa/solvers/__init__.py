@@ -1,11 +1,11 @@
-from .differentiable_search import DifferentiableSearchSolver
-from .lstm_solver import LSTMSolver
-from .memory_network import MemoryNetworkSolver
-from .multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
-from .multiple_choice_similarity import MultipleChoiceSimilaritySolver
-from .question_answer_lstm_solver import QuestionAnswerLSTMSolver
-from .question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
-from .tree_lstm_solver import TreeLSTMSolver
+from .no_memory.true_false_solver import TrueFalseSolver
+from .no_memory.question_answer_solver import QuestionAnswerSolver
+from .no_memory.tree_lstm_solver import TreeLSTMSolver
+from .with_memory.differentiable_search import DifferentiableSearchSolver
+from .with_memory.memory_network import MemoryNetworkSolver
+from .with_memory.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetworkSolver
+from .with_memory.multiple_true_false_similarity import MultipleTrueFalseSimilaritySolver
+from .with_memory.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 
 from ..training import concrete_pretrainers
 from .pretraining.attention_pretrainer import AttentionPretrainer
@@ -13,14 +13,14 @@ from .pretraining.snli_pretrainer import SnliAttentionPretrainer, SnliEntailment
 from .pretraining.encoder_pretrainer import EncoderPretrainer
 
 concrete_solvers = {  # pylint: disable=invalid-name
-        'LSTMSolver': LSTMSolver,
+        'TrueFalseSolver': TrueFalseSolver,
         'TreeLSTMSolver': TreeLSTMSolver,
         'MemoryNetworkSolver': MemoryNetworkSolver,
         'DifferentiableSearchSolver': DifferentiableSearchSolver,
-        'MultipleChoiceMemoryNetworkSolver': MultipleChoiceMemoryNetworkSolver,
+        'MultipleTrueFalseMemoryNetworkSolver': MultipleTrueFalseMemoryNetworkSolver,
         'QuestionAnswerMemoryNetworkSolver': QuestionAnswerMemoryNetworkSolver,
-        'MultipleChoiceSimilaritySolver': MultipleChoiceSimilaritySolver,
-        'QuestionAnswerLSTMSolver': QuestionAnswerLSTMSolver,
+        'MultipleTrueFalseSimilaritySolver': MultipleTrueFalseSimilaritySolver,
+        'QuestionAnswerLSTMSolver': QuestionAnswerSolver,
         }
 
 concrete_pretrainers['AttentionPretrainer'] = AttentionPretrainer

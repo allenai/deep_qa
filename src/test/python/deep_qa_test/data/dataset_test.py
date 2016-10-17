@@ -5,7 +5,8 @@ import os
 import shutil
 
 from deep_qa.data.dataset import Dataset, TextDataset
-from deep_qa.data.text_instance import LabeledBackgroundInstance, TrueFalseInstance
+from deep_qa.data.instances.true_false_instance import TrueFalseInstance
+from deep_qa.data.instances.labeled_background_instance import LabeledBackgroundInstance
 
 from ..common.constants import TEST_DIR
 

@@ -6,9 +6,9 @@ import shutil
 
 from deep_qa.solvers.pretraining.snli_pretrainer import SnliEntailmentPretrainer
 from deep_qa.solvers.pretraining.snli_pretrainer import SnliAttentionPretrainer
-from deep_qa.solvers.memory_network import MemoryNetworkSolver
-from deep_qa.solvers.multiple_choice_memory_network import MultipleChoiceMemoryNetworkSolver
-from deep_qa.solvers.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
+from deep_qa.solvers.with_memory.memory_network import MemoryNetworkSolver
+from deep_qa.solvers.with_memory.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetworkSolver
+from deep_qa.solvers.with_memory.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 from ...common.constants import TEST_DIR
 from ...common.constants import SNLI_FILE
 from ...common.solvers import get_solver
@@ -33,8 +33,8 @@ class TestSnliPretrainers(TestCase):
         pretrainer = SnliEntailmentPretrainer(solver, self.pretrainer_params)
         pretrainer.train()
 
-    def test_entailment_pretraining_does_not_crash_with_multiple_choice_memory_network_solver(self):
-        solver = get_solver(MultipleChoiceMemoryNetworkSolver)
+    def test_entailment_pretraining_does_not_crash_with_multiple_true_false_memory_network_solver(self):
+        solver = get_solver(MultipleTrueFalseMemoryNetworkSolver)
         pretrainer = SnliEntailmentPretrainer(solver, self.pretrainer_params)
         pretrainer.train()
 
@@ -43,8 +43,8 @@ class TestSnliPretrainers(TestCase):
         pretrainer = SnliAttentionPretrainer(solver, self.pretrainer_params)
         pretrainer.train()
 
-    def test_attention_pretraining_does_not_crash_with_multiple_choice_memory_network_solver(self):
-        solver = get_solver(MultipleChoiceMemoryNetworkSolver)
+    def test_attention_pretraining_does_not_crash_with_multiple_true_false_memory_network_solver(self):
+        solver = get_solver(MultipleTrueFalseMemoryNetworkSolver)
         pretrainer = SnliAttentionPretrainer(solver, self.pretrainer_params)
         pretrainer.train()
 

@@ -7,7 +7,7 @@ from keras.models import Model, model_from_json
 from ..common.checks import ConfigurationError
 from ..common.params import get_choice
 from ..data.dataset import Dataset
-from ..data.instance import Instance
+from ..data.instances.instance import Instance
 from .optimizers import optimizer_from_params
 from . import concrete_pretrainers
 

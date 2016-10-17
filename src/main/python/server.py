@@ -18,10 +18,10 @@ from deep_qa.common.checks import ensure_pythonhashseed_set
 from deep_qa.common.params import get_choice
 from deep_qa.solvers import concrete_solvers
 
-from deep_qa.data.text_instance import TrueFalseInstance
-from deep_qa.data.text_instance import MultipleChoiceInstance
-from deep_qa.data.text_instance import QuestionAnswerInstance
-from deep_qa.data.text_instance import BackgroundInstance
+from deep_qa.data.instances.true_false_instance import TrueFalseInstance
+from deep_qa.data.instances.multiple_true_false_instance import MultipleTrueFalseInstance
+from deep_qa.data.instances.question_answer_instance import QuestionAnswerInstance
+from deep_qa.data.instances.background_instance import BackgroundInstance
 from proto import message_pb2
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
@@ -55,7 +55,7 @@ class SolverServer(message_pb2.SolverServiceServicer):
             options = []
             for instance in instance_message.contained_instances:
                 options.append(self.read_instance_message(instance))
-            instance = MultipleChoiceInstance(options)
+            instance = MultipleTrueFalseInstance(options)
         elif instance_type == message_pb2.QUESTION_ANSWER:
             question = instance_message.question
             options = instance_message.answer_options

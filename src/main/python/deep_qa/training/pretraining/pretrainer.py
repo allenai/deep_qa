@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from overrides import overrides
 
-from ...data.instance import Instance
+from ...data.instances.instance import Instance
 from ..trainer import Trainer
 
 class Pretrainer(Trainer):
@@ -23,7 +23,8 @@ class Pretrainer(Trainer):
     # pylint: disable=protected-access
     def __init__(self, trainer: Trainer, params: Dict[str, Any]):
         # The default for saving models in Trainer is True.  We probably don't want to save the
-        # models from the pretrainer, so we'll change the default.
+        # models from the pretrainer, so we'll change the default.  The check is here so that you
+        # _can_ save the model if you want to.
         if 'save_models' not in params:
             params['save_models'] = False
         super(Pretrainer, self).__init__(params)
