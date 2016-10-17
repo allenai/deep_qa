@@ -22,7 +22,7 @@ TODO(matt).).  In addition to the numpy array containing the word index sequence
 array containing shift / reduce operations so that you can construct a tree-structured network
 using a sequence, like in the [SPINN
 paper](https://www.semanticscholar.org/paper/A-Fast-Unified-Model-for-Parsing-and-Sentence-Bowman-Gauthier/23c141141f4f63c061d3cce14c71893959af5721)
-Sam Bowman and others (see the [TreeCompositionLSTM
+by Sam Bowman and others (see the [TreeCompositionLSTM
 encoder](https://github.com/allenai/deep_qa/blob/master/src/main/python/deep_qa/layers/encoders/tree_composition_lstm.py)
 for a way to actually use this in a model).
 
