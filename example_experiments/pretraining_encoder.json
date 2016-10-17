@@ -1,5 +1,5 @@
 {
-  "solver_class": "MultipleChoiceMemoryNetworkSolver",
+  "solver_class": "MultipleTrueFalseMemoryNetworkSolver",
   "model_serialization_prefix": "models/example",
   "encoder": {
     "type": "bow"
@@ -16,16 +16,20 @@
   "num_memory_layers": 1,
   "max_sentence_length": 125,
   "max_training_instances": 10,
-  "train_file": "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_train.tsv",
-  "train_background": "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_train_background.tsv",
-  "validation_file": "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_dev.tsv",
-  "validation_background": "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_dev_background.tsv",
+  "train_files": [
+    "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_train.tsv",
+    "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_train_background.tsv"
+  ],
+  "validation_files": [
+    "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_dev.tsv",
+    "/home/pdasigi/data/ai2_omnibus/processed/omnibus_4_and_8_dev_background.tsv"
+  ],
   "pretrainers": [
     {
       "type": "EncoderPretrainer",
       "max_training_instances": 100,
       "num_epochs": 40,
-      "encoder_pretraining_file": "/home/pdasigi/data/ai2_busc/busc_encoder_pretrain_data_shuf.tsv"
+      "train_files": ["/home/pdasigi/data/ai2_busc/busc_encoder_pretrain_data_shuf.tsv"]
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "solver_class": "MultipleChoiceMemoryNetworkSolver",
+  "solver_class": "MultipleTrueFalseMemoryNetworkSolver",
   "model_serialization_prefix": "models/example",
   "encoder": {
     "type": "bow"
@@ -15,9 +15,10 @@
   },
   "num_memory_layers": 1,
   "max_sentence_length": 125,
+  "patience": 5,
   "max_training_instances": 10,
-  "train_file": "data/science/omnibus_questions/processed_questions.tsv",
-  "train_background": "data/science/omnibus_questions/processed_questions_background.tsv",
-  "validation_file": "data/science/omnibus_questions/processed_questions.tsv",
-  "validation_background": "data/science/omnibus_questions/processed_questions_background.tsv"
+  "train_files": [
+    "data/science/omnibus_questions/processed_questions.tsv",
+    "data/science/omnibus_questions/processed_questions_background.tsv"
+  ]
 }
