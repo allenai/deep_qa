@@ -20,7 +20,7 @@ concrete_solvers = {  # pylint: disable=invalid-name
         'MultipleTrueFalseMemoryNetworkSolver': MultipleTrueFalseMemoryNetworkSolver,
         'QuestionAnswerMemoryNetworkSolver': QuestionAnswerMemoryNetworkSolver,
         'MultipleTrueFalseSimilaritySolver': MultipleTrueFalseSimilaritySolver,
-        'QuestionAnswerLSTMSolver': QuestionAnswerSolver,
+        'QuestionAnswerSolver': QuestionAnswerSolver,
         }
 
 concrete_pretrainers['AttentionPretrainer'] = AttentionPretrainer

@@ -103,12 +103,15 @@ The best way currently to get an idea for what options are available in this con
 and what those options mean, is to look at the class mentioned in the `solver_class` field.
 Looking at the
 [`dynamic_memory_network.json`](https://github.com/allenai/deep_qa/blob/932849e8b3ebec6882680231924248669cc19758/example_experiments/dynamic_memory_network.json)
-example, we can see that it's using a `MemoryNetworkSolver` as it's
+example, we can see that it's using a `MultipleTrueFalseMemoryNetworkSolver` as it's
 [`solver_class`](https://github.com/allenai/deep_qa/blob/932849e8b3ebec6882680231924248669cc19758/example_experiments/dynamic_memory_network.json#L2).
 If we go to that class's [`__init__`
-method](https://github.com/allenai/deep_qa/blob/932849e8b3ebec6882680231924248669cc19758/src/main/python/deep_qa/solvers/with_memory/memory_network.py#L69)
-in the code, we can see the parameters that it takes: things like `num_memory_layers`,
-`knowledge_encoder`, `entailment_model`, and so on.  If you contine on to its super class,
+method](https://github.com/allenai/deep_qa/blob/932849e8b3ebec6882680231924248669cc19758/src/main/python/deep_qa/solvers/with_memory/multiple_true_false_memory_network.py#L31),
+in the code, we don't see any parameters, because `MultipleTrueFalseMemoryNetworkSolver` has no
+unique parameters of its own.  So, we continue up the class hierarchy to
+[`MemoryNetworkSolver`](https://github.com/allenai/deep_qa/blob/932849e8b3ebec6882680231924248669cc19758/src/main/python/deep_qa/solvers/with_memory/memory_network.py#L69),
+and we can see the parameters that it takes: things like `num_memory_layers`, `knowledge_encoder`,
+`entailment_model`, and so on.  If you continue on to its super class,
 [`TextTrainer`](https://github.com/allenai/deep_qa/blob/932849e8b3ebec6882680231924248669cc19758/src/main/python/deep_qa/training/text_trainer.py#L32),
 you'll find more parameters, this time for things that deal with word embeddings and sentence
 encoders.  Finally, you can continue to the base class,
