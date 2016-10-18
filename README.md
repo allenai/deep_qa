@@ -21,7 +21,7 @@ This repository implements several variants of memory networks, including the mo
 - Windowed-memory MemNNs, from [The Goldilocks Principle: Reading Children's Books with Explicit Memory Representations](https://www.semanticscholar.org/paper/The-Goldilocks-Principle-Reading-Children-s-Books-Hill-Bordes/1ee46c3b71ebe336d0b278de9093cfca7af7390b) (in progress)
 
 As well as some of our own, as-yet-unpublished variants.  There is a lot of similarity between the models in these papers, and our code is structured in a way to allow for easily switching between these models.
-
+For a description of how we've built an extensible memory network architecture in this library, see [this readme.](./src/main/python/deep_qa/solvers/with_memory/README.md)
 # Datasets
 
 This code allows for easy experimentation with the following datasets:
@@ -121,6 +121,7 @@ specifying debug output, running pre-training, and other things.  It would be ni
 generate some website to document all of these parameters, but I don't know how to do that and
 don't have the time to dedicate to making it happen.  So for now, just read the comments that are
 in the code.
+
 
 There are several places where we give lists of available choices for particular options.  For
 example, there is a [list of concrete
