@@ -2,11 +2,9 @@ import codecs
 import gzip
 import logging
 
-from typing import Dict, List  # pylint: disable=unused-import
-
 import numpy
-from keras.layers import Embedding
 
+from ..layers.time_distributed_embedding import TimeDistributedEmbedding
 from .data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -15,11 +13,16 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class PretrainedEmbeddings:
     @staticmethod
     def initialize_random_matrix(shape, seed=1337):
-        numpy_rng = numpy.random.RandomState(seed)  # pylint: disable=no-member
+        # TODO(matt): we now already set the random seed, in run_solver.py.  This should be
+        # changed.
+        numpy_rng = numpy.random.RandomState(seed)
         return numpy_rng.uniform(size=shape, low=0.05, high=-0.05)
 
     @staticmethod
-    def get_embedding_layer(embeddings_filename: str, data_indexer: DataIndexer, trainable=False):
+    def get_embedding_layer(embeddings_filename: str,
+                            data_indexer: DataIndexer,
+                            trainable=False,
+                            log_misses=False):
         """
         Reads a pre-trained embedding file and generates a Keras Embedding layer that has weights
         initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or
@@ -66,29 +69,32 @@ class PretrainedEmbeddings:
 
         # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
         # then filling in the word vectors we just read.
-        logger.info("Initializing pre-trained embedding layer; logging embedding misses to %s",
-                    embedding_misses_filename)
+        logger.info("Initializing pre-trained embedding layer")
+        if log_misses:
+            logger.info("Logging embedding misses to %s", embedding_misses_filename)
+            embedding_misses_file = codecs.open(embedding_misses_filename, 'w', 'utf-8')
         embedding_matrix = PretrainedEmbeddings.initialize_random_matrix((vocab_size, embedding_size))
 
         # The 2 here is because we know too much about the DataIndexer.  Index 0 is the padding
         # index, and the vector for that dimension is going to be 0.  Index 1 is the OOV token, and
         # we can't really set a vector for the OOV token.
-        embedding_misses_file = codecs.open(embedding_misses_filename, 'w', 'utf-8')
-        for i in range(2, vocab_size - 1):
+        for i in range(2, vocab_size):
             word = data_indexer.get_word_from_index(i)
 
             # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
             # so the word has a random initialization.
             if word in embeddings:
                 embedding_matrix[i] = embeddings[word]
-            else:
+            elif log_misses:
                 print(word, file=embedding_misses_file)
-        embedding_misses_file.close()
+
+        if log_misses:
+            embedding_misses_file.close()
 
         # The weight matrix is initialized, so we construct and return the actual Embedding layer.
-        return Embedding(input_dim=vocab_size,
-                         output_dim=embedding_size,
-                         mask_zero=True,
-                         weights=[embedding_matrix],
-                         trainable=trainable,
-                         name="embedding")
+        return TimeDistributedEmbedding(input_dim=vocab_size,
+                                        output_dim=embedding_size,
+                                        mask_zero=True,
+                                        weights=[embedding_matrix],
+                                        trainable=trainable,
+                                        name="embedding")

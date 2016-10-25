@@ -54,8 +54,3 @@ pytest-pythonpath
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
-
-# pyfakefs: Provides a fake filesystem for testing.  There was a bug in version 2.8 that made it
-# fail when using os.makedirs() with the exist_ok parameter.  This commit fixes that bug.  When a
-# version with the fix gets pushed to pypi, we can change this line back to just `pyfakefs`.
-git+git://github.com/jmcgeheeiv/pyfakefs.git@90e33844bf3fc3e51550ee8fc839ccd950f53a66

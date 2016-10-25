@@ -1,0 +1,27 @@
+{
+  "solver_class": "QuestionAnswerMemoryNetworkSolver",
+  "model_serialization_prefix": "models/babi_task1/",
+  "encoder": {
+    "type": "bow"
+  },
+  "knowledge_selector": {
+    "type": "dot_product"
+  },
+  "memory_updater": {
+    "type": "sum"
+  },
+  "entailment_input_combiner": {
+    "type": "memory_only"
+  },
+  "debug": {
+    "layer_names": ["embedding", "knowledge_selector_0", "answer_similarity_softmax"],
+    "data": "training"
+  },
+  "num_memory_layers": 1,
+  "patience": 5,
+  "train_files": [
+    "/efs/data/dlfa/facebook/babi_v1.0/processed/task_1_train.tsv",
+    "/efs/data/dlfa/facebook/babi_v1.0/processed/task_1_background.tsv"
+  ]
+}
+

@@ -3,10 +3,10 @@ from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import merge, Dense, TimeDistributed
-from keras.models import Model
 
 from ...data.instances.sentence_pair_instance import SentencePairInstance
 from ...training.pretraining.text_pretrainer import TextPretrainer
+from ...training.models import DeepQaModel
 
 
 class EncoderPretrainer(TextPretrainer):
@@ -42,4 +42,4 @@ class EncoderPretrainer(TextPretrainer):
         # The activation is a sigmoid because the label is one integer instead of a one-hot array, and it
         # does not make sense to do a softmax on one value.
         binary_prediction = Dense(1, activation='sigmoid', name='context_prediction')(merged_sentences)
-        return Model(input=[first_sentence_input, second_sentence_input], output=binary_prediction)
+        return DeepQaModel(input=[first_sentence_input, second_sentence_input], output=binary_prediction)

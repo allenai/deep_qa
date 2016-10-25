@@ -13,36 +13,7 @@ from keras import backend as K
 from keras import activations, initializations
 from keras.layers import Layer
 
-
-def tile_vector(vector, matrix):
-    """
-    This method takes a (collection of) vector(s) (shape: (batch_size, vector_dim)), and tiles that
-    vector a number of times, giving a matrix of shape (batch_size, tile_length, vector_dim).  (I
-    say "vector" and "matrix" here because I'm ignoring the batch_size).  We need the matrix as
-    input so we know what the tile_length is - the matrix is otherwise ignored.
-
-    This is necessary in a number of places in the code.  For instance, if you want to do a dot
-    product of a vector with all of the vectors in a matrix, the most efficient way to do that is
-    to tile the vector first, then do an element-wise product with the matrix, then sum out the
-    last mode.  So, we capture this functionality here.
-
-    This is not done as a Keras Layer, however; if you want to use this function, you'll need to do
-    it _inside_ of a Layer somehow, either in a Lambda or in the call() method of a Layer you're
-    writing.
-
-    TODO(matt): it probably would make sense to move this to a central place, maybe under common
-    (make a new common.tensors?).
-    """
-    # Tensorflow can't use unknown sizes at runtime, so we have to make use of the broadcasting
-    # ability of TF and Theano instead to create the tiled sentence encoding.
-
-    # Shape: (tile_length, batch_size, vector_dim)
-    k_ones = K.permute_dimensions(K.ones_like(matrix), [1, 0, 2])
-
-    # Now we have a (tile_length, batch_size, vector_dim)*(num_samples, vector_dim)
-    # elementwise multiplication which is broadcast. We then reshape back.
-    tiled_vector = K.permute_dimensions(k_ones * vector, [1, 0, 2])
-    return tiled_vector
+from ..common.tensors import tile_vector, masked_softmax, hardmax
 
 
 def split_selector_inputs(inputs):
@@ -57,24 +28,19 @@ def split_selector_inputs(inputs):
     knowledge_encoding = inputs[:, 2:, :]
     return question_encoding, memory_encoding, knowledge_encoding
 
-
-def hardmax(unnormalized_attention, knowledge_length):
-    # (num_samples, knowledge_length)
-    tiled_max_values = K.tile(K.expand_dims(K.max(unnormalized_attention, axis=1)), (1, knowledge_length))
-    # We now have a matrix where every column in each row has the max knowledge score value from
-    # the corresponding row in the unnormalized attention matrix.  Next, we will compare that
-    # all-max matrix with the original input, resulting in ones where the column equals max and
-    # zero everywhere else.
-    # Shape: (num_samples, knowledge_length)
-    bool_max_attention = K.equal(unnormalized_attention, tiled_max_values)
-    # Needs to be cast to be compatible with TensorFlow
-    max_attention = K.cast(bool_max_attention, 'float32')
-    return max_attention
-
+def split_selector_masks(inputs):
+    """
+    This function is used in the same context as split_selector_inputs, but for masks, which are
+    a dimension smaller.
+    """
+    question_mask = inputs[:, 0]
+    memory_mask = inputs[:, 1]
+    knowledge_mask = inputs[:, 2:]
+    return question_mask, memory_mask, knowledge_mask
 
 class DotProductKnowledgeSelector(Layer):
     """
-    Input Shape: num_samples, (knowledge_length + 1), input_dim
+    Input Shape: num_samples, (knowledge_length + 2), input_dim
 
     Take the input as a tensor i, such that i[:, 0, :] is the encoding of the original sentence,
     i[:, 1, :] is the encoding of the memory representation and i[:, 2:, :] are the encodings of
@@ -92,21 +58,22 @@ class DotProductKnowledgeSelector(Layer):
     def call(self, x, mask=None):
         _, memory_encoding, knowledge_encoding = split_selector_inputs(x)
 
-        # We want to take a dot product of the knowledge matrix and the sentence vector from each
-        # sample. Instead of looping over all samples (inefficient), let's tile the sentence
-        # encoding to make it the same size as knowledge encoding, take an element wise product and
-        # sum over the last dimension (dim = 2).
-
         # (num_samples, knowledge_length, input_dim)
         tiled_memory_encoding = tile_vector(memory_encoding, knowledge_encoding)
-
+        if mask is not None:
+            # This mask is (samples, knowledge_length), so we need to expand it to multiply with the actual
+            # knowledge_encoding. At this point, there is no mask for the question or memory encoding.
+            _, _, mask = split_selector_masks(mask)
+            knowledge_mask = K.expand_dims(K.cast(mask, 'float32'))
+            knowledge_encoding *= knowledge_mask
         # (num_samples, knowledge_length)
         unnormalized_attention = K.sum(knowledge_encoding * tiled_memory_encoding, axis=2)
+
         if self.hard_selection:
             knowledge_length = K.shape(knowledge_encoding)[1]
             knowledge_attention = hardmax(unnormalized_attention, knowledge_length)
         else:
-            knowledge_attention = K.softmax(unnormalized_attention)
+            knowledge_attention = masked_softmax(unnormalized_attention, mask)
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
@@ -114,13 +81,20 @@ class DotProductKnowledgeSelector(Layer):
         # over background information.
         return (input_shape[0], input_shape[1] - 2)  # (num_samples, knowledge_length)
 
+    def compute_mask(self, x, input_mask=None):  # pylint: disable=unused-argument
+        # At this point, the attention already implicitly contains our mask. The other
+        # inputs to the Knowledge Combiners will still have access to their respective masks,
+        # so we don't need to pass on the dimensions which were masked here as well, as they
+        # are already zeroed out.
+        return None
+
 
 class ParameterizedKnowledgeSelector(Layer):
     """
     Here we are reimplementing the attention part of the memory layer described in
     "Teaching Machines to Read and Comprehend", Hermann et al., 2015.
 
-    Input Shape: num_samples, (knowledge_length + 1), input_dim
+    Input Shape: num_samples, (knowledge_length + 2), input_dim
 
     Take the input as a tensor i, such that i[:, 0, :] is the encoding of the original question,
     i[:, 1, :] is the encoding of the memory representation and i[:, 2:, :]
@@ -185,18 +159,24 @@ class ParameterizedKnowledgeSelector(Layer):
         '''
         _, memory_encoding, knowledge_encoding = split_selector_inputs(x)
 
-        # We're going to have to do several operations on the memory representation for each
-        # background sentence.  Instead of looping over the background sentences, which is
-        # inefficient, we'll tile the sentence encoding and use it in what follows.
-
         # (num_samples, knowledge_length, input_dim)
         tiled_memory_encoding = tile_vector(memory_encoding, knowledge_encoding)
+        if mask is not None:
+            # This mask is (samples, knowledge_length), so we need to expand it to multiply with the actual
+            # knowledge_encoding. At this point, there is no mask for the question or memory encoding.
+            _, _, mask = split_selector_masks(mask)
+            knowledge_mask = K.expand_dims(K.cast(mask, 'float32'))
+            knowledge_encoding *= knowledge_mask
+            tiled_memory_encoding *= knowledge_mask
 
         # (1: zu_t) Result of this is (num_samples, knowledge_length, input_dim * 2)
         concatenated_encodings = K.concatenate([knowledge_encoding, tiled_memory_encoding])
 
         # (2: m_t) Result of this is (num_samples, knowledge_length, input_dim)
         concatenated_activation = self.activation(K.dot(concatenated_encodings, self.dense_weights))
+
+        if mask is not None:
+            concatenated_activation *= knowledge_mask
 
         # (3: q_t) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
         # after the dot product with K.squeeze, otherwise this would be (num_samples,
@@ -208,13 +188,20 @@ class ParameterizedKnowledgeSelector(Layer):
             knowledge_length = K.shape(knowledge_encoding)[1]
             knowledge_attention = hardmax(unnormalized_attention, knowledge_length)
         else:
-            knowledge_attention = K.softmax(unnormalized_attention)
+            knowledge_attention = masked_softmax(unnormalized_attention, mask)
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
         # For each sample, the output is a vector of size knowledge_length, indicating the weights
         # over background information.
         return (input_shape[0], input_shape[1] - 2)  # (num_samples, knowledge_length)
+
+    def compute_mask(self, x, input_mask=None):  # pylint: disable=unused-argument
+        # At this point, the attention already implicitly contains our mask. The other
+        # inputs to the Knowledge Combiners will still have access to their respective masks,
+        # so we don't need to pass on the dimensions which were masked here as well, as they
+        # are already zeroed out.
+        return None
 
 
 class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
@@ -282,13 +269,19 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
         '''
         original_question_encoding, memory_encoding, knowledge_encoding = split_selector_inputs(x)
 
-        # We're going to have to do several operations on the question and memory representations
-        # for each background sentence.  Instead of looping over the background sentences, which
-        # is inefficient, we'll tile the question and memory encodings and use them in what follows.
-
         # (num_samples, knowledge_length, input_dim)
         tiled_memory_encoding = tile_vector(memory_encoding, knowledge_encoding)
         tiled_question_encoding = tile_vector(original_question_encoding, knowledge_encoding)
+
+        if mask is not None:
+            # This mask is (samples, knowledge_length), so we need to expand it to multiply with the actual
+            # knowledge_encoding. At this point, there is no mask for the question or memory encoding.
+            _, _, mask = split_selector_masks(mask)
+            knowledge_mask = K.expand_dims(K.cast(mask, 'float32'))
+
+            tiled_memory_encoding *= knowledge_mask
+            tiled_question_encoding *= knowledge_mask
+            knowledge_encoding *= knowledge_mask
 
         # (1: zu_t) Result of this is (num_samples, knowledge_length, input_dim * 4)
         concatenated_encodings = K.concatenate([knowledge_encoding * tiled_question_encoding,
@@ -297,8 +290,10 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
                                                 K.abs(knowledge_encoding - tiled_memory_encoding)])
 
         # (2: m_t) Result of this is (num_samples, knowledge_length, input_dim)
-        concatenated_activation = self.activation(K.dot(concatenated_encodings,
-                                                        self.dense_weights) + self.bias1)
+        concatenated_activation = self.activation(K.dot(concatenated_encodings, self.dense_weights) + self.bias1)
+
+        if mask is not None:
+            concatenated_activation *= knowledge_mask
 
         # (3: q_t) Result of this is (num_samples, knowledge_length).  We need to remove a dimension
         # after the dot product with K.squeeze, otherwise this would be (num_samples,
@@ -311,7 +306,7 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
             knowledge_length = K.shape(knowledge_encoding)[1]
             knowledge_attention = hardmax(unnormalized_attention, knowledge_length)
         else:
-            knowledge_attention = K.softmax(unnormalized_attention)
+            knowledge_attention = masked_softmax(unnormalized_attention, mask)
         return knowledge_attention
 
     def get_output_shape_for(self, input_shape):
@@ -319,6 +314,12 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
         # over background information.
         return (input_shape[0], input_shape[1] - 2)  # (num_samples, knowledge_length)
 
+    def compute_mask(self, x, input_mask=None):  # pylint: disable=unused-argument
+        # At this point, the attention already implicitly contains our mask. The other
+        # inputs to the Knowledge Combiners will still have access to their respective masks,
+        # so we don't need to pass on the dimensions which were masked here as well, as they
+        # are already zeroed out.
+        return None
 
 # The first item added here will be used as the default in some cases.
 selectors = OrderedDict()  # pylint: disable=invalid-name

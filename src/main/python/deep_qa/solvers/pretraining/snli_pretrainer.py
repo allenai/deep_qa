@@ -5,11 +5,11 @@ from overrides import overrides
 
 from keras import backend as K
 from keras.layers import merge, Lambda, TimeDistributed
-from keras.models import Model
 
 from ...data.dataset import TextDataset
 from ...data.instances.snli_instance import SnliInstance
 from ...training.pretraining.text_pretrainer import TextPretrainer
+from ...training.models import DeepQaModel
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -69,7 +69,7 @@ class SnliEntailmentPretrainer(TextPretrainer):
         for layer in entailment_model.hidden_layers:
             hidden_input = layer(hidden_input)
         entailment_score = entailment_model.score_layer(hidden_input)
-        return Model(input=[text_input, hypothesis_input], output=entailment_score)
+        return DeepQaModel(input=[text_input, hypothesis_input], output=entailment_score)
 
     @staticmethod
     def _combine_inputs(inputs):
@@ -137,4 +137,4 @@ class SnliAttentionPretrainer(TextPretrainer):
             knowledge_selector = knowledge_selector.layer
         attention_weights = knowledge_selector(merged_encoded_rep)
         input_layers = [text_input, hypothesis_input]
-        return Model(input=input_layers, output=attention_weights)
+        return DeepQaModel(input=input_layers, output=attention_weights)

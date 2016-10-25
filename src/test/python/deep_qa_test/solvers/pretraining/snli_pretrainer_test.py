@@ -61,10 +61,12 @@ class TestSnliPretrainers(TestCase):
                 'pretrainers': [
                         {
                                 'type': 'SnliEntailmentPretrainer',
+                                'num_epochs': 1,
                                 'train_files': [SNLI_FILE]
                                 },
                         {
                                 'type': 'SnliAttentionPretrainer',
+                                'num_epochs': 1,
                                 'train_files': [SNLI_FILE]
                                 },
                         ]

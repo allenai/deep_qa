@@ -16,7 +16,8 @@
   "num_memory_layers": 1,
   "max_sentence_length": 125,
   "patience": 5,
-  "max_training_instances": 10,
+  "show_summary_with_masking_info": true,
+  //"max_training_instances": 10,
   "train_files": [
     "data/science/omnibus_questions/processed_questions.tsv",
     "data/science/omnibus_questions/processed_questions_background.tsv"

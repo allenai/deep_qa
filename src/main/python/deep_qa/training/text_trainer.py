@@ -5,8 +5,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 
 import numpy
-from keras.layers import Dense, Input, Embedding, TimeDistributed, Dropout
-from keras.models import Model
+from keras.layers import Dense, Input, TimeDistributed, Dropout
 from overrides import overrides
 
 from ..common.params import get_choice_with_default
@@ -17,6 +16,8 @@ from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizer import tokenizers
 from ..data.data_indexer import DataIndexer
 from ..layers.encoders import encoders, set_regularization_params
+from ..layers.time_distributed_embedding import TimeDistributedEmbedding
+from .models import DeepQaModel
 from .trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -277,19 +278,17 @@ class TextTrainer(Trainer):
                         self.data_indexer,
                         self.fine_tune_embeddings)
             else:
-                self.embedding_layer = Embedding(input_dim=self.data_indexer.get_vocab_size(),
-                                                 output_dim=self.embedding_size,
-                                                 mask_zero=True,  # this handles padding correctly
-                                                 name='embedding')
+                # TimeDistributedEmbedding works with inputs of any shape.
+                self.embedding_layer = TimeDistributedEmbedding(input_dim=self.data_indexer.get_vocab_size(),
+                                                                output_dim=self.embedding_size,
+                                                                mask_zero=True,  # this handles padding correctly
+                                                                name='embedding')
             if self.project_embeddings:
                 self.projection_layer = TimeDistributed(Dense(output_dim=self.embedding_size,),
                                                         name='embedding_projection')
 
         # Now we actually embed the input and apply dropout.
-        embedding = self.embedding_layer
-        for _ in input_shape[1:]:
-            embedding = TimeDistributed(embedding, name=name_prefix + "_embedding")
-        embedded_input = embedding(input_layer)
+        embedded_input = self.embedding_layer(input_layer)
 
         if self.project_embeddings:
             projection = self.projection_layer
@@ -339,12 +338,30 @@ class TextTrainer(Trainer):
                 input_shape=(self.max_sentence_length,), name_prefix="sentence")
         encoder_layer = self._get_sentence_encoder()
         encoded_input = encoder_layer(embedded_input)
-        self._sentence_encoder_model = Model(input=input_layer, output=encoded_input)
+        self._sentence_encoder_model = DeepQaModel(input=input_layer, output=encoded_input)
 
         # Loss and optimizer do not matter here since we're not going to train this model. But it
         # needs to be compiled to use it for prediction.
         self._sentence_encoder_model.compile(loss="mse", optimizer="adam")
         self._sentence_encoder_model.summary()
+
+    @overrides
+    def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str:
+        """
+        We'll do something different here: if "embedding" is in output_dict, we'll output the
+        embedding matrix at the top of the debug file.  Note that this could be _huge_ - you should
+        only do this for debugging on very simple datasets.
+        """
+        result = super(TextTrainer, self)._overall_debug_output(output_dict)
+        if 'embedding' in output_dict:
+            result += 'Embedding matrix:\n'
+            embedding_weights = self.embedding_layer.get_weights()[0]
+            for i in range(self.data_indexer.get_vocab_size()):
+                word = self.data_indexer.get_word_from_index(i)
+                word_vector = '[' + ' '.join('%.4f' % x for x in embedding_weights[i]) + ']'
+                result += '%s\t%s\n' % (word, word_vector)
+            result += '\n'
+        return result
 
     @classmethod
     def _get_custom_objects(cls):

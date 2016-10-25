@@ -1,7 +1,6 @@
 import codecs
 import itertools
 import logging
-import random
 
 from collections import OrderedDict
 from typing import Dict, List
@@ -78,7 +77,6 @@ class Dataset:
         if len(self.instances) <= max_instances:
             return self
         new_instances = [i for i in self.instances]
-        random.shuffle(new_instances)
         return self.__class__(new_instances[:max_instances])
 
 
@@ -237,7 +235,7 @@ class IndexedDataset(Dataset):
         for instance in self.instances:
             instance.pad(lengths_to_use)
 
-    def as_training_data(self, shuffle=True):
+    def as_training_data(self):
         """
         Takes each IndexedInstance and converts it into (inputs, labels), according to the
         Instance's as_training_data() method.  Note that you might need to call numpy.asarray() on
@@ -246,8 +244,6 @@ class IndexedDataset(Dataset):
         inputs = []
         labels = []
         instances = self.instances
-        if shuffle:
-            random.shuffle(instances)
         for instance in instances:
             instance_inputs, label = instance.as_training_data()
             inputs.append(instance_inputs)

@@ -2,14 +2,17 @@ import logging
 import os
 from typing import Any, Dict, List
 
-from keras.models import Model, model_from_json
+import numpy
+from keras.models import model_from_json
 
+from . import concrete_pretrainers
 from ..common.checks import ConfigurationError
 from ..common.params import get_choice
 from ..data.dataset import Dataset
 from ..data.instances.instance import Instance
+from ..layers.wrappers import OutputMask
+from .models import DeepQaModel
 from .optimizers import optimizer_from_params
-from . import concrete_pretrainers
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -64,6 +67,10 @@ class Trainer:
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
 
+        # This is a debugging setting, mostly - we have written a custom model.summary() method
+        # that supports showing masking info, to help understand what's going on with the masks.
+        self.show_summary_with_masking = params.pop('show_summary_with_masking_info', False)
+
         # This should be a dict, containing the following keys:
         # - "layer_names", which has as a value a list of names that must match layer names in the
         #     model build by this Trainer.
@@ -72,6 +79,8 @@ class Trainer:
         #     load data from the provided files.  Note that currently "validation" only works if
         #     you provide validation files, not if you're just using Keras to split the training
         #     data.
+        # - "masks", an optional key that functions identically to "layer_names", except we output
+        #     the mask at each layer given here.
         self.debug_params = params.pop('debug', {})
 
         pretrainer_params = params.pop('pretrainers', [])
@@ -184,10 +193,10 @@ class Trainer:
                 'metrics': self.metrics,
                 }
 
-    def _build_model(self) -> Model:
-        """Constructs and returns a Keras model that will take the output of
-        self._get_training_data as input, and produce as output a true/false decision for each
-        input.
+    def _build_model(self) -> DeepQaModel:
+        """Constructs and returns a DeepQaModel (which is a wrapper around a Keras Model) that will
+        take the output of self._get_training_data as input, and produce as output a true/false
+        decision for each input.
 
         The returned model will be used to call model.fit(train_input, train_labels).
         """
@@ -231,13 +240,14 @@ class Trainer:
         # Then we build the model and compile it.
         logger.info("Building the model")
         self.model = self._build_model()
-        self.model.summary()
+        self.model.summary(show_masks=self.show_summary_with_masking)
         self.model.compile(**self._compile_kwargs())
 
         if self.debug_params:
             # Get the list of layers whose outputs will be visualized as per the
             # solver definition and build a debug model.
             debug_layer_names = self.debug_params['layer_names']
+            debug_masks = self.debug_params.get('masks', [])
             debug_data = self.debug_params['data']
             if debug_data == "training":
                 self.debug_dataset = self.training_dataset
@@ -252,7 +262,7 @@ class Trainer:
                 # file names.
                 self.debug_dataset = self._load_dataset_from_files(debug_data)
                 self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
-            self.debug_model = self._build_debug_model(debug_layer_names)
+            self.debug_model = self._build_debug_model(debug_layer_names, debug_masks)
             self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
 
 
@@ -286,13 +296,41 @@ class Trainer:
                 if self.save_models:
                     self._save_model(epoch_id)
             if self.debug_params:
-                logger.info("Running debug model")
-                # Shows intermediate outputs of the model on validation data
-                outputs = self.debug_model.predict(self.debug_input)
-                logger.info("Outputting debug results")
-                self._handle_debug_output(self.debug_dataset, debug_layer_names, outputs, epoch_id)
+                self._debug(debug_layer_names, debug_masks, epoch_id)
         if self.save_models:
             self._save_best_model()
+
+    def _debug(self, debug_layer_names: List[str], debug_masks: List[str], epoch: int):
+        """
+        Runs the debug model and saves the results to a file.
+        """
+        logger.info("Running debug model")
+        # Shows intermediate outputs of the model on validation data
+        outputs = self.debug_model.predict(self.debug_input)
+        output_dict = {}
+        if len(debug_layer_names) == 1:
+            output_dict[debug_layer_names[0]] = outputs
+        else:
+            for layer_name, output in zip(debug_layer_names, outputs[:len(debug_layer_names)]):
+                output_dict[layer_name] = output
+        for layer_name, output in zip(debug_masks, outputs[len(debug_layer_names):]):
+            if 'masks' not in output_dict:
+                output_dict['masks'] = {}
+            output_dict['masks'][layer_name] = output
+        self._output_debug_info(output_dict, epoch)
+
+    def _output_debug_info(self, output_dict: Dict[str, numpy.array], epoch: int):
+        logger.info("Outputting debug results")
+        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
+        overall_debug_info = self._overall_debug_output(output_dict)
+        debug_output_file.write(overall_debug_info)
+        for instance_index, instance in enumerate(self.debug_dataset.instances):
+            instance_output_dict = {}
+            for layer_name, output in output_dict.items():
+                instance_output_dict[layer_name] = output[instance_index]
+            instance_info = self._instance_debug_output(instance, instance_output_dict)
+            debug_output_file.write(instance_info + '\n')
+        debug_output_file.close()
 
     def _pre_epoch_hook(self, epoch: int):
         """
@@ -315,34 +353,47 @@ class Trainer:
         """
         pass
 
-    def _build_debug_model(self, debug_layer_names: List[str]):
+    def _build_debug_model(self, debug_layer_names: List[str], debug_masks: List[str]):
         """
         Here we build a very simple kind of debug model: one that takes the same inputs as
-        self.model, and runs the model up to some particular layer, and outputs the values at that
-        layer.
+        self.model, and runs the model up to some particular layers, and outputs the values at
+        those layers.
+
+        In addition, you can optionally specify some number of layers for which you want to output
+        the mask computed by that layer.
 
         If you want something more complicated, override this method.
         """
         debug_inputs = self.model.get_input_at(0)  # list of all input_layers
-        debug_outputs = []
+        debug_output_dict = {}
         layer_names = set(debug_layer_names)
+        mask_names = set(debug_masks)
         for layer in self.model.layers:
             if layer.name in layer_names:
-                debug_outputs.append(layer.get_output_at(0))
+                debug_output_dict[layer.name] = layer.get_output_at(0)
                 layer_names.remove(layer.name)
-        if len(layer_names) != 0:
-            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names))
-        debug_model = Model(input=debug_inputs, output=debug_outputs)
-        return debug_model
+            if layer.name in mask_names:
+                mask = OutputMask()(layer.get_output_at(0))
+                debug_output_dict['mask_for_' + layer.name] = mask
+                mask_names.remove(layer.name)
+        if len(layer_names) != 0 or len(mask_names):
+            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names + mask_names))
+        # The outputs need to be in the same order as `debug_layer_names`, or downstream code will
+        # have issues.
+        debug_outputs = [debug_output_dict[name] for name in debug_layer_names]
+        debug_outputs.extend([debug_output_dict['mask_for_' + name] for name in debug_masks])
+        return DeepQaModel(input=debug_inputs, output=debug_outputs)
 
-    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], outputs, epoch: int):
+    def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str:
+        # pylint: disable=unused-argument
+        return "Number of instances: %d\n" % len(self.debug_dataset.instances)
+
+    def _instance_debug_output(self, instance: Instance, outputs: Dict[str, numpy.array]) -> str:
         """
-        We can build a simple debug model for you given just some layer names, and we can read some
-        debug data.  We can even run the debug model and give you its output.  But if we know
-        nothing about your model, we can't really display or save the output of the debug model for
-        you.  Sorry.
-
-        The outputs parameter is the model output at each of the layers in layer_names.
+        This method takes an Instance and all of the debug outputs for that Instance, puts them
+        into some human-readable format, and returns that as a string.  `outputs` will have one key
+        corresponding to each item in the `debug.layer_names` parameter given to the constructor of
+        this object.
 
         The default here is `pass` instead of `raise NotImplementedError`, because you're not
         required to implement debugging for your model.
@@ -382,7 +433,7 @@ class Trainer:
             model_file = "%s_weights.h5" % self.model_prefix
         logger.info("Loading weights from file %s", model_file)
         self.model.load_weights(model_file)
-        self.model.summary()
+        self.model.summary(show_masks=self.show_summary_with_masking)
         self._load_layers()
         self._load_auxiliary_files()
         self._set_params_from_model()

@@ -46,7 +46,6 @@ class TestPositionalEncoder:
         np.testing.assert_array_almost_equal(expected_output, actual_output)
 
     def numpy_positional_encoder(self, x, mask=None):
-
         if mask is None:
             ones_like_x = np.ones_like(x)
         else:

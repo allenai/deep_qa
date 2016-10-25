@@ -1,9 +1,8 @@
 from typing import Dict, Any
 from overrides import overrides
 
-from keras.layers import TimeDistributed
-
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
+from ...layers.wrappers import EncoderWrapper
 from .memory_network import MemoryNetworkSolver
 
 
@@ -55,7 +54,7 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
         # for a closer re-implementation of prior memory networks.
         answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
                 input_shape=(self.num_options, self.max_answer_length), name_prefix="answer")
-        answer_encoder = TimeDistributed(self._get_new_encoder(), name="answer_encoder")
+        answer_encoder = EncoderWrapper(self._get_new_encoder(), name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
         return ([answer_input_layer],
                 self._get_entailment_model().classify(combined_input, encoded_answers))

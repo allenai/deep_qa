@@ -62,4 +62,4 @@ class DataIndexer:
         return self.reverse_word_index[index]
 
     def get_vocab_size(self):
-        return len(self.word_index) + 1
+        return len(self.word_index)

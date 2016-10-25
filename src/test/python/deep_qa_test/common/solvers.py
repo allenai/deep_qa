@@ -11,6 +11,7 @@ from .constants import VALIDATION_FILE
 from .constants import VALIDATION_BACKGROUND
 from .constants import SNLI_FILE
 
+
 def get_solver(cls, additional_arguments=None):
     params = {}
     params['model_serialization_prefix'] = TEST_DIR
@@ -122,7 +123,7 @@ def write_question_answer_memory_network_files():
     with codecs.open(VALIDATION_BACKGROUND, 'w', 'utf-8') as validation_background:
         validation_background.write('1\tvb1\tvb2\n')
     with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
-        train_file.write('1\ta b e i d\tanswer1###answer2\t0\n')
+        train_file.write('1\ta b e i d\tanswer 1###answer2\t0\n')
         train_file.write('2\ta b c d\tanswer3###answer4\t1\n')
         train_file.write('3\te d w f d s a\tanswer5###answer6###answer9\t2\n')
         train_file.write('4\te fj k w q\tanswer7###answer8\t0\n')

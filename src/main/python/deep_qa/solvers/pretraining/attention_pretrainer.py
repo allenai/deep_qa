@@ -5,11 +5,11 @@ from overrides import overrides
 
 from keras import backend as K
 from keras.layers import merge, Dropout, TimeDistributed
-from keras.models import Model
 
 from ...common.checks import ConfigurationError
-from ...training.pretraining.text_pretrainer import TextPretrainer
 from ...data.dataset import TextDataset
+from ...training.models import DeepQaModel
+from ...training.pretraining.text_pretrainer import TextPretrainer
 from ..with_memory.memory_network import MemoryNetworkSolver
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -106,6 +106,7 @@ class AttentionPretrainer(TextPretrainer):
                                    mode=merge_mode,
                                    output_shape=(self.trainer.max_knowledge_length + 2,
                                                  self.trainer.max_sentence_length),
+                                   output_mask=lambda mask_outs: mask_outs[2],
                                    name='concat_sentence_with_background_%d' % 0)
 
         regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
@@ -115,4 +116,4 @@ class AttentionPretrainer(TextPretrainer):
         attention_weights = knowledge_selector(regularized_merged_rep)
 
         input_layers = [sentence_input_layer, background_input_layer]
-        return Model(input=input_layers, output=attention_weights)
+        return DeepQaModel(input=input_layers, output=attention_weights)

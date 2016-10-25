@@ -1,12 +1,13 @@
 from typing import Any, Dict
 from overrides import overrides
 
-from keras import backend as K
-from keras.layers import Dense, Dropout, Lambda, TimeDistributed
-from keras.models import Model
+from keras.layers import Dense, Dropout
 
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
+from ...layers.wrappers import EncoderWrapper
+from ...layers.entailment_models import AnswerSimilaritySoftmax
 from ...training.text_trainer import TextTrainer
+from ...training.models import DeepQaModel
 
 
 class QuestionAnswerSolver(TextTrainer):
@@ -43,20 +44,6 @@ class QuestionAnswerSolver(TextTrainer):
                                       activation='linear',
                                       name='question_projection')
 
-    @staticmethod
-    def _tile_projection(inputs):
-        """
-        This is used to do some fancy footwork in to compare a question encoding to a number of
-        answer option encodings.
-        """
-        # We need to tile the projected_input so that we can easily do a dot product with the
-        # encoded_answers.  This follows the logic in knowledge_selectors.tile_sentence_encoding.
-        answers, projected = inputs
-        # Shape: (num_options, batch_size, answer_dim)
-        ones = K.permute_dimensions(K.ones_like(answers), [1, 0, 2])
-        # Shape: (batch_size, num_options, answer_dim)
-        return K.permute_dimensions(ones * projected, [1, 0, 2])
-
     @overrides
     def _build_model(self):
         """
@@ -81,7 +68,7 @@ class QuestionAnswerSolver(TextTrainer):
         # padding lengths...  If you really want to use the same LSTM for both questions and
         # answers, pad the answers to the same dimension as the questions, replacing
         # self.max_answer_length with self.max_sentence_length everywhere.
-        answer_encoder = TimeDistributed(question_encoder, name="answer_encoder")
+        answer_encoder = EncoderWrapper(question_encoder, name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
 
         # Then we pass the question through some hidden (dense) layers.
@@ -90,24 +77,12 @@ class QuestionAnswerSolver(TextTrainer):
             hidden_input = layer(hidden_input)
         projected_input = self.projection_layer(hidden_input)
 
-        # Lastly, we compare the similarity of the question to the answer options.
+        # Lastly, we compare the similarity of the question to the answer options.  Note that this
+        # layer has no parameters, so it doesn't need to be put into self._init_layers().
+        softmax_output = AnswerSimilaritySoftmax(name='answer_similarity_softmax')([projected_input,
+                                                                                    encoded_answers])
 
-        # To make the similarity dot product more efficient, we tile the input first, so we can
-        # just do an element-wise product and a sum.  Shape: (batch_size, num_options, answer_dim),
-        # where the (batch_size, answer_dim) projected input has been replicated num_options times.
-        # Note that these lambda layers have no parameters, so they don't need to be put into
-        # self._init_layers().
-        tile_layer = Lambda(self._tile_projection,
-                            output_shape=lambda input_shapes: input_shapes[0],
-                            name='tile_question_encoding')
-        tiled_projected_input = tile_layer([encoded_answers, projected_input])
-        similarity_layer = Lambda(lambda x: K.softmax(K.sum(x[0] * x[1], axis=2)),
-                                  output_shape=lambda input_shapes: (input_shapes[0][0], input_shapes[0][1]),
-                                  name='answer_similarity_softmax')
-        softmax_output = similarity_layer([tiled_projected_input, encoded_answers])
-
-        model = Model(input=[question_input_layer, answer_input_layer], output=softmax_output)
-        return model
+        return DeepQaModel(input=[question_input_layer, answer_input_layer], output=softmax_output)
 
     def _instance_type(self):
         return QuestionAnswerInstance

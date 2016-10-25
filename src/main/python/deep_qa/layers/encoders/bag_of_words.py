@@ -36,8 +36,10 @@ class BOWEncoder(Layer):
             # of type float32 even if mask remains int8, tensorflow would complain. Let's cast it
             # explicitly to remain compatible with tf.
             float_mask = K.cast(mask, 'float32')
-            # Expanding dims of the denominator to make it the same shape as the numerator.
-            weighted_mask = float_mask / K.expand_dims(K.sum(float_mask, axis=1))  # (samples, num_words)
+            # Expanding dims of the denominator to make it the same shape as the numerator, epsilon added to avoid
+            # division by zero.
+            # (samples, num_words)
+            weighted_mask = float_mask / K.expand_dims(K.sum(float_mask, axis=1) + K.epsilon())
             weighted_mask = K.expand_dims(weighted_mask)  # (samples, num_words, 1)
             return K.sum(x * weighted_mask, axis=1)  # (samples, word_dim)
 

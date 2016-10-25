@@ -2,12 +2,12 @@ from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import Input, Dense, Dropout, merge
-from keras.models import Model
 from keras.regularizers import l2
 
 from ...data.instances.logical_form_instance import LogicalFormInstance
 from ...layers.encoders.tree_composition_lstm import TreeCompositionLSTM
 from ...training.text_trainer import TextTrainer
+from ...training.models import DeepQaModel
 
 
 class TreeLSTMSolver(TextTrainer):
@@ -65,8 +65,7 @@ class TreeLSTMSolver(TextTrainer):
         output_probabilities = softmax_layer(projection_layer(regularized_lstm_out))
 
         # Step 6: Define crossentropy against labels as the loss and compile the model.
-        model = Model(input=[transitions_input, logical_form_input_layer], output=output_probabilities)
-        return model
+        return DeepQaModel(input=[transitions_input, logical_form_input_layer], output=output_probabilities)
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:

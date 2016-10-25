@@ -2,13 +2,13 @@ from copy import deepcopy
 from typing import Any, Dict, List
 from overrides import overrides
 
-
+import numpy
 from keras import backend as K
 from keras.layers import Dropout, merge
-from keras.models import Model
 
 from ...common.params import get_choice_with_default
-from ...data.dataset import Dataset, TextDataset
+from ...data.dataset import TextDataset
+from ...data.instances.background_instance import BackgroundInstance
 from ...data.instances.true_false_instance import TrueFalseInstance
 from ...layers.knowledge_selectors import selectors
 from ...layers.memory_updaters import updaters
@@ -16,6 +16,7 @@ from ...layers.entailment_models import entailment_models, entailment_input_comb
 from ...layers.knowledge_combiners import knowledge_combiners
 from ...layers.knowledge_encoders import knowledge_encoders
 from ...training.text_trainer import TextTrainer
+from ...training.models import DeepQaModel
 
 
 # TODO(matt): make this class abstract, and make a TrueFalseMemoryNetwork subclass.
@@ -84,6 +85,11 @@ class MemoryNetworkSolver(TextTrainer):
         self.entailment_combiner_params = params.pop('entailment_input_combiner', {})
         self.entailment_model_params = params.pop('entailment_model', {})
 
+        # Upper limit on number of background sentences in the training data. Ignored during
+        # testing (we use the value set at training time, either from this parameter or from a
+        # loaded model).  If this is not set, we'll calculate a max length from the data.
+        self.max_knowledge_length = params.pop('max_knowledge_length', None)
+
         # Now that we've processed all of our parameters, we can call the superclass constructor.
         # The superclass will check that there are no unused parameters, so we need to call this
         # _after_ we've popped everything we use.
@@ -102,7 +108,6 @@ class MemoryNetworkSolver(TextTrainer):
         self.knowledge_encoder = None
         self.entailment_input_combiner = None
         self.entailment_model = None
-        self.max_knowledge_length = None
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
@@ -372,10 +377,29 @@ class MemoryNetworkSolver(TextTrainer):
                                                            layer_outs[2]],
                                                           axis=knowledge_axis)
 
+            # This merge mask is generating a mask of shape (samples, knowledge_length) for input to the
+            # knowledge selector. This happens even though the encoded_question and current_memory have no mask,
+            # which is why we only deal with last input variables.
+            def merge_mask(mask_outs):
+
+                if self.has_multiple_backgrounds:
+                    return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, :, 0]),
+                                                        dim=knowledge_axis),
+                                          K.expand_dims(K.zeros_like(mask_outs[2][:, :, 0]),
+                                                        dim=knowledge_axis),
+                                          mask_outs[2]], axis=knowledge_axis)
+                else:
+                    return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, 0]),
+                                                        dim=knowledge_axis),
+                                          K.expand_dims(K.zeros_like(mask_outs[2][:, 0]),
+                                                        dim=knowledge_axis),
+                                          mask_outs[2]], axis=knowledge_axis)
+
             merged_shape = self._get_merged_background_shape()
             merged_encoded_rep = merge([encoded_question, current_memory, encoded_knowledge],
                                        mode=merge_mode,
                                        output_shape=merged_shape,
+                                       output_mask=merge_mask,
                                        name='concat_memory_and_question_with_background_%d' % i)
 
             # Regularize it
@@ -434,40 +458,46 @@ class MemoryNetworkSolver(TextTrainer):
         # calling method.
         input_layers = [question_input_layer, knowledge_input_layer]
         input_layers.extend(extra_entailment_inputs)
-        memory_network = Model(input=input_layers, output=entailment_output)
-        return memory_network
+        return DeepQaModel(input=input_layers, output=entailment_output)
 
     @overrides
-    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], outputs, epoch: int):
-        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
-        final_scores = None
-        attention_outputs = []
-        for i, layer_name in enumerate(layer_names):
-            if layer_name.endswith('softmax'):
-                final_scores = outputs[i]
-            elif 'knowledge_selector' in layer_name:
-                attention_outputs.append(outputs[i])
-        assert final_scores is not None, "You must include the softmax layer in the debug output!"
-        assert len(attention_outputs) > 0, "No attention layer specified; what are you debugging?"
-        # Collect values from all hops of attention for a given instance into attention_values.
-        for instance, score, *attention_values in zip(dataset.instances, final_scores, *attention_outputs):
-            sentence = instance.text
-            background_info = instance.background
-            label = instance.label
-            positive_score = score[1]  # Only get p(t|x)
-            # Remove the attention values for padding
-            attention_values = [values[-len(background_info):] for values in attention_values]
-            print("Sentence: %s" % sentence, file=debug_output_file)
-            print("Label: %s" % label, file=debug_output_file)
-            print("Assigned score: %.4f" % positive_score, file=debug_output_file)
-            print("Weights on background:", file=debug_output_file)
-            for i, background_i in enumerate(background_info):
-                if i >= len(attention_values[0]):
-                    # This happens when IndexedBackgroundInstance.pad() ignored some
-                    # sentences (at the end). Let's ignore them too.
-                    break
-                all_hops_attention_i = ["%.4f" % values[i] for values in attention_values]
-                print("\t%s\t%s" % (" ".join(all_hops_attention_i), background_i),
-                      file=debug_output_file)
-            print(file=debug_output_file)
-        debug_output_file.close()
+    def _instance_debug_output(self, instance: BackgroundInstance, outputs: Dict[str, numpy.array]) -> str:
+        result = ""
+        result += "Instance: %s\n" % str(instance)
+        result += "Label: %s\n" % instance.label
+        final_score = [output for layer_name, output in outputs.items() if layer_name.endswith('softmax')]
+        if final_score:
+            result += "Assigned score: %s\n" % str(final_score[0])
+        result += self._render_layer_outputs(instance, outputs)
+        return result
+
+    def _render_layer_outputs(self, instance: BackgroundInstance, outputs: Dict[str, numpy.array]) -> str:
+        result = ""
+        if 'entailment_scorer' in outputs:
+            result += "Entailment score: %.4f\n" % outputs['entailment_scorer']
+        if any('knowledge_selector' in layer_name for layer_name in outputs.keys()):
+            result += "Weights on background:\n"
+            result += self._render_attention(instance, outputs)
+        return result
+
+    @staticmethod
+    def _render_attention(instance: BackgroundInstance, outputs: Dict[str, numpy.array], prefix: str='\t') -> str:
+        background_info = instance.background
+        attention = [output for name, output in outputs.items() if 'knowledge_selector' in name]
+        result = ""
+        for i in range(len(attention[0])):
+            if i >= len(background_info):
+                # This happens when IndexedBackgroundInstance.pad() ignored some
+                # sentences (at the end). Let's ignore them too.
+                background_str = '[empty]'
+            else:
+                background_str = background_info[i]
+            if 'background_input' in outputs:
+                input_sequence = outputs['background_input'][i]
+                background_str += '\t' + str(input_sequence)
+            if 'knowledge_encoder' in outputs:
+                encoding = outputs['knowledge_encoder'][i]
+                background_str += '\t' + str(encoding)
+            attention_i = ["%.4f" % values[i] for values in attention]
+            result += prefix + "%s\t%s\n" % (" ".join(attention_i), background_str)
+        return result

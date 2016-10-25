@@ -1,9 +1,11 @@
 from typing import Any, Dict, List
 from overrides import overrides
 
+import numpy
 from keras.layers import TimeDistributed
-from ...data.dataset import Dataset
 from ...data.instances.true_false_instance import TrueFalseInstance
+from ...data.instances.multiple_true_false_instance import MultipleTrueFalseInstance
+from ...layers.wrappers import EncoderWrapper
 from .memory_network import MemoryNetworkSolver
 
 
@@ -29,15 +31,15 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
     has_multiple_backgrounds = True
 
     def __init__(self, params: Dict[str, Any]):
-        # We don't have any parameters to set that are specific to this class, so we just call the
-        # superclass constructor.
+        # Upper limit on number of options per question in the training data. Ignored during
+        # testing (we use the value set at training time, either from this parameter or from a
+        # loaded model).  If this is not set, we'll calculate a max length from the data.
+        self.num_options = params.pop('num_options', None)
+
         super(MultipleTrueFalseMemoryNetworkSolver, self).__init__(params)
 
         # Now we set some class-specific member variables.
         self.entailment_choices = ['multiple_choice_mlp']
-
-        # And declare some model-specific variables that will be set later.
-        self.num_options = None
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
@@ -77,7 +79,7 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
         # actually work as expected.  There are currently some Keras bugs stopping those tests from
         # working, though.
         base_sentence_encoder = super(MultipleTrueFalseMemoryNetworkSolver, self)._get_sentence_encoder()
-        return TimeDistributed(base_sentence_encoder, name="timedist_%s" % base_sentence_encoder.name)
+        return EncoderWrapper(base_sentence_encoder, name="timedist_%s" % base_sentence_encoder.name)
 
     @overrides
     def _get_knowledge_axis(self):
@@ -87,7 +89,7 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
     @overrides
     def _get_knowledge_selector(self, layer_num: int):
         base_selector = super(MultipleTrueFalseMemoryNetworkSolver, self)._get_knowledge_selector(layer_num)
-        return TimeDistributed(base_selector, name="timedist_%s" % base_selector.name)
+        return EncoderWrapper(base_selector, name="timedist_%s" % base_selector.name)
 
     @overrides
     def _get_knowledge_combiner(self, layer_num: int):
@@ -110,50 +112,30 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
         return dataset.to_question_dataset()
 
     @overrides
-    def _handle_debug_output(self, dataset: Dataset, layer_names: List[str], outputs, epoch: int):
-        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
-        all_question_scores = None
-        all_entailment_scores = None
-        all_question_attention_outputs = []
-        for i, layer_name in enumerate(layer_names):
-            if layer_name.endswith('softmax'):
-                all_question_scores = outputs[i]
-            elif 'knowledge_selector' in layer_name:
-                all_question_attention_outputs.append(outputs[i])
-            elif layer_name == 'entailment_scorer':
-                all_entailment_scores = outputs[i]
-        assert all_question_scores is not None, "You must include the softmax layer in the debug output!"
-        assert len(all_question_attention_outputs) > 0, "No attention layer specified; what are you debugging?"
-        # Collect values from all hops of attention for a given instance into attention_values.
-        for instance_index, instance in enumerate(dataset.instances):
-            question_scores = all_question_scores[instance_index]
-            question_attention_values = [attention[instance_index] for attention in all_question_attention_outputs]
-            if all_entailment_scores is not None:
-                entailment_scores = all_entailment_scores[instance_index]
-            label = instance.label
-            print("Correct answer: %s" % label, file=debug_output_file)
-            for option_id, option_instance in enumerate(instance.options):
-                option_sentence = option_instance.instance.text
-                option_background_info = option_instance.background
-                option_score = question_scores[option_id]
-                # Remove the attention values for padding
-                option_attention_values = [hop_attention_values[option_id]
-                                           for hop_attention_values in question_attention_values]
-                option_attention_values = [values[-len(option_background_info):]
-                                           for values in option_attention_values]
-                print("\tOption %d: %s" % (option_id, option_sentence), file=debug_output_file)
-                print("\tAssigned score: %.4f" % option_score, file=debug_output_file)
-                if all_entailment_scores is not None:
-                    option_entailment_score = entailment_scores[option_id]
-                    print("\tEntailment score: %.4f" % option_entailment_score, file=debug_output_file)
-                print("\tWeights on background:", file=debug_output_file)
-                for i, background_i in enumerate(option_background_info):
-                    if i >= len(option_attention_values[0]):
-                        # This happens when IndexedBackgroundInstance.pad() ignored some
-                        # sentences (at the end). Let's ignore them too.
-                        break
-                    all_hops_attention_i = ["%.4f" % values[i] for values in option_attention_values]
-                    print("\t\t%s\t%s" % (" ".join(all_hops_attention_i), background_i),
-                          file=debug_output_file)
-                print(file=debug_output_file)
-        debug_output_file.close()
+    def _render_layer_outputs(self, instance: MultipleTrueFalseInstance, outputs: Dict[str, numpy.array]) -> str:
+        result = ""
+        for option_index, option_instance in enumerate(instance.options):
+            option_sentence = option_instance.instance.text
+            result += "\tOption %d: %s\n" % (option_index, option_sentence)
+            if 'entailment_scorer' in outputs:
+                result += "\tEntailment score: %.4f\n" % outputs['entailment_scorer'][option_index]
+            if any('knowledge_selector' in layer_name for layer_name in outputs.keys()):
+                result += "\nWeights on background:\n"
+                # In order to use the _render_attention() method in MemoryNetworkSolver, we need
+                # to pass only the output that's relevant to this option.  So we create a new dict.
+                option_outputs = {}
+                for layer_name, output in outputs.items():
+                    if self._is_attention_layer(layer_name):
+                        option_outputs[layer_name] = output[option_index]
+                result += self._render_attention(option_instance, option_outputs, '\t\t')
+        return result
+
+    @staticmethod
+    def _is_attention_layer(layer_name: str) -> bool:
+        if 'knowledge_selector' in layer_name:
+            return True
+        if layer_name == 'background_input':
+            return True
+        if layer_name == 'knowledge_encoder':
+            return True
+        return False

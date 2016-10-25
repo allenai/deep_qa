@@ -2,10 +2,10 @@ from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import Dense, Dropout
-from keras.models import Model
 
 from ...data.instances.true_false_instance import TrueFalseInstance
 from ...training.text_trainer import TextTrainer
+from ...training.models import DeepQaModel
 
 
 class TrueFalseSolver(TextTrainer):
@@ -53,8 +53,7 @@ class TrueFalseSolver(TextTrainer):
         output_probabilities = softmax_layer(projection_layer(regularized_sentence_encoding))
 
         # Step 4: Define crossentropy against labels as the loss.
-        model = Model(input=input_layer, output=output_probabilities)
-        return model
+        return DeepQaModel(input=input_layer, output=output_probabilities)
 
     def _instance_type(self):
         return TrueFalseInstance

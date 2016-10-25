@@ -7,14 +7,15 @@ Network hops.
 
 from collections import OrderedDict
 from typing import Any, Dict
-from keras.layers import TimeDistributed
 from keras.layers.wrappers import Bidirectional
 from keras.layers.recurrent import GRU
+
+from .wrappers import EncoderWrapper
 
 
 class IndependentKnowledgeEncoder:
     '''
-    An Independent KnowledgeEncoder simply wraps Keras' TimeDistributed wrapper.
+    An Independent KnowledgeEncoder simply wraps EncoderWrapper around the question encoder.
     Given a question encoder, which takes (samples, sentence_length, embedding_dim), we
     want to be able to use the question encoder on the background sentences which accompany the
     question, of shape (samples, knowledge_length, sentence_length, embedding_dim).
@@ -26,7 +27,7 @@ class IndependentKnowledgeEncoder:
         self.name = params.pop('name')
 
     def __call__(self, knowledge_embedding):
-        return TimeDistributed(self.question_encoder, name=self.name)(knowledge_embedding)
+        return EncoderWrapper(self.question_encoder, name=self.name)(knowledge_embedding)
 
 
 class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
@@ -37,7 +38,7 @@ class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
     allow the order of the background knowledge to be relevant to the downstream solver. This implementation
     follows the Fusion layer in the Dynamic Memory Networks paper: https://arxiv.org/pdf/1603.01417v1.pdf.
 
-    First, we apply the TimeDistributed question encoder:
+    First, we apply the wrapped question encoder:
     (samples, knowledge_length, sentence_length, embedding_dim) => (samples, knowlege_length, embedding_dim).
 
     Then, we run the encoded background sentence vectors through  a BiDirectional GRU, where the time
@@ -65,7 +66,7 @@ class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
                                     merge_mode='sum', name='{}_bi_gru'.format(self.name))
         if self.has_multiple_backgrounds:
             # pylint: disable=redefined-variable-type
-            self.bi_gru = TimeDistributed(self.bi_gru, name='time_distributed_{}'.format(self.name))
+            self.bi_gru = EncoderWrapper(self.bi_gru, name='wrapped_{}'.format(self.name))
 
     def __call__(self, knowledge_embedding):
 

@@ -1,22 +1,27 @@
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use,invalid-name
+
+from unittest import TestCase
+import os
+import shutil
 
 import gzip
 import numpy
 import pytest
 
-from pyfakefs import fake_filesystem_unittest
-
 from deep_qa.data.embeddings import PretrainedEmbeddings
 from deep_qa.data.data_indexer import DataIndexer
+from ..common.constants import TEST_DIR
 
-class TestPretrainedEmbeddings(fake_filesystem_unittest.TestCase):
-    # pylint: disable=invalid-name
+class TestPretrainedEmbeddings(TestCase):
     def setUp(self):
-        self.setUpPyfakefs()
+        os.mkdir(TEST_DIR)
+
+    def tearDown(self):
+        shutil.rmtree(TEST_DIR)
 
     def test_get_embedding_layer_uses_correct_embedding_size(self):
         data_indexer = DataIndexer()
-        embeddings_filename = "/embeddings.gz"
+        embeddings_filename = TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -31,7 +36,7 @@ class TestPretrainedEmbeddings(fake_filesystem_unittest.TestCase):
 
     def test_get_embedding_layer_crashes_when_embedding_size_is_one(self):
         data_indexer = DataIndexer()
-        embeddings_filename = "/embeddings.gz"
+        embeddings_filename = TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("dimensionality 3\n".encode('utf-8'))
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
@@ -43,7 +48,7 @@ class TestPretrainedEmbeddings(fake_filesystem_unittest.TestCase):
         data_indexer = DataIndexer()
         data_indexer.add_word_to_index("word1")
         data_indexer.add_word_to_index("word2")
-        embeddings_filename = "/embeddings.gz"
+        embeddings_filename = TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 \n".encode('utf-8'))
@@ -54,7 +59,7 @@ class TestPretrainedEmbeddings(fake_filesystem_unittest.TestCase):
     def test_get_embedding_layer_actually_initializes_word_vectors_correctly(self):
         data_indexer = DataIndexer()
         data_indexer.add_word_to_index("word")
-        embeddings_filename = "/embeddings.gz"
+        embeddings_filename = TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
         embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, data_indexer)
@@ -64,7 +69,7 @@ class TestPretrainedEmbeddings(fake_filesystem_unittest.TestCase):
     def test_get_embedding_layer_initializes_unseen_words_randomly_not_zero(self):
         data_indexer = DataIndexer()
         data_indexer.add_word_to_index("word2")
-        embeddings_filename = "/embeddings.gz"
+        embeddings_filename = TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
         embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, data_indexer)

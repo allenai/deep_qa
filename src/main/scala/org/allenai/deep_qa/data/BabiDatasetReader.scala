@@ -73,10 +73,14 @@ object BabiDatasetReader {
   def main(args: Array[String]) {
     val fileUtil = new FileUtil
     val reader = new BabiDatasetReader(fileUtil)
-    val dataset = reader.readFile("/Users/markn/allen_ai/data/facebook/babi/en/qa8_lists-sets_train.txt")
+    val dataset = reader.readFile("/home/mattg/data/facebook/babi_v1.0/en/qa1_single-supporting-fact_train.txt")
+    fileUtil.mkdirs("/home/mattg/data/facebook/babi_v1.0/processed/")
     dataset.writeToFiles(
-      Seq("/Users/markn/allen_ai/data/facebook/train.tsv", "/Users/markn/allen_ai/data/facebook/train_background.tsv"),
-      true,
+      Seq(
+        "/home/mattg/data/facebook/babi_v1.0/processed/task_1_train.tsv",
+        "/home/mattg/data/facebook/babi_v1.0/processed/task_1_background.tsv"
+      ),
+      true,  // withIndices
       fileUtil
     )
   }

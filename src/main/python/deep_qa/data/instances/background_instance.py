@@ -19,7 +19,17 @@ class BackgroundInstance(TextInstance):
         self.background = background
 
     def __str__(self):
-        return 'BackgroundInstance(' + str(self.instance) + ', ' + str(self.background) + ')'
+        string = 'BackgroundInstance(\n   '
+        string += str(self.instance)
+        string += ',\n'
+        string += '   [\n'
+        for background in self.background:
+            string += '      '
+            string += background
+            string += ',\n'
+        string += '   ]\n'
+        string += ')'
+        return string
 
     @overrides
     def words(self):
