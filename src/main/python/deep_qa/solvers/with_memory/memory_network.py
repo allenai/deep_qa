@@ -381,19 +381,16 @@ class MemoryNetworkSolver(TextTrainer):
             # knowledge selector. This happens even though the encoded_question and current_memory have no mask,
             # which is why we only deal with last input variables.
             def merge_mask(mask_outs):
-
                 if self.has_multiple_backgrounds:
-                    return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, :, 0]),
-                                                        dim=knowledge_axis),
-                                          K.expand_dims(K.zeros_like(mask_outs[2][:, :, 0]),
-                                                        dim=knowledge_axis),
-                                          mask_outs[2]], axis=knowledge_axis)
+                    return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, :, 0]), dim=knowledge_axis),
+                                          K.expand_dims(K.zeros_like(mask_outs[2][:, :, 0]), dim=knowledge_axis),
+                                          mask_outs[2]],
+                                         axis=knowledge_axis)
                 else:
-                    return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, 0]),
-                                                        dim=knowledge_axis),
-                                          K.expand_dims(K.zeros_like(mask_outs[2][:, 0]),
-                                                        dim=knowledge_axis),
-                                          mask_outs[2]], axis=knowledge_axis)
+                    return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), dim=knowledge_axis),
+                                          K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), dim=knowledge_axis),
+                                          mask_outs[2]],
+                                         axis=knowledge_axis)
 
             merged_shape = self._get_merged_background_shape()
             merged_encoded_rep = merge([encoded_question, current_memory, encoded_knowledge],

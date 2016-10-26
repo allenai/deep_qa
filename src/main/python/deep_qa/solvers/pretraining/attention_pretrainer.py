@@ -8,6 +8,7 @@ from keras.layers import merge, Dropout, TimeDistributed
 
 from ...common.checks import ConfigurationError
 from ...data.dataset import TextDataset
+from ...layers.wrappers import EncoderWrapper
 from ...training.models import DeepQaModel
 from ...training.pretraining.text_pretrainer import TextPretrainer
 from ..with_memory.memory_network import MemoryNetworkSolver
@@ -93,7 +94,7 @@ class AttentionPretrainer(TextPretrainer):
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
 
-        background_encoder = TimeDistributed(sentence_encoder, name='background_encoder')
+        background_encoder = EncoderWrapper(sentence_encoder, name='background_encoder')
         encoded_sentence = sentence_encoder(sentence_embedding)  # (samples, word_dim)
         encoded_background = background_encoder(background_embedding)  # (samples, background_len, word_dim)
 
@@ -101,12 +102,18 @@ class AttentionPretrainer(TextPretrainer):
                                                        K.expand_dims(layer_outs[1], dim=1),
                                                        layer_outs[2]],
                                                       axis=1)
+        def merge_mask(mask_outs):
+            return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), dim=1),
+                                  K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), dim=1),
+                                  mask_outs[2]],
+                                 axis=1)
+
         # We don't generate a memory representation here so we just pass another encoded_sentence.
         merged_encoded_rep = merge([encoded_sentence, encoded_sentence, encoded_background],
                                    mode=merge_mode,
                                    output_shape=(self.trainer.max_knowledge_length + 2,
-                                                 self.trainer.max_sentence_length),
-                                   output_mask=lambda mask_outs: mask_outs[2],
+                                                 self.trainer.embedding_size),
+                                   output_mask=merge_mask,
                                    name='concat_sentence_with_background_%d' % 0)
 
         regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
