@@ -17,6 +17,9 @@ class Pretrainer(Trainer):
     the Trainer as a member variable!  If it is not, you could easily think you're pretraining a
     layer, but not actually changing the weights used in the trainer itself, because the Trainer
     will just re-build that layer with new weights during its training step.
+
+    Another important point: you really want to avoid name collisions between layers in your
+    pre-training model and layers in your actual model, unless they are actually the _same_ layer.
     """
     # While it's not great, we need access to a few of the internals of the other Trainer, so we'll
     # disable protected access checks.
@@ -33,9 +36,16 @@ class Pretrainer(Trainer):
     def on_finished(self):
         """
         This method is called when all of the pre-training is finished.  You can do whatever clean
-        up or whatever you need to here.  Default implementation is a no-op.
+        up or whatever you need to here.
+
+        The default implementation is to clear the `inbound_nodes` and `outbound_nodes` of all of
+        the `Layers` in self.model.  We need to clear these because Keras has some consistency
+        checks in some places, and if there are references to pre-training inputs, you could fail
+        some of those checks.
         """
-        pass
+        for layer in self.model.layers:
+            layer.inbound_nodes.clear()
+            layer.outbound_nodes.clear()
 
     @overrides
     def _prepare_instance(self, instance: Instance, make_batch: bool=True):

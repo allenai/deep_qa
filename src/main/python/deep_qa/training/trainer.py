@@ -377,7 +377,7 @@ class Trainer:
                 debug_output_dict['mask_for_' + layer.name] = mask
                 mask_names.remove(layer.name)
         if len(layer_names) != 0 or len(mask_names):
-            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names + mask_names))
+            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names | mask_names))
         # The outputs need to be in the same order as `debug_layer_names`, or downstream code will
         # have issues.
         debug_outputs = [debug_output_dict[name] for name in debug_layer_names]

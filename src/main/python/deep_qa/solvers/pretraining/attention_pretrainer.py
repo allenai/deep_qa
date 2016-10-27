@@ -8,6 +8,7 @@ from keras.layers import merge, Dropout, TimeDistributed
 
 from ...common.checks import ConfigurationError
 from ...data.dataset import TextDataset
+from ...data.instances import instances
 from ...layers.wrappers import EncoderWrapper
 from ...training.models import DeepQaModel
 from ...training.pretraining.text_pretrainer import TextPretrainer
@@ -39,6 +40,8 @@ class AttentionPretrainer(TextPretrainer):
     def __init__(self, trainer, params: Dict[str, Any]):
         if not isinstance(trainer, MemoryNetworkSolver):
             raise ConfigurationError("The AttentionPretrainer needs a subclass of MemoryNetworkSolver")
+        instance_type = params.pop('instance_type', None)
+        self.__instance_type = instances[instance_type] if instance_type else None
         super(AttentionPretrainer, self).__init__(trainer, params)
         # NOTE: the default here needs to match the default in the KnowledgeSelector classes.
         self._old_hard_attention_setting = self.trainer.knowledge_selector_params.get('hard_selection', False)
@@ -47,6 +50,7 @@ class AttentionPretrainer(TextPretrainer):
 
     @overrides
     def on_finished(self):
+        super(AttentionPretrainer, self).on_finished()
         self.trainer.knowledge_selector_params['hard_selection'] = self._old_hard_attention_setting
         for layer in self.trainer.knowledge_selector_layers.values():
             layer.hard_selection = self._old_hard_attention_setting
@@ -54,7 +58,9 @@ class AttentionPretrainer(TextPretrainer):
     @overrides
     def _instance_type(self):
         # pylint: disable=protected-access
-        return self.trainer._instance_type()
+        if self.__instance_type is None:
+            self.__instance_type = self.trainer._instance_type()
+        return self.__instance_type
 
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
@@ -86,15 +92,15 @@ class AttentionPretrainer(TextPretrainer):
         background_shape = (self.trainer.max_knowledge_length, self.trainer.max_sentence_length)
 
         sentence_input_layer, sentence_embedding = self.trainer._get_embedded_sentence_input(
-                input_shape=sentence_shape, name_prefix="sentence")
+                input_shape=sentence_shape, name_prefix="pretraining_sentence")
         background_input_layer, background_embedding = self.trainer._get_embedded_sentence_input(
-                input_shape=background_shape, name_prefix="background")
+                input_shape=background_shape, name_prefix="pretraining_background")
 
         sentence_encoder = self.trainer._get_sentence_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
 
-        background_encoder = EncoderWrapper(sentence_encoder, name='background_encoder')
+        background_encoder = EncoderWrapper(sentence_encoder, name='pretraining_background_encoder')
         encoded_sentence = sentence_encoder(sentence_embedding)  # (samples, word_dim)
         encoded_background = background_encoder(background_embedding)  # (samples, background_len, word_dim)
 
@@ -114,7 +120,7 @@ class AttentionPretrainer(TextPretrainer):
                                    output_shape=(self.trainer.max_knowledge_length + 2,
                                                  self.trainer.embedding_size),
                                    output_mask=merge_mask,
-                                   name='concat_sentence_with_background_%d' % 0)
+                                   name='pretraining_concat_sentence_with_background_%d' % 0)
 
         regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
         knowledge_selector = self.trainer._get_knowledge_selector(0)
