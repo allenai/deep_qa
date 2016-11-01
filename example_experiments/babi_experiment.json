@@ -1,20 +1,28 @@
 {
-  "solver_class": "QuestionAnswerMemoryNetworkSolver",
+  "solver_class": "SoftmaxMemoryNetworkSolver",
   "model_serialization_prefix": "models/babi_task1/",
   "encoder": {
     "type": "bow"
   },
+  "embedding_size": 20,
   "knowledge_selector": {
     "type": "dot_product"
   },
   "memory_updater": {
     "type": "sum"
   },
-  "entailment_input_combiner": {
-    "type": "memory_only"
-  },
   "debug": {
-    "layer_names": ["embedding", "knowledge_selector_0", "answer_similarity_softmax"],
+    "layer_names": [
+      "embedding_B",
+      "embedding_A0",
+      "embedding_A1",
+      "sentence_input",
+      "sentence_encoder",
+      "background_input",
+      "knowledge_encoder",
+      "knowledge_selector_0",
+      "final_softmax"
+    ],
     "data": "training"
   },
   "num_memory_layers": 1,
