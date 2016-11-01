@@ -10,6 +10,7 @@ from typing import Any, Dict
 from keras.layers.wrappers import Bidirectional
 from keras.layers.recurrent import GRU
 
+from .additive import Additive
 from .wrappers import EncoderWrapper
 
 
@@ -29,6 +30,21 @@ class IndependentKnowledgeEncoder:
 
     def __call__(self, knowledge_embedding):
         return self.encoder_wrapper(knowledge_embedding)
+
+
+class TemporalKnowledgeEncoder(IndependentKnowledgeEncoder):
+    """
+    This class implements the "temporal encoding" from the end-to-end memory networks paper, which
+    adds a learned vector to the encoding of each time step in the memory.
+    """
+    def __init__(self, params: Dict[str, Any]):
+        super(TemporalKnowledgeEncoder, self).__init__(params)
+        self.additive_layer = Additive(name=self.name + "_additive")
+
+    def __call__(self, knowledge_embedding):
+        encoded_knowledge = self.encoder_wrapper(knowledge_embedding)
+        return self.additive_layer(encoded_knowledge)
+
 
 
 class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
@@ -76,4 +92,5 @@ class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
 
 knowledge_encoders = OrderedDict()  # pylint:  disable=invalid-name
 knowledge_encoders['independent'] = IndependentKnowledgeEncoder
+knowledge_encoders['temporal'] = TemporalKnowledgeEncoder
 knowledge_encoders['bi_gru'] = BiGRUKnowledgeEncoder

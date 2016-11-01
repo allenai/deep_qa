@@ -4,6 +4,9 @@
   "encoder": {
     "type": "bow"
   },
+  "knowledge_encoder": {
+    "type": "temporal"
+  },
   "embedding_size": 20,
   "knowledge_selector": {
     "type": "dot_product"
@@ -13,18 +16,12 @@
   },
   "debug": {
     "layer_names": [
-      "embedding_B",
-      "embedding_A0",
-      "embedding_A1",
-      "sentence_input",
-      "sentence_encoder",
-      "background_input",
-      "knowledge_encoder",
       "knowledge_selector_0",
       "final_softmax"
     ],
     "data": "training"
   },
+  "num_epochs": 60,
   "num_memory_layers": 1,
   "patience": 5,
   "train_files": [

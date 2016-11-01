@@ -106,7 +106,7 @@ class MemoryNetworkSolver(TextTrainer):
         self.knowledge_selector_layers = {}
         self.knowledge_combiner_layers = {}
         self.memory_updater_layers = {}
-        self.knowledge_encoder = None
+        self.knowledge_encoders = {}
         self.entailment_input_combiner = None
         self.entailment_model = None
 
@@ -172,15 +172,15 @@ class MemoryNetworkSolver(TextTrainer):
         # pylint: disable=no-self-use
         return 1
 
-    def _get_knowledge_encoder(self):
+    def _get_knowledge_encoder(self, name='knowledge_encoder'):
         '''
         Instantiates a new KnowledgeEncoder. This can be overridden as in the MultipleChoiceMN case,
         we would pass is_multiple_choice=True, so that any post-processing after the background has
         been encoded is TimeDistributed across the possible answer options.
         '''
-        if self.knowledge_encoder is None:
-            self.knowledge_encoder = self._get_new_knowledge_encoder()
-        return self.knowledge_encoder
+        if name not in self.knowledge_encoders:
+            self.knowledge_encoders[name] = self._get_new_knowledge_encoder(name=name)
+        return self.knowledge_encoders[name]
 
     def _get_new_knowledge_encoder(self, name='knowledge_encoder'):
         # The code that follows would be destructive to self.knowledge_encoder_params (lots of

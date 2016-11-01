@@ -31,6 +31,7 @@ class SoftmaxMemoryNetworkSolver(MemoryNetworkSolver):
         super(SoftmaxMemoryNetworkSolver, self).__init__(params)
         self.name = "SoftmaxMemoryNetworkSolver"
         self.num_options = None
+        self.knowledge_encoders = {}
 
     @overrides
     def _instance_type(self):
@@ -67,7 +68,6 @@ class SoftmaxMemoryNetworkSolver(MemoryNetworkSolver):
         question_encoder = self._get_sentence_encoder()
         encoded_question = question_encoder(question_embedding)  # (samples, word_dim)
 
-        knowledge_encoder = self._get_knowledge_encoder()
 
         # Step 4: Merge the two encoded representations and pass into the knowledge backed scorer.
         # At each step in the following loop, we take the question encoding, or the output of
@@ -78,6 +78,7 @@ class SoftmaxMemoryNetworkSolver(MemoryNetworkSolver):
         knowledge_combiner = self._get_knowledge_combiner(0)
         knowledge_axis = self._get_knowledge_axis()
         for i in range(self.num_memory_layers):
+            knowledge_encoder = self._get_knowledge_encoder(name='knowledge_encoder_A' + str(i))
             knowledge_embedding = self._embed_input(knowledge_input, embedding_name="embedding_A" + str(i))
             encoded_knowledge = knowledge_encoder(knowledge_embedding)
 
@@ -90,8 +91,9 @@ class SoftmaxMemoryNetworkSolver(MemoryNetworkSolver):
             knowledge_selector = self._get_knowledge_selector(i)
             attention_weights = knowledge_selector(merged_encoded_rep)
 
+            output_knowledge_encoder = self._get_knowledge_encoder(name='knowledge_encoder_A' + str(i+1))
             output_embedding = self._embed_input(knowledge_input, embedding_name="embedding_A" + str(i+1))
-            encoded_output_knowledge = knowledge_encoder(output_embedding)
+            encoded_output_knowledge = output_knowledge_encoder(output_embedding)
 
             # Again, this concatenation is done so that we can TimeDistribute the knowledge
             # combiner.  TimeDistributed only allows a single input, so we need to merge them.
