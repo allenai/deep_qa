@@ -1,5 +1,7 @@
 from typing import Dict, Any
+
 from overrides import overrides
+from keras.layers import Input
 
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
@@ -52,9 +54,8 @@ class QuestionAnswerMemoryNetworkSolver(MemoryNetworkSolver):
     def _get_entailment_output(self, combined_input):
         # TODO(matt): allow this to have a separate embedding from the main embedding, which allows
         # for a closer re-implementation of prior memory networks.
-        answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.num_options, self.max_answer_length), name_prefix="answer")
+        answer_input = Input(shape=(self.num_options, self.max_answer_length), dtype='int32', name="answer_input")
+        answer_embedding = self._embed_input(answer_input)
         answer_encoder = EncoderWrapper(self._get_new_encoder(), name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
-        return ([answer_input_layer],
-                self._get_entailment_model().classify(combined_input, encoded_answers))
+        return ([answer_input], self._get_entailment_model().classify(combined_input, encoded_answers))

@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from overrides import overrides
 
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, Input
 
 from ...data.instances.true_false_instance import TrueFalseInstance
 from ...training.text_trainer import TextTrainer
@@ -35,8 +35,8 @@ class TrueFalseSolver(TextTrainer):
             from sentences in training data
         '''
         # Step 1: Convert the sentence input into sequences of word vectors.
-        input_layer, word_embeddings = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,), name_prefix='sentence')
+        sentence_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        word_embeddings = self._embed_input(sentence_input)
 
         # Step 2: Pass the sequences of word vectors through the sentence encoder to get a sentence
         # vector..
@@ -53,7 +53,7 @@ class TrueFalseSolver(TextTrainer):
         output_probabilities = softmax_layer(projection_layer(regularized_sentence_encoding))
 
         # Step 4: Define crossentropy against labels as the loss.
-        return DeepQaModel(input=input_layer, output=output_probabilities)
+        return DeepQaModel(input=sentence_input, output=output_probabilities)
 
     def _instance_type(self):
         return TrueFalseInstance

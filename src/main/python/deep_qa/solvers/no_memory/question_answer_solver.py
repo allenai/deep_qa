@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from overrides import overrides
 
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, Input
 
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
@@ -52,10 +52,10 @@ class QuestionAnswerSolver(TextTrainer):
         layers, and compare the similar to the encoded answers.
         """
         # First we create input layers and pass the inputs through an embedding.
-        question_input_layer, question_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,), name_prefix='sentence')
-        answer_input_layer, answer_embedding = self._get_embedded_sentence_input(
-                input_shape=(self.num_options, self.max_answer_length), name_prefix="answer")
+        question_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        answer_input = Input(shape=(self.num_options, self.max_answer_length), dtype='int32', name="answer_input")
+        question_embedding = self._embed_input(question_input)
+        answer_embedding = self._embed_input(answer_input)
 
         # Then we encode the question and answers using some encoder.
         question_encoder = self._get_sentence_encoder()
@@ -82,7 +82,7 @@ class QuestionAnswerSolver(TextTrainer):
         softmax_output = AnswerSimilaritySoftmax(name='answer_similarity_softmax')([projected_input,
                                                                                     encoded_answers])
 
-        return DeepQaModel(input=[question_input_layer, answer_input_layer], output=softmax_output)
+        return DeepQaModel(input=[question_input, answer_input], output=softmax_output)
 
     def _instance_type(self):
         return QuestionAnswerInstance

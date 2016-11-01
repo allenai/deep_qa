@@ -44,8 +44,8 @@ class TreeLSTMSolver(TextTrainer):
         transitions_input = Input(shape=(buffer_ops_limit, 1))
 
         # Step 2: Convert the logical form input to word vectors.
-        logical_form_input_layer, logical_form_embeddings = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,), name_prefix="sentence")
+        logical_form_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        logical_form_embeddings = self._embed_input(logical_form_input)
 
         # Step 3: Merge transitions and buffer.
         lstm_input = merge([transitions_input, logical_form_embeddings], mode='concat')
@@ -65,7 +65,7 @@ class TreeLSTMSolver(TextTrainer):
         output_probabilities = softmax_layer(projection_layer(regularized_lstm_out))
 
         # Step 6: Define crossentropy against labels as the loss and compile the model.
-        return DeepQaModel(input=[transitions_input, logical_form_input_layer], output=output_probabilities)
+        return DeepQaModel(input=[transitions_input, logical_form_input], output=output_probabilities)
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:

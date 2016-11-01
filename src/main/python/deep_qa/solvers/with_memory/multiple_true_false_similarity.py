@@ -2,6 +2,7 @@ from overrides import overrides
 
 from keras import backend as K
 from keras.engine import Layer
+from keras.layers import Input
 
 from .multiple_true_false_memory_network import MultipleTrueFalseMemoryNetworkSolver
 from ...training.models import DeepQaModel
@@ -24,12 +25,11 @@ class MultipleTrueFalseSimilaritySolver(MultipleTrueFalseMemoryNetworkSolver):
 
     @overrides
     def _build_model(self):
-        question_input_layer, question_embedding = self._get_embedded_sentence_input(
-                input_shape=self._get_question_shape(),
-                name_prefix="sentence")
-        knowledge_input_layer, knowledge_embedding = self._get_embedded_sentence_input(
-                input_shape=self._get_background_shape(),
-                name_prefix="background")
+        question_input = Input(shape=self._get_question_shape(), dtype='int32', name="sentence_input")
+        knowledge_input = Input(shape=self._get_background_shape(), dtype='int32', name="background_input")
+        question_embedding = self._embed_input(question_input)
+        knowledge_embedding = self._embed_input(knowledge_input)
+
         question_encoder = self._get_sentence_encoder()
         knowledge_encoder = EncoderWrapper(question_encoder, name='knowledge_encoder')
         encoded_question = question_encoder(question_embedding)  # (samples, num_options, encoding_dim)
@@ -38,8 +38,7 @@ class MultipleTrueFalseSimilaritySolver(MultipleTrueFalseMemoryNetworkSolver):
         knowledge_axis = self._get_knowledge_axis()
         similarity_layer = SimilaritySoftmax(knowledge_axis, self.max_knowledge_length, name="similarity_layer")
         option_probabilities = similarity_layer([encoded_question, encoded_knowledge])
-        input_layers = [question_input_layer, knowledge_input_layer]
-        return DeepQaModel(input=input_layers, output=option_probabilities)
+        return DeepQaModel(input=[question_input, knowledge_input], output=option_probabilities)
 
 
 class SimilaritySoftmax(Layer):

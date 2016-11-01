@@ -20,7 +20,7 @@ class TestMemoryNetworkSolver(TestCase):
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
 
-    def test_train_does_not_crash(self):
+    def test_train_does_not_crash_with_defaults(self):
         solver = get_solver(MemoryNetworkSolver)
         solver.train()
 

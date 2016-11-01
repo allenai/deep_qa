@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 from overrides import overrides
 
 from keras import backend as K
-from keras.layers import merge, Lambda, TimeDistributed
+from keras.layers import merge, Input, Lambda, TimeDistributed
 
 from ...data.dataset import TextDataset
 from ...data.instances.snli_instance import SnliInstance
@@ -48,9 +48,11 @@ class SnliEntailmentPretrainer(TextPretrainer):
     def _build_model(self):
         # pylint: disable=protected-access
         sentence_shape = (self.trainer.max_sentence_length,)
-        text_input, embedded_text = self.trainer._get_embedded_sentence_input(sentence_shape, "text")
-        hypothesis_input, embedded_hypothesis = self.trainer._get_embedded_sentence_input(sentence_shape,
-                                                                                          "hypothesis")
+        text_input = Input(shape=sentence_shape, dtype='int32', name="text_input")
+        hypothesis_input = Input(shape=sentence_shape, dtype='int32', name="hypothesis_input")
+        embedded_text = self.trainer._embed_input(text_input)
+        embedded_hypothesis = self.trainer._embed_input(hypothesis_input)
+
         sentence_encoder = self.trainer._get_sentence_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
@@ -115,9 +117,11 @@ class SnliAttentionPretrainer(TextPretrainer):
     def _build_model(self):
         # pylint: disable=protected-access
         sentence_shape = (self.trainer.max_sentence_length,)
-        text_input, embedded_text = self.trainer._get_embedded_sentence_input(sentence_shape, "text")
-        hypothesis_input, embedded_hypothesis = self.trainer._get_embedded_sentence_input(sentence_shape,
-                                                                                          "hypothesis")
+        text_input = Input(shape=sentence_shape, dtype='int32', name="text_input")
+        hypothesis_input = Input(shape=sentence_shape, dtype='int32', name="hypothesis_input")
+        embedded_text = self.trainer._embed_input(text_input)
+        embedded_hypothesis = self.trainer._embed_input(hypothesis_input)
+
         sentence_encoder = self.trainer._get_sentence_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer

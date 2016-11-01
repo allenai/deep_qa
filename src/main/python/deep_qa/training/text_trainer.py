@@ -1,12 +1,12 @@
+from copy import deepcopy
+from typing import Any, Dict, List
 import logging
 import pickle
 
-from copy import deepcopy
-from typing import Any, Dict, List, Tuple
-
-import numpy
-from keras.layers import Dense, Input, TimeDistributed, Dropout
+from keras import backend as K
+from keras.layers import Dense, Dropout, Input, Layer, TimeDistributed
 from overrides import overrides
+import numpy
 
 from ..common.params import get_choice_with_default
 from ..data.dataset import TextDataset
@@ -74,8 +74,7 @@ class TextTrainer(Trainer):
         # Model-specific member variables that will get set and used later.  For many of these, we
         # don't want to set them now, because they use max length information that only gets set
         # after reading the training data.
-        self.embedding_layer = None
-        self.projection_layer = None
+        self.embedding_layers = {}
         self.sentence_encoder_layer = None
         self._sentence_encoder_model = None
 
@@ -142,23 +141,27 @@ class TextTrainer(Trainer):
         have any parameters themselves.
         """
         logger.info("Loading individual layers from model for re-use")
-
-        # I guess we could just load the embedding layer, the projection layer, and the sentence
-        # encoder, and reconstruct the others, because they don't actually have any parameters...
-        # But, we'll stick with this for now.
         for layer in self.model.layers:
-            if layer.name == "embedding":
-                logger.info("  Found embedding layer")
-                self.embedding_layer = layer
-            elif layer.name == "sentence_embedding":
-                logger.info("  Found wrapped embedding layer")
-                if self.embedding_layer is None:
-                    self.embedding_layer = layer.layer
+            if 'embedding' in layer.name:
+                # Because we store two layers in self.embedding_layers (an embedding and an
+                # optional projection), this logic is a little complicated.  We need to check
+                # whether this layer is the embedding layer or the projection layer, and handle
+                # updating self.embedding_layers accordingly.
+                #
+                # TODO(matt): I don't think this logic will work with distributed projections, but
+                # we'll worry about that later.
+                embedding_name = layer.name.replace("_projection", "")
+                if embedding_name in self.embedding_layers:
+                    current_embedding, current_projection = self.embedding_layers[embedding_name]
+                    if '_projection' in layer.name:
+                        self.embedding_layers[embedding_name] = (current_embedding, layer)
+                    else:
+                        self.embedding_layers[embedding_name] = (layer, current_projection)
                 else:
-                    logger.warning("  FOUND DUPLICATE EMBEDDING LAYER!  NOT SURE WHAT TO DO!")
-            elif layer.name == "embedding_projection":
-                logger.info("  Found projection layer")
-                self.projection_layer = layer
+                    if '_projection' in layer.name:
+                        self.embedding_layers[embedding_name] = (None, layer)
+                    else:
+                        self.embedding_layers[embedding_name] = (layer, None)
             elif layer.name == "sentence_encoder":
                 logger.info("  Found sentence encoder")
                 self.sentence_encoder_layer = layer
@@ -168,10 +171,6 @@ class TextTrainer(Trainer):
                     self.sentence_encoder_layer = layer
                 else:
                     logger.warning("  FOUND DUPLICATE SENTENCE ENCODER LAYER!  NOT SURE WHAT TO DO!")
-        assert self.embedding_layer is not None, "Embedding layer not found"
-        assert self.sentence_encoder_layer is not None, "Sentence encoder not found"
-        if self.project_embeddings:
-            assert self.projection_layer is not None, "Projection layer not found"
 
     def get_sentence_vector(self, sentence: str):
         """
@@ -244,62 +243,62 @@ class TextTrainer(Trainer):
         """
         return TextDataset.read_from_file(files[0], self._instance_type(), tokenizer=self.tokenizer)
 
-    def _get_embedded_sentence_input(self, input_shape: Tuple[int], name_prefix: str):
+    def _embed_input(self, input_layer: Layer, embedding_name: str="embedding"):
         """
-        Performs the initial steps of embedding sentences.  This function takes care of two steps:
-        (1) it creates an Input layer for the sentence input, and (2) it converts word indices into
-        word vectors with an Embedding layer.  Depending on how this object was initialized, we
-        might initialize that Embedding layer from pre-trained word vectors, or add a projection on
-        top of the embedding, or add dropout after the embedding layer.
+        This function embeds a word sequence input, using an embedding defined by `embedding_name`.
 
-        We use `input_shape` to decide how many TimeDistributed() layers we need on top of the
-        initial embedding / projection.  We will always do one less TimeDistributed() layer than
-        there are dimensions in `input_shape`.  For example, if you pass an input shape of
-        (max_sentence_length,), we will not add any TimeDistributed() layers.  If you pass
-        (max_knowledge_length, max_sentence_length), we'll add one, and if you pass (num_options,
-        max_knowledge_length, max_sentence_length), we'll add two, etc.
+        We need to take the input Layer here, instead of just returning a Layer that you can use as
+        you wish, because we might have to apply several layers to the input, depending on the
+        parameters you specified for embedding things.  So we return, essentially,
+        `embedding(input_layer)`.
 
-        Because Keras requires access to the actual Input() layer, we return that along with the
-        final word vector layer.
+        The input layer can have arbitrary shape, as long as it ends with a word sequence.  For
+        example, you could pass in a single sentence, a set of sentences, or a set of sets of
+        sentences, and we will handle them correctly.
+
+        Internally, we will create a dictionary mapping embedding names to embedding layers, so if
+        you have several things you want to embed with the same embedding layer, be sure you use
+        the same name each time (or just don't pass a name, which accomplishes the same thing).  If
+        for some reason you want to have different embeddings for different inputs, use a different
+        name for the embedding.
         """
         # pylint: disable=redefined-variable-type
-        input_layer = Input(shape=input_shape, dtype='int32', name=name_prefix + "_input")
+        if embedding_name not in self.embedding_layers:
+            self.embedding_layers[embedding_name] = self._get_new_embedding(embedding_name)
 
-        # If a particular model has several places where sentences are encoded, we want to be sure
-        # to use the _same_ embedding layer for all of them, so we initialize them and save them to
-        # self here, if we haven't already done so.
-        if self.embedding_layer is None:
-            if self.pretrained_embeddings_file:
-                # If we have a pre-trained embeddings file, we'll create the embedding layer
-                # initialized with the embeddings in the file.  These embeddings can either be
-                # fixed or tunable.
-                self.embedding_layer = PretrainedEmbeddings.get_embedding_layer(
-                        self.pretrained_embeddings_file,
-                        self.data_indexer,
-                        self.fine_tune_embeddings)
-            else:
-                # TimeDistributedEmbedding works with inputs of any shape.
-                self.embedding_layer = TimeDistributedEmbedding(input_dim=self.data_indexer.get_vocab_size(),
-                                                                output_dim=self.embedding_size,
-                                                                mask_zero=True,  # this handles padding correctly
-                                                                name='embedding')
-            if self.project_embeddings:
-                self.projection_layer = TimeDistributed(Dense(output_dim=self.embedding_size,),
-                                                        name='embedding_projection')
-
-        # Now we actually embed the input and apply dropout.
-        embedded_input = self.embedding_layer(input_layer)
-
-        if self.project_embeddings:
-            projection = self.projection_layer
-            for _ in input_shape[1:]:
-                projection = TimeDistributed(projection, name=name_prefix + "_projection")
-            embedded_input = projection(embedded_input)
-
+        embedding_layer, projection_layer = self.embedding_layers[embedding_name]
+        embedded_input = embedding_layer(input_layer)
+        if projection_layer is not None:
+            for _ in range(2, K.ndim(input_layer)):  # 2 here to account for batch_size.
+                projection_layer = TimeDistributed(projection_layer, name=projection_layer.name)
+            embedded_input = projection_layer(embedded_input)
         if self.embedding_dropout > 0.0:
-            embedded_input = Dropout(self.embedding_dropout, name=name_prefix + "_dropout")(embedded_input)
+            embedded_input = Dropout(self.embedding_dropout)(embedded_input)
 
-        return input_layer, embedded_input
+        return embedded_input
+
+    def _get_new_embedding(self, name):
+        """
+        Creates an Embedding Layer (and possibly also a Dense projection Layer) based on the
+        parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
+        could include a projection or not, and so on.
+        """
+        if self.pretrained_embeddings_file:
+            embedding_layer = PretrainedEmbeddings.get_embedding_layer(
+                    self.pretrained_embeddings_file,
+                    self.data_indexer,
+                    self.fine_tune_embeddings)
+        else:
+            # TimeDistributedEmbedding works with inputs of any shape.
+            embedding_layer = TimeDistributedEmbedding(input_dim=self.data_indexer.get_vocab_size(),
+                                                       output_dim=self.embedding_size,
+                                                       mask_zero=True,  # this handles padding correctly
+                                                       name=name)
+        projection_layer = None
+        if self.project_embeddings:
+            projection_layer = TimeDistributed(Dense(output_dim=self.embedding_size,),
+                                               name=name + '_projection')
+        return embedding_layer, projection_layer
 
     def _get_sentence_encoder(self):
         """
@@ -334,11 +333,11 @@ class TextTrainer(Trainer):
         This must be called after self.max_sentence_length has been set, which happens when
         self._get_training_data() is called.
         """
-        input_layer, embedded_input = self._get_embedded_sentence_input(
-                input_shape=(self.max_sentence_length,), name_prefix="sentence")
+        sentence_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        embedded_input = self._embed_input(sentence_input)
         encoder_layer = self._get_sentence_encoder()
         encoded_input = encoder_layer(embedded_input)
-        self._sentence_encoder_model = DeepQaModel(input=input_layer, output=encoded_input)
+        self._sentence_encoder_model = DeepQaModel(input=sentence_input, output=encoded_input)
 
         # Loss and optimizer do not matter here since we're not going to train this model. But it
         # needs to be compiled to use it for prediction.
@@ -353,14 +352,22 @@ class TextTrainer(Trainer):
         only do this for debugging on very simple datasets.
         """
         result = super(TextTrainer, self)._overall_debug_output(output_dict)
-        if 'embedding' in output_dict:
-            result += 'Embedding matrix:\n'
-            embedding_weights = self.embedding_layer.get_weights()[0]
-            for i in range(self.data_indexer.get_vocab_size()):
-                word = self.data_indexer.get_word_from_index(i)
-                word_vector = '[' + ' '.join('%.4f' % x for x in embedding_weights[i]) + ']'
-                result += '%s\t%s\n' % (word, word_vector)
-            result += '\n'
+        if any('embedding' in layer_name for layer_name in output_dict.keys()):
+            embedding_layers = set([n for n in output_dict.keys() if 'embedding' in n])
+            for embedding_layer in embedding_layers:
+                if '_projection' in embedding_layer:
+                    continue
+                result += self._render_embedding_matrix(embedding_layer)
+        return result
+
+    def _render_embedding_matrix(self, embedding_name: str) -> str:
+        result = 'Embedding matrix for %s:\n' % embedding_name
+        embedding_weights = self.embedding_layers[embedding_name][0].get_weights()[0]
+        for i in range(self.data_indexer.get_vocab_size()):
+            word = self.data_indexer.get_word_from_index(i)
+            word_vector = '[' + ' '.join('%.4f' % x for x in embedding_weights[i]) + ']'
+            result += '%s\t%s\n' % (word, word_vector)
+        result += '\n'
         return result
 
     @classmethod
