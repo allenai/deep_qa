@@ -26,14 +26,12 @@ class SentencePairInstance(TextInstance):
 
     @overrides
     def words(self) -> List[str]:
-        return self._tokenize(self.first_sentence.lower()) + self._tokenize(self.second_sentence.lower())
+        return self._tokenize(self.first_sentence) + self._tokenize(self.second_sentence)
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
-        first_sentence = [data_indexer.get_word_index(word) for word in
-                          self._tokenize(self.first_sentence.lower())]
-        second_sentence = [data_indexer.get_word_index(word) for word in
-                           self._tokenize(self.second_sentence.lower())]
+        first_sentence = self._index_text(self.first_sentence, data_indexer)
+        second_sentence = self._index_text(self.second_sentence, data_indexer)
         return IndexedSentencePairInstance(first_sentence, second_sentence, self.label, self.index)
 
     @classmethod
