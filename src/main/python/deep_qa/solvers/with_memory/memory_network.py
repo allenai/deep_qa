@@ -8,15 +8,16 @@ from keras.layers import Dropout, Input, merge
 from ...common.params import get_choice_with_default
 from ...data.dataset import TextDataset
 from ...data.instances.background_instance import BackgroundInstance
+from ...data.instances.instance import TextInstance
 from ...data.instances.true_false_instance import TrueFalseInstance
-from ...layers.knowledge_selectors import selectors
-from ...layers.memory_updaters import updaters
 from ...layers.entailment_models import entailment_models, entailment_input_combiners
 from ...layers.knowledge_combiners import knowledge_combiners
 from ...layers.knowledge_encoders import knowledge_encoders
+from ...layers.knowledge_selectors import selectors
+from ...layers.memory_updaters import updaters
 from ...layers.vector_matrix_merge import VectorMatrixMerge
-from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
+from ...training.text_trainer import TextTrainer
 
 
 # TODO(matt): make this class abstract, and make a TrueFalseMemoryNetwork subclass.
@@ -105,7 +106,7 @@ class MemoryNetworkSolver(TextTrainer):
         self.knowledge_selector_layers = {}
         self.knowledge_combiner_layers = {}
         self.memory_updater_layers = {}
-        self.knowledge_encoder = None
+        self.knowledge_encoders = {}
         self.entailment_input_combiner = None
         self.entailment_model = None
 
@@ -171,15 +172,15 @@ class MemoryNetworkSolver(TextTrainer):
         # pylint: disable=no-self-use
         return 1
 
-    def _get_knowledge_encoder(self):
+    def _get_knowledge_encoder(self, name='knowledge_encoder'):
         '''
         Instantiates a new KnowledgeEncoder. This can be overridden as in the MultipleChoiceMN case,
         we would pass is_multiple_choice=True, so that any post-processing after the background has
         been encoded is TimeDistributed across the possible answer options.
         '''
-        if self.knowledge_encoder is None:
-            self.knowledge_encoder = self._get_new_knowledge_encoder()
-        return self.knowledge_encoder
+        if name not in self.knowledge_encoders:
+            self.knowledge_encoders[name] = self._get_new_knowledge_encoder(name=name)
+        return self.knowledge_encoders[name]
 
     def _get_new_knowledge_encoder(self, name='knowledge_encoder'):
         # The code that follows would be destructive to self.knowledge_encoder_params (lots of
@@ -387,8 +388,26 @@ class MemoryNetworkSolver(TextTrainer):
         result += self._render_layer_outputs(instance, outputs)
         return result
 
+    @staticmethod
+    def _render_instance(instance: TextInstance, outputs: Dict[str, numpy.array]) -> str:
+        """
+        If you've specified debug information related to sentence input / encoding, we'll try to
+        display that here.  We can handle a few simple cases, but there might be some cases where
+        we just don't know enough about the Instance type you're using to effectively display the
+        output.
+        """
+        result = ""
+        result += 'Words in instance: %s\n' % ' '.join(instance.words())
+        if 'sentence_input' in outputs:
+            result += 'Sentence input: %s\n' % str(outputs['sentence_input'])
+        if 'sentence_encoder' in outputs:
+            result += 'Sentence encoding: %s\n' % str(outputs['sentence_encoder'])
+        return result
+
     def _render_layer_outputs(self, instance: BackgroundInstance, outputs: Dict[str, numpy.array]) -> str:
         result = ""
+        if 'sentence_input' in outputs or 'sentence_encoder' in outputs:
+            result += self._render_instance(instance.instance, outputs)
         if 'entailment_scorer' in outputs:
             result += "Entailment score: %.4f\n" % outputs['entailment_scorer']
         if any('knowledge_selector' in layer_name for layer_name in outputs.keys()):

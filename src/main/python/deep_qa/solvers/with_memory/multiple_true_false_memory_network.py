@@ -117,6 +117,12 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
         for option_index, option_instance in enumerate(instance.options):
             option_sentence = option_instance.instance.text
             result += "\tOption %d: %s\n" % (option_index, option_sentence)
+            if 'sentence_input' in outputs or 'sentence_encoder' in outputs:
+                option_outputs = {}
+                for layer_name in ['sentence_input', 'sentence_encoder']:
+                    if layer_name in outputs:
+                        option_outputs[layer_name] = outputs[layer_name][option_index]
+                self._render_instance(option_instance.instance, option_outputs)
             if 'entailment_scorer' in outputs:
                 result += "\tEntailment score: %.4f\n" % outputs['entailment_scorer'][option_index]
             if any('knowledge_selector' in layer_name for layer_name in outputs.keys()):

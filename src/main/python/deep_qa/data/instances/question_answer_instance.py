@@ -33,17 +33,17 @@ class QuestionAnswerInstance(TextInstance):
     @overrides
     def words(self) -> List[str]:
         words = []
-        words.extend(self._tokenize(self.question_text.lower()))
+        words.extend(self._tokenize(self.question_text))
         for option in self.answer_options:
-            words.extend(self._tokenize(option.lower()))
+            words.extend(self._tokenize(option))
         return words
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
-        question_indices = [data_indexer.get_word_index(word) for word in self._tokenize(self.question_text)]
+        question_indices = self._index_text(self.question_text, data_indexer)
         option_indices = []
         for option in self.answer_options:
-            indices = [data_indexer.get_word_index(word) for word in self._tokenize(option)]
+            indices = self._index_text(option, data_indexer)
             option_indices.append(indices)
         return IndexedQuestionAnswerInstance(question_indices, option_indices, self.label, self.index)
 

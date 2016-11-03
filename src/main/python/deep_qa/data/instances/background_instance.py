@@ -36,7 +36,7 @@ class BackgroundInstance(TextInstance):
         words = []
         words.extend(self.instance.words())
         for background_text in self.background:
-            words.extend(self._tokenize(background_text.lower()))
+            words.extend(self._tokenize(background_text))
         return words
 
     @overrides
@@ -44,9 +44,7 @@ class BackgroundInstance(TextInstance):
         indexed_instance = self.instance.to_indexed_instance(data_indexer)
         background_indices = []
         for text in self.background:
-            words = self._tokenize(text.lower())
-            indices = [data_indexer.get_word_index(word) for word in words]
-            background_indices.append(indices)
+            background_indices.append(self._index_text(text, data_indexer))
         return IndexedBackgroundInstance(indexed_instance, background_indices)
 
 

@@ -29,11 +29,11 @@ class TrueFalseInstance(TextInstance):
 
     @overrides
     def words(self) -> List[str]:
-        return self._tokenize(self.text.lower())
+        return self._tokenize(self.text)
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
-        indices = [data_indexer.get_word_index(word) for word in self.words()]
+        indices = self._index_text(self.text, data_indexer)
         return IndexedTrueFalseInstance(indices, self.label, self.index)
 
     @classmethod

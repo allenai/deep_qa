@@ -5,6 +5,7 @@ from .with_memory.differentiable_search import DifferentiableSearchSolver
 from .with_memory.memory_network import MemoryNetworkSolver
 from .with_memory.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetworkSolver
 from .with_memory.multiple_true_false_similarity import MultipleTrueFalseSimilaritySolver
+from .with_memory.softmax_memory_network import SoftmaxMemoryNetworkSolver
 from .with_memory.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
 
 from ..training import concrete_pretrainers
@@ -13,14 +14,15 @@ from .pretraining.snli_pretrainer import SnliAttentionPretrainer, SnliEntailment
 from .pretraining.encoder_pretrainer import EncoderPretrainer
 
 concrete_solvers = {  # pylint: disable=invalid-name
-        'TrueFalseSolver': TrueFalseSolver,
-        'TreeLSTMSolver': TreeLSTMSolver,
-        'MemoryNetworkSolver': MemoryNetworkSolver,
         'DifferentiableSearchSolver': DifferentiableSearchSolver,
+        'MemoryNetworkSolver': MemoryNetworkSolver,
         'MultipleTrueFalseMemoryNetworkSolver': MultipleTrueFalseMemoryNetworkSolver,
-        'QuestionAnswerMemoryNetworkSolver': QuestionAnswerMemoryNetworkSolver,
         'MultipleTrueFalseSimilaritySolver': MultipleTrueFalseSimilaritySolver,
+        'QuestionAnswerMemoryNetworkSolver': QuestionAnswerMemoryNetworkSolver,
         'QuestionAnswerSolver': QuestionAnswerSolver,
+        'SoftmaxMemoryNetworkSolver': SoftmaxMemoryNetworkSolver,
+        'TreeLSTMSolver': TreeLSTMSolver,
+        'TrueFalseSolver': TrueFalseSolver,
         }
 
 concrete_pretrainers['AttentionPretrainer'] = AttentionPretrainer

@@ -10,6 +10,7 @@ from typing import Any, Dict
 from keras.layers.wrappers import Bidirectional
 from keras.layers.recurrent import GRU
 
+from .additive import Additive
 from .wrappers import EncoderWrapper
 
 
@@ -25,35 +26,51 @@ class IndependentKnowledgeEncoder:
     def __init__(self, params: Dict[str, Any]):
         self.question_encoder = params.pop('question_encoder')
         self.name = params.pop('name')
+        self.encoder_wrapper = EncoderWrapper(self.question_encoder, name=self.name)
 
     def __call__(self, knowledge_embedding):
-        return EncoderWrapper(self.question_encoder, name=self.name)(knowledge_embedding)
+        return self.encoder_wrapper(knowledge_embedding)
+
+
+class TemporalKnowledgeEncoder(IndependentKnowledgeEncoder):
+    """
+    This class implements the "temporal encoding" from the end-to-end memory networks paper, which
+    adds a learned vector to the encoding of each time step in the memory.
+    """
+    def __init__(self, params: Dict[str, Any]):
+        super(TemporalKnowledgeEncoder, self).__init__(params)
+        self.additive_layer = Additive(name=self.name + "_additive")
+
+    def __call__(self, knowledge_embedding):
+        encoded_knowledge = self.encoder_wrapper(knowledge_embedding)
+        return self.additive_layer(encoded_knowledge)
+
 
 
 class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
-
     '''
-    A BiGRUKnowledgeEncoder performs the same inital encoding as the Independent
-    KnowledgeEncoder, but applies a BiDirectional GRU over the encoded knowledge in order to
-    allow the order of the background knowledge to be relevant to the downstream solver. This implementation
-    follows the Fusion layer in the Dynamic Memory Networks paper: https://arxiv.org/pdf/1603.01417v1.pdf.
+    A BiGRUKnowledgeEncoder performs the same inital encoding as the IndependentKnowledgeEncoder,
+    but applies a BiDirectional GRU over the encoded knowledge in order to allow the order of the
+    background knowledge to be relevant to the downstream solver. This implementation follows the
+    Fusion layer in the Dynamic Memory Networks paper: https://arxiv.org/pdf/1603.01417v1.pdf.
 
     First, we apply the wrapped question encoder:
-    (samples, knowledge_length, sentence_length, embedding_dim) => (samples, knowlege_length, embedding_dim).
+    (samples, knowledge_length, sentence_length, embedding_dim) => (samples, knowlege_length, encoding_dim).
 
-    Then, we run the encoded background sentence vectors through  a BiDirectional GRU, where the time
-    dimension is the knowledge_length (this allows the Memory Network to take into account that the background
-    knowledge may have some temporal structure, such as in the Babi tasks).
+    Then, we run the encoded background sentence vectors through  a BiDirectional GRU, where the
+    time dimension is the knowledge_length (this allows the Memory Network to take into account
+    that the background knowledge may have some temporal structure, such as in the Babi tasks).
 
-    (samples, knowledge_length, embedding_dim) => (samples, knowledge_length, embedding_dim)
+    (samples, knowledge_length, encoding_dim) => (samples, knowledge_length, encoding_dim)
 
-    Note that in Keras, we must explicitly set the 'return_sequences' flag in order to return the full set of
-    vectors, rather than just the last one in the sequence. Additionally, the merge mode we choose for this
-    BiDirectional GRU is 'sum', rather than the standard 'concat' which would double the embedding_dim.
+    Note that in Keras, we must explicitly set the 'return_sequences' flag in order to return the
+    full set of vectors, rather than just the last one in the sequence. Additionally, the merge
+    mode we choose for this BiDirectional GRU is 'sum', rather than the standard 'concat' which
+    would double the encoding_dim.
 
-    Additionally, if we are using a MultipleChoice Memory Network, we have multiple sets of background knowledge
-    related to each answer. If this is the case, then we again TimeDistribute the BiDirectional GRU to apply this
-    to every set of background knowledge.
+    Additionally, if we are using a MultipleChoice Memory Network, we have multiple sets of
+    background knowledge related to each answer. If this is the case, then we again TimeDistribute
+    the BiDirectional GRU to apply this to every set of background knowledge.
     '''
     def __init__(self, params: Dict[str, Any]):
         self.knowledge_length = params.pop('knowledge_length')
@@ -69,10 +86,11 @@ class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
             self.bi_gru = EncoderWrapper(self.bi_gru, name='wrapped_{}'.format(self.name))
 
     def __call__(self, knowledge_embedding):
-
         base_time_distributed_layer = super(BiGRUKnowledgeEncoder, self).__call__(knowledge_embedding)
         return self.bi_gru(base_time_distributed_layer)
 
+
 knowledge_encoders = OrderedDict()  # pylint:  disable=invalid-name
 knowledge_encoders['independent'] = IndependentKnowledgeEncoder
+knowledge_encoders['temporal'] = TemporalKnowledgeEncoder
 knowledge_encoders['bi_gru'] = BiGRUKnowledgeEncoder

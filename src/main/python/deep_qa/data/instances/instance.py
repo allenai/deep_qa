@@ -58,7 +58,18 @@ class TextInstance(Instance):
         self.tokenizer = tokenizer
 
     def _tokenize(self, sentence: str) -> List[str]:
-        return self.tokenizer.tokenize(sentence)
+        """
+        Lowercases and then tokenizes the string, using self.tokenizer.
+        """
+        return self.tokenizer.tokenize(sentence.lower())
+
+    def _index_text(self, text: str, data_indexer: DataIndexer) -> List[int]:
+        """
+        Tokenizes the given sentence with self._tokenize, then passes the tokens through the
+        DataIndexer to get a list of integers out.
+        """
+        tokens = self._tokenize(text)
+        return [data_indexer.get_word_index(token) for token in tokens]
 
     def words(self) -> List[str]:
         """

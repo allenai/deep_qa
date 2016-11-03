@@ -50,16 +50,16 @@ class TestQuestionAnswerInstance(TestCase):
         assert instance.words() == ['a', 'b', 'c', 'd', 'e', 'f']
 
     def test_to_indexed_instance_converts_correctly(self):
-        instance = QuestionAnswerInstance("a b", ["d", "e f"], 1)
+        instance = QuestionAnswerInstance("a A b", ["d", "e f D"], 1)
         data_indexer = DataIndexer()
         a_index = data_indexer.add_word_to_index("a")
         d_index = data_indexer.add_word_to_index("d")
         oov_index = data_indexer.get_word_index(data_indexer._oov_token)  # pylint: disable=protected-access
         indexed_instance = instance.to_indexed_instance(data_indexer)
-        assert indexed_instance.question_indices == [a_index, oov_index]
+        assert indexed_instance.question_indices == [a_index, a_index, oov_index]
         assert len(indexed_instance.option_indices) == 2
         assert indexed_instance.option_indices[0] == [d_index]
-        assert indexed_instance.option_indices[1] == [oov_index, oov_index]
+        assert indexed_instance.option_indices[1] == [oov_index, oov_index, d_index]
 
 
 class TestIndexedQuestionAnswerInstance(TestCase):
