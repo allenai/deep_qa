@@ -82,6 +82,6 @@ object SimpleLstmExperiments {
     //new SentenceToLogic(sentenceToLogicParams, fileUtil).runPipeline()
     //new CorruptedSentenceSelector(corruptedSentenceSelectorParams, fileUtil).runPipeline()
     //new QuestionInterpreter(questionInterpreterParams, fileUtil).runPipeline()
-    NeuralNetworkTrainer.create(modelParams, fileUtil).runPipeline()
+    new NeuralNetworkTrainerStep(modelParams, fileUtil).runPipeline()
   }
 }

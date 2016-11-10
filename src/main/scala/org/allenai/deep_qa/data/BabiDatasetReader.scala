@@ -3,9 +3,11 @@ package org.allenai.deep_qa.data
 import scala.collection.mutable
 import com.mattg.util.FileUtil
 
-class BabiDatasetReader(fileUtil: FileUtil) {
+class BabiDatasetReader(
+  fileUtil: FileUtil
+) extends DatasetReader[BackgroundInstance[QuestionAnswerInstance]] {
 
-    def readFile(filename: String): Dataset[BackgroundInstance[QuestionAnswerInstance]] = {
+    override def readFile(filename: String): Dataset[BackgroundInstance[QuestionAnswerInstance]] = {
       val answerVocabulary = getAnswerVocabulary(filename)
       val currentBackground = new mutable.ArrayBuffer[String]
       val currentQuestions = new mutable.ArrayBuffer[String]
@@ -66,22 +68,5 @@ class BabiDatasetReader(fileUtil: FileUtil) {
         answerVocabulary,
         Some(indicies)),
       thisBackground)
-  }
-}
-
-object BabiDatasetReader {
-  def main(args: Array[String]) {
-    val fileUtil = new FileUtil
-    val reader = new BabiDatasetReader(fileUtil)
-    val dataset = reader.readFile("/home/mattg/data/facebook/babi_v1.0/en/qa1_single-supporting-fact_train.txt")
-    fileUtil.mkdirs("/home/mattg/data/facebook/babi_v1.0/processed/")
-    dataset.writeToFiles(
-      Seq(
-        "/home/mattg/data/facebook/babi_v1.0/processed/task_1_train.tsv",
-        "/home/mattg/data/facebook/babi_v1.0/processed/task_1_background.tsv"
-      ),
-      true,  // withIndices
-      fileUtil
-    )
   }
 }

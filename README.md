@@ -38,58 +38,19 @@ Mail](http://cs.nyu.edu/~kcho/DMQA/), and
 # Usage Guide
 
 This code is a mix of scala and python.  The intent is that the data processing and experiment
-pipeline code is in scala, and the deep learning code is in python.  Eventually (hopefully soon),
-there will be an easy way to specify a set of experiments entirely in scala and run them from sbt
-with a single command.  That's not quite ready yet, though, so you currently have to set up the
-data in scala, set up the deep learning model with a json configuration file, then use sbt to
-create the data files and python to do actual training.
-
-## Running experiments with scala
-
-This code is still a work in progress, but you can see how data files are prepared by looking in
-[MemoryNetworkExperiments.scala](https://github.com/allenai/deep_qa/blob/master/src/main/scala/org/allenai/deep_qa/experiments/MemoryNetworkExperiments.scala).
-That class sets up a JSON object that gets passed to a pipeline Step, which will run the pipeline,
-creating whatever intermediate files it needs.
-
-For example, if you wanted to create the necessary input files to run an experiment with Aristo's
-science questions, starting from a raw question file from [AI2's
-webpage](http://allenai.org/data.html) and a pointer to an Elastic Search index containing a
-science corpus, you would set up the parameters required for the last step in that pipeline (doing
-a search over the corpus with all of the processed questions), and run it using a command like
-[this](https://github.com/allenai/deep_qa/blob/089954f5713b4b91d5a0b73c375d5d2983383772/src/main/scala/org/allenai/deep_qa/experiments/MemoryNetworkExperiments.scala#L188).
-That code creates a `BackgroundCorpusSearcherStep`, taking
-[parameters](https://github.com/allenai/deep_qa/blob/089954f5713b4b91d5a0b73c375d5d2983383772/src/main/scala/org/allenai/deep_qa/experiments/MemoryNetworkExperiments.scala#L123)
-that identify the corpus to be searched and the sentences that should be used for the search.  The
-[sentence
-parameters](https://github.com/allenai/deep_qa/blob/089954f5713b4b91d5a0b73c375d5d2983383772/src/main/scala/org/allenai/deep_qa/experiments/MemoryNetworkExperiments.scala#L108),
-in turn, specify how those sentences were produced (in this case, they were obtained from a raw
-Aristo question file, by appending each answer option to the text of the original question to
-obtain a list of sentences).  The pipeline code takes care of running all intermediate `Steps` to
-get from the original input file to the final output.  These `Steps` take their inputs and outputs
-from the file system, so intermediate results are saved across runs and are only ever constructed
-once for each unique combination of parameters.  Each `Step` specifies the files it needs as inputs
-and the files it produces as outputs; if necessary input files are not present, and you've
-specified how to create them using another `Step`, the pipeline code will run those prior `Steps`
-before running the current one.  You can see how this works by looking at the
-[code](https://github.com/allenai/deep_qa/blob/089954f5713b4b91d5a0b73c375d5d2983383772/src/main/scala/org/allenai/deep_qa/pipeline/BackgroundCorpusSearcherStep.scala#L94)
-for the
-[`BackgroundCorpusSearcherStep`](https://github.com/allenai/deep_qa/blob/089954f5713b4b91d5a0b73c375d5d2983383772/src/main/scala/org/allenai/deep_qa/pipeline/BackgroundCorpusSearcherStep.scala#L51-L60).
-
-You might notice that there's a
-[`NeuralNetworkTrainer`](https://github.com/allenai/deep_qa/blob/089954f5713b4b91d5a0b73c375d5d2983383772/src/main/scala/org/allenai/deep_qa/pipeline/NeuralNetworkTrainer.scala)
-step in the code, also.  This `Step` runs the python code, though it's currently in a broken
-state.  Eventually, you will just specify the model parameters you want, similar to how you do with
-the data processing, then run this `Step`, and it will create all of the necessary input files for
-the model you want to train, and train the model for you, with a single command.
+pipeline code is in scala, and the deep learning code is in python.  The recommended approach is to
+set up your experiments in scala code, then run them through `sbt`.  Some documentation on how to
+do this is found in the [README for the `org.allenai.deep_qa.experiments`
+package](src/main/scala/org/allenai/deep_qa/experiments/).
 
 ## Running experiments with python
 
-Because the scala code isn't ready to run end-to-end yet, you currently have to run the python code
-manually.  To do this, from the base directory, you run the command `python
-src/main/python/run_solver.py [model_config]`.  You must use python >= 3.5, as we make heavy use of
-the type annotations introduced in python 3.5 to aid in code readability (I recommend using
-[anaconda](https://www.continuum.io/downloads) to set up python 3, if you don't have it set up
-already).
+If for whatever reason you don't want to gain the benefits of the scala pipeline when running
+experiments, you can run the python code manually.  To do this, from the base directory, you run
+the command `python src/main/python/run_solver.py [model_config]`.  You must use python >= 3.5, as
+we make heavy use of the type annotations introduced in python 3.5 to aid in code readability (I
+recommend using [anaconda](https://www.continuum.io/downloads) to set up python 3, if you don't
+have it set up already).
 
 You can see some examples of what model configuration files look like in the [example
 experiments directory](https://github.com/allenai/deep_qa/tree/master/example_experiments).  We
@@ -121,7 +82,6 @@ specifying debug output, running pre-training, and other things.  It would be ni
 generate some website to document all of these parameters, but I don't know how to do that and
 don't have the time to dedicate to making it happen.  So for now, just read the comments that are
 in the code.
-
 
 There are several places where we give lists of available choices for particular options.  For
 example, there is a [list of concrete

@@ -46,19 +46,25 @@ abstract class QuestionInterpreter {
    *  Parses a question line formatted as "[correct_answer]\t[question] [answers]", returning a
    *  ScienceQuestion object.
    *
-   *  NOTE: this assumes the answer options always begin with 'A' and go up from there, and are
-   *  formatted like (A).  There's code in the Aristo question decomposer that will handle this
-   *  more generally, but that code is heavy...
+   *  NOTE: this assumes the answer options always begin with 'A'  or '1' and go up from there, and
+   *  are formatted like (A).  There's code in the Aristo question decomposer that will handle this
+   *  a little more generally, but that code is heavy...
    */
   def parseQuestionLine(questionLine: String): ScienceQuestion = {
     val fields = questionLine.split("\t")
 
-    val (correctAnswerOption, rawQuestion) = if (fields.length == 2) {
-      (Some(fields(0).charAt(0) - 'A'), fields(1))
+    val (correctAnswerString, rawQuestion) = if (fields.length == 2) {
+      (Some(fields(0)), fields(1))
     } else {
       (None, fields(0))
     }
-    val (questionText, answerOptions) = rawQuestion.splitAt(rawQuestion.indexOf("(A)"))
+
+    // Are we dealing with 'A' as the first answer option, or '1'?
+    val firstAnswerChar = if (rawQuestion.contains("(A)")) 'A' else '1'
+    val correctAnswerOption = correctAnswerString.map(_.charAt(0) - firstAnswerChar)
+
+    val firstAnswerString = s"($firstAnswerChar)"
+    val (questionText, answerOptions) = rawQuestion.splitAt(rawQuestion.indexOf(firstAnswerString))
     val sentences = parser.splitSentences(questionText.trim)
     val options = answerOptions.trim.split("\\(.\\)")
     val answers = options.drop(1).zipWithIndex.map(optionWithIndex => {

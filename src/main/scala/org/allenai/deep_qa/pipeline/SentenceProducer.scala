@@ -34,7 +34,10 @@ trait SentenceProducer {
   val indexSentences = JsonHelper.extractWithDefault(params, "create sentence indices", false)
   val maxSentences = JsonHelper.extractAsOption[Int](params, "max sentences")
 
-  def outputFile: String
+  /**
+   * You must override this if you want to use `outputSentences()`.
+   */
+  def outputFile: String = "/dev/null"
 
   def outputSentences(sentences: Seq[String]) {
     val outputLines = sentences.zipWithIndex.map(sentenceWithIndex => {
@@ -55,11 +58,13 @@ trait SentenceProducer {
 object SentenceProducer {
   def create(params: JValue, fileUtil: FileUtil): Step with SentenceProducer = {
     (params \ "sentence producer type") match {
-      case JString("sentence selector") => new SentenceSelector(params, fileUtil)
-      case JString("sentence corruptor") => new SentenceCorruptor(params, fileUtil)
+      case JString("background searcher") => BackgroundCorpusSearcherStep.create(params, fileUtil)
+      case JString("dataset reader") => new DatasetReaderStep(params, fileUtil)
       case JString("kb sentence corruptor") => new CorruptedSentenceSelector(params, fileUtil)
-      case JString("question interpreter") => new QuestionInterpreterStep(params, fileUtil)
       case JString("manually provided") => new ManuallyProvidedSentences(params, fileUtil)
+      case JString("question interpreter") => new QuestionInterpreterStep(params, fileUtil)
+      case JString("sentence corruptor") => new SentenceCorruptor(params, fileUtil)
+      case JString("sentence selector") => new SentenceSelector(params, fileUtil)
       case jval => throw new IllegalStateException(s"unrecognized SentenceProducer parameters: $jval")
     }
   }

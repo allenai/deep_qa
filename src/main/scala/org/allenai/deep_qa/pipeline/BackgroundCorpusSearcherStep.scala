@@ -40,11 +40,9 @@ import org.allenai.deep_qa.data.BackgroundCorpusSearcher
  * See note in SentenceProducer for why this is a trait instead of an abstract class.  Basically,
  * this is necessary to allow some subclasses to be SubprocessSteps instead of just Steps.
  */
-trait BackgroundCorpusSearcherStep {
-  def params: JValue
-  def fileUtil: FileUtil
+trait BackgroundCorpusSearcherStep extends SentenceProducer {
 
-  val baseParams = Seq("type", "searcher", "sentences", "sentence format")
+  val baseSearcherParams = Seq("type", "searcher", "sentences", "sentence format") ++ baseParams
 
   lazy val searcher = BackgroundCorpusSearcher.create(params \ "searcher")
 
@@ -59,7 +57,7 @@ trait BackgroundCorpusSearcherStep {
 
   lazy val sentencesInput: (String, Option[Step]) = (sentencesFile, Some(sentenceProducer))
 
-  lazy val outputFile = sentencesFile.dropRight(4) + "_background.tsv"
+  override lazy val outputFile = sentencesFile.dropRight(4) + "_background.tsv"
 }
 
 object BackgroundCorpusSearcherStep {
@@ -79,7 +77,7 @@ class DefaultBackgroundCorpusSearcherStep(
   val fileUtil: FileUtil
 ) extends Step(Some(params), fileUtil) with BackgroundCorpusSearcherStep {
   override val name = "Background Corpus Searcher Step"
-  val validParams = baseParams
+  val validParams = baseSearcherParams
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   // TODO(matt): Is there a way to get this from the sentence producer, instead of from a param?
@@ -143,7 +141,7 @@ class ManuallyProvidedBackground(
   implicit val formats = DefaultFormats
   override val name = "Manually Provided Background"
 
-  val validParams = baseParams ++ Seq("filename")
+  val validParams = baseSearcherParams ++ Seq("filename")
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   override lazy val outputFile = (params \ "filename").extract[String]
