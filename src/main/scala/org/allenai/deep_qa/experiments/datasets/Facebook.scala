@@ -39,7 +39,6 @@ object BabiDatasets {
       outputDirectory + s"task_${taskNumber}_${trainString}.tsv",
       outputDirectory + s"task_${taskNumber}_${trainString}_background.tsv"
     )
-    ("name" -> s"babi_task_$taskNumber") ~
     ("data files" -> List(
       ("sentence producer type" -> "dataset reader") ~
       ("reader" -> "babi") ~
@@ -93,7 +92,6 @@ object ChildrensBookDatasets {
       outputDirectory + s"${questionType}_${split}.tsv",
       outputDirectory + s"${questionType}_${split}_background.tsv"
     )
-    ("name" -> s"childrens_books_${questionType}") ~
     ("data files" -> List(
       ("sentence producer type" -> "dataset reader") ~
       ("reader" -> "children's books") ~

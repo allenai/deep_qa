@@ -35,6 +35,27 @@ class LuceneBackgroundCorpusSearcherSpec extends FlatSpecLike with Matchers {
     searcher.consolidateHits(negative, hits, 10) should contain theSameElementsAs Seq(sentence)
   }
 
+  it should "remove near duplicates with a query made into a question" in {
+    val positive = "Tiger sharks and killer whales eat adult sea turtles."
+    val negative = "Tiger ____ and killer whales eat adult sea turtles. ||| sharks"
+    val hits = Seq(positive, sentence)
+    searcher.consolidateHits(negative, hits, 10) should contain theSameElementsAs Seq(sentence)
+  }
+
+  it should "remove near duplicates with a query made into a question, including with commas" in {
+    val positive = "Tiger sharks and killer whales, eat adult sea turtles."
+    val negative = "Tiger ____ and killer whales, eat adult sea turtles. ||| sharks"
+    val hits = Seq(positive, sentence)
+    searcher.consolidateHits(negative, hits, 10) should contain theSameElementsAs Seq(sentence)
+  }
+
+  it should "remove near duplicates with a query made into a question, with a false answer" in {
+    val positive = "Tiger sharks and killer whales, eat adult sea turtles."
+    val negative = "Tiger ____ and killer whales, eat adult sea turtles. ||| puppies"
+    val hits = Seq(positive, sentence)
+    searcher.consolidateHits(negative, hits, 10) should contain theSameElementsAs Seq(sentence)
+  }
+
   it should "remove near duplicates with the query when all are lower cased" in {
     val positive = "Tiger sharks and killer whales eat adult sea turtles."
     val negative = "tiger elephant and killer whales eat adult sea turtles."
