@@ -12,7 +12,6 @@ object SnliDatasets {
     val outputDirectory = snliDir + "processed/"
     val inputFile = snliDir + s"snli_1.0_${split}.txt"
     val outputFiles = Seq(outputDirectory + s"${split}.tsv")
-    ("name" -> s"snli_${split}") ~
     ("data files" -> List(
       ("sentence producer type" -> "dataset reader") ~
       ("reader" -> "snli") ~

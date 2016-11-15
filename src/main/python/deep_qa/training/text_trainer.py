@@ -270,7 +270,7 @@ class TextTrainer(Trainer):
         embedded_input = embedding_layer(input_layer)
         if projection_layer is not None:
             for _ in range(2, K.ndim(input_layer)):  # 2 here to account for batch_size.
-                projection_layer = TimeDistributed(projection_layer, name=projection_layer.name)
+                projection_layer = TimeDistributed(projection_layer, name="timedist_" + projection_layer.name)
             embedded_input = projection_layer(embedded_input)
         if self.embedding_dropout > 0.0:
             embedded_input = Dropout(self.embedding_dropout)(embedded_input)

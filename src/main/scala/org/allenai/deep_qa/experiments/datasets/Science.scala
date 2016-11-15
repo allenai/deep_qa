@@ -10,10 +10,8 @@ object ScienceDatasets {
   def makeBackgroundDataset(
     sentences: JValue,
     sentenceFormat: String,
-    corpus: JValue,
-    name: String
+    corpus: JValue
   ): JValue = {
-    ("name" -> name) ~
     ("data files" -> List(
       sentences,
       ("sentence producer type" -> "background searcher") ~
@@ -25,71 +23,61 @@ object ScienceDatasets {
   val omnibusMtfGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourTrainSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10),
-    "omnibus_4_train_mtf_qa_busc"
+    ScienceCorpora.buscElasticSearchIndex(10)
   )
 
   val omnibusMtfGradeFourDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourDevSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10),
-    "omnibus_4_dev_mtf_qa_busc"
+    ScienceCorpora.buscElasticSearchIndex(10)
   )
 
   val omnibusMtfGradeEightTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeEightTrainSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10),
-    "omnibus_8_train_mtf_qa_busc"
+    ScienceCorpora.buscElasticSearchIndex(10)
   )
 
   val omnibusMtfGradeEightDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeEightDevSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10),
-    "omnibus_8_dev_mtf_qa_busc"
+    ScienceCorpora.buscElasticSearchIndex(10)
   )
 
   val diagramMtfQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.ai2diagramSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10),
-    "diagram_mtf_qa_busc"
+    ScienceCorpora.buscElasticSearchIndex(10)
   )
 
   val omnibusQaGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourTrainSentences_questionAndAnswer,
     "question and answer",
-    ScienceCorpora.buscElasticSearchIndex(3),
-    "omnibus_4_train_q_and_a_busc"
+    ScienceCorpora.buscElasticSearchIndex(3)
   )
 
   val omnibusQaGradeFourDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourDevSentences_questionAndAnswer,
     "question and answer",
-    ScienceCorpora.buscElasticSearchIndex(3),
-    "omnibus_4_dev_q_and_a_busc"
+    ScienceCorpora.buscElasticSearchIndex(3)
   )
 
   val omnibusQaGradeEightTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeEightTrainSentences_questionAndAnswer,
     "question and answer",
-    ScienceCorpora.buscElasticSearchIndex(3),
-    "omnibus_8_train_q_and_a_busc"
+    ScienceCorpora.buscElasticSearchIndex(3)
   )
 
   val omnibusQaGradeEightDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeEightDevSentences_questionAndAnswer,
     "question and answer",
-    ScienceCorpora.buscElasticSearchIndex(3),
-    "omnibus_8_dev_q_and_a_busc"
+    ScienceCorpora.buscElasticSearchIndex(3)
   )
 
   val diagramQaQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.ai2diagramSentences_questionAndAnswer,
     "question and answer",
-    ScienceCorpora.buscElasticSearchIndex(3),
-    "diagram_q_and_a_busc"
+    ScienceCorpora.buscElasticSearchIndex(3)
   )
 }
 
@@ -206,8 +194,7 @@ object CreatedScienceDatasets {
   val johannesVersion0WithBuscBackground: JValue = ScienceDatasets.makeBackgroundDataset(
     johannesGeneratedDataVersion0,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue),
-    "johannes_generated_data_busc"
+    ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue)
   )
 
   val corpus = "s3n://private.store.dev.allenai.org/org.allenai.corpora.busc/extractedDocuments/science_templates"
