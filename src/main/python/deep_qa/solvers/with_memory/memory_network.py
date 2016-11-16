@@ -16,6 +16,8 @@ from ...layers.knowledge_encoders import knowledge_encoders
 from ...layers.knowledge_selectors import selectors
 from ...layers.memory_updaters import updaters
 from ...layers.vector_matrix_merge import VectorMatrixMerge
+from ...layers.recurrence_modes import recurrence_modes
+
 from ...training.models import DeepQaModel
 from ...training.text_trainer import TextTrainer
 
@@ -71,7 +73,10 @@ class MemoryNetworkSolver(TextTrainer):
     def __init__(self, params: Dict[str, Any]):
 
         self.num_memory_layers = params.pop('num_memory_layers', 1)
-
+        # This is used to label names for layers within the memory network loop. We have to define it here
+        # as the loop can be non-deterministic, meaning we have to modify it as we go, rather than use
+        # a loop index.
+        self.iteration = 0
         # These parameters specify the kind of knowledge selector, used to compute an attention
         # over a collection of background information.
         # If given, this must be a dict.  We will use the "type" key in this dict (which must match
@@ -85,7 +90,7 @@ class MemoryNetworkSolver(TextTrainer):
         self.memory_updater_params = params.pop('memory_updater', {})
         self.entailment_combiner_params = params.pop('entailment_input_combiner', {})
         self.entailment_model_params = params.pop('entailment_model', {})
-
+        self.recurrence_params = params.pop('recurrence_mode', {})
         # Upper limit on number of background sentences in the training data. Ignored during
         # testing (we use the value set at training time, either from this parameter or from a
         # loaded model).  If this is not set, we'll calculate a max length from the data.
@@ -304,6 +309,16 @@ class MemoryNetworkSolver(TextTrainer):
             entailment_params['answer_dim'] = self.embedding_size
         return entailment_models[model_type](entailment_params)
 
+    def _get_memory_network_recurrence(self):
+        # This code determines how the memory step is controlled within the memory network. If the
+        # recurrence method is 'fixed' we simply do a fixed number of memory steps. If the method is
+        # adaptive, the number of steps is data dependent and is a parameter of the model.
+        recurrence_params = deepcopy(self.recurrence_params)
+        recurrence_type = get_choice_with_default(recurrence_params, "type", list(recurrence_modes.keys()))
+        recurrence_params["memory_step"] = self.memory_step
+        recurrence_params["num_memory_layers"] = self.num_memory_layers
+        return recurrence_modes[recurrence_type](self, recurrence_params)
+
     @overrides
     def _build_model(self):
         # Steps 1 and 2: Convert inputs to sequences of word vectors, for both the question
@@ -320,42 +335,14 @@ class MemoryNetworkSolver(TextTrainer):
         knowledge_encoder = self._get_knowledge_encoder()
         encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, encoding_dim)
 
-        # Step 4: The "memory" component of a memory network.  At each step of this loop, we take
-        # the current memory, the encoded question, and the encoded background knowledge, perform
-        # some attention-based aggregation of the background knowledge, then update our current
-        # memory state.
+        # Step 4: Pass the question, memory and background into a memory network loop.
+        # At each step in the following loop recurrence, we take the question encoding,
+        # or the output of the previous memory layer, merge it with the knowledge encoding
+        # and pass it to the current memory layer.
+
         current_memory = encoded_question
-
-        knowledge_combiner = self._get_knowledge_combiner(0)
-        knowledge_axis = self._get_knowledge_axis()
-        for i in range(self.num_memory_layers):
-            # We do this concatenation so that the knowledge selector can be TimeDistributed
-            # correctly.
-            merged_encoded_rep = VectorMatrixMerge(
-                    concat_axis=knowledge_axis,
-                    name='concat_memory_layer_%d' % i)([encoded_question, current_memory, encoded_knowledge])
-            regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
-
-            knowledge_selector = self._get_knowledge_selector(i)
-            attention_weights = knowledge_selector(regularized_merged_rep)
-
-            # Again, this concatenation is done so that we can TimeDistribute the knowledge
-            # combiner.  TimeDistributed only allows a single input, so we need to merge them.
-            combined_background_with_attention = VectorMatrixMerge(
-                    concat_axis=knowledge_axis + 1,
-                    propagate_mask=False,  # the attention will have zeros, so we don't need a mask
-                    name='concat_attention_%d' % i)([attention_weights, encoded_knowledge])
-            attended_knowledge = knowledge_combiner(combined_background_with_attention)
-
-            # This one is just a regular merge, because all of these are vectors.  The
-            # concatenation is done, you guessed it, so that the memory_updater can be
-            # TimeDistributed.
-            updater_input = merge([encoded_question, current_memory, attended_knowledge],
-                                  mode='concat',
-                                  concat_axis=knowledge_axis,
-                                  name='concat_current_memory_with_background_%d' % i)
-            memory_updater = self._get_memory_updater(i)
-            current_memory = memory_updater(updater_input)
+        memory_steps = self._get_memory_network_recurrence()
+        current_memory, attended_knowledge = memory_steps(encoded_question, current_memory, encoded_knowledge)
 
         # TODO(matt): we now have subclasses that do answer selection, instead of entailment, and
         # it's not very nice to shoehorn them into the same "entailment" model.  It would be nice
@@ -366,7 +353,7 @@ class MemoryNetworkSolver(TextTrainer):
         # background knowledge through an entailment model to get a final true/false score.
         entailment_input = merge([encoded_question, current_memory, attended_knowledge],
                                  mode='concat',
-                                 concat_axis=knowledge_axis,
+                                 concat_axis=self._get_knowledge_axis(),
                                  name='concat_entailment_inputs')
         combined_input = self._get_entailment_input_combiner()(entailment_input)
         extra_entailment_inputs, entailment_output = self._get_entailment_output(combined_input)
@@ -375,7 +362,47 @@ class MemoryNetworkSolver(TextTrainer):
         # calling method.
         input_layers = [question_input, knowledge_input]
         input_layers.extend(extra_entailment_inputs)
+
         return DeepQaModel(input=input_layers, output=entailment_output)
+
+    def memory_step(self, encoded_question, current_memory, encoded_knowledge):
+
+        # TODO(Mark): Fix how _get_* methods handle layer incrementation/weight sharing.
+        knowledge_combiner = self._get_knowledge_combiner(0)
+        knowledge_axis = self._get_knowledge_axis()
+
+        # We do this concatenation so that the knowledge selector can be TimeDistributed
+        # correctly.
+        merged_encoded_rep = VectorMatrixMerge(
+                concat_axis=knowledge_axis,
+                name='concat_memory_layer_%d' % self.iteration)(
+                        [encoded_question, current_memory, encoded_knowledge])
+        regularized_merged_rep = Dropout(0.2)(merged_encoded_rep)
+
+        knowledge_selector = self._get_knowledge_selector(self.iteration)
+        attention_weights = knowledge_selector(regularized_merged_rep)
+
+        # Again, this concatenation is done so that we can TimeDistribute the knowledge
+        # combiner.  TimeDistributed only allows a single input, so we need to merge them.
+        combined_background_with_attention = VectorMatrixMerge(
+                concat_axis=knowledge_axis + 1,
+                propagate_mask=False,  # the attention will have zeros, so we don't need a mask
+                name='concat_attention_%d' % self.iteration)([attention_weights, encoded_knowledge])
+        attended_knowledge = knowledge_combiner(combined_background_with_attention)
+
+        # To make this easier to TimeDistribute, we're going to concatenate the current memory
+        # with the attended knowledge, and use that as the input to the memory updater, instead
+        # of just passing a list.
+        # We going from two inputs of (batch_size, encoding_dim) to one input of (batch_size,
+        # encoding_dim * 2).
+        updater_input = merge([encoded_question, current_memory, attended_knowledge],
+                              mode='concat',
+                              concat_axis=knowledge_axis,
+                              name='concat_current_memory_with_background_%d' % self.iteration)
+        memory_updater = self._get_memory_updater(self.iteration)
+        current_memory = memory_updater(updater_input)
+        self.iteration += 1
+        return current_memory, attended_knowledge
 
     @overrides
     def _instance_debug_output(self, instance: BackgroundInstance, outputs: Dict[str, numpy.array]) -> str:

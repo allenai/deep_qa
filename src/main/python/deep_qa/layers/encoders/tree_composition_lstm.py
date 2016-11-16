@@ -252,6 +252,8 @@ class TreeCompositionLSTM(Recurrent):
             self.set_weights(self.initial_weights)
             del self.initial_weights
 
+        self.built = True
+
     def _one_arg_compose(self, pred_arg):
         # pred_arg: Tensors of size (batch_size, 2, dim) where
         # pred_arg[:,0,:] are arg vectors (h,c) of all samples

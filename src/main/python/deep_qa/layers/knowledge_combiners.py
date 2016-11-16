@@ -226,6 +226,7 @@ class AttentiveGRUKnowledgeCombiner(GRU):
             self.set_weights(self.initial_weights)
             del self.initial_weights
 
+        self.built = True
     @overrides
     def preprocess_input(self, x):
         '''

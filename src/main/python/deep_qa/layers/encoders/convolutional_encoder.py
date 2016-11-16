@@ -83,6 +83,8 @@ class CNNEncoder(Layer):
             self.set_weights(self.initial_weights)
             del self.initial_weights
 
+        super(CNNEncoder, self).build(input_shape)
+
     def call(self, x, mask=None):
         # Each convolution layer returns output of size (samples, pool_length, num_filters),
         #       where pool_length = num_words - ngram_size + 1

@@ -87,6 +87,8 @@ class KnowledgeBackedLSTM(LSTM):
             self.set_weights(self.initial_kblstm_weights)
             del self.initial_kblstm_weights
 
+        self.built = True
+
     def step(self, x, states):
         # While the actual input to the layer is of
         # shape (batch_size, time, knowledge_length, token_dim+knowledge_dim), x in this function

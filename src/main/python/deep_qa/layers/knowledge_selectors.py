@@ -139,6 +139,7 @@ class ParameterizedKnowledgeSelector(Layer):
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
+        super(ParameterizedKnowledgeSelector, self).build(input_shape)
 
     def call(self, x, mask=None):
         '''
@@ -249,6 +250,7 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
+        super(ParameterizedHeuristicMatchingKnowledgeSelector, self).build(input_shape)
 
     def call(self, x, mask=None):
         '''

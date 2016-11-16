@@ -8,7 +8,7 @@ from deep_qa.solvers.with_memory.multiple_true_false_memory_network import Multi
 from ...common.constants import TEST_DIR
 from ...common.solvers import get_solver
 from ...common.solvers import write_multiple_true_false_memory_network_files
-
+from ...common.test_markers import requires_tensorflow
 
 class TestMultipleTrueFalseMemoryNetworkSolver(TestCase):
     # pylint: disable=protected-access
@@ -60,4 +60,10 @@ class TestMultipleTrueFalseMemoryNetworkSolver(TestCase):
             assert attention_weights[4][1] == 0
             assert attention_weights[4][2] == 0
         _output_debug_info.side_effect = new_debug
+        solver.train()
+
+    @requires_tensorflow
+    def test_train_does_not_crash_using_adaptive_recurrence(self):
+        args = {'recurrence_mode': {'type': 'adaptive'}}
+        solver = get_solver(MultipleTrueFalseMemoryNetworkSolver, args)
         solver.train()
