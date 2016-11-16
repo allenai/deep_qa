@@ -7,11 +7,18 @@ trait Instance {
   val label: Option[Any]
 
   /**
-   * Converts the instance into a sequence of strings.  This is a Seq[String] instead of just a
-   * String because some instance types (like BackgroundInstances) get written to multiple files,
-   * and we need to separate them.
+   * Converts the instance into a sequence of strings.  The return type here is unfortunately very
+   * complex, in order to handle a wide variety of possible ways that Instances can be written to
+   * disk.  First, some Instance types (like BackgroundInstances) get written to multiple files, so
+   * we need a Seq[] to be able to handle that.  Second, some Instance types (like
+   * MultipleTrueFalseInstances) get written to multiple lines in a file, and because we need to be
+   * able to number the lines, we need to return a Seq[] to handle this correctly.
+   *
+   * So, the length of the outer Seq[] is the number of files needed to write this Instance to
+   * disk, and the length of the inner Seq[] is the number of lines to write for this Instance.
+   * The length of all inner Seqs must match, or the numbering will not work correctly.
    */
-  def asStrings(): Seq[String]
+  def asStrings(): Seq[Seq[String]]
 }
 
 /**
@@ -21,11 +28,11 @@ case class TrueFalseInstance(
   statement: String,
   override val label: Option[Boolean]
 ) extends Instance {
-  def asStrings(): Seq[String] = {
+  def asStrings(): Seq[Seq[String]] = {
     label match {
-      case Some(true) => Seq(s"$statement\t1")
-      case Some(false) => Seq(s"$statement\t0")
-      case None => Seq(s"$statement")
+      case Some(true) => Seq(Seq(s"$statement\t1"))
+      case Some(false) => Seq(Seq(s"$statement\t0"))
+      case None => Seq(Seq(s"$statement"))
     }
   }
 }
@@ -40,11 +47,11 @@ case class MultipleTrueFalseInstance[T <: Instance](
 ) extends Instance {
 
   /**
-   * Here we return a single multiline string, one line for each statement.
+   * Each contained instance returns its own Seq[Seq[String]].  We just flatten together all of the
+   * inner Seq[Strings], and return a Seq[Seq[String]] with all of the instances combined.
    */
-  def asStrings(): Seq[String] = {
-    // TODO(matt): this needs to return a Seq[Seq[String]], to do things correctly...
-    Seq()
+  def asStrings(): Seq[Seq[String]] = {
+    instances.map(_.asStrings()).transpose.map(_.flatten)
   }
 }
 
@@ -56,11 +63,11 @@ case class QuestionAnswerInstance(
   answers: Seq[String],
   override val label: Option[Seq[Int]]
 ) extends Instance {
-  def asStrings(): Seq[String] = {
+  def asStrings(): Seq[Seq[String]] = {
     val answerString = answers.mkString("###")
     label match {
-      case Some(l) => Seq(s"$question\t$answerString\t${l.mkString(",")}")
-      case None => Seq(s"$question\t$answerString")
+      case Some(l) => Seq(Seq(s"$question\t$answerString\t${l.mkString(",")}"))
+      case None => Seq(Seq(s"$question\t$answerString"))
     }
   }
 }
@@ -72,9 +79,9 @@ case class BackgroundInstance[T <: Instance](
   containedInstance: T,
   background: Seq[String]
 ) extends Instance {
-  def asStrings(): Seq[String] = {
+  def asStrings(): Seq[Seq[String]] = {
     val backgroundString = background.mkString("\t")
-    containedInstance.asStrings() ++ Seq(backgroundString)
+    containedInstance.asStrings() ++ Seq(Seq(backgroundString))
   }
 
   override val label = containedInstance.label
@@ -88,13 +95,10 @@ case class SnliInstance(
   hypothesis: String,
   override val label: Option[String]
 ) extends Instance {
-  def asStrings(): Seq[String] = {
+  def asStrings(): Seq[Seq[String]] = {
     label match {
-      case Some(l) => Seq(s"$text\t$hypothesis\t$l")
-      case None => Seq(s"$text\t$hypothesis")
+      case Some(l) => Seq(Seq(s"$text\t$hypothesis\t$l"))
+      case None => Seq(Seq(s"$text\t$hypothesis"))
     }
   }
 }
-
-
-
