@@ -13,7 +13,6 @@ object ScienceDatasets {
     corpus: JValue
   ): JValue = {
     ("data files" -> List(
-      sentences,
       ("sentence producer type" -> "background searcher") ~
       ("searcher" -> corpus) ~
       ("sentences" -> sentences) ~
@@ -48,6 +47,13 @@ object ScienceDatasets {
     ScienceFiles.ai2diagramSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
     ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val openQaMtfQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.openQaAnimalAndGeneralScience_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10),
+    "omnibus_8_train_mtf_qa_busc"
   )
 
   val omnibusQaGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
@@ -162,6 +168,13 @@ private object ScienceFiles {
       "/efs/data/dlfa/questions/diagram_questions.tsv",
       "/efs/data/dlfa/processed/diagram_questions/question_and_answer/questions.tsv"
     )
+
+  val openQaAnimalAndGeneralScience_multipleTrueFalse_appendAnswer: JValue =
+    ("sentence producer type" -> "dataset reader") ~
+      ("reader" -> "open_qa") ~
+      ("create sentence indices" -> true) ~
+      ("input file" -> "/efs/data/dlfa/questions/open_qa/science_related.json") ~
+      ("output files" -> Seq("/efs/data/dlfa/processed/open_qa/questions.tsv"))
 }
 
 /**
