@@ -59,7 +59,7 @@ class DatasetSpec extends FlatSpecLike with Matchers {
     val filename1 = "/dataset"
     val contents1 = "0\tsentence with an answer\t1\n" +
       "1\tsentence with of answer\t0\n" +
-      "2\tsentence with in answer\t0\n" +
+      "2\tsentence with bad answer\t0\n" +
       "3\thaving an incorrect response\t0\n" +
       "4\thaving the perfect response\t1\n" +
       "5\thaving precisely response\t0\n"
@@ -71,7 +71,7 @@ class DatasetSpec extends FlatSpecLike with Matchers {
       MultipleTrueFalseInstance(Seq(
           BackgroundInstance(TrueFalseInstance("sentence with an answer", Some(true)), Seq("b1")),
           BackgroundInstance(TrueFalseInstance("sentence with of answer", Some(false)), Seq("b2")),
-          BackgroundInstance(TrueFalseInstance("sentence with in answer", Some(false)), Seq("b3"))
+          BackgroundInstance(TrueFalseInstance("sentence with bad answer", Some(false)), Seq("b3"))
       ), Some(0)),
       MultipleTrueFalseInstance(Seq(
         BackgroundInstance(TrueFalseInstance("having an incorrect response", Some(false)), Seq("b4")),
