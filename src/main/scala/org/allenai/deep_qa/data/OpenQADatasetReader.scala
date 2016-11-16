@@ -26,9 +26,8 @@ class OpenQADatasetReader(fileUtil: FileUtil) extends DatasetReader[MultipleTrue
         TrueFalseInstance(statement, Some(truthValue))
 
       })
-      MultipleTrueFalseInstance(instances,  Some(index))
+      MultipleTrueFalseInstance[TrueFalseInstance](instances,  Some(index))
     })
     Dataset(questions)
-    // TODO: Not correct.
   }
 }
