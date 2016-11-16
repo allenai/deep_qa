@@ -1,6 +1,5 @@
 package org.allenai.deep_qa.experiments
 
-import org.allenai.deep_qa.experiments.datasets.CreatedScienceDatasets
 import org.allenai.deep_qa.experiments.datasets.ScienceDatasets
 import org.allenai.deep_qa.pipeline.Evaluator
 

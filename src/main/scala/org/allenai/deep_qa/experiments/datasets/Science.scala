@@ -52,9 +52,7 @@ object ScienceDatasets {
   val openQaMtfQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.openQaAnimalAndGeneralScience_multipleTrueFalse_appendAnswer,
     "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10),
-    "omnibus_8_train_mtf_qa_busc"
-  )
+    ScienceCorpora.buscElasticSearchIndex(10))
 
   val omnibusQaGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourTrainSentences_questionAndAnswer,
@@ -174,7 +172,9 @@ private object ScienceFiles {
       ("reader" -> "open_qa") ~
       ("create sentence indices" -> true) ~
       ("input file" -> "/efs/data/dlfa/questions/open_qa/science_related.json") ~
-      ("output files" -> Seq("/efs/data/dlfa/processed/open_qa/questions.tsv"))
+      ("output files" ->
+        Seq("/efs/data/dlfa/processed/open_qa/questions.tsv",
+            "/efs/data/dlfa/processed/open_qa/busc_background.tsv"))
 }
 
 /**
