@@ -94,6 +94,7 @@ class NeuralNetworkTrainerStep(
     val validationInputs = validationFiles.map((_, validationDataset)).toSet
     trainInputs ++ validationInputs
   }
+println(inputs)
 
   // These three outputs are written by the python code.  The config.json file is a specification
   // of the model layers, so that keras can reconstruct the saved model object / computational

@@ -29,6 +29,7 @@ class DatasetStep(
   override val inputs: Set[(String, Option[Step])] = sentenceProducers.flatMap(producer => {
     producer.outputs.map((_, Some(producer)))
   }).toSet
+println(s"Dataset inputs: $inputs")
   val files = sentenceProducers.flatMap(_.outputs.toSeq)
   override val outputs = files.toSet
   override val inProgressFile = outputs.head.dropRight(4) + s"_${datasetHash}_in_progress"

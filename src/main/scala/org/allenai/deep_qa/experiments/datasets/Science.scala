@@ -13,6 +13,7 @@ object ScienceDatasets {
     corpus: JValue
   ): JValue = {
     ("data files" -> List(
+      sentences,
       ("sentence producer type" -> "background searcher") ~
       ("searcher" -> corpus) ~
       ("sentences" -> sentences) ~
@@ -171,10 +172,9 @@ private object ScienceFiles {
     ("sentence producer type" -> "dataset reader") ~
       ("reader" -> "open_qa") ~
       ("create sentence indices" -> true) ~
-      ("input file" -> "/efs/data/dlfa/questions/open_qa/science_related.json") ~
+      ("input file" -> "/efs/data/dlfa/open_qa/science_related.json") ~
       ("output files" ->
-        Seq("/efs/data/dlfa/processed/open_qa/questions.tsv",
-            "/efs/data/dlfa/processed/open_qa/busc_background.tsv"))
+        Seq("/efs/data/dlfa/processed/open_qa/questions.tsv"))
 }
 
 /**

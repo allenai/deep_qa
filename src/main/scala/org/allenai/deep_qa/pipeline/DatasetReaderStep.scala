@@ -26,6 +26,12 @@ class DatasetReaderStep(
   val outputFiles = (params \ "output files").extract[List[String]]
   val reader = DatasetReader.readers((params \ "reader").extract[String])(fileUtil)
 
+  // SentenceProducers need to specify an outputFile member variable, that will
+  // occasionally get read by other SentenceProducers.  We set this with
+  // outputFiles.head, which is the right thing if there's only one output
+  // file, and If we're reading multiple files, it's likely that this will get
+  // ignored, anyway, so it's probably ok.
+  override val outputFile = outputFiles.head
   override val inputs: Set[(String, Option[Step])] = Set((inputFile, None))
   override val outputs = outputFiles.toSet
   override val inProgressFile = outputs.head.dropRight(4) + s"_in_progress"

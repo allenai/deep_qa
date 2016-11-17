@@ -14,20 +14,25 @@ class OpenQADatasetReader(fileUtil: FileUtil) extends DatasetReader[MultipleTrue
     val source = fileUtil.readFileContents(filename)
     val jsonQuestions = JsonMethods.parse(source).children
 
-    val questions = jsonQuestions.map(item => {
+    val questions = jsonQuestions.flatMap(item => {
       val question = (item \ "question").extract[String]
       val correctAnswer = (item \ "answer").extract[String]
       val answerOptions = (item \ "choices").extract[Seq[String]]
-      val index = answerOptions.indexOf(correctAnswer)
+      val correctAnswerIndex = answerOptions.indexOf(correctAnswer)
 
+      val assertOneAnswer = answerOptions.map(_.equals(correctAnswer)).count(_.equals(true)).equals(1)
       val instances = answerOptions.map(option =>{
         val statement = question + " " + option
-        val truthValue = option == correctAnswer
+        val truthValue = answerOptions.indexOf(option).equals(correctAnswerIndex)
         TrueFalseInstance(statement, Some(truthValue))
-
       })
-      MultipleTrueFalseInstance[TrueFalseInstance](instances,  Some(index))
+      MultipleTrueFalseInstance[TrueFalseInstance](instances,  Some(correctAnswerIndex))
+      if (assertOneAnswer) {
+          Seq(MultipleTrueFalseInstance[TrueFalseInstance](instances, Some(correctAnswerIndex)))
+        } else {
+          Seq()
+      }
     })
-    Dataset(questions)
+    Dataset(questions.filter(x => x.instances.length == 4))
   }
 }
