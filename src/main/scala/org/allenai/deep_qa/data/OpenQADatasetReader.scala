@@ -4,9 +4,9 @@ import com.mattg.util.FileUtil
 import org.json4s.DefaultFormats
 import org.json4s.native.JsonMethods
 
-/**
+/*
  * Reader for the json pre-processed OpenQA dataset: https://github.com/uberspot/OpenTriviaQA.
-  * Download and run the packaged ruby preprocessing step (ruby converter.rb /path/to/data\*)
+ * Download and run the packaged ruby preprocessing step (ruby converter.rb /path/to/data\*)
  */
 class OpenQADatasetReader(fileUtil: FileUtil) extends DatasetReader[MultipleTrueFalseInstance[TrueFalseInstance]] {
   override def readFile(filename: String): Dataset[MultipleTrueFalseInstance[TrueFalseInstance]] = {
@@ -20,19 +20,19 @@ class OpenQADatasetReader(fileUtil: FileUtil) extends DatasetReader[MultipleTrue
       val answerOptions = (item \ "choices").extract[Seq[String]]
       val correctAnswerIndex = answerOptions.indexOf(correctAnswer)
 
-      val assertOneAnswer = answerOptions.map(_.equals(correctAnswer)).count(_.equals(true)).equals(1)
+      val hasOneAnswer = answerOptions.map(_.equals(correctAnswer)).count(_.equals(true)).equals(1)
       val instances = answerOptions.map(option =>{
-        val statement = question + " " + option
-        val truthValue = answerOptions.indexOf(option).equals(correctAnswerIndex)
+        val statement = question + " ||| " + option
+        val truthValue = option == correctAnswer
         TrueFalseInstance(statement, Some(truthValue))
       })
       MultipleTrueFalseInstance[TrueFalseInstance](instances,  Some(correctAnswerIndex))
-      if (assertOneAnswer) {
+      if (hasOneAnswer) {
           Seq(MultipleTrueFalseInstance[TrueFalseInstance](instances, Some(correctAnswerIndex)))
         } else {
           Seq()
       }
     })
-    Dataset(questions.filter(x => x.instances.length == 4))
+    Dataset(questions.filter(_.instances.length == 4))
   }
 }

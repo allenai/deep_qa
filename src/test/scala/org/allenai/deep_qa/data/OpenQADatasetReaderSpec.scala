@@ -37,8 +37,17 @@ class OpenQADatasetReaderSpec extends FlatSpecLike with Matchers {
     val dataset = reader.readFile(datasetFile)
 
     dataset should be(Dataset(Seq(
-        QuestionAnswerInstance("Question1", Seq("Answer1", "Answer2", "Answer3", "Answer4"), Some(Seq(0))),
-        QuestionAnswerInstance("Question2", Seq("Answer1", "Answer2", "Answer3", "Answer4"), Some(Seq(1))))
+      MultipleTrueFalseInstance[TrueFalseInstance](
+        List(TrueFalseInstance("Question1 ||| Answer1", Some(true)),
+             TrueFalseInstance("Question1 ||| Answer2", Some(false)),
+             TrueFalseInstance("Question1 ||| Answer3", Some(false)),
+             TrueFalseInstance("Question1 ||| Answer4", Some(false))),Some(0)),
+
+      MultipleTrueFalseInstance[TrueFalseInstance](
+        List(TrueFalseInstance("Question2 ||| Answer1", Some(false)),
+          TrueFalseInstance("Question2 ||| Answer2", Some(true)),
+          TrueFalseInstance("Question2 ||| Answer3", Some(false)),
+          TrueFalseInstance("Question2 ||| Answer4", Some(false))),Some(1)))
     ))
   }
 }
