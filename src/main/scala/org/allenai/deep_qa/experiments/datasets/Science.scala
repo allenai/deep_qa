@@ -170,7 +170,7 @@ private object ScienceFiles {
 
   val openQaAnimalAndGeneralScience_multipleTrueFalse_appendAnswer: JValue =
     ("sentence producer type" -> "dataset reader") ~
-      ("reader" -> "open_qa") ~
+      ("reader" -> "open qa") ~
       ("create sentence indices" -> true) ~
       ("input file" -> "/efs/data/dlfa/open_qa/science_related.json") ~
       ("output files" ->
