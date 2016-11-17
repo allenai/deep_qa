@@ -25,7 +25,6 @@ object MemoryNetworkExperiments {
     ("dataset" -> CreatedScienceDatasets.johannesVersion0WithBuscBackground) ~
     ("validation dataset" -> ScienceDatasets.omnibusMtfGradeFourTrainQuestionsWithBuscBackground)
   }
-
   val models = Seq(generatedDataMultipleChoiceMemoryNetwork)
 
   def main(args: Array[String]) {

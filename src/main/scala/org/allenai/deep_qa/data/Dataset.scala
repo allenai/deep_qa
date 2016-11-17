@@ -30,4 +30,5 @@ object DatasetReader {
   readers.put("babi", (fileUtil) => new BabiDatasetReader(fileUtil))
   readers.put("children's books", (fileUtil) => new ChildrensBookDatasetReader(fileUtil))
   readers.put("snli", (fileUtil) => new SnliDatasetReader(fileUtil))
+  readers.put("open qa", (fileUtil) => new OpenQADatasetReader(fileUtil))
 }
