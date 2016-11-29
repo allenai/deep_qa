@@ -1,6 +1,7 @@
 from keras import backend as K
 from keras.engine import InputSpec
 from keras.layers import Layer
+from ...common.tensors import switch
 
 class PositionalEncoder(Layer):
     '''
@@ -72,14 +73,18 @@ class PositionalEncoder(Layer):
         # row of ones which has been masked if required.
         masked_m = K.expand_dims(K.sum(ones_like_x, 1), 1)
 
-        one_over_m = ones_like_x / masked_m
-        j_index = my_keras_cumsum(ones_like_x, 1)
-        k_over_d = my_keras_cumsum(ones_like_x, 2) * 1.0/K.cast(K.shape(x)[2], 'float32')
-        one_minus_j = ones_like_x - j_index
-        one_minus_two_j = ones_like_x - 2 * j_index
+        if mask is None:
+            one_over_m = ones_like_x / masked_m
+            j_index = my_keras_cumsum(ones_like_x, 1)
+        else:
+            one_over_m = switch(ones_like_x, ones_like_x/masked_m, K.zeros_like(ones_like_x))
 
-        l_weighting_vectors = (one_minus_j * one_over_m) - \
-                              (k_over_d * (one_minus_two_j * one_over_m))
+            j_index = my_keras_cumsum(ones_like_x, 1) * K.expand_dims(float_mask, 2)
+
+        k_over_d = my_keras_cumsum(ones_like_x, 2) * 1.0/K.cast(K.shape(x)[2], 'float32')
+
+        l_weighting_vectors = (ones_like_x - (j_index * one_over_m)) - \
+                              (k_over_d * (ones_like_x - 2 * j_index * one_over_m))
 
         return K.sum(l_weighting_vectors * x, 1)
 
