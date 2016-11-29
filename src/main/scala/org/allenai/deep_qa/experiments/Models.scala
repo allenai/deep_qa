@@ -25,6 +25,12 @@ object Models {
     ("entailment_input_combiner" -> ("type" -> "memory_only")) ~
     ("num_memory_layers" -> 1)
 
+  val betterEntailmentComponents: JValue =
+    ("knowledge_selector" -> ("type" -> "dot_product")) ~
+    ("memory_updater" -> ("type" -> "dense_concat")) ~
+    ("entailment_input_combiner" -> ("type" -> "heuristic_matching")) ~
+    ("num_memory_layers" -> 1)
+
   def endToEndMemoryNetwork(encoder: String, numMemoryLayers: Int): JValue =
     softmaxMemoryNetwork merge
     basicMemoryNetworkComponents merge

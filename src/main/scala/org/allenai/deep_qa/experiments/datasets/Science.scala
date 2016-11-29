@@ -20,6 +20,12 @@ object ScienceDatasets {
       ("sentence format" -> sentenceFormat)))
   }
 
+  def makeCombinedDataset(datasets: Seq[JValue], outputDirectory: String): JValue = {
+    ("dataset type" -> "combined") ~
+    ("datasets" -> datasets) ~
+    ("output directory" -> outputDirectory)
+  }
+
   val omnibusMtfGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourTrainSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
@@ -43,6 +49,16 @@ object ScienceDatasets {
     "plain sentence",
     ScienceCorpora.buscElasticSearchIndex(10)
   )
+
+  val omnibusMtfGradeFourAndEightTrainQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    omnibusMtfGradeFourTrainQuestionsWithBuscBackground,
+    omnibusMtfGradeEightTrainQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/processed/omnibus_4_8_train/")
+
+  val omnibusMtfGradeFourAndEightDevQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    omnibusMtfGradeFourDevQuestionsWithBuscBackground,
+    omnibusMtfGradeEightDevQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/processed/omnibus_4_8_dev/")
 
   val diagramMtfQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.ai2diagramSentences_multipleTrueFalse_appendAnswer,
@@ -202,10 +218,21 @@ object CreatedScienceDatasets {
   val johannesGeneratedDataVersion0: JValue =
     ("sentence producer type" -> "manually provided") ~
     ("create sentence indices" -> true) ~
-    ("filename" -> "/efs/data/dlfa/generated_questions/v0_cleaned_and_filtered.tsv")
+    ("filename" -> "/efs/data/dlfa/generated_questions/v0/sentences.tsv")
+
+  val johannesGeneratedDataVersion01: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("create sentence indices" -> true) ~
+    ("filename" -> "/efs/data/dlfa/generated_questions/v0.1/sentences.tsv")
 
   val johannesVersion0WithBuscBackground: JValue = ScienceDatasets.makeBackgroundDataset(
     johannesGeneratedDataVersion0,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue)
+  )
+
+  val johannesVersion01WithBuscBackground: JValue = ScienceDatasets.makeBackgroundDataset(
+    johannesGeneratedDataVersion01,
     "plain sentence",
     ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue)
   )
