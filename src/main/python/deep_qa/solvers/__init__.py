@@ -7,6 +7,7 @@ from .with_memory.multiple_true_false_memory_network import MultipleTrueFalseMem
 from .with_memory.multiple_true_false_similarity import MultipleTrueFalseSimilaritySolver
 from .with_memory.softmax_memory_network import SoftmaxMemoryNetworkSolver
 from .with_memory.question_answer_memory_network import QuestionAnswerMemoryNetworkSolver
+from .with_memory.decomposable_attention_solver import DecomposableAttentionSolver
 
 from ..training import concrete_pretrainers
 from .pretraining.attention_pretrainer import AttentionPretrainer
@@ -19,6 +20,7 @@ concrete_solvers = {  # pylint: disable=invalid-name
         'MultipleTrueFalseMemoryNetworkSolver': MultipleTrueFalseMemoryNetworkSolver,
         'MultipleTrueFalseSimilaritySolver': MultipleTrueFalseSimilaritySolver,
         'QuestionAnswerMemoryNetworkSolver': QuestionAnswerMemoryNetworkSolver,
+        'DecomposableAttentionSolver': DecomposableAttentionSolver,
         'QuestionAnswerSolver': QuestionAnswerSolver,
         'SoftmaxMemoryNetworkSolver': SoftmaxMemoryNetworkSolver,
         'TreeLSTMSolver': TreeLSTMSolver,

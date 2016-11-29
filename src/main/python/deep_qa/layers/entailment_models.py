@@ -15,6 +15,7 @@ reasoning over this background knowledge, which the entailment model can choose 
 from typing import Any, Dict
 
 from keras import backend as K
+from keras import initializations, activations
 from keras.layers import Dense, Layer, TimeDistributed
 
 from ..common.tensors import switch, masked_softmax, tile_vector
@@ -219,6 +220,179 @@ class MultipleChoiceEntailmentModel:
         return softmax_output
 
 
+class DecomposableAttentionEntailment(Layer):
+    '''
+    This layer is a reimplementation of the entailment algorithm described in the following paper:
+    "A Decomposable Attention Model for Natural Language Inference", Parikh et al., 2016.
+    The algorithm has three main steps:
+    1) Attend: Compute dot products between all pairs of projections of words in the hypothesis and the premise,
+        normalize those dot products to use them to align each word in premise to a phrase in the hypothesis and
+        vice-versa. These alignments are then used to summarize the aligned phrase in the other sentence as a
+        weighted sum. The initial word projections are computed using a feed forward NN, F.
+    2) Compare: Pass a concatenation of each word in the premise and the summary of its aligned phrase in the
+        hypothesis through a feed forward NN, G, to get a projected comparison. Do the same with the hypothesis
+        and the aligned phrase from the premise.
+    3) Aggregate: Sum over the comparisons to get a single vector each for premise-hypothesis comparison, and
+        hypothesis-premise comparison. Pass them through a third feed forward NN (H), to get the entailment
+        decision.
+
+    At this point this doesn't quite fit into the memory network setup because the model doesn't
+    operate on the encoded sentence representations, but instead consumes the word level representations.
+    TODO(pradeep): Make this work with the memory network eventually.
+    TODO(pradeep): Split this layer into multiple layers to make parts of it reusable with memory network.
+    '''
+    def __init__(self, params: Dict[str, Any]):
+        self.num_hidden_layers = params.pop('num_hidden_layers', 1)
+        self.hidden_layer_width = params.pop('hidden_layer_width', 50)
+        self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
+        self.init = initializations.get(params.pop('init', 'uniform'))
+        self.supports_masking = True
+        # Making the name end with 'softmax' to let debug handle this layer's output correctly.
+        params['name'] = 'decomposable_attention_softmax'
+        # Weights will be initialized in the build method.
+        self.attend_weights = []  # weights related to F
+        self.compare_weights = []  # weights related to G
+        self.aggregate_weights = []  # weights related to H
+        self.scorer = None
+        super(DecomposableAttentionEntailment, self).__init__(**params)
+
+    def build(self, input_shape):
+        '''
+        This model has three feed forward NNs (F, G and H in the paper). We assume that all three NNs have the
+        same hyper-parameters: num_hidden_layers, hidden_layer_width and hidden_layer_activation. That is,
+        F, G and H have the same structure and activations. Their actual weights are different, though. H has a
+        separate softmax layer at the end.
+        '''
+        super(DecomposableAttentionEntailment, self).build(input_shape)
+        # input_shape is a list containing the shapes of the two inputs.
+        # Both sentences should be of the same length to share compare weights.
+        assert input_shape[0][1] == input_shape[1][1]
+        # input_dim below is embedding dim for the model in the paper since they feed embedded input directly into
+        # this layer.
+        input_dim = input_shape[0][-1]
+        attend_input_dim = input_dim
+        compare_input_dim = 2 * input_dim
+        aggregate_input_dim = self.hidden_layer_width * 2
+        for i in range(self.num_hidden_layers):
+            self.attend_weights.append(self.init((attend_input_dim, self.hidden_layer_width),
+                                                 name='%s_attend_%d' % (self.name, i)))
+            self.compare_weights.append(self.init((compare_input_dim, self.hidden_layer_width),
+                                                  name='%s_compare_%d' % (self.name, i)))
+            self.aggregate_weights.append(self.init((aggregate_input_dim, self.hidden_layer_width),
+                                                    name='%s_aggregate_%d' % (self.name, i)))
+            attend_input_dim = self.hidden_layer_width
+            compare_input_dim = self.hidden_layer_width
+            aggregate_input_dim = self.hidden_layer_width
+        self.trainable_weights = self.attend_weights + self.compare_weights + self.aggregate_weights
+        self.scorer = self.init((self.hidden_layer_width, 2), name='%s_score' % self.name)
+        self.trainable_weights.append(self.scorer)
+
+    def compute_mask(self, x, mask=None):
+        # pylint: disable=unused-argument
+        return None
+
+    def get_output_shape_for(self, input_shape):
+        # (batch_size, 2)
+        return (input_shape[0][0], 2)  # returns T/F probabilities.
+
+    @staticmethod
+    def _apply_feed_forward(input_tensor, weights, activation):
+        current_tensor = input_tensor
+        for weight in weights:
+            current_tensor = activation(K.dot(current_tensor, weight))
+        return current_tensor
+
+    @staticmethod
+    def _last_dim_flatten(input_tensor):
+        '''
+        Takes a tensor and returns a matrix while preserving only the last dimension from the input.
+        '''
+        input_shape = K.shape(input_tensor)
+        last_dim = input_shape[-1]
+        size_till_last_dim = K.prod(input_shape[:-1])
+        return K.reshape(input_tensor, (size_till_last_dim, last_dim))
+
+    def call(self, x, mask=None):
+        # premise_length = hypothesis_length in the following lines, but the names are kept separate to keep
+        # track of the axes being normalized.
+        premise_embedding, hypothesis_embedding = x
+        # (batch_size, premise_length), (batch_size, hypothesis_length)
+        premise_mask, hypothesis_mask = mask
+        if premise_mask is not None:
+            premise_embedding = switch(K.expand_dims(premise_mask), premise_embedding,
+                                       K.zeros_like(premise_embedding))
+        if hypothesis_mask is not None:
+            hypothesis_embedding = switch(K.expand_dims(hypothesis_mask), hypothesis_embedding,
+                                          K.zeros_like(hypothesis_embedding))
+        activation = activations.get(self.hidden_layer_activation)
+        # (batch_size, premise_length, hidden_dim)
+        projected_premise = self._apply_feed_forward(premise_embedding, self.attend_weights, activation)
+        # (batch_size, hypothesis_length, hidden_dim)
+        projected_hypothesis = self._apply_feed_forward(hypothesis_embedding, self.attend_weights, activation)
+        # (batch_size, premise_length, hypothesis_length)
+        unnormalized_attention = K.batch_dot(projected_premise, projected_hypothesis, axes=(2, 2))
+        (batch_size, premise_length, hypothesis_length) = K.shape(unnormalized_attention)
+
+        ## Step 1: Attend
+        # (batch_size, hypothesis_length, premise_length)
+        reshaped_attention = K.permute_dimensions(unnormalized_attention, (0, 2, 1))
+        flattened_unnormalized_attention = self._last_dim_flatten(unnormalized_attention)
+        flattened_reshaped_attention = self._last_dim_flatten(reshaped_attention)
+        if premise_mask is None and hypothesis_mask is None:
+            # (batch_size * premise_length, hypothesis_length)
+            flattened_p2h_attention = K.softmax(flattened_unnormalized_attention)
+            # (batch_size * hypothesis_length, premise_length)
+            flattened_h2p_attention = K.softmax(flattened_reshaped_attention)
+        elif premise_mask is not None and hypothesis_mask is not None:
+            # We have to compute alignment masks. All those elements that correspond to a masked word in
+            # either the premise or the hypothesis need to be masked.
+            # The two * operations below are essentially performing batched outer products. That is, the
+            # element-wise multiplications are between inputs of shape (batch_size, 1, l_a) and
+            # (batch_size, l_b, 1) to get an output of shape (batch_size, l_b, l_a).
+            # (batch_size * premise_length, hypothesis_length)
+            p2h_mask = self._last_dim_flatten(K.expand_dims(premise_mask, dim=-1) * K.expand_dims(hypothesis_mask,
+                                                                                                  dim=1))
+            # (batch_size * hypothesis_length, premise_length)
+            h2p_mask = self._last_dim_flatten(K.expand_dims(premise_mask, dim=1) * K.expand_dims(hypothesis_mask,
+                                                                                                 dim=-1))
+            flattened_p2h_attention = masked_softmax(flattened_unnormalized_attention, p2h_mask)
+            flattened_h2p_attention = masked_softmax(flattened_reshaped_attention, h2p_mask)
+        else:
+            # One of the two inputs is masked, and the other isn't. How did this happen??
+            raise NotImplementedError('Cannot handle only one of the inputs being masked.')
+        # (batch_size, premise_length, hypothesis_length)
+        p2h_attention = K.reshape(flattened_p2h_attention, (batch_size, premise_length, hypothesis_length))
+        # (batch_size, hypothesis_length, premise_length)
+        h2p_attention = K.reshape(flattened_h2p_attention, (batch_size, hypothesis_length, premise_length))
+        # beta in the paper (equation 2)
+        # sum((batch_size, premise_length, hyp_length, embed_dim), axis=2) = (batch_size, premise_length, emb_dim)
+        p2h_alignments = K.sum(K.expand_dims(p2h_attention, dim=-1) * K.expand_dims(hypothesis_embedding, dim=1),
+                               axis=2)
+        # alpha in the paper (equation 2)
+        # sum((batch_size, hyp_length, premise_length, embed_dim), axis=2) = (batch_size, hyp_length, emb_dim)
+        h2p_alignments = K.sum(K.expand_dims(h2p_attention, dim=-1) * K.expand_dims(premise_embedding, dim=1),
+                               axis=2)
+
+        ## Step 2: Compare
+        # Concatenate premise embedding and its alignments with hypothesis
+        premise_comparison_input = K.concatenate([premise_embedding, p2h_alignments])
+        hypothesis_comparison_input = K.concatenate([hypothesis_embedding, h2p_alignments])
+        # Equation 3 in the paper.
+        compared_premise = self._apply_feed_forward(premise_comparison_input, self.compare_weights, activation)
+        compared_hypothesis = self._apply_feed_forward(hypothesis_comparison_input, self.compare_weights,
+                                                       activation)
+
+        ## Step 3: Aggregate
+        # Equations 4 and 5.
+        # (batch_size, hidden_dim * 2)
+        aggregated_input = K.concatenate([K.sum(compared_premise, axis=1), K.sum(compared_hypothesis, axis=1)])
+        # (batch_size, hidden_dim)
+        input_to_scorer = self._apply_feed_forward(aggregated_input, self.aggregate_weights, activation)
+        # (batch_size, 2)
+        scores = K.softmax(K.dot(input_to_scorer, self.scorer))
+        return scores
+
+
 def split_combiner_inputs(x, encoding_dim: int):  # pylint: disable=invalid-name
     sentence_encoding = x[:, :encoding_dim]
     current_memory = x[:, encoding_dim:2*encoding_dim]
@@ -283,6 +457,7 @@ entailment_models = {  # pylint: disable=invalid-name
         'true_false_mlp': TrueFalseEntailmentModel,
         'multiple_choice_mlp': MultipleChoiceEntailmentModel,
         'question_answer_mlp': QuestionAnswerEntailmentModel,
+        'decomposable_attention': DecomposableAttentionEntailment,
         }
 
 entailment_input_combiners = {  # pylint: disable=invalid-name
