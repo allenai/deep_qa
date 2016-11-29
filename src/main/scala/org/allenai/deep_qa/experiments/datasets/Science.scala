@@ -100,6 +100,31 @@ object ScienceDatasets {
     "question and answer",
     ScienceCorpora.buscElasticSearchIndex(3)
   )
+
+  val tableMcqTrain: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("create sentence indices" -> true) ~
+    ("filename" -> "/efs/data/dlfa/table_mcq_test/training_data.tsv")
+
+  val tableMcqDev: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("create sentence indices" -> true) ~
+    ("filename" -> "/efs/data/dlfa/table_mcq_test/validation_data.tsv")
+
+  val tableMcqCorrectBackground: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("create sentence indices" -> true) ~
+    ("filename" -> "/efs/data/dlfa/table_mcq_test/test_data_background_correct_only.tsv")
+
+  val tableMcqTenBackground: JValue =
+    ("sentence producer type" -> "manually provided") ~
+    ("create sentence indices" -> true) ~
+    ("filename" -> "/efs/data/dlfa/table_mcq_test/test_data_background.tsv")
+
+  val tableMcqTrainWithCorrectBackground: JValue = ("data files" -> List(tableMcqTrain, tableMcqCorrectBackground))
+  val tableMcqDevWithCorrectBackground: JValue = ("data files" -> List(tableMcqDev, tableMcqCorrectBackground))
+  val tableMcqTrainWithTenBackground: JValue = ("data files" -> List(tableMcqTrain, tableMcqTenBackground))
+  val tableMcqDevWithTenBackground: JValue = ("data files" -> List(tableMcqDev, tableMcqTenBackground))
 }
 
 /**
