@@ -24,7 +24,7 @@ import scala.sys.process.ProcessLogger
 class NeuralNetworkTrainerStep(
   params: JValue,
   fileUtil: FileUtil
-) extends Step(Some(params), fileUtil) {
+  ) extends Step(Some(params merge (("name" -> "removed"): JValue)), fileUtil) {
   override val name = "Neural Network Trainer Step"
   implicit val formats = DefaultFormats
 
@@ -46,10 +46,10 @@ class NeuralNetworkTrainerStep(
   val logFile = s"${modelPrefix}log.txt"
   val errorLogFile = s"${modelPrefix}log.err"
 
-  val trainDataset = new DatasetStep(params \ "dataset", fileUtil)
+  val trainDataset = DatasetStep.create(params \ "dataset", fileUtil)
   val validationDataset = (params \ "validation dataset") match {
     case JNothing => None
-    case jval => Some(new DatasetStep(jval, fileUtil))
+    case jval => Some(DatasetStep.create(jval, fileUtil))
   }
   val trainFiles = trainDataset.outputs
   val validationFiles = validationDataset.map(_.outputs).getOrElse(Seq())

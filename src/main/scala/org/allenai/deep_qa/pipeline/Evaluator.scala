@@ -20,7 +20,7 @@ class Evaluator(models: Seq[JValue], fileUtil: FileUtil) extends Step(None, file
   override def _runStep() {
     val results = trainers.par.map(t => readStatsFromFile(t.logFile)).seq
     for ((trainer, result) <- trainers.zip(results)) {
-      println(s"Results for model ${trainer.modelName}:")
+      println(s"Results for model ${trainer.modelName} (hash: ${trainer.modelHash}):")
       for ((key, value) <- result) {
         println(s"${key}: ${value}")
       }

@@ -11,21 +11,53 @@ import org.json4s._
 object MemoryNetworkExperiments {
   val fileUtil = new FileUtil
 
-  val generatedDataMultipleChoiceMemoryNetwork: JValue = {
+  def multipleChoiceMemoryNetwork(name: String, trainingDataset: JValue): JValue = {
     val modelParams: JValue =
       Models.multipleTrueFalseMemoryNetwork merge
-      Models.basicMemoryNetworkComponents merge
-      Debug.multipleTrueFalseDefault merge
-      Encoders.bagOfWords merge
+      Models.betterEntailmentComponents merge
+      //Debug.multipleTrueFalseDefault merge
+      Encoders.gru merge
       Training.default merge
       //Training.entailmentPretraining merge
       (("max_sentence_length" -> 100) ~ ("patience" -> 20))
 
+    ("name" -> name) ~
     ("model params" -> modelParams) ~
-    ("dataset" -> CreatedScienceDatasets.johannesVersion0WithBuscBackground) ~
-    ("validation dataset" -> ScienceDatasets.omnibusMtfGradeFourTrainQuestionsWithBuscBackground)
+    ("dataset" -> trainingDataset) ~
+    ("validation dataset" -> ScienceDatasets.omnibusMtfGradeFourDevQuestionsWithBuscBackground)
   }
-  val models = Seq(generatedDataMultipleChoiceMemoryNetwork)
+
+  def omnibusWithTruncatedGeneratedQuestions(linesToKeep: Int): JValue = {
+    val truncatedQuestions: JValue =
+      ("dataset type" -> "truncated") ~
+      ("dataset to truncate" -> CreatedScienceDatasets.johannesVersion01WithBuscBackground) ~
+      ("instances to keep" -> linesToKeep) ~
+      ("output directory" -> s"/efs/data/dlfa/generated_questions/v0.1/truncated_${linesToKeep}/")
+
+    val combinedDataset: JValue =
+      ("dataset type" -> "combined") ~
+      ("datasets" -> Seq(
+        truncatedQuestions,
+        ScienceDatasets.omnibusMtfGradeFourTrainQuestionsWithBuscBackground)) ~
+      ("output directory" -> s"/efs/data/dlfa/processed/omnibus_4_train_and_${linesToKeep}_generated/")
+    combinedDataset
+  }
+
+  val omnibusTrain = multipleChoiceMemoryNetwork(
+    "omnibus",
+    ScienceDatasets.omnibusMtfGradeFourTrainQuestionsWithBuscBackground
+  )
+
+  val dataSizes = Seq(500, 1000, 2000, 5000, 10000, 15000, 20000)
+
+  val withGeneratedData = dataSizes.map(numInstances => {
+    multipleChoiceMemoryNetwork(
+      s"omnibus plus $numInstances generated questions",
+      omnibusWithTruncatedGeneratedQuestions(numInstances * 4)
+    )
+  })
+
+  val models = Seq(omnibusTrain) ++ withGeneratedData
 
   def main(args: Array[String]) {
     new Evaluator(models, fileUtil).runPipeline()
