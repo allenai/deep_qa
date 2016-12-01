@@ -15,8 +15,11 @@ import scala.collection.mutable
  * models: a list of (model name, model params) pairs.  We'll add the dataset parameters here, so
  * leave those out.
  */
-class BabiEvaluator(models: Seq[(String, JValue)], fileUtil: FileUtil) extends Step(None, fileUtil) {
-  override val name = "Evaluator"
+class BabiEvaluator(
+  evaluatorName: Option[String] = None,
+  models: Seq[(String, JValue)],
+  fileUtil: FileUtil
+) extends Step(None, fileUtil) {
 
   def addBabiParams(modelParams: JValue, modelName: String, taskNumber: Int): JValue = {
     ("model params" -> modelParams) ~
@@ -30,11 +33,16 @@ class BabiEvaluator(models: Seq[(String, JValue)], fileUtil: FileUtil) extends S
     tasks.map(new NeuralNetworkTrainerStep(_, fileUtil))
   }}
   val trainers = modelTrainers.flatten
-  val evaluatorName = trainers.map(_.modelName).hashCode().toHexString
+  val evaluationHash = trainers.map(_.modelHash).hashCode().toHexString
+  override val name = evaluatorName.getOrElse(evaluationHash)
+  val modelHashFile = s"/efs/data/dlfa/models/evaluations/${name}_${evaluationHash}.txt"
 
   override val inputs: Set[(String, Option[Step])] = trainers.map(trainer => (trainer.logFile, Some(trainer))).toSet
   override val outputs: Set[String] = Set()
-  override val inProgressFile = s"./babi_evaluator_${evaluatorName}_in_progress"
+  override val inProgressFile = modelHashFile.dropRight(4) + "_in_progress"
+
+  logger.info(s"Writing all model hashes used for experiment $name to $modelHashFile")
+  fileUtil.writeLinesToFile(modelHashFile, trainers.map(_.modelHash))
 
   override def _runStep() {
     val metric = "best validation accuracy"

@@ -29,6 +29,6 @@ object OpenQADataExperiments {
 
   def main(args: Array[String]) {
 
-    new Evaluator(models, fileUtil).runPipeline()
+    new Evaluator(Some("open_qa"), models, fileUtil).runPipeline()
   }
 }

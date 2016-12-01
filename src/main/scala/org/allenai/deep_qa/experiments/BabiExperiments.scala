@@ -20,6 +20,6 @@ object BabiExperiments {
   val models = Seq(babiMemN2N(1), babiMemN2N(3))
 
   def main(args: Array[String]) {
-    new BabiEvaluator(models, fileUtil).runPipeline()
+    new BabiEvaluator(Some("babi_experiments"), models, fileUtil).runPipeline()
   }
 }

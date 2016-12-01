@@ -6,16 +6,25 @@ import org.json4s._
 
 import scala.collection.mutable
 
-class Evaluator(models: Seq[JValue], fileUtil: FileUtil) extends Step(None, fileUtil) {
-  override val name = "Evaluator"
+class Evaluator(
+  evaluationName: Option[String]= None,
+  models: Seq[JValue],
+  fileUtil: FileUtil
+) extends Step(None, fileUtil) {
 
   val trainers = models.map(new NeuralNetworkTrainerStep(_, fileUtil))
-  val modelNames = trainers.map(_.modelName)
-  val evaluatorName = modelNames.hashCode().toHexString
+  val evaluationHash = trainers.map(_.modelHash).hashCode().toHexString
+  override val name = evaluationName.getOrElse(evaluationHash)
+  val modelHashFile = s"/efs/data/dlfa/models/evaluations/${name}_${evaluationHash}.txt"
 
   override val inputs: Set[(String, Option[Step])] = trainers.map(trainer => (trainer.logFile, Some(trainer))).toSet
   override val outputs: Set[String] = Set()
-  override val inProgressFile = s"./evaluator_${evaluatorName}_in_progress"
+  // TODO(Mark): This step does no work, so no step should have to wait for it.
+  // Alter pipeline code so this isn't required.
+  override val inProgressFile = modelHashFile.dropRight(4) + "_in_progress"
+
+  logger.info(s"Writing all model hashes used for experiment $name to $modelHashFile")
+  fileUtil.writeLinesToFile(modelHashFile, trainers.map(_.modelHash))
 
   override def _runStep() {
     val results = trainers.par.map(t => readStatsFromFile(t.logFile)).seq

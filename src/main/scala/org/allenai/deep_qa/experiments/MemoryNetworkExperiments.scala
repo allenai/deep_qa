@@ -60,6 +60,6 @@ object MemoryNetworkExperiments {
   val models = Seq(omnibusTrain) ++ withGeneratedData
 
   def main(args: Array[String]) {
-    new Evaluator(models, fileUtil).runPipeline()
+    new Evaluator(Some("memory_network"), models, fileUtil).runPipeline()
   }
 }
