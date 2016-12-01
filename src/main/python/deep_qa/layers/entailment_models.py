@@ -254,6 +254,9 @@ class DecomposableAttentionEntailment(Layer):
         self.compare_weights = []  # weights related to G
         self.aggregate_weights = []  # weights related to H
         self.scorer = None
+        self.input_dim = None
+        self.premise_length = None
+        self.hypothesis_length = None
         super(DecomposableAttentionEntailment, self).__init__(**params)
 
     def build(self, input_shape):
@@ -265,13 +268,13 @@ class DecomposableAttentionEntailment(Layer):
         '''
         super(DecomposableAttentionEntailment, self).build(input_shape)
         # input_shape is a list containing the shapes of the two inputs.
-        # Both sentences should be of the same length to share compare weights.
-        assert input_shape[0][1] == input_shape[1][1]
+        self.premise_length = input_shape[0][1]
+        self.hypothesis_length = input_shape[1][1]
         # input_dim below is embedding dim for the model in the paper since they feed embedded input directly into
         # this layer.
-        input_dim = input_shape[0][-1]
-        attend_input_dim = input_dim
-        compare_input_dim = 2 * input_dim
+        self.input_dim = input_shape[0][-1]
+        attend_input_dim = self.input_dim
+        compare_input_dim = 2 * self.input_dim
         aggregate_input_dim = self.hidden_layer_width * 2
         for i in range(self.num_hidden_layers):
             self.attend_weights.append(self.init((attend_input_dim, self.hidden_layer_width),
@@ -307,10 +310,10 @@ class DecomposableAttentionEntailment(Layer):
         '''
         Takes a tensor and returns a matrix while preserving only the last dimension from the input.
         '''
-        input_shape = K.shape(input_tensor)
-        last_dim = input_shape[-1]
-        size_till_last_dim = K.prod(input_shape[:-1])
-        return K.reshape(input_tensor, (size_till_last_dim, last_dim))
+        input_ndim = K.ndim(input_tensor)
+        shuffle_pattern = (input_ndim - 1,) + tuple(range(input_ndim - 1))
+        dim_shuffled_input = K.permute_dimensions(input_tensor, shuffle_pattern)
+        return K.transpose(K.batch_flatten(dim_shuffled_input))
 
     def call(self, x, mask=None):
         # premise_length = hypothesis_length in the following lines, but the names are kept separate to keep
@@ -331,11 +334,12 @@ class DecomposableAttentionEntailment(Layer):
         projected_hypothesis = self._apply_feed_forward(hypothesis_embedding, self.attend_weights, activation)
         # (batch_size, premise_length, hypothesis_length)
         unnormalized_attention = K.batch_dot(projected_premise, projected_hypothesis, axes=(2, 2))
-        (batch_size, premise_length, hypothesis_length) = K.shape(unnormalized_attention)
+        p2h_shape = K.shape(unnormalized_attention)
 
         ## Step 1: Attend
         # (batch_size, hypothesis_length, premise_length)
         reshaped_attention = K.permute_dimensions(unnormalized_attention, (0, 2, 1))
+        h2p_shape = K.shape(reshaped_attention)
         flattened_unnormalized_attention = self._last_dim_flatten(unnormalized_attention)
         flattened_reshaped_attention = self._last_dim_flatten(reshaped_attention)
         if premise_mask is None and hypothesis_mask is None:
@@ -349,29 +353,43 @@ class DecomposableAttentionEntailment(Layer):
             # The two * operations below are essentially performing batched outer products. That is, the
             # element-wise multiplications are between inputs of shape (batch_size, 1, l_a) and
             # (batch_size, l_b, 1) to get an output of shape (batch_size, l_b, l_a).
+            # Casting masks to float since we TF would complain if we multiplied bools.
+            float_premise_mask = K.cast(premise_mask, 'float32')
+            float_hypothesis_mask = K.cast(hypothesis_mask, 'float32')
             # (batch_size * premise_length, hypothesis_length)
-            p2h_mask = self._last_dim_flatten(K.expand_dims(premise_mask, dim=-1) * K.expand_dims(hypothesis_mask,
-                                                                                                  dim=1))
+            p2h_mask = self._last_dim_flatten(K.expand_dims(float_premise_mask, dim=-1) *
+                                              K.expand_dims(float_hypothesis_mask, dim=1))
             # (batch_size * hypothesis_length, premise_length)
-            h2p_mask = self._last_dim_flatten(K.expand_dims(premise_mask, dim=1) * K.expand_dims(hypothesis_mask,
-                                                                                                 dim=-1))
+            h2p_mask = self._last_dim_flatten(K.expand_dims(float_premise_mask, dim=1) *
+                                              K.expand_dims(float_hypothesis_mask, dim=-1))
             flattened_p2h_attention = masked_softmax(flattened_unnormalized_attention, p2h_mask)
             flattened_h2p_attention = masked_softmax(flattened_reshaped_attention, h2p_mask)
         else:
             # One of the two inputs is masked, and the other isn't. How did this happen??
             raise NotImplementedError('Cannot handle only one of the inputs being masked.')
         # (batch_size, premise_length, hypothesis_length)
-        p2h_attention = K.reshape(flattened_p2h_attention, (batch_size, premise_length, hypothesis_length))
+        p2h_attention = K.reshape(flattened_p2h_attention, p2h_shape)
         # (batch_size, hypothesis_length, premise_length)
-        h2p_attention = K.reshape(flattened_h2p_attention, (batch_size, hypothesis_length, premise_length))
+        h2p_attention = K.reshape(flattened_h2p_attention, h2p_shape)
+
+        # We have to explicitly tile tensors below because TF does not broadcast values while performing *.
+        # (batch_size, premise_length, hypothesis_length, embed_dim)
+        tiled_p2h_attention = K.dot(K.expand_dims(p2h_attention), K.ones((1, self.input_dim)))
+        # (batch_size, hypothesis_length, premise_length, embed_dim)
+        tiled_h2p_attention = K.dot(K.expand_dims(h2p_attention), K.ones((1, self.input_dim)))
+        # (batch_size, premise_length, hypothesis_length, embed_dim)
+        tiled_hypothesis_embedding = K.permute_dimensions(K.dot(K.expand_dims(hypothesis_embedding),
+                                                                K.ones((1, self.premise_length))), (0, 3, 1, 2))
+        # (batch_size, hypothesis_length, premise_length, embed_dim)
+        tiled_premise_embedding = K.permute_dimensions(K.dot(K.expand_dims(premise_embedding),
+                                                             K.ones((1, self.hypothesis_length))), (0, 3, 1, 2))
+
         # beta in the paper (equation 2)
         # sum((batch_size, premise_length, hyp_length, embed_dim), axis=2) = (batch_size, premise_length, emb_dim)
-        p2h_alignments = K.sum(K.expand_dims(p2h_attention, dim=-1) * K.expand_dims(hypothesis_embedding, dim=1),
-                               axis=2)
+        p2h_alignments = K.sum(tiled_p2h_attention * tiled_hypothesis_embedding, axis=2)
         # alpha in the paper (equation 2)
         # sum((batch_size, hyp_length, premise_length, embed_dim), axis=2) = (batch_size, hyp_length, emb_dim)
-        h2p_alignments = K.sum(K.expand_dims(h2p_attention, dim=-1) * K.expand_dims(premise_embedding, dim=1),
-                               axis=2)
+        h2p_alignments = K.sum(tiled_h2p_attention * tiled_premise_embedding, axis=2)
 
         ## Step 2: Compare
         # Concatenate premise embedding and its alignments with hypothesis
