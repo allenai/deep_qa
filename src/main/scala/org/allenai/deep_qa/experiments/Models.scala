@@ -31,6 +31,11 @@ object Models {
     ("entailment_input_combiner" -> ("type" -> "heuristic_matching")) ~
     ("num_memory_layers" -> 1)
 
+  val decomposableAttentionSolver: JValue =
+    ("solver_class" -> "DecomposableAttentionSolver")
+  val multipleTrueFalseDecomposableAttentionSolver: JValue =
+    ("solver_class" -> "MultipleTrueFalseDecomposableAttentionSolver")
+
   def endToEndMemoryNetwork(encoder: String, numMemoryLayers: Int): JValue =
     softmaxMemoryNetwork merge
     basicMemoryNetworkComponents merge

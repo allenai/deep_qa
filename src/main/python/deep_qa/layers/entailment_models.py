@@ -225,26 +225,31 @@ class DecomposableAttentionEntailment(Layer):
     This layer is a reimplementation of the entailment algorithm described in the following paper:
     "A Decomposable Attention Model for Natural Language Inference", Parikh et al., 2016.
     The algorithm has three main steps:
-    1) Attend: Compute dot products between all pairs of projections of words in the hypothesis and the premise,
-        normalize those dot products to use them to align each word in premise to a phrase in the hypothesis and
-        vice-versa. These alignments are then used to summarize the aligned phrase in the other sentence as a
-        weighted sum. The initial word projections are computed using a feed forward NN, F.
-    2) Compare: Pass a concatenation of each word in the premise and the summary of its aligned phrase in the
-        hypothesis through a feed forward NN, G, to get a projected comparison. Do the same with the hypothesis
-        and the aligned phrase from the premise.
-    3) Aggregate: Sum over the comparisons to get a single vector each for premise-hypothesis comparison, and
-        hypothesis-premise comparison. Pass them through a third feed forward NN (H), to get the entailment
-        decision.
+
+    1) Attend: Compute dot products between all pairs of projections of words in the hypothesis and
+      the premise, normalize those dot products to use them to align each word in premise to a
+      phrase in the hypothesis and vice-versa. These alignments are then used to summarize the
+      aligned phrase in the other sentence as a weighted sum. The initial word projections are
+      computed using a feed forward NN, F.
+    2) Compare: Pass a concatenation of each word in the premise and the summary of its aligned
+      phrase in the hypothesis through a feed forward NN, G, to get a projected comparison. Do the
+      same with the hypothesis and the aligned phrase from the premise.
+    3) Aggregate: Sum over the comparisons to get a single vector each for premise-hypothesis
+      comparison, and hypothesis-premise comparison. Pass them through a third feed forward NN (H),
+      to get the entailment decision.
 
     At this point this doesn't quite fit into the memory network setup because the model doesn't
-    operate on the encoded sentence representations, but instead consumes the word level representations.
+    operate on the encoded sentence representations, but instead consumes the word level
+    representations.
     TODO(pradeep): Make this work with the memory network eventually.
-    TODO(pradeep): Split this layer into multiple layers to make parts of it reusable with memory network.
+    TODO(pradeep): Split this layer into multiple layers to make parts of it reusable with memory
+    network.
     '''
     def __init__(self, params: Dict[str, Any]):
         self.num_hidden_layers = params.pop('num_hidden_layers', 1)
         self.hidden_layer_width = params.pop('hidden_layer_width', 50)
         self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
+        self.final_activation = params.pop('final_activation', 'softmax')
         self.init = initializations.get(params.pop('init', 'uniform'))
         self.supports_masking = True
         # Making the name end with 'softmax' to let debug handle this layer's output correctly.
@@ -257,22 +262,29 @@ class DecomposableAttentionEntailment(Layer):
         self.input_dim = None
         self.premise_length = None
         self.hypothesis_length = None
+        self.output_dim = 2 if self.final_activation == 'softmax' else 1
         super(DecomposableAttentionEntailment, self).__init__(**params)
 
     def build(self, input_shape):
         '''
-        This model has three feed forward NNs (F, G and H in the paper). We assume that all three NNs have the
-        same hyper-parameters: num_hidden_layers, hidden_layer_width and hidden_layer_activation. That is,
-        F, G and H have the same structure and activations. Their actual weights are different, though. H has a
-        separate softmax layer at the end.
+        This model has three feed forward NNs (F, G and H in the paper). We assume that all three
+        NNs have the same hyper-parameters: num_hidden_layers, hidden_layer_width and
+        hidden_layer_activation. That is, F, G and H have the same structure and activations. Their
+        actual weights are different, though. H has a separate softmax layer at the end.
         '''
         super(DecomposableAttentionEntailment, self).build(input_shape)
-        # input_shape is a list containing the shapes of the two inputs.
-        self.premise_length = input_shape[0][1]
-        self.hypothesis_length = input_shape[1][1]
-        # input_dim below is embedding dim for the model in the paper since they feed embedded input directly into
-        # this layer.
-        self.input_dim = input_shape[0][-1]
+        if isinstance(input_shape, list):
+            # input_shape is a list containing the shapes of the two inputs.
+            self.premise_length = input_shape[0][1]
+            self.hypothesis_length = input_shape[1][1]
+            # input_dim below is embedding dim for the model in the paper since they feed embedded
+            # input directly into this layer.
+            self.input_dim = input_shape[0][-1]
+        else:
+            # NOTE: This will probably fail silently later on in this code if your premise and
+            # hypothesis actually have different lengths.
+            self.premise_length = self.hypothesis_length = int(input_shape[1] / 2)
+            self.input_dim = input_shape[-1]
         attend_input_dim = self.input_dim
         compare_input_dim = 2 * self.input_dim
         aggregate_input_dim = self.hidden_layer_width * 2
@@ -287,7 +299,7 @@ class DecomposableAttentionEntailment(Layer):
             compare_input_dim = self.hidden_layer_width
             aggregate_input_dim = self.hidden_layer_width
         self.trainable_weights = self.attend_weights + self.compare_weights + self.aggregate_weights
-        self.scorer = self.init((self.hidden_layer_width, 2), name='%s_score' % self.name)
+        self.scorer = self.init((self.hidden_layer_width, self.output_dim), name='%s_score' % self.name)
         self.trainable_weights.append(self.scorer)
 
     def compute_mask(self, x, mask=None):
@@ -296,7 +308,10 @@ class DecomposableAttentionEntailment(Layer):
 
     def get_output_shape_for(self, input_shape):
         # (batch_size, 2)
-        return (input_shape[0][0], 2)  # returns T/F probabilities.
+        if isinstance(input_shape, list):
+            return (input_shape[0][0], self.output_dim)
+        else:
+            return (input_shape[0], self.output_dim)
 
     @staticmethod
     def _apply_feed_forward(input_tensor, weights, activation):
@@ -318,9 +333,16 @@ class DecomposableAttentionEntailment(Layer):
     def call(self, x, mask=None):
         # premise_length = hypothesis_length in the following lines, but the names are kept separate to keep
         # track of the axes being normalized.
-        premise_embedding, hypothesis_embedding = x
-        # (batch_size, premise_length), (batch_size, hypothesis_length)
-        premise_mask, hypothesis_mask = mask
+        if isinstance(x, list) or isinstance(x, tuple):
+            premise_embedding, hypothesis_embedding = x
+            # (batch_size, premise_length), (batch_size, hypothesis_length)
+            premise_mask, hypothesis_mask = mask
+        else:
+            premise_embedding = x[:, :self.premise_length, :]
+            hypothesis_embedding = x[:, self.premise_length:, :]
+            # (batch_size, premise_length), (batch_size, hypothesis_length)
+            premise_mask = None if mask is None else mask[:, :self.premise_length]
+            hypothesis_mask = None if mask is None else mask[:, self.premise_length:]
         if premise_mask is not None:
             premise_embedding = switch(K.expand_dims(premise_mask), premise_embedding,
                                        K.zeros_like(premise_embedding))
@@ -407,7 +429,8 @@ class DecomposableAttentionEntailment(Layer):
         # (batch_size, hidden_dim)
         input_to_scorer = self._apply_feed_forward(aggregated_input, self.aggregate_weights, activation)
         # (batch_size, 2)
-        scores = K.softmax(K.dot(input_to_scorer, self.scorer))
+        final_activation = activations.get(self.final_activation)
+        scores = final_activation(K.dot(input_to_scorer, self.scorer))
         return scores
 
 

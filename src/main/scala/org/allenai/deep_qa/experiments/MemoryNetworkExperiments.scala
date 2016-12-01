@@ -57,9 +57,51 @@ object MemoryNetworkExperiments {
     )
   })
 
-  val models = Seq(omnibusTrain) ++ withGeneratedData
+  //val models = Seq(omnibusTrain) ++ withGeneratedData
+
+  def tableMcqExperiment(name: String, modelParams: JValue): JValue = {
+    ("name" -> name) ~
+    ("model params" -> modelParams) ~
+    ("dataset" -> ScienceDatasets.tableMcqTrainWithCorrectBackground) ~
+    ("validation dataset" -> ScienceDatasets.tableMcqDevWithCorrectBackground)
+  }
+
+  val tableMcqDecomposableAttention = tableMcqExperiment(
+    "Decomposable attention",
+    Models.decomposableAttentionSolver merge Training.default
+  )
+
+  val tableMcqMtfDecomposableAttention = tableMcqExperiment(
+    "MultipleTF Decomposable attention",
+    Models.multipleTrueFalseDecomposableAttentionSolver merge Training.default
+  )
+
+  val tableMcqMtfmnsGru = tableMcqExperiment(
+    "MTFMNS with GRU",
+    Models.multipleTrueFalseMemoryNetwork merge
+    Models.betterEntailmentComponents merge
+    //Debug.multipleTrueFalseDefault merge
+    Encoders.gru merge
+    Training.default
+  )
+
+  val tableMcqTfmnsGru = tableMcqExperiment(
+    "TFMNS with GRU",
+    Models.trueFalseMemoryNetwork merge
+    Models.betterEntailmentComponents merge
+    //Debug.multipleTrueFalseDefault merge
+    Encoders.gru merge
+    Training.default
+  )
+
+  val models = Seq(
+    tableMcqDecomposableAttention,
+    tableMcqMtfDecomposableAttention,
+    tableMcqMtfmnsGru,
+    tableMcqTfmnsGru
+  )
 
   def main(args: Array[String]) {
-    new Evaluator(Some("memory_network"), models, fileUtil).runPipeline()
+    new Evaluator(Some("table_mcq_decomposable_attention_2016_12_01"), models, fileUtil).runPipeline()
   }
 }

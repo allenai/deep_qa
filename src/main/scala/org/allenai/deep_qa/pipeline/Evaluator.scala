@@ -24,6 +24,7 @@ class Evaluator(
   override val inProgressFile = modelHashFile.dropRight(4) + "_in_progress"
 
   logger.info(s"Writing all model hashes used for experiment $name to $modelHashFile")
+  fileUtil.mkdirsForFile(modelHashFile)
   fileUtil.writeLinesToFile(modelHashFile, trainers.map(_.modelHash))
 
   override def _runStep() {
