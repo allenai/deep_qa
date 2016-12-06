@@ -132,7 +132,7 @@ object ScienceDatasets {
  * we can't really specify them all declaratively in Datasets, so we specify them here first, then
  * use them above in Datasets.
  */
-private object ScienceFiles {
+object ScienceFiles {
   def makeMultipleTrueFalseQuestionAnswerFile(questionFile: String, outputFile: String): JValue = {
     ("sentence producer type" -> "question interpreter") ~
     ("create sentence indices" -> true) ~
@@ -221,7 +221,7 @@ private object ScienceFiles {
 /**
  * These are corpora that can be used for searching, or for training language models, or the like.
  */
-private object ScienceCorpora {
+object ScienceCorpora {
   def buscElasticSearchIndex(numResults: Int): JValue =
     ("num passages per query" -> numResults) ~
     ("elastic search index url" -> "aristo-es1.dev.ai2") ~

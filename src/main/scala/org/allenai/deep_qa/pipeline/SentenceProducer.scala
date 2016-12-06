@@ -65,6 +65,11 @@ object SentenceProducer {
       case JString("question interpreter") => new QuestionInterpreterStep(params, fileUtil)
       case JString("sentence corruptor") => new SentenceCorruptor(params, fileUtil)
       case JString("sentence selector") => new SentenceSelector(params, fileUtil)
+      // TODO(matt): it probably makes sense to have a higher-level abstraction here, because
+      // tuples aren't really sentences...  But I'm doing it this way so that the DatasetStep can
+      // use tuples as input, as it requires SentenceProducers.  I need it to require something of
+      // which SentenceProducer is a subclass...
+      case JString("sentence to tuple") => new SentenceToTuple(params, fileUtil)
       case jval => throw new IllegalStateException(s"unrecognized SentenceProducer parameters: $jval")
     }
   }
