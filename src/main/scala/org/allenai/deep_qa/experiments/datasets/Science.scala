@@ -240,27 +240,15 @@ object CreatedScienceDatasets {
   // Step 1: Take a corpus and select sentences to use
   //////////////////////////////////////////////////////////
 
-  val johannesGeneratedDataVersion0: JValue =
-    ("sentence producer type" -> "manually provided") ~
-    ("create sentence indices" -> true) ~
-    ("filename" -> "/efs/data/dlfa/generated_questions/v0/sentences.tsv")
-
-  val johannesGeneratedDataVersion01: JValue =
-    ("sentence producer type" -> "manually provided") ~
-    ("create sentence indices" -> true) ~
-    ("filename" -> "/efs/data/dlfa/generated_questions/v0.1/sentences.tsv")
-
-  val johannesVersion0WithBuscBackground: JValue = ScienceDatasets.makeBackgroundDataset(
-    johannesGeneratedDataVersion0,
-    "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue)
-  )
-
-  val johannesVersion01WithBuscBackground: JValue = ScienceDatasets.makeBackgroundDataset(
-    johannesGeneratedDataVersion01,
-    "plain sentence",
-    ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue)
-  )
+  def johannesBackgroundDataset(version: String): JValue = {
+    ScienceDatasets.makeBackgroundDataset(
+      ("sentence producer type" -> "manually provided") ~
+        ("create sentence indices" -> true) ~
+        ("filename" -> s"/efs/data/dlfa/generated_questions/v${version}/sentences.tsv"),
+      "plain sentence",
+      ScienceCorpora.buscElasticSearchIndex(10) merge (("remove query near duplicates" -> true): JValue)
+    )
+  }
 
   val corpus = "s3n://private.store.dev.allenai.org/org.allenai.corpora.busc/extractedDocuments/science_templates"
   val sentenceSelectorParams: JValue =

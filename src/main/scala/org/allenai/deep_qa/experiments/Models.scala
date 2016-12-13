@@ -70,14 +70,10 @@ object Encoders {
     ("ngram_filter_sizes" -> List(2, 3, 4)) ~ ("num_filters" -> 50)
   )
 
-  val pretrainedGloveEmbeddingsWithProjection: JValue =
-    ("file" -> "/efs/data/dlfa/glove.840B.300d.txt.gz") ~
-    ("fine tune" -> false) ~
-    ("add projection" -> true)
-
-  val pretrainedGloveEmbeddingsWithFineTuning: JValue =
-    ("file" -> "/efs/data/dlfa/glove.840B.300d.txt.gz") ~
-    ("fine tune" -> true)
+  def pretrainedGloveEmbeddings(fineTuning: Boolean=true, projection: Boolean=false): JValue =
+    ("pretrained_embeddings_file" -> "/efs/data/dlfa/glove.840B.300d.txt.gz") ~
+    ("fine_tune_embeddings" -> fineTuning) ~
+    ("project_embeddings" -> projection)
 }
 
 object Training {

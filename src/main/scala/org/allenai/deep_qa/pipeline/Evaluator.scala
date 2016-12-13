@@ -25,7 +25,7 @@ class Evaluator(
 
   logger.info(s"Writing all model hashes used for experiment $name to $modelHashFile")
   fileUtil.mkdirsForFile(modelHashFile)
-  fileUtil.writeLinesToFile(modelHashFile, trainers.map(_.modelHash))
+  fileUtil.writeLinesToFile(modelHashFile, trainers.map(t => s"${t.modelHash}\t${t.modelName}"))
 
   override def _runStep() {
     val results = trainers.par.map(t => readStatsFromFile(t.logFile)).seq
