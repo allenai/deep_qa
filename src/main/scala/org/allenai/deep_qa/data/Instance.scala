@@ -102,3 +102,16 @@ case class SnliInstance(
     }
   }
 }
+
+case class SquadInstance(
+  question: String,
+  passage: String,
+  answerStartCharacterIndex: Option[Int],
+  answerEndCharacterIndex: Option[Int]
+) extends Instance {
+  override val label: Option[(Int, Int)] = answerStartCharacterIndex.map((_, answerEndCharacterIndex.get))
+  def asStrings(): Seq[Seq[String]] = {
+    val labelString = (label.map { case (start, end) => s"\t${start},${end}" }).getOrElse("")
+    Seq(Seq(s"${question}\t${passage}${labelString}"))
+  }
+}
