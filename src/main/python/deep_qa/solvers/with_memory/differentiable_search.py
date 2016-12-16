@@ -124,12 +124,12 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
                         self.validation_dataset, for_train=False)
 
     @overrides
-    def _save_model(self, epoch: int):
+    def _save_auxiliary_files(self):
         """
         In addition to whatever superclasses do, here we need to save the LSH, so we can load it
         later if desired.
         """
-        super(DifferentiableSearchSolver, self)._save_model(epoch)
+        super(DifferentiableSearchSolver, self)._save_auxiliary_files()
         lsh_file = open("%s_lsh.pkl" % self.model_prefix, "wb")
         sentence_index_file = open("%s_index.pkl" % self.model_prefix, "wb")
         pickle.dump(self.lsh, lsh_file)

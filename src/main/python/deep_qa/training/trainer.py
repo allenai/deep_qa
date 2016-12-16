@@ -3,7 +3,9 @@ import os
 from typing import Any, Dict, List
 
 import numpy
+import keras.backend as K
 from keras.models import model_from_json
+from keras.callbacks import LambdaCallback, TensorBoard, EarlyStopping, CallbackList, ModelCheckpoint
 
 from . import concrete_pretrainers
 from ..common.checks import ConfigurationError
@@ -51,6 +53,8 @@ class Trainer:
         self.num_epochs = params.pop('num_epochs', 20)
         # Number of epochs to be patient before early stopping.
         self.patience = params.pop('patience', 1)
+        # Log directory for tensorboard.
+        self.tensorboard_log = params.pop('tensorboard_log', None)
 
         # The files containing the data that should be used for training.  See
         # _load_dataset_from_files().
@@ -265,40 +269,62 @@ class Trainer:
             self.debug_model = self._build_debug_model(debug_layer_names, debug_masks)
             self.debug_model.compile(loss='mse', optimizer='sgd')  # Will not train this model.
 
+        # Now we actually train the model using various Keras callbacks to control training.
+        callbacks = self._get_callbacks()
+        kwargs = {'nb_epoch': self.num_epochs, 'callbacks': [callbacks]}
+        # We'll check for explicit validation data first; if you provided this, you definitely
+        # wanted to use it for validation.  self.keras_validation_split is non-zero by default,
+        # so you may have left it above zero on accident.
+        if self.validation_input is not None:
+            kwargs['validation_data'] = (self.validation_input, self.validation_labels)
+        elif self.keras_validation_split > 0.0:
+            kwargs['validation_split'] = self.keras_validation_split
+        # We now pass all the arguments to the model's fit function, which does all of the training.
+        history = self.model.fit(self.train_input, self.train_labels, **kwargs)
+        # After finishing training, we save the best weights and
+        # any auxillary files, such as the model config.
 
-        # Now we actually train the model, with patient early stopping using the validation data.
-        best_accuracy = 0.0
-        self.best_epoch = 0
-        num_worse_epochs = 0
-        for epoch_id in range(self.num_epochs):
-            self._pre_epoch_hook(epoch_id)
-            logger.info("Epoch %d", epoch_id)
-            kwargs = {'nb_epoch': 1}
-            # We'll check for explicit validation data first; if you provided this, you definitely
-            # wanted to use it for validation.  self.keras_validation_split is non-zero by default,
-            # so you may have left it above zero on accident.
-            if self.validation_input:
-                kwargs['validation_data'] = (self.validation_input, self.validation_labels)
-            elif self.keras_validation_split > 0.0:
-                kwargs['validation_split'] = self.keras_validation_split
-            history = self.model.fit(self.train_input, self.train_labels, **kwargs)
-            self._post_epoch_hook(epoch_id, history.history)
-            accuracy = history.history[self.validation_metric][-1]
-            if accuracy < best_accuracy:
-                num_worse_epochs += 1
-                if num_worse_epochs >= self.patience:
-                    logger.info("Stopping training")
-                    break
-            else:
-                best_accuracy = accuracy
-                self.best_epoch = epoch_id
-                num_worse_epochs = 0  # Reset the counter.
-                if self.save_models:
-                    self._save_model(epoch_id)
-            if self.debug_params:
-                self._debug(debug_layer_names, debug_masks, epoch_id)
+        self.best_epoch = int(numpy.argmax(history.history[self.validation_metric]))
         if self.save_models:
             self._save_best_model()
+            self._save_auxiliary_files()
+
+    def _get_callbacks(self):
+        """
+         Returns a set of Callbacks which are used to perform various functions within Keras' .fit method.
+         Here, we use an early stopping callback to add patience with respect to the validation metric and
+         a Lambda callback which performs the model specific callbacks which you might want to build into
+         a model, such as re-encoding some background knowledge.
+
+         Additionally, there is also functionality to create Tensorboard log files. These can be visualised
+         using 'tensorboard --logdir /path/to/log/files' after training.
+        """
+        early_stop = EarlyStopping(monitor=self.validation_metric, patience=self.patience)
+        model_callbacks = LambdaCallback(on_epoch_begin=lambda epoch, logs: self._pre_epoch_hook(epoch),
+                                         on_epoch_end=lambda epoch, logs: self._post_epoch_hook(epoch))
+        callbacks = [early_stop, model_callbacks]
+
+        if self.tensorboard_log is not None:
+            if K.backend() == 'theano':
+                raise ConfigurationError("Tensorboard logging is only compatibile with Tensorflow. "
+                                         "Change the backend using the KERAS_BACKEND environment variable.")
+            tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log)
+            callbacks.append(tensorboard_visualisation)
+
+        if self.debug_params:
+            debug_callback = LambdaCallback(on_epoch_end=lambda epoch, logs:
+                                            self._debug(self.debug_params["layer_names"],
+                                                        self.debug_params.get("masks", []), epoch))
+            callbacks.append(debug_callback)
+
+        # Some witchcraft is happening here - we don't specify the epoch replacement variable
+        # checkpointing string, because Keras does that within the callback if we specify it here.
+        if self.save_models:
+            checkpointing = ModelCheckpoint(self.model_prefix + "_weights_epoch={epoch:d}.h5",
+                                            save_best_only=True, save_weights_only=True)
+            callbacks.append(checkpointing)
+
+        return CallbackList(callbacks)
 
     def _debug(self, debug_layer_names: List[str], debug_masks: List[str], epoch: int):
         """
@@ -340,16 +366,14 @@ class Trainer:
         """
         pass
 
-    def _post_epoch_hook(self, epoch: int, history: Dict[str, Any]):
+    def _post_epoch_hook(self, epoch: int):
         """
         This method gets called directly after model.fit(), before making any early stopping
         decisions.  If you want to modify anything after each iteration (e.g., computing a
         different kind of validation loss to use for early stopping, or just computing and printing
-        accuracy on some other held out data), you can do that here.
-
-        If you have good reason to, feel free to modify the history object, which could change the
-        behavior of the training (e.g., by setting a new value for the self.validation_metric key,
-        which affects early stopping and best epoch decisions).
+        accuracy on some other held out data), you can do that here. If you require extra parameters,
+        use calls to local methods rather than passing new parameters, as this hook is run via a
+        Keras Callback, which is fairly strict in it's interface.
         """
         pass
 
@@ -465,20 +489,9 @@ class Trainer:
         """
         pass
 
-    def _save_model(self, epoch: int):
-        """
-        Serializes the model at a particular epoch for future use.
-        """
-        model_config = self.model.to_json()
-        model_config_file = open("%s_config.json" % (self.model_prefix), "w")
-        print(model_config, file=model_config_file)
-        model_config_file.close()
-        self.model.save_weights("%s_weights_epoch=%d.h5" % (self.model_prefix, epoch), overwrite=True)
-        self._save_auxiliary_files()
-
     def _save_best_model(self):
         """
-        Copies the weights from the best epoch to a final weight file
+        Copies the weights from the best epoch to a final weight file.
 
         The point of this is so that the input/output spec of the NNSolver is simpler.  Someone
         calling this as a subroutine doesn't have to worry about which epoch ended up being the
@@ -492,10 +505,13 @@ class Trainer:
 
     def _save_auxiliary_files(self):
         """
-        Called while saving a model.  If you have some auxiliary object, such as an object storing
-        the vocabulary of your model, you can save it here.
+        Called after training. If you have some auxiliary object, such as an object storing
+        the vocabulary of your model, you can save it here. The model config is saved by default.
         """
-        pass
+        model_config = self.model.to_json()
+        model_config_file = open("%s_config.json" % (self.model_prefix), "w")
+        print(model_config, file=model_config_file)
+        model_config_file.close()
 
     @classmethod
     def _get_custom_objects(cls):

@@ -14,6 +14,7 @@ from .constants import SNLI_FILE
 
 def get_solver(cls, additional_arguments=None):
     params = {}
+    params['save_models'] = False
     params['model_serialization_prefix'] = TEST_DIR
     params['train_files'] = [TRAIN_FILE]
     params['validation_files'] = [VALIDATION_FILE]

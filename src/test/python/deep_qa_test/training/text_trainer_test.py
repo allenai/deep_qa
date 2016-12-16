@@ -10,6 +10,7 @@ from ..common.constants import TEST_DIR
 from ..common.constants import TRAIN_FILE
 from ..common.solvers import get_solver
 from ..common.solvers import write_true_false_solver_files
+from ..common.test_markers import requires_tensorflow
 
 
 class TestNNSolver(TestCase):
@@ -32,3 +33,8 @@ class TestNNSolver(TestCase):
         assert isinstance(solver.tokenizer, SimpleTokenizer)
         dataset = solver._load_dataset_from_files([TRAIN_FILE])
         assert isinstance(dataset.instances[0].tokenizer, SimpleTokenizer)
+
+    @requires_tensorflow
+    def test_tensorboard_logs_does_not_crash(self):
+        solver = get_solver(TrueFalseSolver, {'tensorboard_log': TEST_DIR})
+        solver.train()
