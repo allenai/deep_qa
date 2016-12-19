@@ -4,10 +4,10 @@ from ..tokenizer import tokenizers, Tokenizer
 
 class SnliInstance(SentencePairInstance):
     """
-    An SnliInstance is a SentencePairInstance  that a pair of (text, hypothesis) from the Stanford
-    Natural Language Inference (SNLI) dataset, with an associated label.  The main thing we need to
-    add here is handling of the label, because there are a few different ways we can use this
-    Instance.
+    An SnliInstance is a SentencePairInstance that represents a pair of (text, hypothesis) from the
+    Stanford Natural Language Inference (SNLI) dataset, with an associated label.  The main thing
+    we need to add here is handling of the label, because there are a few different ways we can use
+    this Instance.
 
     The label can either be a three-way decision (one of either "entails", "contradicts", or
     "neutral"), or a binary decision (grouping either "entails" and "contradicts", for relevance

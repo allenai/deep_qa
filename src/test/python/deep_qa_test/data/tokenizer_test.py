@@ -3,6 +3,22 @@
 from deep_qa.data.tokenizer import SimpleTokenizer
 
 
+class TestTokenizer:
+    tokenizer = SimpleTokenizer()
+    passage = "On January 7, 2012, Beyoncé gave birth to her first child, a daughter, Blue Ivy " +\
+        "Carter, at Lenox Hill Hospital in New York. Five months later, she performed for four " +\
+        "nights at Revel Atlantic City's Ovation Hall to celebrate the resort's opening, her " +\
+        "first performances since giving birth to Blue Ivy."
+
+    def test_char_span_to_token_span_handles_easy_cases(self):
+        token_span = self.tokenizer.char_span_to_token_span(self.passage, (3, 18))
+        assert token_span == (1, 4)
+        token_span = self.tokenizer.char_span_to_token_span(self.passage, (91, 110))
+        assert token_span == (22, 24)
+        token_span = self.tokenizer.char_span_to_token_span(self.passage, (91, 123))
+        assert token_span == (22, 28)
+
+
 class TestSimpleTokenizer:
     tokenizer = SimpleTokenizer()
     def test_tokenize_handles_complex_punctuation(self):
