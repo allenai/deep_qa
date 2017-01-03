@@ -111,7 +111,7 @@ class IndexedLogicalFormInstance(IndexedTrueFalseInstance):
         super(IndexedLogicalFormInstance, self).pad(max_lengths)
 
         transition_length = max_lengths['transition_length']
-        self.transitions = self.pad_word_sequence_to_length(self.transitions, transition_length)
+        self.transitions = self.pad_sequence_to_length(self.transitions, transition_length)
 
     @overrides
     def as_training_data(self):

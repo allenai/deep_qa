@@ -36,7 +36,7 @@ class BackgroundInstance(TextInstance):
         words = []
         words.extend(self.instance.words())
         for background_text in self.background:
-            words.extend(self._tokenize(background_text))
+            words.extend(self._words_from_text(background_text))
         return words
 
     @overrides
@@ -85,9 +85,15 @@ class IndexedBackgroundInstance(IndexedInstance):
         """
         lengths = self.indexed_instance.get_lengths()
         lengths['background_sentences'] = len(self.background_indices)
+        background_lengths = [self._get_word_sequence_lengths(background)
+                              for background in self.background_indices]
         if self.background_indices:
-            max_background_length = max(len(background) for background in self.background_indices)
+            max_background_length = max(l['word_sequence_length'] for l in background_lengths)
             lengths['word_sequence_length'] = max(lengths['word_sequence_length'], max_background_length)
+            if 'word_character_length' in lengths:
+                max_background_character_length = max([l['word_character_length'] for l in background_lengths])
+                max_character_length = max([lengths['word_character_length'], max_background_character_length])
+                lengths['word_character_length'] = max_character_length
         return lengths
 
     @overrides
@@ -101,7 +107,6 @@ class IndexedBackgroundInstance(IndexedInstance):
         """
         self.indexed_instance.pad(max_lengths)
         background_length = max_lengths['background_sentences']
-        word_sequence_length = max_lengths['word_sequence_length']
 
         # Padding (1): making sure we have the right number of background sentences.  We also need
         # to truncate, if necessary.
@@ -113,7 +118,7 @@ class IndexedBackgroundInstance(IndexedInstance):
         # Padding (2): making sure all background sentences have the right length.
         padded_background = []
         for background in self.background_indices:
-            padded_background.append(self.pad_word_sequence_to_length(background, word_sequence_length))
+            padded_background.append(self.pad_word_sequence(background, max_lengths))
         self.background_indices = padded_background
 
     @overrides

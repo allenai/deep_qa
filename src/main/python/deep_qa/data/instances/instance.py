@@ -13,8 +13,9 @@ As this codebase is dealing mostly with textual question answering, pretty much 
 Instance types will have both a TextInstance and a corresponding IndexedInstance, which you can see
 in the individual files for each Instance type.
 """
-from typing import List
+from typing import Any, Callable, Dict, List
 
+from .text_encoders import text_encoders
 from ..data_indexer import DataIndexer
 from ..tokenizer import tokenizers, Tokenizer
 
@@ -49,7 +50,14 @@ class TextInstance(Instance):
     We use these kinds of instances to fit a DataIndexer (e.g., deciding which words should be
     mapped to an unknown token); to use them in training or testing, we need to first convert them
     into IndexedInstances.
+
+    In order to actually convert text into some kind of indexed sequence, we rely on a TextEncoder.
+    There are several TextEncoder subclasses, that will let you use word token sequences, character
+    sequences, and other options.  By default we use word tokens.  You can override this by setting
+    the `encoder` class variable.
     """
+    encoder = text_encoders['word tokens']
+
     def __init__(self,
                  label,
                  index: int=None,
@@ -63,13 +71,15 @@ class TextInstance(Instance):
         """
         return self.tokenizer.tokenize(sentence.lower())
 
+    def _words_from_text(self, text: str) -> List[str]:
+        return self.encoder.get_words_for_indexer(text, self._tokenize)
+
     def _index_text(self, text: str, data_indexer: DataIndexer) -> List[int]:
         """
         Tokenizes the given sentence with self._tokenize, then passes the tokens through the
         DataIndexer to get a list of integers out.
         """
-        tokens = self._tokenize(text)
-        return [data_indexer.get_word_index(token) for token in tokens]
+        return self.encoder.index_text(text, self._tokenize, data_indexer)
 
     def words(self) -> List[str]:
         """
@@ -144,19 +154,58 @@ class IndexedInstance(Instance):
         raise NotImplementedError
 
     @staticmethod
-    def pad_word_sequence_to_length(indices: List[int], desired_length: int) -> List[int]:
+    def _get_word_sequence_lengths(word_indices: List) -> Dict[str, int]:
         """
-        Take a list of word indices and pads them to the desired length.
-
-        If we need to truncate the word indices, we do it from the _right_, not the left.  This is
-        important for cases that are questions, with long set ups.  We at least want to get the
-        question encoded, which is always at the end, even if we've lost much of the question set
-        up.
-
-        Though, this might be backwards for encoding background information...
+        Because TextEncoders can return complex data structures, we might actually have several
+        things to pad for a single word sequence.  We check for that and handle it in a single spot
+        here.  We return a dictionary containing 'word_sequence_length', which is the number of
+        words in word_indices.  If the word representations also contain characters, the dictionary
+        additionally contains a 'word_character_length' key, with a value corresponding to the
+        longest word in the sequence.
         """
-        padded_indices = [0] * desired_length
-        indices_length = min(len(indices), desired_length)
-        if indices_length != 0:
-            padded_indices[-indices_length:] = indices[-indices_length:]
-        return padded_indices
+        lengths = {'word_sequence_length': len(word_indices)}
+        if len(word_indices) > 0 and not isinstance(word_indices[0], int):
+            if isinstance(word_indices[0], list):
+                lengths['word_character_length'] = max([len(word) for word in word_indices])
+            # There might someday be other cases we're missing here, but we'll punt for now.
+        return lengths
+
+    @staticmethod
+    def pad_word_sequence(word_sequence: List,
+                          lengths: Dict[str, int],
+                          truncate_from_right: bool=True) -> List:
+        default_value = lambda: 0
+        if 'word_character_length' in lengths:
+            default_value = lambda: []
+
+        padded_word_sequence = IndexedInstance.pad_sequence_to_length(
+                word_sequence, lengths['word_sequence_length'], default_value, truncate_from_right)
+        if 'word_character_length' in lengths:
+            padded_word_sequence = [IndexedInstance.pad_sequence_to_length(
+                    word, lengths['word_character_length'], truncate_from_right=False)
+                                    for word in padded_word_sequence]
+        return padded_word_sequence
+
+    @staticmethod
+    def pad_sequence_to_length(sequence: List,
+                               desired_length: int,
+                               default_value: Callable[[], Any]=lambda: 0,
+                               truncate_from_right: bool=True) -> List:
+        """
+        Take a list of indices and pads them to the desired length.
+
+        If we need to truncate the indices, by default we do it from the _right_, not the left.
+        This is important for cases that are questions, with long set ups.  We at least want to get
+        the question encoded, which is always at the end, even if we've lost much of the question
+        set up.  If you want to truncate from the other direction, you can.
+        """
+        padded_sequence = []
+        for _ in range(desired_length):
+            padded_sequence.append(default_value())
+        sequence_length = min(len(sequence), desired_length)
+        if sequence_length != 0:
+            if truncate_from_right:
+                padded_sequence[-sequence_length:] = sequence[-sequence_length:]
+            else:
+                padded_sequence[:sequence_length] = sequence[:sequence_length]
+        return padded_sequence

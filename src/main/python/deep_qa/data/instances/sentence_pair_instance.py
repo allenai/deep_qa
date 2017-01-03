@@ -26,7 +26,7 @@ class SentencePairInstance(TextInstance):
 
     @overrides
     def words(self) -> List[str]:
-        return self._tokenize(self.first_sentence) + self._tokenize(self.second_sentence)
+        return self._words_from_text(self.first_sentence) + self._words_from_text(self.second_sentence)
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
@@ -67,8 +67,12 @@ class IndexedSentencePairInstance(IndexedInstance):
 
     @overrides
     def get_lengths(self) -> Dict[str, int]:
-        max_length = max(len(self.first_sentence_indices), len(self.second_sentence_indices))
-        return {'word_sequence_length': max_length}
+        first_sentence_lengths = self._get_word_sequence_lengths(self.first_sentence_indices)
+        second_sentence_lengths = self._get_word_sequence_lengths(self.second_sentence_indices)
+        lengths = {}
+        for key in first_sentence_lengths:
+            lengths[key] = max(first_sentence_lengths[key], second_sentence_lengths[key])
+        return lengths
 
     @overrides
     def pad(self, max_lengths: Dict[str, int]):
@@ -76,11 +80,8 @@ class IndexedSentencePairInstance(IndexedInstance):
         Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
         self.get_lengths() for why max_lengths is a list instead of an int.
         """
-        sentence_length = max_lengths['word_sequence_length']
-        self.first_sentence_indices = self.pad_word_sequence_to_length(self.first_sentence_indices,
-                                                                       sentence_length)
-        self.second_sentence_indices = self.pad_word_sequence_to_length(self.second_sentence_indices,
-                                                                        sentence_length)
+        self.first_sentence_indices = self.pad_word_sequence(self.first_sentence_indices, max_lengths)
+        self.second_sentence_indices = self.pad_word_sequence(self.second_sentence_indices, max_lengths)
 
     @overrides
     def as_training_data(self):

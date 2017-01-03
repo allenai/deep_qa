@@ -257,6 +257,6 @@ class AttentiveGRUKnowledgeCombiner(GRU):
             return x
 
 # The first item added here will be used as the default in some cases.
-knowledge_combiners = OrderedDict()  # pylint:  disable=invalid-name
+knowledge_combiners = OrderedDict()  # pylint: disable=invalid-name
 knowledge_combiners["weighted_average"] = WeightedAverageKnowledgeCombiner
 knowledge_combiners["attentive_gru"] = AttentiveGRUKnowledgeCombiner
