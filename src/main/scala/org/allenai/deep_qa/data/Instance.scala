@@ -103,13 +103,14 @@ case class SnliInstance(
   }
 }
 
+/**
+  * An Instance created from the Stanford Question Answering Dataset (SQuAD).
+  */
 case class SquadInstance(
   question: String,
   passage: String,
-  answerStartCharacterIndex: Option[Int],
-  answerEndCharacterIndex: Option[Int]
+  override val label: Option[(Int, Int)]
 ) extends Instance {
-  override val label: Option[(Int, Int)] = answerStartCharacterIndex.map((_, answerEndCharacterIndex.get))
   def asStrings(): Seq[Seq[String]] = {
     val labelString = (label.map { case (start, end) => s"\t${start},${end}" }).getOrElse("")
     Seq(Seq(s"${question}\t${passage}${labelString}"))

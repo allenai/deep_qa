@@ -149,13 +149,13 @@ class SquadDatasetReaderSpec extends FlatSpecLike with Matchers {
 
     val fixedParagraph1 = paragraph1.replace("\\\"", "\"")
     dataset.instances.size should be(7)
-    dataset.instances(0) should be(SquadInstance(question11, fixedParagraph1, Some(515), Some(515 + answer11.size)))
-    dataset.instances(1) should be(SquadInstance(question12, fixedParagraph1, Some(92), Some(92 + answer12.size)))
-    dataset.instances(2) should be(SquadInstance(question21, paragraph2, Some(3), Some(3 + answer21.size)))
-    dataset.instances(3) should be(SquadInstance(question22, paragraph2, Some(222), Some(222 + answer22.size)))
-    dataset.instances(4) should be(SquadInstance(question23, paragraph2, Some(49), Some(49 + answer23.size)))
-    dataset.instances(5) should be(SquadInstance(question31, paragraph3, Some(105), Some(105 + answer31.size)))
-    dataset.instances(6) should be(SquadInstance(question32, paragraph3, Some(286), Some(286 + answer32.size)))
+    dataset.instances(0) should be(SquadInstance(question11, fixedParagraph1, Some(515, 515 + answer11.size)))
+    dataset.instances(1) should be(SquadInstance(question12, fixedParagraph1, Some(92, 92 + answer12.size)))
+    dataset.instances(2) should be(SquadInstance(question21, paragraph2, Some(3, 3 + answer21.size)))
+    dataset.instances(3) should be(SquadInstance(question22, paragraph2, Some(222, 222 + answer22.size)))
+    dataset.instances(4) should be(SquadInstance(question23, paragraph2, Some(49, 49 + answer23.size)))
+    dataset.instances(5) should be(SquadInstance(question31, paragraph3, Some(105, 105 + answer31.size)))
+    dataset.instances(6) should be(SquadInstance(question32, paragraph3, Some(286, 286 + answer32.size)))
   }
 }
 

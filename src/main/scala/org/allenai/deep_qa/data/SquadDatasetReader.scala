@@ -33,7 +33,7 @@ class SquadDatasetReader(fileUtil: FileUtil) extends DatasetReader[SquadInstance
       val uniqueAnswers = answerTuples.groupBy(identity).mapValues(_.size).toList.sortBy(-_._2)
       val mostFrequentAnswer = uniqueAnswers.head._1
       val (answerStart, answerText) = mostFrequentAnswer
-      SquadInstance(question, paragraph, Some(answerStart), Some(answerStart + answerText.size))
+      SquadInstance(question, paragraph, Some(answerStart, answerStart + answerText.size))
     }}
     Dataset(instances)
   }
