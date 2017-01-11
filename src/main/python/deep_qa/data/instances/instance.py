@@ -136,7 +136,7 @@ class IndexedInstance(Instance):
         """
         raise NotImplementedError
 
-    def pad(self, max_lengths: List[int]):
+    def pad(self, max_lengths: Dict[str, int]):
         """
         The max_lengths argument passed here must have the same dimension as was returned by
         get_lengths().  We will use these lengths to pad the instance in all of the necessary
