@@ -17,7 +17,7 @@ class TestNNSolver(TestCase):
     # pylint: disable=protected-access
 
     def setUp(self):
-        os.mkdir(TEST_DIR)
+        os.makedirs(TEST_DIR, exist_ok=True)
         write_true_false_solver_files()
 
     def tearDown(self):

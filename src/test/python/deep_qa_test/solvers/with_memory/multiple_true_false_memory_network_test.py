@@ -14,7 +14,7 @@ class TestMultipleTrueFalseMemoryNetworkSolver(TestCase):
     # pylint: disable=protected-access
 
     def setUp(self):
-        os.mkdir(TEST_DIR)
+        os.makedirs(TEST_DIR, exist_ok=True)
         write_multiple_true_false_memory_network_files()
 
     def tearDown(self):
