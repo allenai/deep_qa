@@ -54,3 +54,13 @@ pytest-pythonpath
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
+
+#### LIBRARIES USED IN SCRIPTS ####
+# argument parsing in for data cleaning scripts
+argparse
+
+# Used to read the NewsQA CSV and output a clean one.
+pandas
+
+# progress bars in data cleaning scripts
+tqdm

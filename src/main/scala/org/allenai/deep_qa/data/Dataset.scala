@@ -33,4 +33,5 @@ object DatasetReader {
   readers.put("open qa", (fileUtil) => new OpenQADatasetReader(fileUtil))
   readers.put("squad", (fileUtil) => new SquadDatasetReader(fileUtil))
   readers.put("who did what", (fileUtil) => new WhoDidWhatDatasetReader(fileUtil))
+  readers.put("newsqa", (fileUtil) => new NewsQaDatasetReader(fileUtil))
 }

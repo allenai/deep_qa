@@ -32,6 +32,7 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3" % "3.0",
   "org.apache.spark" %% "spark-core" % "1.6.0",
   "org.elasticsearch" % "elasticsearch" % "2.3.4",
+  "com.opencsv" % "opencsv" % "3.8",
   "org.json4s" %% "json4s-native" % "3.2.11",
   "com.jayantkrish.jklol" % "jklol" % "1.1",
   "edu.cmu.ml.rtw" %%  "pra" % "3.4",
