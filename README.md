@@ -27,12 +27,14 @@ For a description of how we've built an extensible memory network architecture i
 This code allows for easy experimentation with the following datasets:
 
 - [AI2 Elementary school science questions (no diagrams)](http://allenai.org/data.html)
-- [The Facebook Children's book test dataset](https://research.facebook.com/research/babi/#cbt)
+- [The Facebook Children's Book Test dataset](https://research.facebook.com/research/babi/)
 - [The Facebook bAbI dataset](https://research.facebook.com/research/babi/)
+- [The NewsQA dataset](https://datasets.maluuba.com/NewsQA)
+- [The Stanford Question Answering Dataset (SQuAD)](https://rajpurkar.github.io/SQuAD-explorer/)
+- [The Who Did What dataset](https://tticnlp.github.io/who_did_what/)
 
-And more to come...  In the near future, we hope to also include easy experimentation with
-[SQuAD](https://rajpurkar.github.io/SQuAD-explorer/), [CNN/Daily
-Mail](http://cs.nyu.edu/~kcho/DMQA/), and
+And more to come... In the near future, we hope to also include easy
+experimentation with [CNN/Daily Mail](http://cs.nyu.edu/~kcho/DMQA/) and
 [SimpleQuestions](https://research.facebook.com/research/babi/).
 
 # Usage Guide
