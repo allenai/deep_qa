@@ -103,7 +103,7 @@ class IndexedQuestionPassageInstance(IndexedInstance):
         max_lengths_tmp['word_sequence_length'] = max_lengths_tmp['num_question_words']
         self.question_indices = self.pad_word_sequence(self.question_indices,
                                                        max_lengths_tmp)
-        max_lengths_tmp['word_sequence_length'] = max_lengths_tmp['num_question_words']
+        max_lengths_tmp['word_sequence_length'] = max_lengths_tmp['num_passage_words']
         self.passage_indices = self.pad_word_sequence(self.passage_indices,
                                                       max_lengths_tmp)
 
