@@ -7,10 +7,7 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-# Require this specific keras commit which fixed some import errors in the tensorflow backend of
-# Keras 1.1.0.  Can be replaced once the next release is out.
-git+git://github.com/fchollet/keras.git@6b18a908b8ee6e9b58c834a3f7b1944e002764a3
-# keras==1.1.0
+keras
 h5py
 scikit-learn
 theano
