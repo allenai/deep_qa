@@ -13,7 +13,7 @@ class BackgroundInstance(TextInstance):
     currently only be expressed as a list of sentences.  Maybe someday we'll expand that to allow
     other kinds of background knowledge.
     """
-    def __init__(self, instance: TextInstance, background: List[str]):
+    def __init__(self, instance: TextInstance, background: List[TextInstance]):
         super(BackgroundInstance, self).__init__(instance.label, instance.index, instance.tokenizer)
         self.instance = instance
         self.background = background
@@ -25,7 +25,7 @@ class BackgroundInstance(TextInstance):
         string += '   [\n'
         for background in self.background:
             string += '      '
-            string += background
+            string += str(background)
             string += ',\n'
         string += '   ]\n'
         string += ')'
@@ -35,17 +35,17 @@ class BackgroundInstance(TextInstance):
     def words(self):
         words = []
         words.extend(self.instance.words())
-        for background_text in self.background:
-            words.extend(self._words_from_text(background_text))
+        for background_instance in self.background:
+            words.extend(background_instance.words())
         return words
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
         indexed_instance = self.instance.to_indexed_instance(data_indexer)
-        background_indices = []
-        for text in self.background:
-            background_indices.append(self._index_text(text, data_indexer))
-        return IndexedBackgroundInstance(indexed_instance, background_indices)
+        indexed_background_instances = []
+        for background_instance in self.background:
+            indexed_background_instances.append(background_instance.to_indexed_instance(data_indexer))
+        return IndexedBackgroundInstance(indexed_instance, indexed_background_instances)
 
 
 class IndexedBackgroundInstance(IndexedInstance):
@@ -54,23 +54,27 @@ class IndexedBackgroundInstance(IndexedInstance):
     knowledge has also been indexed.
     """
     contained_instance_type = None
+    background_instance_type = None
     def __init__(self,
                  indexed_instance: IndexedInstance,
-                 background_indices: List[List[int]]):
+                 background_instances: List[IndexedInstance]):
         super(IndexedBackgroundInstance, self).__init__(indexed_instance.label, indexed_instance.index)
         self.indexed_instance = indexed_instance
-        self.background_indices = background_indices
+        self.background_instances = background_instances
 
-        # We need to set this here so that we know what kind of contained instance we should create
-        # when we're asked for an empty IndexedBackgroundInstance.  Note that this assumes that
-        # you'll only ever have one underlying Instance type, which is a reasonable assumption
-        # given our current code.
+        # We need to set these here so that we know what kind of contained and background instances
+        # we should create when we're asked for an empty IndexedBackgroundInstance or for padding.
+        # Note that this assumes that you'll only ever have one type of underlying contained Instance type
+        # and one type of background instance, which is a reasonable assumption given our current code.
         IndexedBackgroundInstance.contained_instance_type = indexed_instance.__class__
+        if len(background_instances) > 0:
+            IndexedBackgroundInstance.background_instance_type = background_instances[0].__class__
 
     @classmethod
     @overrides
     def empty_instance(cls):
         contained_instance = IndexedBackgroundInstance.contained_instance_type.empty_instance()
+        # An empty instance contains an empty list of background instances.
         return IndexedBackgroundInstance(contained_instance, [])
 
     @overrides
@@ -84,16 +88,19 @@ class IndexedBackgroundInstance(IndexedInstance):
         too.
         """
         lengths = self.indexed_instance.get_lengths()
-        lengths['background_sentences'] = len(self.background_indices)
-        background_lengths = [self._get_word_sequence_lengths(background)
-                              for background in self.background_indices]
-        if self.background_indices:
-            max_background_length = max(l['word_sequence_length'] for l in background_lengths)
-            lengths['word_sequence_length'] = max(lengths['word_sequence_length'], max_background_length)
-            if 'word_character_length' in lengths:
-                max_background_character_length = max([l['word_character_length'] for l in background_lengths])
-                max_character_length = max([lengths['word_character_length'], max_background_character_length])
-                lengths['word_character_length'] = max_character_length
+        lengths['background_sentences'] = len(self.background_instances)
+        # TODO(pradeep): We are using the same max sequence length for both background instances and the
+        # contained instance. While this is fine when background instances are sentences, it may be inefficient
+        # when they are tuples. Have a separate background sequence length. This requires making changes to
+        # the lengths in most solvers.
+        if len(self.background_instances) > 0:
+            background_lengths = [background.get_lengths() for background in self.background_instances]
+            for attribute in background_lengths[0]:
+                max_background_attribute_value = max(background[attribute] for background in background_lengths)
+                if attribute in lengths:
+                    lengths[attribute] = max(lengths[attribute], max_background_attribute_value)
+                else:
+                    lengths[attribute] = max_background_attribute_value
         return lengths
 
     @overrides
@@ -108,18 +115,17 @@ class IndexedBackgroundInstance(IndexedInstance):
         self.indexed_instance.pad(max_lengths)
         background_length = max_lengths['background_sentences']
 
-        # Padding (1): making sure we have the right number of background sentences.  We also need
+        # Padding (1): making sure we have the right number of background instances.  We also need
         # to truncate, if necessary.
-        if len(self.background_indices) > background_length:
-            self.background_indices = self.background_indices[:background_length]
-        for _ in range(background_length - len(self.background_indices)):
-            self.background_indices.append([0])
+        if len(self.background_instances) > background_length:
+            self.background_instances = self.background_instances[:background_length]
+        empty_background_instance = IndexedBackgroundInstance.background_instance_type.empty_instance()
+        for _ in range(background_length - len(self.background_instances)):
+            self.background_instances.append(empty_background_instance)
 
-        # Padding (2): making sure all background sentences have the right length.
-        padded_background = []
-        for background in self.background_indices:
-            padded_background.append(self.pad_word_sequence(background, max_lengths))
-        self.background_indices = padded_background
+        # Padding (2): making sure all background instances are padded to the right length.
+        for background_instance in self.background_instances:
+            background_instance.pad(max_lengths)
 
     @overrides
     def as_training_data(self):
@@ -135,7 +141,13 @@ class IndexedBackgroundInstance(IndexedInstance):
         around a bit.
         """
         instance_inputs, label = self.indexed_instance.as_training_data()
-        background_array = numpy.asarray(self.background_indices, dtype='int32')
+        background_indices = []
+        for background_instance in self.background_instances:
+            background_inputs, _ = background_instance.as_training_data()
+            if isinstance(background_inputs, tuple):
+                raise RuntimeError("Received a background instance that provides multiple inputs.")
+            background_indices.append(background_inputs)
+        background_array = numpy.asarray(background_indices, dtype='int32')
         if isinstance(instance_inputs, tuple):
             final_inputs = (instance_inputs[0],) + (background_array,) + instance_inputs[1:]
         else:

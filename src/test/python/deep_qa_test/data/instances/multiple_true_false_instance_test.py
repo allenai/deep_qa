@@ -56,13 +56,17 @@ class TestIndexedMultipleTrueFalseInstance(TestCase):
         instance = IndexedMultipleTrueFalseInstance(
                 [
                         IndexedBackgroundInstance(IndexedTrueFalseInstance([1, 2], False),
-                                                  [[2], [3]]),
+                                                  [IndexedTrueFalseInstance([2], None),
+                                                   IndexedTrueFalseInstance([3], None)]),
                         IndexedBackgroundInstance(IndexedTrueFalseInstance([3, 4], False),
-                                                  [[5], [6]]),
+                                                  [IndexedTrueFalseInstance([5], None),
+                                                   IndexedTrueFalseInstance([6], None)]),
                         IndexedBackgroundInstance(IndexedTrueFalseInstance([5, 6], False),
-                                                  [[8], [9]]),
+                                                  [IndexedTrueFalseInstance([8], None),
+                                                   IndexedTrueFalseInstance([9], None)]),
                         IndexedBackgroundInstance(IndexedTrueFalseInstance([7, 8], True),
-                                                  [[11], [12]]),
+                                                  [IndexedTrueFalseInstance([11], None),
+                                                   IndexedTrueFalseInstance([12], None)]),
                 ],
                 3)
         (word_arrays, background_arrays), label = instance.as_training_data()

@@ -118,10 +118,14 @@ class MemoryNetworkSolver(TextTrainer):
     @overrides
     def _load_dataset_from_files(self, files: List[str]):
         dataset = super(MemoryNetworkSolver, self)._load_dataset_from_files(files)
-        return TextDataset.read_background_from_file(dataset, files[1])
+        return TextDataset.read_background_from_file(dataset, files[1], self._background_instance_type())
 
     @overrides
     def _instance_type(self):
+        return TrueFalseInstance
+
+    @staticmethod
+    def _background_instance_type():
         return TrueFalseInstance
 
     @classmethod

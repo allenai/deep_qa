@@ -34,7 +34,7 @@ class LabeledBackgroundInstance(BackgroundInstance):
     def to_indexed_instance(self, data_indexer: DataIndexer):
         instance = super(LabeledBackgroundInstance, self).to_indexed_instance(data_indexer)
         return IndexedLabeledBackgroundInstance(instance.indexed_instance,
-                                                instance.background_indices,
+                                                instance.background_instances,
                                                 self.label)
 
 
@@ -62,7 +62,7 @@ class IndexedLabeledBackgroundInstance(IndexedBackgroundInstance):
         if self.label is None:
             label = None
         else:
-            label = numpy.zeros(len(self.background_indices))
+            label = numpy.zeros(len(self.background_instances))
             for index in self.label:
                 label[index] = 1
         return inputs, label

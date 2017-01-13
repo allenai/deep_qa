@@ -23,6 +23,44 @@ def switch(cond, then_tensor, else_tensor):
         return T.switch(cond, then_tensor, else_tensor)
 
 
+def last_dim_flatten(input_tensor):
+    '''
+    Takes a tensor and returns a matrix while preserving only the last dimension from the input.
+    '''
+    input_ndim = K.ndim(input_tensor)
+    shuffle_pattern = (input_ndim - 1,) + tuple(range(input_ndim - 1))
+    dim_shuffled_input = K.permute_dimensions(input_tensor, shuffle_pattern)
+    return K.transpose(K.batch_flatten(dim_shuffled_input))
+
+
+def masked_batch_dot(tensor_a, tensor_b, mask_a, mask_b):
+    '''
+    tensor_a: (batch_size, a_length, embed_dim)
+    tensor_b: (batch_size, b_length, embed_dim)
+    mask_a: None or (batch_size, a_length, 1)
+    mask_b: None or (batch_size, b_length, 1)
+
+    Returns:
+    a_dot_b: (batch_size, a_length, b_length), with zeros for masked elements.
+    '''
+    # (batch_size, a_length, b_length)
+    a_dot_b = K.batch_dot(tensor_a, tensor_b, axes=(2, 2))
+    if mask_a is None and mask_b is None:
+        return a_dot_b
+    elif mask_a is None:
+        # (batch_size, a_length)
+        mask_a = K.sum(K.ones_like(tensor_a), axis=-1)
+    elif mask_b is None:
+        # (batch_size, b_length)
+        mask_b = K.sum(K.ones_like(tensor_b), axis=-1)
+    # Casting masks to float since we TF would complain if we multiplied bools.
+    float_mask_a = K.cast(mask_a, 'float32')
+    float_mask_b = K.cast(mask_b, 'float32')
+    # (batch_size, a_length, b_length)
+    a2b_mask = K.expand_dims(float_mask_a, dim=-1) * K.expand_dims(float_mask_b, dim=1)
+    return switch(a2b_mask, a_dot_b, K.zeros_like(a_dot_b))
+
+
 def tile_vector(vector, matrix):
     """
     This method takes a (collection of) vector(s) (shape: (batch_size, vector_dim)), and tiles that
@@ -49,6 +87,7 @@ def tile_vector(vector, matrix):
     # elementwise multiplication which is broadcast. We then reshape back.
     tiled_vector = K.permute_dimensions(k_ones * vector, [1, 0, 2])
     return tiled_vector
+
 
 def tile_scalar(scalar, vector):
     """
@@ -110,3 +149,17 @@ def masked_softmax(vector, mask):
         exponentiated = switch(mask, exponentiated, K.zeros_like(exponentiated))
     exp_sum = K.sum(exponentiated, axis=1, keepdims=True)
     return switch(tile_scalar(exp_sum, exponentiated), exponentiated / exp_sum, K.zeros_like(exponentiated))
+
+
+def apply_feed_forward(input_tensor, weights, activation):
+    '''
+    Takes an input tensor, sequence of weights and an activation and builds an MLP.
+    This can also be achieved by defining a sequence of Dense layers in Keras, but doing this
+    might be desirable if the operation needs to be done within the call method of a more complex
+    layer. Moreover, we are not applying biases here. The input tensor can have any number of
+    dimensions. But the last dimension, and the sequence of weights are expected to be compatible.
+    '''
+    current_tensor = input_tensor
+    for weight in weights:
+        current_tensor = activation(K.dot(current_tensor, weight))
+    return current_tensor
