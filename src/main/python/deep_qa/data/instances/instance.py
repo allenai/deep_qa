@@ -3,8 +3,8 @@ This module contains the base Instance classes that concrete classes inherit fro
 there are three classes:
 
 1. Instance, that just exists as a base type with no functionality
-2. TextInstance, which adds a Tokenizer, a words() method, and a method to convert strings to
-indices using a DataIndexer.
+2. TextInstance, which adds a words() method and a method to convert strings to indices using a
+DataIndexer.
 3. IndexedInstance, which is a TextInstance that has had all of its strings converted into indices.
 This class has methods to deal with padding (so that sequences all have the same length) and
 converting an Instance into a set of numpy arrays suitable for use with Keras.
@@ -15,9 +15,8 @@ in the individual files for each Instance type.
 """
 from typing import Any, Callable, Dict, List
 
-from .text_encoders import text_encoders
+from ..tokenizers import tokenizers
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 class Instance:
     """
@@ -56,35 +55,28 @@ class TextInstance(Instance):
     sequences, and other options.  By default we use word tokens.  You can override this by setting
     the `encoder` class variable.
     """
-    encoder = text_encoders['word tokens']
+    tokenizer = tokenizers['words']({})
 
-    def __init__(self,
-                 label,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
+    def __init__(self, label, index: int=None):
         super(TextInstance, self).__init__(label, index)
-        self.tokenizer = tokenizer
 
-    def _tokenize(self, sentence: str) -> List[str]:
-        """
-        Lowercases and then tokenizes the string, using self.tokenizer.
-        """
-        return self.tokenizer.tokenize(sentence.lower())
-
-    def _words_from_text(self, text: str) -> List[str]:
-        return self.encoder.get_words_for_indexer(text, self._tokenize)
+    def _words_from_text(self, text: str) -> Dict[str, List[str]]:
+        return self.tokenizer.get_words_for_indexer(text)
 
     def _index_text(self, text: str, data_indexer: DataIndexer) -> List[int]:
-        """
-        Tokenizes the given sentence with self._tokenize, then passes the tokens through the
-        DataIndexer to get a list of integers out.
-        """
-        return self.encoder.index_text(text, self._tokenize, data_indexer)
+        return self.tokenizer.index_text(text, data_indexer)
 
-    def words(self) -> List[str]:
+    def words(self) -> Dict[str, List[str]]:
         """
-        Returns a list of all of the words in this instance.  This is mainly used for computing
-        word counts when fitting a word vocabulary on a dataset.
+        Returns a list of all of the words in this instance, contained in a namespace dictionary.
+        This is mainly used for computing word counts when fitting a word vocabulary on a dataset.
+
+        The namespace dictionary allows you to have several embedding matrices with different vocab
+        sizes, e.g., for words and for characters (in fact, words and characters are the only use
+        cases I can think of for now, but this allows you to do other more crazy things if you
+        want).  You can call the namespaces whatever you want, but if you want the DataIndexer to
+        work correctly without namespace arguments, you should use the key 'words' to represent
+        word tokens.
         """
         raise NotImplementedError
 
@@ -95,10 +87,7 @@ class TextInstance(Instance):
         raise NotImplementedError
 
     @classmethod
-    def read_from_line(cls,
-                       line: str,
-                       default_label: bool=None,
-                       tokenizer: Tokenizer=tokenizers['default']()):
+    def read_from_line(cls, line: str, default_label: bool=None):
         """
         Reads an instance of this type from a line.  We throw a RuntimeError here instead of a
         NotImplementedError, because it's not expected that all subclasses will implement this.

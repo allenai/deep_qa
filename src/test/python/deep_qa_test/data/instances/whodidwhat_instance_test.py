@@ -21,9 +21,10 @@ class TestWhoDidWhatInstance:
         instance = WhoDidWhatInstance("Cats from Nevada are eaten by dogs in XXX .",
                                       "Dogs eat cats from Nevada in Washington .",
                                       ["Nevada", "Washington"], 1)
-        assert instance.words() == ['cats', 'from', 'nevada', 'are', 'eaten', 'by', 'dogs',
-                                    'in', 'xxx', '.', 'dogs', 'eat', 'cats', 'from', 'nevada',
-                                    'in', 'washington', '.', 'nevada', 'washington']
+        assert instance.words() == {'words': ['cats', 'from', 'nevada', 'are', 'eaten', 'by',
+                                              'dogs', 'in', 'xxx', '.', 'dogs', 'eat', 'cats',
+                                              'from', 'nevada', 'in', 'washington', '.', 'nevada',
+                                              'washington']}
 
     def test_read_from_line_handles_five_column(self):
         passage = "Dogs eat cats from Nevada in Washington ."

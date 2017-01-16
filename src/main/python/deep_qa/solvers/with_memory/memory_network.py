@@ -139,14 +139,13 @@ class MemoryNetworkSolver(TextTrainer):
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
-        return {
-                'word_sequence_length': self.max_sentence_length,
-                'background_sentences': self.max_knowledge_length,
-                }
+        max_lengths = super(MemoryNetworkSolver, self)._get_max_lengths()
+        max_lengths['background_sentences'] = self.max_knowledge_length
+        return max_lengths
 
     @overrides
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.max_sentence_length = max_lengths['word_sequence_length']
+        super(MemoryNetworkSolver, self)._set_max_lengths(max_lengths)
         self.max_knowledge_length = max_lengths['background_sentences']
 
     @overrides
@@ -158,14 +157,14 @@ class MemoryNetworkSolver(TextTrainer):
         """
         This is the shape of the input word sequences for a question, not including the batch size.
         """
-        return (self.max_sentence_length,)
+        return self._get_sentence_shape()
 
     def _get_background_shape(self):
         """
         This is the shape of background data (word sequences) associated with a question, not
         including the batch size.
         """
-        return (self.max_knowledge_length, self.max_sentence_length)
+        return (self.max_knowledge_length,) + self._get_sentence_shape()
 
     def _get_knowledge_axis(self):
         """

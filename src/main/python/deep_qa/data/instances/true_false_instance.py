@@ -5,7 +5,6 @@ from overrides import overrides
 
 from .instance import TextInstance, IndexedInstance
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class TrueFalseInstance(TextInstance):
@@ -13,22 +12,18 @@ class TrueFalseInstance(TextInstance):
     A TrueFalseInstance is a TextInstance that is a statement, where the statement is either true
     or false.
     """
-    def __init__(self,
-                 text: str,
-                 label: bool,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
+    def __init__(self, text: str, label: bool, index: int=None):
         """
         text: the text of this instance, typically either a sentence or a logical form.
         """
-        super(TrueFalseInstance, self).__init__(label, index, tokenizer)
+        super(TrueFalseInstance, self).__init__(label, index)
         self.text = text
 
     def __str__(self):
         return 'TrueFalseInstance(' + self.text + ', ' + str(self.label) + ')'
 
     @overrides
-    def words(self) -> List[str]:
+    def words(self) -> Dict[str, List[str]]:
         return self._words_from_text(self.text)
 
     @overrides
@@ -37,10 +32,7 @@ class TrueFalseInstance(TextInstance):
         return IndexedTrueFalseInstance(indices, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls,
-                       line: str,
-                       default_label: bool=None,
-                       tokenizer: Tokenizer=tokenizers['default']()):
+    def read_from_line(cls, line: str, default_label: bool=None):
         """
         Reads a TrueFalseInstance object from a line.  The format has one of four options:
 
@@ -67,23 +59,23 @@ class TrueFalseInstance(TextInstance):
             index, text, label_string = fields
             label = label_string == '1'
             cls._check_label(label, default_label)
-            return cls(text, label, int(index), tokenizer)
+            return cls(text, label, int(index))
         elif len(fields) == 2:
             if fields[0].isdecimal():
                 index, text = fields
                 cls._check_label(None, default_label)
-                return cls(text, default_label, int(index), tokenizer)
+                return cls(text, default_label, int(index))
             elif fields[1].isdecimal():
                 text, label_string = fields
                 label = label_string == '1'
                 cls._check_label(label, default_label)
-                return cls(text, label, tokenizer=tokenizer)
+                return cls(text, label)
             else:
                 raise RuntimeError("Unrecognized line format: " + line)
         elif len(fields) == 1:
             text = fields[0]
             cls._check_label(None, default_label)
-            return cls(text, default_label, tokenizer=tokenizer)
+            return cls(text, default_label)
         else:
             raise RuntimeError("Unrecognized line format: " + line)
 

@@ -83,11 +83,11 @@ class TestTrueFalseInstance:
 
     def test_words_tokenizes_the_sentence_correctly(self):
         t = TrueFalseInstance("This is a sentence.", None)
-        assert t.words() == ['this', 'is', 'a', 'sentence', '.']
+        assert t.words() == {'words': ['this', 'is', 'a', 'sentence', '.']}
         t = TrueFalseInstance("This isn't a sentence.", None)
-        assert t.words() == ['this', 'is', "n't", 'a', 'sentence', '.']
+        assert t.words() == {'words': ['this', 'is', "n't", 'a', 'sentence', '.']}
         t = TrueFalseInstance("And, I have commas.", None)
-        assert t.words() == ['and', ',', 'i', 'have', 'commas', '.']
+        assert t.words() == {'words': ['and', ',', 'i', 'have', 'commas', '.']}
 
 
 class TestIndexedTrueFalseInstance(TestCase):

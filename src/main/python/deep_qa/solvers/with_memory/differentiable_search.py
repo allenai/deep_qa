@@ -149,7 +149,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         corpus_lines = [line.decode('utf-8') for line in corpus_file.readlines()]
 
         logger.info("Creating dataset")
-        dataset = TextDataset.read_from_lines(corpus_lines, self._instance_type(), tokenizer=self.tokenizer)
+        dataset = TextDataset.read_from_lines(corpus_lines, self._instance_type())
 
         def _get_generator():
             grouped_instances = zip_longest(*(iter(dataset.instances),) * batch_size)
@@ -187,7 +187,7 @@ class DifferentiableSearchSolver(MemoryNetworkSolver):
         """
         new_instances = []
         for instance in dataset.instances:  # type: BackgroundInstance
-            text_instance = TrueFalseInstance(instance.text, label=True, tokenizer=self.tokenizer)
+            text_instance = TrueFalseInstance(instance.text, label=True)
             new_background = self.get_nearest_neighbors(text_instance)
             background_text = [background.text for background in new_background]
             new_instances.append(BackgroundInstance(instance, background_text))

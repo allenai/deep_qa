@@ -25,7 +25,7 @@ class TestTupleInstance:
 
     def test_words_tokenizes_the_tuple_correctly(self):
         t = TupleInstance(["This", "is", "a triple"])
-        assert t.words() == ['this', 'is', 'a', 'triple']
+        assert t.words() == {'words': ['this', 'is', 'a', 'triple']}
 
 
 class TestIndexedTupleInstance(TestCase):

@@ -5,23 +5,16 @@ from overrides import overrides
 
 from .instance import TextInstance, IndexedInstance
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class QuestionPassageInstance(TextInstance):
     """
-    A QuestionPassageInstance is a base class for datasets that consist
-    primarily of a question text and a passage, where the passage contains
-    the answer to the question. This class should not be used directly due to
-    the missing ``_index_label`` function, use a subclass instead.
+    A QuestionPassageInstance is a base class for datasets that consist primarily of a question
+    text and a passage, where the passage contains the answer to the question. This class should
+    not be used directly due to the missing ``_index_label`` function, use a subclass instead.
     """
-    def __init__(self,
-                 question_text: str,
-                 passage_text: str,
-                 label: Any,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
-        super(QuestionPassageInstance, self).__init__(label, index, tokenizer)
+    def __init__(self, question_text: str, passage_text: str, label: Any, index: int=None):
+        super(QuestionPassageInstance, self).__init__(label, index)
         self.question_text = question_text
         self.passage_text = passage_text
 
@@ -31,9 +24,12 @@ class QuestionPassageInstance(TextInstance):
                 str(self.label) + ')')
 
     @overrides
-    def words(self) -> List[str]:
-        return (self._words_from_text(self.question_text) +
-                self._words_from_text(self.passage_text))
+    def words(self) -> Dict[str, List[str]]:
+        words = self._words_from_text(self.question_text)
+        passage_words = self._words_from_text(self.passage_text)
+        for namespace in words:
+            words[namespace].extend(passage_words[namespace])
+        return words
 
     def _index_label(self, label: Any) -> List[int]:
         """
@@ -101,11 +97,9 @@ class IndexedQuestionPassageInstance(IndexedInstance):
         """
         max_lengths_tmp = max_lengths.copy()
         max_lengths_tmp['word_sequence_length'] = max_lengths_tmp['num_question_words']
-        self.question_indices = self.pad_word_sequence(self.question_indices,
-                                                       max_lengths_tmp)
+        self.question_indices = self.pad_word_sequence(self.question_indices, max_lengths_tmp)
         max_lengths_tmp['word_sequence_length'] = max_lengths_tmp['num_passage_words']
-        self.passage_indices = self.pad_word_sequence(self.passage_indices,
-                                                      max_lengths_tmp)
+        self.passage_indices = self.pad_word_sequence(self.passage_indices, max_lengths_tmp)
 
     @overrides
     def as_training_data(self):

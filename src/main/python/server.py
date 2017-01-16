@@ -50,7 +50,7 @@ class SolverServer(message_pb2.SolverServiceServicer):
         instance_type = instance_message.type
         if instance_type == message_pb2.TRUE_FALSE:
             text = instance_message.question
-            instance = TrueFalseInstance(text, None, None, self.solver.tokenizer)
+            instance = TrueFalseInstance(text, None, None)
         elif instance_type == message_pb2.MULTIPLE_TRUE_FALSE:
             options = []
             for instance in instance_message.contained_instances:
@@ -59,7 +59,7 @@ class SolverServer(message_pb2.SolverServiceServicer):
         elif instance_type == message_pb2.QUESTION_ANSWER:
             question = instance_message.question
             options = instance_message.answer_options
-            instance = QuestionAnswerInstance(question, options, None, None, self.solver.tokenizer)
+            instance = QuestionAnswerInstance(question, options, None, None)
         else:
             raise RuntimeError("Unrecognized instance type: " + instance_type)
         if instance_message.background:

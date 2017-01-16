@@ -1,5 +1,4 @@
 from .sentence_pair_instance import SentencePairInstance
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class SnliInstance(SentencePairInstance):
@@ -37,14 +36,9 @@ class SnliInstance(SentencePairInstance):
             "not_entails_sigmoid": [0],
             }
 
-    def __init__(self,
-                 text: str,
-                 hypothesis: str,
-                 label: str,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
+    def __init__(self, text: str, hypothesis: str, label: str, index: int=None):
         # This intentionally crashes if `label` is not one of the keys in `label_mapping`.
-        super(SnliInstance, self).__init__(text, hypothesis, self.label_mapping[label], index, tokenizer)
+        super(SnliInstance, self).__init__(text, hypothesis, self.label_mapping[label], index)
 
     def __str__(self):
         return 'SnliInstance(' + self.first_sentence + ', ' + self.second_sentence + ', ' + str(self.label) + ')'
@@ -59,7 +53,7 @@ class SnliInstance(SentencePairInstance):
             new_label = "attention_false"
         else:
             raise RuntimeError("Can't convert " + str(self.label) + " to an attention label")
-        return SnliInstance(self.first_sentence, self.second_sentence, new_label, self.index, self.tokenizer)
+        return SnliInstance(self.first_sentence, self.second_sentence, new_label, self.index)
 
     def to_entails_instance(self, activation: str):
         """
@@ -79,13 +73,10 @@ class SnliInstance(SentencePairInstance):
         else:
             raise RuntimeError("Can't convert " + str(self.label) + " to an entails/not-entails label")
         new_label += '_' + activation
-        return SnliInstance(self.first_sentence, self.second_sentence, new_label, self.index, self.tokenizer)
+        return SnliInstance(self.first_sentence, self.second_sentence, new_label, self.index)
 
     @classmethod
-    def read_from_line(cls,
-                       line: str,
-                       default_label: bool=None,
-                       tokenizer: Tokenizer=tokenizers['default']()):
+    def read_from_line(cls, line: str, default_label: bool=None):
         """
         Reads an SnliInstance object from a line.  The format has one of two options:
 
@@ -106,4 +97,4 @@ class SnliInstance(SentencePairInstance):
             index = None
         else:
             raise RuntimeError("Unrecognized line format: " + line)
-        return cls(text, hypothesis, label, index, tokenizer)
+        return cls(text, hypothesis, label, index)

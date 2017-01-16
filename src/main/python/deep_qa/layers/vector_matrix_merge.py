@@ -20,6 +20,8 @@ class VectorMatrixMerge(Layer):
     can specify a different one if you need to.  We just ignore masks on the vectors, because doing
     the right thing with masked vectors here is complicated.  If you want to handle that later,
     submit a PR.
+
+    This Layer is essentially the opposite of a VectorMatrixSplit.
     """
     def __init__(self,
                  concat_axis: int,

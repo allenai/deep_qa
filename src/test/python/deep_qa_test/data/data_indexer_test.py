@@ -36,6 +36,28 @@ class TestDataIndexer:
         assert data_indexer.get_word_from_index(word_index) == "word"
         assert data_indexer.get_vocab_size() == initial_vocab_size + 1
 
+    def test_namespaces(self):
+        data_indexer = DataIndexer()
+        initial_vocab_size = data_indexer.get_vocab_size()
+        word_index = data_indexer.add_word_to_index("word", namespace='1')
+        assert "word" in data_indexer.words_in_index(namespace='1')
+        assert data_indexer.get_word_index("word", namespace='1') == word_index
+        assert data_indexer.get_word_from_index(word_index, namespace='1') == "word"
+        assert data_indexer.get_vocab_size(namespace='1') == initial_vocab_size + 1
+
+        # Now add it again, in a different namespace and a different word, and make sure it's like
+        # new.
+        word2_index = data_indexer.add_word_to_index("word2", namespace='2')
+        word_index = data_indexer.add_word_to_index("word", namespace='2')
+        assert "word" in data_indexer.words_in_index(namespace='2')
+        assert "word2" in data_indexer.words_in_index(namespace='2')
+        assert data_indexer.get_word_index("word", namespace='2') == word_index
+        assert data_indexer.get_word_index("word2", namespace='2') == word2_index
+        assert data_indexer.get_word_from_index(word_index, namespace='2') == "word"
+        assert data_indexer.get_word_from_index(word2_index, namespace='2') == "word2"
+        assert data_indexer.get_vocab_size(namespace='2') == initial_vocab_size + 2
+
+
     def test_unknown_token(self):
         # pylint: disable=protected-access
         # We're putting this behavior in a test so that the behavior is documented.  There is

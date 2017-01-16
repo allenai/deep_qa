@@ -4,7 +4,6 @@ from overrides import overrides
 
 from .question_answer_instance import IndexedQuestionAnswerInstance, QuestionAnswerInstance
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class BabiInstance(QuestionAnswerInstance):
@@ -14,13 +13,8 @@ class BabiInstance(QuestionAnswerInstance):
     makes sense, really, is in the bAbI dataset, with models that have a final softmax over a fixed
     answer space.
     """
-    def __init__(self,
-                 question_text: str,
-                 answer_options: List[str],
-                 label: int,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
-        super(BabiInstance, self).__init__(question_text, answer_options, label, index, tokenizer)
+    def __init__(self, question_text: str, answer_options: List[str], label: int, index: int=None):
+        super(BabiInstance, self).__init__(question_text, answer_options, label, index)
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):

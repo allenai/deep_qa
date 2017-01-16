@@ -14,7 +14,7 @@ class BackgroundInstance(TextInstance):
     other kinds of background knowledge.
     """
     def __init__(self, instance: TextInstance, background: List[TextInstance]):
-        super(BackgroundInstance, self).__init__(instance.label, instance.index, instance.tokenizer)
+        super(BackgroundInstance, self).__init__(instance.label, instance.index)
         self.instance = instance
         self.background = background
 
@@ -33,10 +33,11 @@ class BackgroundInstance(TextInstance):
 
     @overrides
     def words(self):
-        words = []
-        words.extend(self.instance.words())
+        words = self.instance.words()
         for background_instance in self.background:
-            words.extend(background_instance.words())
+            background_words = background_instance.words()
+            for namespace in words:
+                words[namespace].extend(background_words[namespace])
         return words
 
     @overrides

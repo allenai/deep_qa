@@ -8,6 +8,11 @@ class DataIndexer:
 
     DataIndexers are fit to a particular dataset, which we use to decide which words are
     in-vocabulary.
+
+    DataIndexers also allow for several different namespaces, so you can have separate word indices
+    for 'a' as a word, and 'a' as a character, for instance.  Most of the methods on this class
+    allow you to pass in a namespace; by default we use the 'words' namespace, and you can omit the
+    namespace argument everywhere and just use the default.
     """
     def __init__(self):
         # Typically all input words to this code are lower-cased, so we could simply use "PADDING"
@@ -15,8 +20,8 @@ class DataIndexer:
         # it is used later in a setting where not all input is lowercase.
         self._padding_token = "@@PADDING@@"
         self._oov_token = "@@UNKOWN@@"
-        self.word_index = {self._padding_token: 0, self._oov_token: 1}
-        self.reverse_word_index = {0: self._padding_token, 1: self._oov_token}
+        self.word_indices = defaultdict(lambda: {self._padding_token: 0, self._oov_token: 1})
+        self.reverse_word_indices = defaultdict(lambda: {0: self._padding_token, 1: self._oov_token})
 
     def fit_word_dictionary(self, dataset: 'TextDataset', min_count: int=1):
         """
@@ -28,38 +33,41 @@ class DataIndexer:
         We call instance.words() for each instance in the dataset, and then keep all words that
         appear at least min_count times.
         """
-        word_counts = defaultdict(int)
+        namespace_word_counts = defaultdict(lambda: defaultdict(int))
         for instance in dataset.instances:
-            for word in instance.words():
-                word_counts[word] += 1
-        for word, count in word_counts.items():
-            if count >= min_count:
-                self.add_word_to_index(word)
+            namespace_dict = instance.words()
+            for namespace in namespace_dict:
+                for word in namespace_dict[namespace]:
+                    namespace_word_counts[namespace][word] += 1
+        for namespace in namespace_word_counts:
+            for word, count in namespace_word_counts[namespace].items():
+                if count >= min_count:
+                    self.add_word_to_index(word, namespace)
 
-    def add_word_to_index(self, word: str) -> int:
+    def add_word_to_index(self, word: str, namespace: str='words') -> int:
         """
         Adds `word` to the index, if it is not already present.  Either way, we return the index of
         the word.
         """
-        if word not in self.word_index:
-            index = len(self.word_index)
-            self.word_index[word] = index
-            self.reverse_word_index[index] = word
+        if word not in self.word_indices[namespace]:
+            index = len(self.word_indices[namespace])
+            self.word_indices[namespace][word] = index
+            self.reverse_word_indices[namespace][index] = word
             return index
         else:
-            return self.word_index[word]
+            return self.word_indices[namespace][word]
 
-    def words_in_index(self):
-        return self.word_index.keys()
+    def words_in_index(self, namespace: str='words'):
+        return self.word_indices[namespace].keys()
 
-    def get_word_index(self, word: str):
-        if word in self.word_index:
-            return self.word_index[word]
+    def get_word_index(self, word: str, namespace: str='words'):
+        if word in self.word_indices[namespace]:
+            return self.word_indices[namespace][word]
         else:
-            return self.word_index[self._oov_token]
+            return self.word_indices[namespace][self._oov_token]
 
-    def get_word_from_index(self, index: int):
-        return self.reverse_word_index[index]
+    def get_word_from_index(self, index: int, namespace: str='words'):
+        return self.reverse_word_indices[namespace][index]
 
-    def get_vocab_size(self):
-        return len(self.word_index)
+    def get_vocab_size(self, namespace: str='words'):
+        return len(self.word_indices[namespace])

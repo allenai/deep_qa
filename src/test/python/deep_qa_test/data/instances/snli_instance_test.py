@@ -39,7 +39,7 @@ class TestSnliInstance:
 
     def test_words_includes_text_and_hypothesis(self):
         instance = SnliInstance("a b c", "d a", "entails")
-        assert instance.words() == ['a', 'b', 'c', 'd', 'a']
+        assert instance.words() == {'words': ['a', 'b', 'c', 'd', 'a']}
 
     def test_labels_are_mapped_correctly(self):
         assert SnliInstance("", "", "entails").label == [1, 0, 0]

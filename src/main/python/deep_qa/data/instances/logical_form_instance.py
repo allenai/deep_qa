@@ -20,7 +20,7 @@ class LogicalFormInstance(TrueFalseInstance):
         This method takes all predicate names and arguments and returns them, removing commas and
         parentheses.
         """
-        return [word for word in self.tokens() if word != ',' and word != ')' and word != '(']
+        return {'words': [word for word in self.tokens() if word != ',' and word != ')' and word != '(']}
 
     def tokens(self) -> List[str]:
         """

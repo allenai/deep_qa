@@ -47,7 +47,7 @@ class TestQuestionAnswerInstance(TestCase):
 
     def test_words_includes_question_and_answers(self):
         instance = QuestionAnswerInstance("a b c", ["d", "e f"], 1)
-        assert instance.words() == ['a', 'b', 'c', 'd', 'e', 'f']
+        assert instance.words() == {'words': ['a', 'b', 'c', 'd', 'e', 'f']}
 
     def test_to_indexed_instance_converts_correctly(self):
         instance = QuestionAnswerInstance("a A b", ["d", "e f D"], 1)

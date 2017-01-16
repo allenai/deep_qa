@@ -52,8 +52,10 @@ class QuestionAnswerSolver(TextTrainer):
         layers, and compare the similar to the encoded answers.
         """
         # First we create input layers and pass the inputs through an embedding.
-        question_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
-        answer_input = Input(shape=(self.num_options, self.max_answer_length), dtype='int32', name="answer_input")
+        question_input = Input(shape=self._get_sentence_shape(), dtype='int32', name="sentence_input")
+        answer_input = Input(shape=(self.num_options,) + self._get_sentence_shape(self.max_answer_length),
+                             dtype='int32',
+                             name="answer_input")
         question_embedding = self._embed_input(question_input)
         answer_embedding = self._embed_input(answer_input)
 
@@ -89,15 +91,14 @@ class QuestionAnswerSolver(TextTrainer):
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
-        return {
-                'word_sequence_length': self.max_sentence_length,
-                'num_options': self.num_options,
-                'answer_length': self.max_answer_length,
-                }
+        max_lengths = super(QuestionAnswerSolver, self)._get_max_lengths()
+        max_lengths['num_options'] = self.num_options
+        max_lengths['answer_length'] = self.max_answer_length
+        return max_lengths
 
     @overrides
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.max_sentence_length = max_lengths['word_sequence_length']
+        super(QuestionAnswerSolver, self)._set_max_lengths(max_lengths)
         self.max_answer_length = max_lengths['answer_length']
         self.num_options = max_lengths['num_options']
 

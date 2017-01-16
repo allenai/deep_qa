@@ -40,7 +40,7 @@ class TextPretrainer(Pretrainer):
         have something more complicated, you'll need to override this method (possibly calling this
         to process the first file, and processing other files in the subclass).
         """
-        return TextDataset.read_from_file(files[0], self._instance_type(), tokenizer=self.trainer.tokenizer)
+        return TextDataset.read_from_file(files[0], self._instance_type())
 
     def fit_data_indexer(self):
         """

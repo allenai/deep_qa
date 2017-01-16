@@ -88,8 +88,8 @@ class AttentionPretrainer(TextPretrainer):
         # What follows is a lightly-edited version of the code from
         # MemoryNetworkSolver._build_model().
         # pylint: disable=protected-access
-        sentence_shape = (self.trainer.max_sentence_length,)
-        background_shape = (self.trainer.max_knowledge_length, self.trainer.max_sentence_length)
+        sentence_shape = self.trainer._get_sentence_shape()
+        background_shape = (self.trainer.max_knowledge_length,) + self.trainer._get_sentence_shape()
 
         sentence_input_layer, sentence_embedding = self.trainer._get_embedded_sentence_input(
                 input_shape=sentence_shape, name_prefix="pretraining_sentence")

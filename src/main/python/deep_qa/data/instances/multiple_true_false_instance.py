@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, List
 
 import numpy
@@ -26,8 +27,7 @@ class MultipleTrueFalseInstance(TextInstance):
             positive_index = [index for index, instance in enumerate(options) if instance.label is True]
             assert len(positive_index) == 1
             label = positive_index[0]
-        tokenizer = self.options[0].tokenizer if self.options else None
-        super(MultipleTrueFalseInstance, self).__init__(label, None, tokenizer)
+        super(MultipleTrueFalseInstance, self).__init__(label, None)
 
     def __str__(self):
         options_string = ',\n    '.join([str(x) for x in self.options])
@@ -36,9 +36,11 @@ class MultipleTrueFalseInstance(TextInstance):
 
     @overrides
     def words(self):
-        words = []
+        words = defaultdict(list)
         for option in self.options:
-            words.extend(option.words())
+            option_words = option.words()
+            for namespace in option_words:
+                words[namespace].extend(option_words[namespace])
         return words
 
     @overrides

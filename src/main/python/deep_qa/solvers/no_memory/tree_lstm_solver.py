@@ -44,7 +44,7 @@ class TreeLSTMSolver(TextTrainer):
         transitions_input = Input(shape=(buffer_ops_limit, 1))
 
         # Step 2: Convert the logical form input to word vectors.
-        logical_form_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        logical_form_input = Input(shape=self._get_sentence_shape(), dtype='int32', name="sentence_input")
         logical_form_embeddings = self._embed_input(logical_form_input)
 
         # Step 3: Merge transitions and buffer.
@@ -69,14 +69,13 @@ class TreeLSTMSolver(TextTrainer):
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
-        return {
-                'word_sequence_length': self.max_sentence_length,
-                'transition_length': self.max_transition_length,
-                }
+        max_lengths = super(TreeLSTMSolver, self)._get_max_lengths()
+        max_lengths['transition_length'] = self.max_transition_length
+        return max_lengths
 
     @overrides
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.max_sentence_length = max_lengths['word_sequence_length']
+        super(TreeLSTMSolver, self)._set_max_lengths(max_lengths)
         self.max_transition_length = max_lengths['transition_length']
 
     @overrides

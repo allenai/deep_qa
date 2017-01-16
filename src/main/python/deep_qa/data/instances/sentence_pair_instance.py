@@ -5,7 +5,6 @@ from overrides import overrides
 
 from .instance import TextInstance, IndexedInstance
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class SentencePairInstance(TextInstance):
@@ -14,19 +13,18 @@ class SentencePairInstance(TextInstance):
     could have the label represent whatever you want, such as entailment, or occuring in the same
     context, or whatever.
     """
-    def __init__(self,
-                 first_sentence: str,
-                 second_sentence: str,
-                 label: List[int],
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
-        super(SentencePairInstance, self).__init__(label, index, tokenizer)
+    def __init__(self, first_sentence: str, second_sentence: str, label: List[int], index: int=None):
+        super(SentencePairInstance, self).__init__(label, index)
         self.first_sentence = first_sentence
         self.second_sentence = second_sentence
 
     @overrides
-    def words(self) -> List[str]:
-        return self._words_from_text(self.first_sentence) + self._words_from_text(self.second_sentence)
+    def words(self) -> Dict[str, List[str]]:
+        words = self._words_from_text(self.first_sentence)
+        second_sentence_words = self._words_from_text(self.second_sentence)
+        for namespace in words:
+            words[namespace].extend(second_sentence_words[namespace])
+        return words
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
@@ -35,17 +33,14 @@ class SentencePairInstance(TextInstance):
         return IndexedSentencePairInstance(first_sentence, second_sentence, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls,
-                       line: str,
-                       default_label: bool=None,
-                       tokenizer: Tokenizer=tokenizers['default']()):
+    def read_from_line(cls, line: str, default_label: bool=None):
         """
         Expected format:
         [sentence1][tab][sentence2][tab][label]
         """
         fields = line.split("\t")
         first_sentence, second_sentence, label = fields
-        return cls(first_sentence, second_sentence, [int(label)], tokenizer)
+        return cls(first_sentence, second_sentence, [int(label)])
 
 
 class IndexedSentencePairInstance(IndexedInstance):

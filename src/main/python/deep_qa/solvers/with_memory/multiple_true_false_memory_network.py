@@ -43,11 +43,9 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
-        return {
-                'word_sequence_length': self.max_sentence_length,
-                'background_sentences': self.max_knowledge_length,
-                'num_options': self.num_options,
-                }
+        max_lengths = super(MultipleTrueFalseMemoryNetworkSolver, self)._get_max_lengths()
+        max_lengths['num_options'] = self.num_options
+        return max_lengths
 
     @overrides
     def _instance_type(self):
@@ -55,8 +53,7 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.max_sentence_length = max_lengths['word_sequence_length']
-        self.max_knowledge_length = max_lengths['background_sentences']
+        super(MultipleTrueFalseMemoryNetworkSolver, self)._set_max_lengths(max_lengths)
         self.num_options = max_lengths['num_options']
 
     @overrides
@@ -67,11 +64,11 @@ class MultipleTrueFalseMemoryNetworkSolver(MemoryNetworkSolver):
 
     @overrides
     def _get_question_shape(self):
-        return (self.num_options, self.max_sentence_length,)
+        return (self.num_options,) + self._get_sentence_shape()
 
     @overrides
     def _get_background_shape(self):
-        return (self.num_options, self.max_knowledge_length, self.max_sentence_length)
+        return (self.num_options, self.max_knowledge_length) + self._get_sentence_shape()
 
     @overrides
     def _get_sentence_encoder(self):

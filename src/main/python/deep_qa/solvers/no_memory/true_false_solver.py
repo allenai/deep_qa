@@ -35,7 +35,7 @@ class TrueFalseSolver(TextTrainer):
             from sentences in training data
         '''
         # Step 1: Convert the sentence input into sequences of word vectors.
-        sentence_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        sentence_input = Input(shape=self._get_sentence_shape(), dtype='int32', name="sentence_input")
         word_embeddings = self._embed_input(sentence_input)
 
         # Step 2: Pass the sequences of word vectors through the sentence encoder to get a sentence
@@ -57,14 +57,6 @@ class TrueFalseSolver(TextTrainer):
 
     def _instance_type(self):
         return TrueFalseInstance
-
-    @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        return {'word_sequence_length': self.max_sentence_length}
-
-    @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.max_sentence_length = max_lengths['word_sequence_length']
 
     @overrides
     def _set_max_lengths_from_model(self):

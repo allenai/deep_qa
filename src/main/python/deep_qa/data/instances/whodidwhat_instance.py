@@ -4,7 +4,6 @@ import numpy as np
 from overrides import overrides
 from .question_passage_instance import IndexedQuestionPassageInstance, QuestionPassageInstance
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class WhoDidWhatInstance(QuestionPassageInstance):
@@ -18,9 +17,8 @@ class WhoDidWhatInstance(QuestionPassageInstance):
                  passage: str,
                  answer_options: List[str],
                  label: int,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
-        super(WhoDidWhatInstance, self).__init__(question, passage, label, index, tokenizer)
+                 index: int=None):
+        super(WhoDidWhatInstance, self).__init__(question, passage, label, index)
         self.answer_options = answer_options
 
     def __str__(self):
@@ -30,12 +28,12 @@ class WhoDidWhatInstance(QuestionPassageInstance):
                                                             str(self.label)))
 
     @overrides
-    def words(self) -> List[str]:
-        words = []
-        words.extend(self._words_from_text(self.question_text))
-        words.extend(self._words_from_text(self.passage_text))
+    def words(self) -> Dict[str, List[str]]:
+        words = super(WhoDidWhatInstance, self).words()
         for option in self.answer_options:
-            words.extend(self._words_from_text(option))
+            option_words = self._words_from_text(option)
+            for namespace in words:
+                words[namespace].extend(option_words[namespace])
         return words
 
     @overrides
@@ -56,10 +54,7 @@ class WhoDidWhatInstance(QuestionPassageInstance):
                                          option_indices, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls,
-                       line: str,
-                       default_label: bool=None,
-                       tokenizer: Tokenizer=tokenizers['default']()):
+    def read_from_line(cls, line: str, default_label: bool=None):
         """
         Reads a WhoDidWhatInstance object from a line.  The format has one of two options:
 
@@ -92,7 +87,7 @@ class WhoDidWhatInstance(QuestionPassageInstance):
         # form the question from left and right contexts, keeping spacing consistent
         question = "{} XXX {}".format(left_context, right_context).strip()
 
-        return cls(question, passage, answer_options, label, index, tokenizer)
+        return cls(question, passage, answer_options, label, index)
 
 
 class IndexedWhoDidWhatInstance(IndexedQuestionPassageInstance):

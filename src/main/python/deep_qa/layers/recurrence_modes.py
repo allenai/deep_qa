@@ -4,7 +4,6 @@ from collections import OrderedDict
 from keras import backend as K
 
 
-
 class FixedRecurrence:
     '''
     This recurrence class simply performs a fixed number of memory network steps and

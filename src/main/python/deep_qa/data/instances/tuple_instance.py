@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, List
 
 import numpy
@@ -5,7 +6,6 @@ from overrides import overrides
 
 from .instance import TextInstance, IndexedInstance
 from ..data_indexer import DataIndexer
-from ..tokenizer import tokenizers, Tokenizer
 
 
 class TupleInstance(TextInstance):
@@ -13,27 +13,25 @@ class TupleInstance(TextInstance):
     A TupleInstance is a kind of TextInstance that has text in multiple slots. This can be used to
     store SVO triples.
     """
-    def __init__(self,
-                 text: List[str],
-                 label: bool=None,
-                 index: int=None,
-                 tokenizer: Tokenizer=tokenizers['default']()):
+    def __init__(self, text: List[str], label: bool=None, index: int=None):
         """
         text: list of phrases that form the tuple. The first two slots are subject and verb, and the
             remaining are objects.
         """
-        super(TupleInstance, self).__init__(label, index, tokenizer)
+        super(TupleInstance, self).__init__(label, index)
         self.text = text
 
     def __str__(self):
         return 'TupleInstance( [' + ',\n'.join(self.text) + '] , ' + str(self.label) + ')'
 
     @overrides
-    def words(self) -> List[str]:
-        all_words = []
+    def words(self) -> Dict[str, List[str]]:
+        words = defaultdict(list)
         for phrase in self.text:
-            all_words.extend(self._tokenize(phrase))
-        return all_words
+            phrase_words = self._words_from_text(phrase)
+            for namespace in phrase_words:
+                words[namespace].extend(phrase_words[namespace])
+        return words
 
     @overrides
     def to_indexed_instance(self, data_indexer: DataIndexer):
@@ -41,10 +39,7 @@ class TupleInstance(TextInstance):
         return IndexedTupleInstance(indices, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls,
-                       line: str,
-                       default_label: bool=True,
-                       tokenizer: Tokenizer=tokenizers['default']()):
+    def read_from_line(cls, line: str, default_label: bool=True):
         """
         Reads a TupleInstances from a line.  The format has one of four options:
 
@@ -81,7 +76,7 @@ class TupleInstance(TextInstance):
         tuple_fields = tuple_string.split('###')
         if len(tuple_fields) < 2:
             raise RuntimeError("Unexpected number of fields in tuple: " + tuple_string)
-        return cls(tuple_fields, label=label, index=index, tokenizer=tokenizer)
+        return cls(tuple_fields, label=label, index=index)
 
 
 class IndexedTupleInstance(IndexedInstance):

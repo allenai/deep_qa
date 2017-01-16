@@ -47,7 +47,7 @@ class SnliEntailmentPretrainer(TextPretrainer):
     @overrides
     def _build_model(self):
         # pylint: disable=protected-access
-        sentence_shape = (self.trainer.max_sentence_length,)
+        sentence_shape = self.trainer._get_sentence_shape()
         text_input = Input(shape=sentence_shape, dtype='int32', name="text_input")
         hypothesis_input = Input(shape=sentence_shape, dtype='int32', name="hypothesis_input")
         embedded_text = self.trainer._embed_input(text_input)
@@ -116,7 +116,7 @@ class SnliAttentionPretrainer(TextPretrainer):
     @overrides
     def _build_model(self):
         # pylint: disable=protected-access
-        sentence_shape = (self.trainer.max_sentence_length,)
+        sentence_shape = self.trainer._get_sentence_shape()
         text_input = Input(shape=sentence_shape, dtype='int32', name="text_input")
         hypothesis_input = Input(shape=sentence_shape, dtype='int32', name="hypothesis_input")
         embedded_text = self.trainer._embed_input(text_input)

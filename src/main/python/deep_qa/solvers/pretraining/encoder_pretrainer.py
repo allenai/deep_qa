@@ -28,7 +28,7 @@ class EncoderPretrainer(TextPretrainer):
     @overrides
     def _build_model(self):
         # pylint: disable=protected-access
-        sentence_shape = (self.trainer.max_sentence_length,)
+        sentence_shape = self.trainer._get_sentence_shape()
         first_sentence_input, embedded_first_sentence = self.trainer._get_embedded_sentence_input(sentence_shape,
                                                                                                   "first_sentence")
         second_sentence_input, embedded_second_sentence = self.trainer._get_embedded_sentence_input(

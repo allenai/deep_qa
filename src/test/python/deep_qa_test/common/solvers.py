@@ -61,8 +61,8 @@ def write_true_false_solver_files():
         validation_file.write('12\tq3a4\t1\n')
     with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
         train_file.write('1\tsentence1\t0\n')
-        train_file.write('2\tsentence2\t1\n')
-        train_file.write('3\tsentence3\t0\n')
+        train_file.write('2\tsentence2 word2 word3\t1\n')
+        train_file.write('3\tsentence3 word2\t0\n')
         train_file.write('4\tsentence4\t1\n')
         train_file.write('5\tsentence5\t0\n')
         train_file.write('6\tsentence6\t0\n')
