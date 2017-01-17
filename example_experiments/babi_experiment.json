@@ -1,5 +1,5 @@
 {
-  "solver_class": "SoftmaxMemoryNetworkSolver",
+  "model_class": "SoftmaxMemoryNetwork",
   "model_serialization_prefix": "models/babi_task1/",
   "encoder": {
     "type": "bow"

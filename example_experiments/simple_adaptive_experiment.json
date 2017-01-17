@@ -1,5 +1,5 @@
 {
-  "solver_class": "MemoryNetworkSolver",
+  "model_class": "MemoryNetwork",
   "model_serialization_prefix": "models/example",
   "recurrence_mode": {
     "type": "adaptive"

@@ -6,7 +6,7 @@ from pyhocon import ConfigFactory
 
 from deep_qa.common.checks import ensure_pythonhashseed_set
 from deep_qa.data.instances.instance import TextInstance
-from deep_qa.solvers.with_memory.differentiable_search import DifferentiableSearchSolver
+from deep_qa.models.memory_networks.differentiable_search import DifferentiableSearchMemoryNetwork
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -27,7 +27,7 @@ def main():
 
     param_file = args.param_file
     params = ConfigFactory.parse_file(param_file)
-    solver = DifferentiableSearchSolver(**params)  # TODO(matt): fix this in the next PR
+    solver = DifferentiableSearchMemoryNetwork(**params)  # TODO(matt): fix this in the next PR
     solver.load_model()
 
     with codecs.open(args.output_file, 'w', 'utf-8') as outfile:

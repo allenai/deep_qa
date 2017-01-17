@@ -28,6 +28,8 @@ PB.runProtoc in PB.protobufConfig := (args =>
 
 version in PB.protobufConfig := "3.0.0-beta-2"
 
+resolvers += Resolver.jcenterRepo
+
 libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3" % "3.0",
   "org.apache.spark" %% "spark-core" % "1.6.0",
@@ -42,7 +44,7 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0",
   "ch.qos.logback" %  "logback-classic" % "1.1.7",  // backend for scala-logging
-  "org.allenai.openie" %% "openie" % "4.2.4",
+  "org.allenai.openie" %% "openie" % "4.2.6",
 
   // These are for running this as a solver with gRPC
   "io.grpc" % "grpc-okhttp" % "0.13.2",

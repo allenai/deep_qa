@@ -1,6 +1,5 @@
 from .encoded_sentence import TrueFalseEntailmentModel, MultipleChoiceEntailmentModel
 from .encoded_sentence import QuestionAnswerEntailmentModel, MemoryOnlyCombiner, HeuristicMatchingCombiner
-from .encoded_sentence import AnswerSimilaritySoftmax, AnswerOptionSoftmax
 from .decomposable_attention import DecomposableAttentionEntailment
 from .multiple_choice_tuple_entailment import MultipleChoiceTupleEntailment
 

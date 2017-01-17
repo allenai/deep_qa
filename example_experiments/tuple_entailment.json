@@ -1,5 +1,5 @@
 {
-  "solver_class": "MultipleChoiceTupleEntailmentSolver",
+  "model_class": "MultipleChoiceTupleEntailmentModel",
   "model_serialization_prefix": "models/qa/multi_tuple",
   "encoder": {
     "type": "bow"

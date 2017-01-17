@@ -16,7 +16,7 @@ numpy.random.seed(1337)  # pylint: disable=no-member
 # pylint: disable=wrong-import-position
 from deep_qa.common.checks import ensure_pythonhashseed_set
 from deep_qa.common.params import get_choice
-from deep_qa.solvers import concrete_solvers
+from deep_qa.models import concrete_models
 
 from deep_qa.data.instances.true_false_instance import TrueFalseInstance
 from deep_qa.data.instances.multiple_true_false_instance import MultipleTrueFalseInstance
@@ -78,8 +78,8 @@ def serve(config_file: str):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
     solver_params = params['solver']
-    model_type = get_choice(solver_params, 'solver_class', concrete_solvers.keys())
-    solver_class = concrete_solvers[model_type]
+    model_type = get_choice(solver_params, 'solver_class', concrete_models.keys())
+    solver_class = concrete_models[model_type]
     solver = solver_class(solver_params)
     message_pb2.add_SolverServiceServicer_to_server(SolverServer(solver), server)
 

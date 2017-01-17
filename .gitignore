@@ -3,7 +3,6 @@ target/
 *.pyc
 /data/
 output/
-models/
 /experiments/
 *results*/
 tmp*/

@@ -1,5 +1,5 @@
 {
-  "solver_class": "MultipleTrueFalseMemoryNetworkSolver",
+  "model_class": "MultipleTrueFalseMemoryNetwork",
   "model_serialization_prefix": "models/dmn",
   "encoder": {
     "type": "positional"

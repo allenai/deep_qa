@@ -17,7 +17,9 @@ from typing import Any, Dict
 from keras import backend as K
 from keras.layers import Dense, Layer, TimeDistributed
 
-from ...common.tensors import switch, masked_softmax, tile_vector
+from ..softmaxes.masked_softmax import MaskedSoftmax
+from ..softmaxes.similarity_softmax import SimilaritySoftmax
+
 
 class TrueFalseEntailmentModel:
     """
@@ -56,44 +58,6 @@ class TrueFalseEntailmentModel:
         for layer in self.hidden_layers:
             hidden_input = layer(hidden_input)
         softmax_output = self.score_layer(hidden_input)
-        return softmax_output
-
-
-class AnswerSimilaritySoftmax(Layer):
-    '''
-    This layer takes a list of two tensors: projected_entailment_input and encoded_answers, and computes
-    a softmax over the options based on how similar they are to the input. It first tiles the entailment_input
-    to compute an efficient dot product (followed by a sum) with the encoded answers.
-    Input shapes:
-        projected_input: (batch_size, answer_dim)
-        encoded_answers: (batch_size, num_options, answer_dim)
-    Output shape: (batch_size, num_options)
-    '''
-    def __init__(self, **kwargs):
-        self.supports_masking = True
-        super(AnswerSimilaritySoftmax, self).__init__(**kwargs)
-
-    def compute_mask(self, inputs, mask=None):
-        # pylint: disable=unused-argument
-        # We do not need a mask beyond this layer.
-        return None
-
-    def get_output_shape_for(self, input_shapes):
-        return (input_shapes[1][0], input_shapes[1][1])
-
-    def call(self, inputs, mask=None):
-        projected_input, encoded_answers = inputs
-        if mask is not None:
-            # The projected input is not expected to have a mask, since it is the output of a Dense layer.
-            answers_mask = mask[1]
-            if K.ndim(answers_mask) < K.ndim(encoded_answers):
-                # To use switch, we need the answer_mask to be the same size as the encoded_answers.
-                # Therefore we expand it and multiply by ones in the shape that we need.
-                answers_mask = K.expand_dims(answers_mask) * K.cast(K.ones_like(encoded_answers), "uint8")
-            encoded_answers = switch(answers_mask, encoded_answers, K.zeros_like(encoded_answers))
-        # (batch_size, answer_dim) --> (batch_size, num_options, answer_dim)
-        tiled_input = tile_vector(projected_input, encoded_answers)
-        softmax_output = masked_softmax(K.sum(encoded_answers * tiled_input, axis=2), mask[1])
         return softmax_output
 
 
@@ -145,34 +109,8 @@ class QuestionAnswerEntailmentModel:
         projected_input = self.projection_layer(hidden_input)
 
         # Note that this layer has no parameters, so it doesn't need to be put into self._init_layers().
-        softmax_output = AnswerSimilaritySoftmax(name='answer_similarity_softmax')([projected_input,
-                                                                                    encoded_answers])
+        softmax_output = SimilaritySoftmax(name='answer_similarity_softmax')([projected_input, encoded_answers])
         return softmax_output
-
-
-class AnswerOptionSoftmax(Layer):
-    '''
-    This layer accepts a tensor of scores of shape (batch_size, num_options, 1), and calculates the softmax
-    of those scores over num_options. The reason we have a final dimension of length 1 is because the input
-    is expected to be the output of a TimeDistributed scoring layer. See MultipleChoiceEntailmentModel.classify().
-    This could have been a lambda layer, except that we need to accept masked input, which Lambda doesn't.
-    '''
-    def __init__(self, **kwargs):
-        self.supports_masking = True
-        super(AnswerOptionSoftmax, self).__init__(**kwargs)
-
-    def compute_mask(self, inputs, mask=None):
-        # pylint: disable=unused-argument
-        # We do not need a mask beyond this layer.
-        return None
-
-    def get_output_shape_for(self, input_shape):
-        return (input_shape[0], input_shape[1])
-
-    def call(self, x, mask=None):
-        # input shape: (batch_size, num_options, 1)
-        squeezed_x = K.squeeze(x, axis=2)  # (batch_size, num_options)
-        return masked_softmax(squeezed_x, mask)
 
 
 class MultipleChoiceEntailmentModel:
@@ -214,7 +152,7 @@ class MultipleChoiceEntailmentModel:
         scores = TimeDistributed(self.score_layer, name='entailment_scorer')(hidden_input)
 
         # This layer has no parameters, so it doesn't need to go into self._init_layers().
-        softmax_layer = AnswerOptionSoftmax(name='answer_option_softmax')
+        softmax_layer = MaskedSoftmax(name='answer_option_softmax')
         softmax_output = softmax_layer(scores)
         return softmax_output
 

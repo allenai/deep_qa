@@ -1,5 +1,5 @@
 {
-  "solver_class": "QuestionAnswerSolver",
+  "model_class": "QuestionAnswerSimilarity",
   "model_serialization_prefix": "models/qa/lstm",
   "encoder": {
     "type": "gru"
