@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 
 import numpy
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
 import keras.backend as K
 
 from deep_qa.common import tensors
@@ -141,3 +142,12 @@ class TestTensors:
                                                          K.variable(mask_b),
                                                          K.variable(mask_a)))
         assert numpy.all(result == flipped_result)
+
+    def test_l1_normalize(self):
+        # test 1D case
+        vector_1d = K.variable(numpy.array([[2, 1, 5, 7]]))
+        vector_1d_normalized = K.eval(tensors.l1_normalize(vector_1d))
+        assert_array_almost_equal(vector_1d_normalized,
+                                  numpy.array([[0.13333333, 0.06666666,
+                                                0.33333333, 0.46666666]]))
+        assert_almost_equal(1.0, numpy.sum(vector_1d_normalized), decimal=6)

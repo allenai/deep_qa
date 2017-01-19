@@ -141,6 +141,17 @@ def is_memory_network(cls):
     return False
 
 
+def write_who_did_what_files():
+    with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:
+        train_file.write('1\tpassage1\tleftcontext1\trightcontext1\tanswer1###answer2\t0\n')
+    with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
+        # document, leftcontext, rightcontext, answers
+        train_file.write('1\te q e q ka q o\ta b\te i d\tanswer1 word2###answer2\t0\n')
+        train_file.write('2\tm a os e z p\ta b\tc d\tanswer3###answer4\t1\n')
+        train_file.write('3\tx e q m\te d w f d\ts a\tanswer5###answer6###answer9\t2\n')
+        train_file.write('4\tj aq ei q l\te fj\tk w q\tanswer7###answer8\t0\n')
+
+
 def is_model_with_background(cls):
     # pylint: disable=multiple-statements
     if is_memory_network(cls): return True

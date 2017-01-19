@@ -15,7 +15,7 @@ from ..data.instances.true_false_instance import TrueFalseInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizers import tokenizers
 from ..data.data_indexer import DataIndexer
-from ..layers.encoders import encoders, set_regularization_params
+from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
 from ..layers.time_distributed_embedding import TimeDistributedEmbedding
 from .models import DeepQaModel
 from .trainer import Trainer
@@ -82,6 +82,9 @@ class TextTrainer(Trainer):
         # here's your chance to specify the word encoder.
         self.word_encoder_params = params.pop('word_encoder', self.encoder_params)
 
+        self.seq2seq_encoder_params = params.pop('seq2seq_encoder', {"encoder_params": {},
+                                                                     "wrapper_params": {}})
+
         super(TextTrainer, self).__init__(params)
 
         self.name = "TextTrainer"
@@ -93,6 +96,7 @@ class TextTrainer(Trainer):
         self.embedding_layers = {}
         self.sentence_encoder_layer = None
         self.word_encoder_layer = None
+        self.seq2seq_encoder_layer = None
         self._sentence_encoder_model = None
 
     @overrides
@@ -391,6 +395,27 @@ class TextTrainer(Trainer):
         params["output_dim"] = self.embedding_size
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
+
+    def _get_seq2seq_encoder(self, input_shape):
+        """
+        A seq2seq encoder takes as input a sequence of word embeddings, and returns as output a
+        sequence of vectors.
+        """
+        if self.seq2seq_encoder_layer is None:
+            params = deepcopy(self.seq2seq_encoder_params)
+            params["wrapper_params"]["input_shape"] = input_shape
+            self.seq2seq_encoder_layer = self._get_new_seq2seq_encoder(params)
+        return self.seq2seq_encoder_layer
+
+    def _get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
+        encoder_params = params["encoder_params"]
+        seq2seq_encoder_type = get_choice_with_default(encoder_params,
+                                                       "type",
+                                                       list(seq2seq_encoders.keys()))
+        encoder_params["name"] = name
+        encoder_params["output_dim"] = self.embedding_size
+        set_regularization_params(seq2seq_encoder_type, encoder_params)
+        return seq2seq_encoders[seq2seq_encoder_type](**params)
 
     def _build_sentence_encoder_model(self):
         """

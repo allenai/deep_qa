@@ -8,6 +8,7 @@ from .multiple_choice_qa.multiple_true_false_similarity import MultipleTrueFalse
 from .multiple_choice_qa.question_answer_memory_network import QuestionAnswerMemoryNetwork
 from .multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from .multiple_choice_qa.tuple_entailment import MultipleChoiceTupleEntailmentModel
+from .reading_comprehension.attention_sum_reader import AttentionSumReader
 from .text_classification.tree_lstm_model import TreeLSTMModel
 from .text_classification.true_false_model import TrueFalseModel
 
@@ -17,6 +18,7 @@ from .memory_networks.pretrainers.snli_pretrainer import SnliAttentionPretrainer
 from .text_pretrainers.encoder_pretrainer import EncoderPretrainer
 
 concrete_models = {  # pylint: disable=invalid-name
+        'AttentionSumReader': AttentionSumReader,
         'DecomposableAttention': DecomposableAttention,
         'DifferentiableSearchMemoryNetwork': DifferentiableSearchMemoryNetwork,
         'MemoryNetwork': MemoryNetwork,

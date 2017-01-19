@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Dict, Any
 
 from keras.layers import GRU, LSTM
+from keras.layers.wrappers import Bidirectional
 from keras.regularizers import l1l2
 
 from .bag_of_words import BOWEncoder
@@ -47,3 +48,11 @@ encoders["gru"] = GRU
 encoders["tree_lstm"] = TreeCompositionLSTM
 encoders["cnn"] = CNNEncoder
 encoders["positional"] = PositionalEncoder
+encoders["bi_gru"] = (lambda **params: Bidirectional(GRU(**params,
+                                                         return_sequences=False)))
+
+seq2seq_encoders = OrderedDict()  # pylint:  disable=invalid-name
+seq2seq_encoders["bi_gru"] = (lambda **params:
+                              Bidirectional(GRU(return_sequences=True,
+                                                **(params["encoder_params"])),
+                                            **(params["wrapper_params"])))

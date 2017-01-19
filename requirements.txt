@@ -1,13 +1,11 @@
 # Library dependencies for the python code.  You need to install these with
 # `pip install -r requirements.txt` before you can run this.
 
-# Currently we haven't specified any version numbers on these requirements; we'll do that when
-# there is some pressing reason to do so.
-
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-keras
+# We need at least keras 1.2.0 due to the use of `keras.backend.int_shape()`
+keras>=1.2.0
 h5py
 scikit-learn
 theano
