@@ -1,11 +1,11 @@
 package org.allenai.deep_qa.data
 
-import com.mattg.util.FakeFileUtil
+import com.mattg.util.FileUtil
 import org.scalatest._
 
 class WhoDidWhatDatasetReaderSpec extends FlatSpecLike with Matchers {
 
-  val fileUtil = new FakeFileUtil
+  val fileUtil = new FileUtil
   val rightContext1 = "walked through the general managers meetings in Dana Point , Calif. , " +
     "last week as proud as a peacock ."
   val leftContext1 = ""
@@ -50,7 +50,7 @@ class WhoDidWhatDatasetReaderSpec extends FlatSpecLike with Matchers {
     "rewarded for it,\" he added. Obama is scheduled to visit the White House Monday for talks " +
     "with Bush on the transition."
 
-  val datasetFile = "/dataset"
+  val datasetFile = "./dataset"
   val datasetFileContents = s"""<?xml version="1.0" encoding="UTF-8"?>
       |<ROOT>
       |<mc>
@@ -116,14 +116,16 @@ class WhoDidWhatDatasetReaderSpec extends FlatSpecLike with Matchers {
       | </choice>
       |</mc>
       |</ROOT>""".stripMargin
-
-  fileUtil.addFileToBeRead(datasetFile, datasetFileContents)
+  fileUtil.mkdirsForFile(datasetFile)
+  fileUtil.writeContentsToFile(datasetFile, datasetFileContents)
   val reader = new WhoDidWhatDatasetReader(fileUtil)
   val answers1 = Seq("Joe Maddon", "Lou Piniella", "Ron Gardenhire", "Charlie Manuel")
   val answers2 = Seq("George W. Bush", "John Podesta", "Fox", "Bill Clinton")
 
   "readFile" should "return a correct dataset" in {
     val dataset = reader.readFile(datasetFile)
+    fileUtil.deleteFile(datasetFile)
+    fileUtil.deleteFile(datasetFile + ".bak")
 
     dataset.instances.size should be(2)
     dataset.instances(0) should be(WhoDidWhatInstance(passage1, leftContext1, rightContext1, answers1, Some(0)))

@@ -7,6 +7,9 @@ import org.json4s._
 
 import org.allenai.deep_qa.data.DatasetReader
 
+import scala.sys.process.Process
+import scala.sys.process.ProcessLogger
+
 /**
  * This Step is a SentenceProducer that reads some external dataset and converts it into a format
  * usable by our pipeline, by means of a DatasetReader.  This is for doing things like running

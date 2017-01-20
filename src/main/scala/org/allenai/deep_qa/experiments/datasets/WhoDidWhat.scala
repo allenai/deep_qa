@@ -37,8 +37,8 @@ object WhoDidWhatDatasets {
 
   val trainFile = WhoDidWhatFile(baseDir, "train")
   val train = WhoDidWhatDataset(baseDir, "train")
-  val devFile = WhoDidWhatFile(baseDir, "dev")
-  val dev = WhoDidWhatDataset(baseDir, "dev")
+  val devFile = WhoDidWhatFile(baseDir, "val")
+  val dev = WhoDidWhatDataset(baseDir, "val")
   val relaxedTrainFile = WhoDidWhatFile(baseDir, "train", true)
   val relaxedTrain = WhoDidWhatDataset(baseDir, "train", true)
 }

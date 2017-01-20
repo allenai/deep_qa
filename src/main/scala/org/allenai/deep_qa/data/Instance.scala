@@ -115,7 +115,7 @@ case class WhoDidWhatInstance(
 ) extends Instance {
   def asStrings(): Seq[Seq[String]] = {
     val answerString = answerOptions.mkString("###")
-    val labelString = label.map(l => s"\t$l")
+    val labelString = label.map(l => s"\t$l").getOrElse("")
     Seq(Seq(s"$passage\t$leftContext\t$rightContext\t$answerString" + labelString))
   }
 }
