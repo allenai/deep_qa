@@ -59,3 +59,14 @@ pandas
 
 # progress bars in data cleaning scripts
 tqdm
+
+#### DOC-RELATED PACKAGES ####
+
+# Builds our documentation.
+sphinx
+
+# Watches the documentation directory and rebuilds on changes.
+sphinx-autobuild
+
+# doc theme
+sphinx_rtd_theme

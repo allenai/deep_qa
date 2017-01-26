@@ -17,3 +17,4 @@ tmp*/
 *.make
 *.temp
 .coverage
+_build
