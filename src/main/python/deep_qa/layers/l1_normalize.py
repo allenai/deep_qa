@@ -1,7 +1,7 @@
 from keras import backend as K
 from keras.layers import Layer
 from overrides import overrides
-from ..common.tensors import l1_normalize
+from ..tensors.backend import l1_normalize
 
 
 class L1Normalize(Layer):

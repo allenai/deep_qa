@@ -1,7 +1,7 @@
 from keras import backend as K
 from keras.engine import Layer
 
-from ...common.tensors import masked_batch_dot, masked_softmax
+from ...tensors.masked_operations import masked_batch_dot, masked_softmax
 
 
 class MaxSimilaritySoftmax(Layer):

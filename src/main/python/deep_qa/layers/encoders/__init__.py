@@ -1,13 +1,14 @@
 from collections import OrderedDict
 from typing import Dict, Any
 
-from keras.layers import GRU, LSTM
+from keras.layers import LSTM
 from keras.layers.wrappers import Bidirectional
 from keras.regularizers import l1l2
 
 from .bag_of_words import BOWEncoder
 from .convolutional_encoder import CNNEncoder
 from .positional_encoder import PositionalEncoder
+from .shareable_gru import ShareableGRU as GRU
 from .tree_composition_lstm import TreeCompositionLSTM
 
 

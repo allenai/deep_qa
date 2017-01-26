@@ -2,7 +2,7 @@ from keras import backend as K
 from keras.layers import Layer
 from overrides import overrides
 
-from ...common.tensors import masked_softmax
+from ...tensors.masked_operations import masked_softmax
 
 class MaskedSoftmax(Layer):
     '''

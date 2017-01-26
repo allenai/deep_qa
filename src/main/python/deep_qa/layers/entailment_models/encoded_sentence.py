@@ -17,8 +17,8 @@ from typing import Any, Dict
 from keras import backend as K
 from keras.layers import Dense, Layer, TimeDistributed
 
-from ..softmaxes.masked_softmax import MaskedSoftmax
-from ..softmaxes.similarity_softmax import SimilaritySoftmax
+from ..attention.masked_softmax import MaskedSoftmax
+from ..attention.attention import Attention
 
 
 class TrueFalseEntailmentModel:
@@ -109,7 +109,7 @@ class QuestionAnswerEntailmentModel:
         projected_input = self.projection_layer(hidden_input)
 
         # Note that this layer has no parameters, so it doesn't need to be put into self._init_layers().
-        softmax_output = SimilaritySoftmax(name='answer_similarity_softmax')([projected_input, encoded_answers])
+        softmax_output = Attention(name='answer_similarity_softmax')([projected_input, encoded_answers])
         return softmax_output
 
 

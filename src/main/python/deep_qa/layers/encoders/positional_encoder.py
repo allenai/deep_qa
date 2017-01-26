@@ -1,7 +1,8 @@
 from keras import backend as K
 from keras.engine import InputSpec
 from keras.layers import Layer
-from ...common.tensors import switch
+
+from ...tensors.backend import switch
 
 class PositionalEncoder(Layer):
     '''

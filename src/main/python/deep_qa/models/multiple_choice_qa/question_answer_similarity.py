@@ -5,7 +5,7 @@ from keras.layers import Dense, Dropout, Input
 
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
-from ...layers.softmaxes.similarity_softmax import SimilaritySoftmax
+from ...layers.attention.attention import Attention
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 
@@ -81,7 +81,7 @@ class QuestionAnswerSimilarity(TextTrainer):
 
         # Lastly, we compare the similarity of the question to the answer options.  Note that this
         # layer has no parameters, so it doesn't need to be put into self._init_layers().
-        softmax_output = SimilaritySoftmax(name='answer_similarity_softmax')([projected_input, encoded_answers])
+        softmax_output = Attention(name='answer_similarity_softmax')([projected_input, encoded_answers])
 
         return DeepQaModel(input=[question_input, answer_input], output=softmax_output)
 

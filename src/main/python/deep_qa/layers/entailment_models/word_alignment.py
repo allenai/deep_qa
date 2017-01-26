@@ -15,7 +15,8 @@ from typing import Any, Dict
 from keras import backend as K
 from keras.layers import Layer
 
-from ...common.tensors import masked_softmax, last_dim_flatten, masked_batch_dot
+from ...tensors.masked_operations import masked_softmax, masked_batch_dot
+from ...tensors.backend import last_dim_flatten
 
 class WordAlignmentEntailment(Layer):
     '''

@@ -3,7 +3,7 @@ from overrides import overrides
 from keras.layers import Input
 
 from ...data.instances.whodidwhat_instance import WhoDidWhatInstance
-from ...layers.softmaxes.similarity_softmax import SimilaritySoftmax
+from ...layers.attention.attention import Attention
 from ...layers.option_attention_sum import OptionAttentionSum
 from ...layers.l1_normalize import L1Normalize
 from ...training.text_trainer import TextTrainer
@@ -88,8 +88,8 @@ class AttentionSumReader(TextTrainer):
         # Here we take the dot product of `encoded_question` and each word
         # vector in `encoded_document`.
         # shape: (batch size, max docuent length in words)
-        document_probabilities = SimilaritySoftmax(name='question_document_softmax')([encoded_question,
-                                                                                      encoded_document])
+        document_probabilities = Attention(name='question_document_softmax')([encoded_question,
+                                                                              encoded_document])
         # We sum together the weights of words that match each option.
         options_sum_layer = OptionAttentionSum(self.multiword_option_mode,
                                                name="options_probability_sum")

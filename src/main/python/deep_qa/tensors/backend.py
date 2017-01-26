@@ -1,12 +1,18 @@
+"""
+These are utility functions that are similar to calls to Keras' backend.  Some of these are here
+because a current function in keras.backend is broken, some are things that just haven't been
+implemented.
+"""
 import keras.backend as K
 
 
 def switch(cond, then_tensor, else_tensor):
     """
-    Keras' implementation of K.switch currently uses tensorflow's switch function, which only accepts
-    scalar value conditions, rather than boolean tensors which are treated in an elementwise function.
-    This doesn't match with Theano's implementation of switch, but using tensorflow's select, we can
-    exactly retrieve this functionality."""
+    Keras' implementation of K.switch currently uses tensorflow's switch function, which only
+    accepts scalar value conditions, rather than boolean tensors which are treated in an
+    elementwise function.  This doesn't match with Theano's implementation of switch, but using
+    tensorflow's select, we can exactly retrieve this functionality.
+    """
 
     if K.backend() == 'tensorflow':
         import tensorflow as tf
@@ -33,70 +39,10 @@ def last_dim_flatten(input_tensor):
     return K.transpose(K.batch_flatten(dim_shuffled_input))
 
 
-def masked_batch_dot(tensor_a, tensor_b, mask_a, mask_b):
-    '''
-    The simplest case where this function is applicable is the following:
-
-    tensor_a: (batch_size, a_length, embed_dim)
-    tensor_b: (batch_size, b_length, embed_dim)
-    mask_a: None or (batch_size, a_length)
-    mask_b: None or (batch_size, b_length)
-
-    Returns:
-    a_dot_b: (batch_size, a_length, b_length), with zeros for masked elements.
-
-    This function will also work for larger tensors, as long as `abs(K.ndim(tensor_a) -
-    K.ndim(tensor_b)) < 1` (this is due to the limitations of `K.batch_dot`).  We always assume the
-    dimension to perform the dot is the last one, and that the masks have one fewer dimension than
-    the tensors.
-    '''
-    if K.ndim(tensor_a) < K.ndim(tensor_b):
-        # To simplify the logic below, we'll make sure that tensor_a is always the bigger one.
-        tensor_a, tensor_b = tensor_b, tensor_a
-        mask_a, mask_b = mask_b, mask_a
-
-    if K.ndim(tensor_a) > 3 and K.backend() == 'theano':
-        raise RuntimeError("K.batch_dot() in theano is broken for tensors with more than"
-                           " three dimensions.  Use tensorflow instead.")
-    a_dot_axis = K.ndim(tensor_a) - 1
-    b_dot_axis = K.ndim(tensor_b) - 1
-    if b_dot_axis < a_dot_axis:
-        tensor_b = K.expand_dims(tensor_b, dim=-1)
-
-    # (batch_size, a_length, b_length)
-    a_dot_b = K.batch_dot(tensor_a, tensor_b, axes=(a_dot_axis, b_dot_axis))
-    if b_dot_axis < a_dot_axis:
-        a_dot_b = K.squeeze(a_dot_b, axis=-1)
-
-    if mask_a is None and mask_b is None:
-        return a_dot_b
-    elif mask_a is None:
-        # (batch_size, a_length)
-        mask_a = K.sum(K.ones_like(tensor_a), axis=-1)
-    elif mask_b is None:
-        # (batch_size, b_length)
-        sum_axis = -1
-        if b_dot_axis < a_dot_axis:
-            sum_axis -= 1
-        mask_b = K.sum(K.ones_like(tensor_b), axis=sum_axis)
-    # Casting masks to float since we TF would complain if we multiplied bools.
-    float_mask_a = K.cast(mask_a, 'float32')
-    float_mask_b = K.cast(mask_b, 'float32')
-
-    if b_dot_axis < a_dot_axis:
-        float_mask_b = K.expand_dims(float_mask_b, dim=-1)
-    else:
-        float_mask_a = K.expand_dims(float_mask_a, dim=-1)
-        float_mask_b = K.expand_dims(float_mask_b, dim=-2)
-    # (batch_size, a_length, b_length)
-    a2b_mask = float_mask_a * float_mask_b
-
-    result = switch(a2b_mask, a_dot_b, K.zeros_like(a_dot_b))
-    return result
-
-
 def tile_vector(vector, matrix):
     """
+    DEPRECATED: I'm pretty sure K.repeat_elements does exactly this, and should be used instead.
+
     This method takes a (collection of) vector(s) (shape: (batch_size, vector_dim)), and tiles that
     vector a number of times, giving a matrix of shape (batch_size, tile_length, vector_dim).  (I
     say "vector" and "matrix" here because I'm ignoring the batch_size).  We need the matrix as
@@ -125,6 +71,8 @@ def tile_vector(vector, matrix):
 
 def tile_scalar(scalar, vector):
     """
+    DEPRECATED: I'm pretty sure K.repeat_elements does exactly this, and should be used instead.
+
     This method takes a (collection of) scalar(s) (shape: (batch_size, 1)), and tiles that
     scala a number of times, giving a vector of shape (batch_size, tile_length).  (I say "scalar"
     and "vector" here because I'm ignoring the batch_size).  We need the vector as input so we know
@@ -168,21 +116,6 @@ def hardmax(unnormalized_attention, knowledge_length):
     # Needs to be cast to be compatible with TensorFlow
     max_attention = K.cast(bool_max_attention, 'float32')
     return max_attention
-
-
-def masked_softmax(vector, mask):
-    """
-    `K.softmax(vector)` does not work if some elements of `vector` should be masked.  This performs
-    a softmax on just the non-masked portions of `vector` (passing None in for the mask is also
-    acceptable; you'll just get a regular softmax).
-
-    We assume that both `vector` and `mask` (if given) have shape (batch_size, vector_dim).
-    """
-    exponentiated = K.exp(vector)
-    if mask is not None:
-        exponentiated = switch(mask, exponentiated, K.zeros_like(exponentiated))
-    exp_sum = K.sum(exponentiated, axis=1, keepdims=True)
-    return switch(tile_scalar(exp_sum, exponentiated), exponentiated / exp_sum, K.zeros_like(exponentiated))
 
 
 def apply_feed_forward(input_tensor, weights, activation):

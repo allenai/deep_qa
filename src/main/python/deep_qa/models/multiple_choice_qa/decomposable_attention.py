@@ -4,7 +4,7 @@ from overrides import overrides
 from keras.layers import Input, merge
 
 from .multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
-from ...layers.softmaxes.masked_softmax import MaskedSoftmax
+from ...layers.attention.masked_softmax import MaskedSoftmax
 from ...layers.top_knowledge_selector import TopKnowledgeSelector
 from ...layers.wrappers import TimeDistributedWithMask, EncoderWrapper
 from ...training.models import DeepQaModel

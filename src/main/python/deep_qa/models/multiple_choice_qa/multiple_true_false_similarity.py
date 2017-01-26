@@ -4,7 +4,7 @@ from keras.layers import Input
 
 from .multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
 from ...training.models import DeepQaModel
-from ...layers.softmaxes.max_similarity_softmax import MaxSimilaritySoftmax
+from ...layers.attention.max_similarity_softmax import MaxSimilaritySoftmax
 from ...layers.wrappers import EncoderWrapper
 
 

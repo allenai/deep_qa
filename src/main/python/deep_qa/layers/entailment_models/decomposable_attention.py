@@ -4,7 +4,7 @@ from keras import backend as K
 from keras import initializations, activations
 
 from .word_alignment import WordAlignmentEntailment
-from ...common.tensors import switch, apply_feed_forward
+from ...tensors.backend import switch, apply_feed_forward
 
 class DecomposableAttentionEntailment(WordAlignmentEntailment):
     '''

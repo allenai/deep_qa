@@ -3,7 +3,7 @@ from typing import Any, Dict
 from keras import backend as K
 
 from .word_alignment import WordAlignmentEntailment
-from ...common.tensors import switch
+from ...tensors.backend import switch
 
 class MultipleChoiceTupleEntailment(WordAlignmentEntailment):
     '''

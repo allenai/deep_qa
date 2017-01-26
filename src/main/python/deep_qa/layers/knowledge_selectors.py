@@ -13,7 +13,8 @@ from keras import backend as K
 from keras import activations, initializations
 from keras.layers import Layer
 
-from ..common.tensors import tile_vector, masked_softmax, hardmax
+from ..tensors.backend import tile_vector, hardmax
+from ..tensors.masked_operations import masked_softmax
 
 
 def split_selector_inputs(inputs):
