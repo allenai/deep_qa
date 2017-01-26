@@ -12,15 +12,21 @@ theano
 
 ## Tensorflow Requirements ##
 # Tensorflow is required to run this code but depends on specific configurations. Install from:
-# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/g3doc/get_started/os_setup.md#pip-installation
-# If the GPU version is installed, you will also need Nvidia's CUDA toolkit and cuDNN:
+# https://www.tensorflow.org/get_started/os_setup#overview
+# If you want to use the GPU version, you will also need Nvidia's CUDA toolkit and cuDNN:
 # https://developer.nvidia.com/cuda-downloads
 # https://developer.nvidia.com/cudnn
+# Note that if you want to use the GPU version, you have to `pip uninstall tensorflow`
+# and `pip install tensorflow-gpu`, since both cannot coexist. 
+tensorflow
 
 # These are for running this as an Aristo solver using gRPC.
 grpcio
 grpcio-tools
 pyhocon
+
+# Type checking for python
+typing
 
 #### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
 
