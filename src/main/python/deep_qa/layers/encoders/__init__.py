@@ -49,8 +49,8 @@ encoders["gru"] = GRU
 encoders["tree_lstm"] = TreeCompositionLSTM
 encoders["cnn"] = CNNEncoder
 encoders["positional"] = PositionalEncoder
-encoders["bi_gru"] = (lambda **params: Bidirectional(GRU(**params,
-                                                         return_sequences=False)))
+encoders["bi_gru"] = (lambda **params: Bidirectional(GRU(return_sequences=False,
+                                                         **params)))
 
 seq2seq_encoders = OrderedDict()  # pylint:  disable=invalid-name
 seq2seq_encoders["bi_gru"] = (lambda **params:
