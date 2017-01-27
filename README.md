@@ -1,4 +1,5 @@
 [![Build Status](https://semaphoreci.com/api/v1/projects/b3480192-615d-4981-ba34-62afeb9d9ae6/953929/shields_badge.svg)](https://semaphoreci.com/allenai/deep_qa)
+[![Documentation Status](https://readthedocs.org/projects/deep-qa/badge/?version=latest)](http://deep-qa.readthedocs.io/en/latest/?badge=latest)
 
 # Deep QA
 
@@ -21,7 +22,7 @@ This repository implements several variants of memory networks, including the mo
 - Windowed-memory MemNNs, from [The Goldilocks Principle: Reading Children's Books with Explicit Memory Representations](https://www.semanticscholar.org/paper/The-Goldilocks-Principle-Reading-Children-s-Books-Hill-Bordes/1ee46c3b71ebe336d0b278de9093cfca7af7390b) (in progress)
 
 As well as some of our own, as-yet-unpublished variants.  There is a lot of similarity between the models in these papers, and our code is structured in a way to allow for easily switching between these models.
-For a description of how we've built an extensible memory network architecture in this library, see [this readme.](./src/main/python/deep_qa/solvers/with_memory/README.md)
+For a description of how we've built an extensible memory network architecture in this library, see [this readme.](./src/main/python/deep_qa/models/memory_networks/README.md)
 # Datasets
 
 This code allows for easy experimentation with the following datasets:
@@ -118,7 +119,7 @@ If you use this code and think something could be improved, pull requests are ve
 Opening an issue is ok, too, but we're a lot more likely to respond to a PR.  The primary
 maintainer of this code is [Matt Gardner](https://matt-gardner.github.io/), with a lot of help
 from [Pradeep Dasigi](http://www.cs.cmu.edu/~pdasigi/) (who was the initial author of this
-codebase) and [Mark Neumann](http://markneumann.xyz/).
+codebase), [Mark Neumann](http://markneumann.xyz/) and [Nelson Liu](http://nelsonliu.me/).
 
 # License
 
