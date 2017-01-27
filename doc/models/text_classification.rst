@@ -9,8 +9,8 @@ Input: Text sequence
 Output: Class label
 
 
-tree_lstm_model
----------------
+TreeLSTMModel
+-------------
 
 .. automodule:: deep_qa.models.text_classification.tree_lstm_model
     :members:
@@ -18,8 +18,8 @@ tree_lstm_model
     :undoc-members:
     :show-inheritance:
 
-text_classification.true_false_model
-------------------------------------
+TrueFalseModel
+--------------
 
 .. automodule:: deep_qa.models.text_classification.true_false_model
     :members:

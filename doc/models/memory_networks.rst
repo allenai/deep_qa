@@ -38,8 +38,8 @@ network. It follows several basic steps:
 
 Hopefully the above gives a clear way to approach this library.
 
-differentiable_search
----------------------
+DifferentiableSearch
+--------------------
 
 .. automodule:: deep_qa.models.memory_networks.differentiable_search
     :members:
@@ -47,8 +47,8 @@ differentiable_search
     :undoc-members:
     :show-inheritance:
 
-memory_network
---------------
+MemoryNetwork
+-------------
 
 .. automodule:: deep_qa.models.memory_networks.memory_network
     :members:
@@ -56,8 +56,8 @@ memory_network
     :undoc-members:
     :show-inheritance:
 
-softmax_memory_network
-----------------------
+SoftmaxMemoryNetwork
+--------------------
 
 .. automodule:: deep_qa.models.memory_networks.softmax_memory_network
     :members:

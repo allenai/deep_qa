@@ -1,8 +1,8 @@
 Memory Network Pretrainers
 ==========================
 
-attention_pretrainer
---------------------
+AttentionPretrainer
+-------------------
 
 .. automodule:: deep_qa.models.memory_networks.pretrainers.attention_pretrainer
     :members:
@@ -10,8 +10,8 @@ attention_pretrainer
     :undoc-members:
     :show-inheritance:
 
-snli_pretrainer
----------------
+SnliPretrainer
+--------------
 
 .. automodule:: deep_qa.models.memory_networks.pretrainers.snli_pretrainer
     :members:

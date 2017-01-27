@@ -1,8 +1,8 @@
 Reading Comprehension
 =====================
 
-attention_sum_reader
---------------------
+AttentionSumReader
+------------------
 
 .. automodule:: deep_qa.models.reading_comprehension.attention_sum_reader
     :members:

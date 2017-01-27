@@ -1,8 +1,8 @@
 Entailment Model Layers
 =======================
 
-decomposable_attention
-----------------------
+DecomposableAttention
+---------------------
 
 .. automodule:: deep_qa.layers.entailment_models.decomposable_attention
     :members:
@@ -10,8 +10,8 @@ decomposable_attention
     :undoc-members:
     :show-inheritance:
 
-encoded_sentence
-----------------
+EncodedSentence
+---------------
 
 .. automodule:: deep_qa.layers.entailment_models.encoded_sentence
     :members:
@@ -19,8 +19,8 @@ encoded_sentence
     :undoc-members:
     :show-inheritance:
 
-multiple_choice_tuple_entailment
---------------------------------
+MultipleChoiceTupleEntailment
+-----------------------------
 
 .. automodule:: deep_qa.layers.entailment_models.multiple_choice_tuple_entailment
     :members:
@@ -28,8 +28,8 @@ multiple_choice_tuple_entailment
     :undoc-members:
     :show-inheritance:
 
-word_alignment
---------------
+WordAlignment
+-------------
 
 .. automodule:: deep_qa.layers.entailment_models.word_alignment
     :members:

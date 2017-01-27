@@ -26,9 +26,17 @@ deep_qa.layers.attention.matrix_attention
     :show-inheritance:
 
 deep_qa.layers.attention.attention
------------------------------------------
+----------------------------------
 
 .. automodule:: deep_qa.layers.attention.attention
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+deep_qa.layers.attention.weighted_sum
+-------------------------------------
+
+.. automodule:: deep_qa.layers.attention.weighted_sum
     :members:
     :undoc-members:
     :show-inheritance:

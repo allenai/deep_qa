@@ -1,8 +1,8 @@
 Encoders
 ========
 
-bag_of_words
-------------
+BagOfWords
+----------
 
 .. automodule:: deep_qa.layers.encoders.bag_of_words
     :members:
@@ -10,8 +10,8 @@ bag_of_words
     :undoc-members:
     :show-inheritance:
 
-convolutional_encoder
----------------------
+ConvolutionalEncoder
+--------------------
 
 .. automodule:: deep_qa.layers.encoders.convolutional_encoder
     :members:
@@ -19,8 +19,8 @@ convolutional_encoder
     :undoc-members:
     :show-inheritance:
 
-knowledge_backed_lstm
----------------------
+KnowledgeBackedLSTM
+-------------------
 
 .. automodule:: deep_qa.layers.encoders.knowledge_backed_lstm
     :members:
@@ -28,8 +28,8 @@ knowledge_backed_lstm
     :undoc-members:
     :show-inheritance:
 
-positional_encoder
-------------------
+PositionalEncoder
+-----------------
 
 .. automodule:: deep_qa.layers.encoders.positional_encoder
     :members:
@@ -37,8 +37,8 @@ positional_encoder
     :undoc-members:
     :show-inheritance:
 
-tree_composition_lstm
----------------------
+TreeCompositionLSTM
+-------------------
 
 .. automodule:: deep_qa.layers.encoders.tree_composition_lstm
     :members:

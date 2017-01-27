@@ -1,8 +1,8 @@
 Attention
 =========
 
-masked_softmax
---------------
+MaskedSoftmax
+-------------
 
 .. automodule:: deep_qa.layers.attention.masked_softmax
     :members:
@@ -10,8 +10,8 @@ masked_softmax
     :undoc-members:
     :show-inheritance:
 
-max_similarity_softmax
-----------------------
+MaxSimilaritySoftmax
+--------------------
 
 .. automodule:: deep_qa.layers.attention.max_similarity_softmax
     :members:
@@ -19,8 +19,8 @@ max_similarity_softmax
     :undoc-members:
     :show-inheritance:
 
-matrix_attention
-----------------
+MatrixAttention
+---------------
 
 .. automodule:: deep_qa.layers.attention.matrix_attention
     :members:
@@ -28,10 +28,19 @@ matrix_attention
     :undoc-members:
     :show-inheritance:
 
-attention
+Attention
 ---------
 
 .. automodule:: deep_qa.layers.attention.attention
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
+WeightedSum
+-----------
+
+.. automodule:: deep_qa.layers.attention.weighted_sum
     :members:
     :noindex:
     :undoc-members:

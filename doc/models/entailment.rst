@@ -11,8 +11,8 @@ Inputs: Two text sequences
 Output: Some classification decision (typically "entails/not entails", "entails/neutral/contradicts", or similar)
 
 
-decomposable_attention
-----------------------
+DecomposableAttention
+---------------------
 
 .. automodule:: deep_qa.models.entailment.decomposable_attention
     :noindex:

@@ -12,8 +12,8 @@ text in some form
 Outputs: A probability distribution over the answer options indicating how
 likely each option is to be correct.
 
-decomposable_attention
-----------------------
+DecomposableAttention
+---------------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.decomposable_attention
     :members:
@@ -21,8 +21,8 @@ decomposable_attention
     :undoc-members:
     :show-inheritance:
 
-multiple_true_false_memory_network
-----------------------------------
+MultipleTrueFalseMemoryNetwork
+------------------------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network
     :members:
@@ -30,8 +30,8 @@ multiple_true_false_memory_network
     :undoc-members:
     :show-inheritance:
 
-multiple_true_false_similarity
-------------------------------
+MultipleTrueFalseSimilarity
+---------------------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.multiple_true_false_similarity
     :members:
@@ -39,8 +39,8 @@ multiple_true_false_similarity
     :undoc-members:
     :show-inheritance:
 
-question_answer_memory_network
-------------------------------
+QuestionAnswerMemoryNetwork
+---------------------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.question_answer_memory_network
     :members:
@@ -48,8 +48,8 @@ question_answer_memory_network
     :undoc-members:
     :show-inheritance:
 
-question_answer_similarity
---------------------------
+QuestionAnswerSimilarity
+------------------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.question_answer_similarity
     :members:
@@ -57,8 +57,8 @@ question_answer_similarity
     :undoc-members:
     :show-inheritance:
 
-tuple_entailment
-----------------
+TupleEntailment
+---------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.tuple_entailment
     :members:
