@@ -2,6 +2,7 @@ from keras import backend as K
 from keras.layers import Layer
 from overrides import overrides
 
+from ...tensors.backend import last_dim_flatten
 from ...tensors.masked_operations import masked_softmax
 
 class MaskedSoftmax(Layer):
@@ -15,9 +16,14 @@ class MaskedSoftmax(Layer):
     which we will squeeze to be `(batch_size, num_options)` (though the mask must still be
     `(batch_size, num_options)`).
 
+    While we give the expected input as having two modes, we also accept higher-order tensors.  In
+    those cases, we'll first perform a `last_dim_flatten` on both the input and the mask, so that
+    we always do the softmax over a single dimension (the last one).
+
     We give no output mask, as we expect this to only be used at the end of the model, to get a
-    final probability distribution over class labels.  If you need this to propagate the mask for
-    your model, it would be pretty easy to change it to optionally do so - submit a PR.
+    final probability distribution over class labels (and it's a softmax, so you'll have zeros in
+    the tensor itself; do you really still need a mask?).  If you need this to propagate the mask
+    for whatever reason, it would be pretty easy to change it to optionally do so - submit a PR.
     '''
     def __init__(self, **kwargs):
         self.supports_masking = True
@@ -31,14 +37,24 @@ class MaskedSoftmax(Layer):
 
     @overrides
     def get_output_shape_for(self, input_shape):
-        return (input_shape[0], input_shape[1])
+        if input_shape[-1] == 1:
+            return input_shape[:-1]
+        else:
+            return input_shape
 
     @overrides
     def call(self, x, mask=None):
-        # input shape: (batch_size, num_options, 1)
-        if K.ndim(x) == 3:
-            x = K.squeeze(x, axis=2)
-        if K.ndim(x) != 2:
-            raise RuntimeError("MaskedSoftmax only supports inputs of shape (batch_size, "
-                               "num_options) or (batch_size, num_options, 1)")
-        return masked_softmax(x, mask)
+        input_shape = K.int_shape(x)
+        if input_shape[-1] == 1:
+            x = K.squeeze(x, axis=-1)
+            input_shape = input_shape[:-1]
+        if len(input_shape) > 2:
+            x = last_dim_flatten(x)
+            if mask is not None:
+                mask = last_dim_flatten(mask)
+        # Now we have both x and mask with shape (?, num_options), and can do a softmax.
+        softmax_result = masked_softmax(x, mask)
+        if len(input_shape) > 2:
+            input_shape = (-1,) + input_shape[1:]
+            softmax_result = K.reshape(softmax_result, input_shape)
+        return softmax_result
