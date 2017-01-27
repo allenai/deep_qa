@@ -2,6 +2,8 @@
 
 from typing import Tuple
 
+import numpy
+
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.character_span_instance import CharacterSpanInstance
 
@@ -58,3 +60,14 @@ class TestCharacterSpanInstance:
         assert indexed_instance.passage_indices == [dogs_index, eat_index,
                                                     cats_index, period_index]
         assert indexed_instance.label == (2, 2)
+
+        # I put this test in here, instead of its own `test_as_training_data` test, to be sure that
+        # the conversion to IndexedCharacterSpanIndex was performed correctly.
+        indexed_instance.pad({'num_question_words': 3, 'num_passage_words': 6})
+        (question_array, passage_array), label = indexed_instance.as_training_data()
+        assert isinstance(label, tuple)
+        assert numpy.all(label[0] == numpy.asarray([0, 0, 1, 0, 0, 0]))
+        assert numpy.all(label[1] == numpy.asarray([0, 0, 1, 0, 0, 0]))
+        assert numpy.all(question_array == numpy.asarray([dogs_index, eat_index, question_index]))
+        assert numpy.all(passage_array == numpy.asarray([0, 0, dogs_index, eat_index, cats_index,
+                                                         period_index]))
