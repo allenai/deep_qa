@@ -23,6 +23,7 @@ class ShareableGRU(GRU):
             # doesn't work in Theano, because "res is not a Keras tensor"...
             result_shape = K.int_shape(res)
             if input_shape[1] is not None and result_shape[1] is None:
-                shape = [d if d is not None else -1 for d in input_shape]
-                res = K.reshape(res, shape=tuple(shape))
+                shape = (input_shape[0] if input_shape[0] is not None else -1,
+                         input_shape[1], result_shape[2])
+                res = K.reshape(res, shape=shape)
         return res

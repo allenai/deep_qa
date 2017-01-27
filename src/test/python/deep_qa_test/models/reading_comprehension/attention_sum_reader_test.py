@@ -18,7 +18,18 @@ class TestAttentionSumReader(TestCase):
 
     def test_train_does_not_crash(self):
         args = {
-                'encoder': {"type": "bi_gru"},
+                "encoder": {
+                        "type": "bi_gru",
+                        "output_dim": 7
+                },
+                "seq2seq_encoder": {
+                        "type": "bi_gru",
+                        "encoder_params": {
+                                "output_dim": 7
+                        },
+                        "wrapper_params": {}
+                },
+                "embedding_size": 5,
         }
         solver = get_model(AttentionSumReader, args)
         solver.train()

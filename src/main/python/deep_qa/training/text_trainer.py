@@ -392,7 +392,8 @@ class TextTrainer(Trainer):
     def _get_new_encoder(self, params: Dict[str, Any], name: str):
         encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
         params["name"] = name
-        params["output_dim"] = self.embedding_size
+        if "output_dim" not in params:
+            params["output_dim"] = self.embedding_size
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
@@ -413,7 +414,8 @@ class TextTrainer(Trainer):
                                                        "type",
                                                        list(seq2seq_encoders.keys()))
         encoder_params["name"] = name
-        encoder_params["output_dim"] = self.embedding_size
+        if "output_dim" not in encoder_params:
+            encoder_params["output_dim"] = self.embedding_size
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)
 

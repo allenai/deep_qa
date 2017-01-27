@@ -1,0 +1,24 @@
+{
+    "model_class": "AttentionSumReader",
+    "model_serialization_prefix": "models/multiple_choice_qa/asreader",
+    "encoder": {
+        "type": "bi_gru",
+        "output_dim": 384
+    },
+    "seq2seq_encoder": {
+        "type": "bi_gru",
+        "encoder_params": {
+            "output_dim": 384
+        },
+        "wrapper_params": {}
+    },
+    "optimizer": {"type": "adam",
+                  "clipnorm": 10.0
+                 },
+    "embedding_dropout": 0.0,
+    "patience": 1,
+    "embedding_size": 256,
+    "num_epochs": 5,
+    "validation_files": ["/efs/data/dlfa/who_did_what/processed/strict/val.tsv"],
+    "train_files": ["/efs/data/dlfa/who_did_what/processed/strict/train.tsv"]
+}

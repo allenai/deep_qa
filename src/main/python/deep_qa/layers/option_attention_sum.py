@@ -1,6 +1,7 @@
 from keras import backend as K
 from keras.layers import Layer
 from ..common.checks import ConfigurationError
+from ..tensors.backend import switch
 
 
 class OptionAttentionSum(Layer):
@@ -122,6 +123,9 @@ class OptionAttentionSum(Layer):
                                  "float32")
             # This tensor stores the number words in each option.
             divisor = K.sum(option_mask, axis=2)
+            # If the divisor is zero at a position, we add epsilon to it.
+            is_zero_divisor = K.equal(divisor, K.zeros_like(divisor))
+            divisor = switch(is_zero_divisor, K.ones_like(divisor)*K.epsilon(), divisor)
         else:
             # Since we're taking the sum, we divide all sums by 1.
             divisor = K.ones_like(sum_option_words_probabilities)

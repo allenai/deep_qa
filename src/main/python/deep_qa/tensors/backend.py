@@ -136,6 +136,13 @@ def l1_normalize(tensor_to_normalize, mask=None):
     """
     Normalize a tensor by its L1 norm. Takes an optional mask.
 
+    When the vector to be normalized is all 0's we return the uniform
+    distribution (taking masking into account, so masked values are still 0.0).
+    When the vector to be normalized is completely masked, we return the
+    uniform distribution over the max padding length of the tensor.
+
+    See the tests for concrete examples of the aforementioned behaviors.
+
     Parameters
     ----------
     tensor_to_normalize : Tensor
@@ -152,10 +159,36 @@ def l1_normalize(tensor_to_normalize, mask=None):
     normalized_tensor : Tensor
         Normalized tensor with shape (batch size, x).
     """
-    if mask is not None:
-        tensor_to_normalize = switch(mask, tensor_to_normalize,
-                                     K.zeros_like(tensor_to_normalize))
-    norm = K.sum(tensor_to_normalize, keepdims=True)
-    normalized_tensor = tensor_to_normalize / norm
-    float32_normalized_tensor = K.cast(normalized_tensor, "float32")
-    return float32_normalized_tensor
+    if mask is None:
+        mask = K.ones_like(tensor_to_normalize)
+
+    # We cast the  mask to float32 to prevent dtype
+    # issues when multiplying it with other things
+    mask = K.cast(mask, "float32")
+
+    # We apply the mask to the tensor and take the sum
+    # of the values in each row.
+    row_sum = K.sum(mask * tensor_to_normalize, axis=-1, keepdims=True)
+
+    # We divide the tensor by the sum of the elements in the rows,
+    # and then apply the mask. This is the result a naive
+    # implementation would yield; we instead return the uniform distribution
+    # in a host of special cases (see the docstring and tests for more detail).
+    normal_result = (tensor_to_normalize / row_sum) * mask
+
+    mask_row_sum = K.sum(mask, axis=1, keepdims=True)
+
+    # The number of non-masked elements in the tensor to normalize.
+    # If all the elements in the tensor to normalize are masked,
+    # we set it to be the number of elements in the tensor to normalize.
+    divisor = K.sum(switch(mask_row_sum, mask, K.ones_like(mask)), axis=1,
+                    keepdims=True)
+
+    # This handles the case where mask is all 0 and all values are 0.
+    # If the sum of mask_row_sum and row_sum is 0, make mask all ones,
+    # else just keep the mask as it is.
+    temp_mask = switch(mask_row_sum+row_sum, mask, K.ones_like(mask))
+
+    uniform = (K.ones_like(mask)/(divisor)) * temp_mask
+    normalized_tensors = switch(row_sum, normal_result, uniform)
+    return normalized_tensors
