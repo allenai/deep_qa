@@ -19,6 +19,15 @@ additive
     :undoc-members:
     :show-inheritance:
 
+ComplexConcat
+-------------
+
+.. automodule:: deep_qa.layers.complex_concat
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 knowledge_combiners
 -------------------
 

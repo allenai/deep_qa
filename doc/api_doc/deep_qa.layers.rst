@@ -23,6 +23,14 @@ deep_qa.layers.additive
     :undoc-members:
     :show-inheritance:
 
+deep_qa.layers.complex_concat
+-----------------------------
+
+.. automodule:: deep_qa.layers.complex_concat
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 deep_qa.layers.knowledge_combiners
 ----------------------------------
 
