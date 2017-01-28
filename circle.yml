@@ -1,0 +1,25 @@
+machine:
+  environment:
+    MINICONDA_PATH: $HOME/miniconda
+    CONDA_ENV_NAME: testenv
+
+dependencies:
+  cache_directories:
+    - "~/.cache/pip"
+    - "~/download"
+  # Check whether the doc build is required, install build dependencies and
+  # run sphinx to build the doc.
+  override:
+    - bash build_tools/circle/build_doc.sh:
+        timeout: 3600 # seconds
+
+test:
+  override:
+    - |
+      export PATH="$MINICONDA_PATH/bin:$PATH"
+      source activate $CONDA_ENV_NAME
+general:
+  # Open the built docs to the CircleCI API
+  artifacts:
+    - "doc/_build/html"
+    - "~/log.txt"
