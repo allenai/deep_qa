@@ -4,6 +4,7 @@ deep_qa.layers
 .. toctree::
 
     deep_qa.layers.encoders
+    deep_qa.layers.backend
     deep_qa.layers.entailment_models
     deep_qa.layers.attention
 
@@ -27,6 +28,14 @@ deep_qa.layers.complex_concat
 -----------------------------
 
 .. automodule:: deep_qa.layers.complex_concat
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+deep_qa.layers.highway
+----------------------
+
+.. automodule:: deep_qa.layers.highway
     :members:
     :undoc-members:
     :show-inheritance:

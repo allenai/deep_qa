@@ -5,6 +5,9 @@ implemented.
 """
 import keras.backend as K
 
+VERY_LARGE_NUMBER = 1e30
+VERY_SMALL_NUMBER = 1e-30
+VERY_NEGATIVE_NUMBER = -VERY_LARGE_NUMBER
 
 def switch(cond, then_tensor, else_tensor):
     """
@@ -29,6 +32,10 @@ def switch(cond, then_tensor, else_tensor):
         return T.switch(cond, then_tensor, else_tensor)
 
 
+def very_negative_like(tensor):
+    return K.ones_like(tensor) * VERY_NEGATIVE_NUMBER
+
+
 def last_dim_flatten(input_tensor):
     '''
     Takes a tensor and returns a matrix while preserving only the last dimension from the input.
@@ -41,7 +48,9 @@ def last_dim_flatten(input_tensor):
 
 def tile_vector(vector, matrix):
     """
-    DEPRECATED: I'm pretty sure K.repeat_elements does exactly this, and should be used instead.
+    NOTE: If your matrix has known shape (i.e., the relevant dimension from `K.int_shape(matrix) is
+    not None`), you should just use `K.repeat_elements(vector)` instead of this.  This method
+    works, however, when the number of rows in your matrix is unknown at graph compilation time.
 
     This method takes a (collection of) vector(s) (shape: (batch_size, vector_dim)), and tiles that
     vector a number of times, giving a matrix of shape (batch_size, tile_length, vector_dim).  (I
@@ -71,7 +80,9 @@ def tile_vector(vector, matrix):
 
 def tile_scalar(scalar, vector):
     """
-    DEPRECATED: I'm pretty sure K.repeat_elements does exactly this, and should be used instead.
+    NOTE: If your vector has known shape (i.e., the relevant dimension from `K.int_shape(vector) is
+    not None`), you should just use `K.repeat_elements(scalar)` instead of this.  This method
+    works, however, when the number of entries in your vector is unknown at graph compilation time.
 
     This method takes a (collection of) scalar(s) (shape: (batch_size, 1)), and tiles that
     scala a number of times, giving a vector of shape (batch_size, tile_length).  (I say "scalar"

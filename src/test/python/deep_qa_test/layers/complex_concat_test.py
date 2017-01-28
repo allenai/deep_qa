@@ -48,4 +48,4 @@ class TestComplexConcatLayer:
                 input_4_tensor + input_3_tensor,
                 input_3_tensor
                 ], axis=1)
-        numpy.testing.assert_almost_equal(concat_tensor, expected_tensor, decimal=4)
+        numpy.testing.assert_almost_equal(concat_tensor, expected_tensor, decimal=3)

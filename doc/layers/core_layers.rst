@@ -28,6 +28,15 @@ ComplexConcat
     :undoc-members:
     :show-inheritance:
 
+Highway
+-------
+
+.. automodule:: deep_qa.layers.highway
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 KnowledgeCombiners
 ------------------
 

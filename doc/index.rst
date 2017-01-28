@@ -53,6 +53,7 @@ This library has several main components:
 
    layers/about_layers
    layers/core_layers
+   layers/backend
    layers/encoders
    layers/entailment_models
    layers/attention
