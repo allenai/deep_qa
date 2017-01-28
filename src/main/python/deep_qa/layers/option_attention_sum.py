@@ -14,10 +14,12 @@ class OptionAttentionSum(Layer):
     Comprehension with the Attention Sum Reader Network" (Kadlec et. al 2016).
 
     Inputs:
-        document indices (batch_size, document_length)
-        document probabilities (batch_size, document_length)
-        options (batch size, num_options, option_length)
-    Output: option_probabilities (batch_size, num_options)
+        - document indices: shape ``(batch_size, document_length)``
+        - document probabilities: shape ``(batch_size, document_length)``
+        - options: shape ``(batch size, num_options, option_length)``
+
+    Output:
+        - option_probabilities ``(batch_size, num_options)``
     """
     def __init__(self, multiword_option_mode="mean", **kwargs):
         """

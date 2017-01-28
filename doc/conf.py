@@ -20,6 +20,7 @@
 import sphinx_rtd_theme
 import os
 import sys
+import inspect
 sys.path.insert(0, os.path.abspath('../src/main/python/'))
 
 
@@ -34,6 +35,7 @@ sys.path.insert(0, os.path.abspath('../src/main/python/'))
 # ones.
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
+              'sphinx.ext.linkcode',
               'numpydoc',
               'sphinx.ext.autosummary'
 ]
@@ -183,4 +185,47 @@ epub_copyright = copyright
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
 
+# make github links resolve
+def linkcode_resolve(domain, info):
+    """
+    Determine the URL corresponding to Python object
+    This code is from
+    https://github.com/numpy/numpy/blob/master/doc/source/conf.py#L290
+    and https://github.com/Lasagne/Lasagne/pull/262
+    """
+    if domain != 'py':
+        return None
 
+    modname = info['module']
+    fullname = info['fullname']
+
+    submod = sys.modules.get(modname)
+    if submod is None:
+        return None
+
+    obj = submod
+    for part in fullname.split('.'):
+        try:
+            obj = getattr(obj, part)
+        except:
+            return None
+
+    try:
+        fn = inspect.getsourcefile(obj)
+    except:
+        fn = None
+    if not fn:
+        return None
+
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+    except:
+        lineno = None
+
+    if lineno:
+        linespec = "#L%d-L%d" % (lineno, lineno + len(source) - 1)
+    else:
+        linespec = ""
+
+    filename = info['module'].replace('.', '/')
+    return "http://github.com/allenai/deep_qa/blob/master/src/main/python/%s.py%s" % (filename, linespec)
