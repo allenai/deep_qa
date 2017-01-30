@@ -8,27 +8,40 @@ from ..common.checks import ConfigurationError
 
 
 class ComplexConcat(Layer):
-    '''
-    This Layer does K.concatenate on a collection of tensors, but allows for more complex
-    operations than merge(mode='concat').  Specifically, you can perform an arbitrary number of
-    elementwise linear combinations of the vectors, and concatenate all of the results.  If you do
-    not need to do this, you should use the regular Merge layer instead of this ComplexConcat.
+    """
+    This ``Layer`` does ``K.concatenate()`` on a collection of tensors, but
+    allows for more complex operations than ``Merge(mode='concat')``.
+    Specifically, you can perform an arbitrary number of elementwise linear
+    combinations of the vectors, and concatenate all of the results.  If you do
+    not need to do this, you should use the regular ``Merge`` layer instead of
+    this ``ComplexConcat``.
 
-    Because the inputs all have the same shape, we assume that the masks are also the same, and
-    just return the first mask.
+    Because the inputs all have the same shape, we assume that the masks are
+    also the same, and just return the first mask.
 
-    Input: A list of tensors.  The tensors that you combine _must_ have the same shape, so that we
-        can do elementwise operations on them, and all tensors must have the same number of
-        dimensions, and match on all dimensions except the concatenation axis.
-    Output: A tensor with some combination of the input tensors concatenated along a specific
-        dimension.
-    Parameters:
-        - `axis`: the axis to use for K.concatenate
-        - `combination`: a comma-separated list of combinations to perform on the input tensors.
-          These are either tensor indices (1-indexed), or an arithmetic operation between two
-          tensor indices (valid operations: *, +, -, /).  For example, these are all valid
-          combination parameters: "1,2", "1,2*3", "1-2,2-1", "1,1*1", and "1,2,1*2".
-    '''
+    Input:
+        - A list of tensors.  The tensors that you combine **must** have the
+          same shape, so that we can do elementwise operations on them, and
+          all tensors must have the same number of dimensions, and match on
+          all dimensions except the concatenation axis.
+
+    Output:
+        - A tensor with some combination of the input tensors concatenated
+          along a specific dimension.
+
+    Parameters
+    ----------
+    axis : int
+        The axis to use for ``K.concatenate``.
+
+    combination: List of str
+        A comma-separated list of combinations to perform on the input tensors.
+        These are either tensor indices (1-indexed), or an arithmetic
+        operation between two tensor indices (valid operations: ``*``, ``+``,
+        ``-``, ``/``).  For example, these are all valid combination
+        parameters: ``"1,2"``, ``"1,2*3"``, ``"1-2,2-1"``, ``"1,1*1"``,
+        and ``"1,2,1*2"``.
+    """
     def __init__(self, combination: str, axis: int=-1, **kwargs):
         self.supports_masking = True
         self.axis = axis

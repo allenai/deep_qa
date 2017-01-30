@@ -33,7 +33,7 @@ class AdaptiveRecurrence:
     can create one copy of the weights and although the number of iterations of the memory step is
     non-deterministic, the computational graph can be statically defined - we just loop over a part of it.
     '''
-    def __init__(self, memory_network: 'MemoryNetworkSolver', params: Dict[str, Any]):
+    def __init__(self, memory_network: 'MemoryNetworkModel', params: Dict[str, Any]):
         if K.backend() == 'theano':
             raise Exception("You are trying to use an adaptive method for performing memory network "
                             "steps using Keras with Theano as its backend. This recurrence method "
@@ -67,7 +67,7 @@ class AdaptiveStep(Layer):
     probabilities, states and outputs from a timestep t's contribution if they have already reached
     1 - epsilon at a timestep s < t.
     '''
-    def __init__(self, memory_network: 'MemoryNetworkSolver', layer_params: Dict[str, Any],
+    def __init__(self, memory_network: 'MemoryNetworkModel', layer_params: Dict[str, Any],
                  initialization='glorot_uniform', name='adaptive_layer', **kwargs):
         # Dictates the value at which we halt the memory network steps (1 - epsilon).
         # Necessary so that the network can learn to halt after one step. If we didn't have

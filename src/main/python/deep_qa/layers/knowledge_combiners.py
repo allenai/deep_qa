@@ -1,17 +1,20 @@
-'''
+"""
 Knowledge combiners take:
- - encoded representations of background facts related to the sentence
- - attention weights over the background
- as a single tensor.
 
- These are then combined in some way to return a single representation of the
- background knowledge per sample. The simplest way for this to happen is simply
- taking a weighted average of the knowledge representations with respect to the
- attention weights.
+- Encoded representations of background facts related to the sentence
+- Attention weights over the background as a single tensor.
 
- Input shapes: (samples, knowledge_len, input_dim + 1)
- Output shape: (samples, input_dim)
-'''
+These are then combined in some way to return a single representation of the
+background knowledge per sample. The simplest way for this to happen is simply
+taking a weighted average of the knowledge representations with respect to the
+attention weights.
+
+Input shapes:
+    - (samples, knowledge_len, input_dim + 1)
+
+Output shape:
+    - (samples, input_dim)
+"""
 
 from collections import OrderedDict
 from overrides import overrides
@@ -147,17 +150,18 @@ class AttentiveGRUKnowledgeCombiner(GRU):
     @overrides
     def build(self, input_shape):
         # pylint: disable=attribute-defined-outside-init
-        '''
+        """
         This is used by Keras to verify things, but also to build the weights.
         The only differences from the Keras GRU (which we copied exactly
         other than the below) are:
+
         - We generate weights with dimension input_dim[2] - 1, rather than
           dimension input_dim[2].
         - There are a few variables which are created in non-'gpu' modes which
           are not required, and actually raise errors in Theano if you include them in
           the trainable weights(as Theano will alert you if you try to compute a gradient
           of a loss wrt a constant). These are commented out but left in for clarity below.
-        '''
+        """
         self.input_spec = [InputSpec(shape=input_shape)]
 
         # Here we make all the weights with a dimension one smaller

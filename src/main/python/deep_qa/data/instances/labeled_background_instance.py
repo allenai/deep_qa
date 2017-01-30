@@ -10,8 +10,8 @@ from ..data_indexer import DataIndexer
 
 class LabeledBackgroundInstance(BackgroundInstance):
     """
-    An Instance that has background knowledge associated with it, where the label is _attention
-    over the background knowledge_.  This is basically identical to BackgroundInstance, except for
+    An Instance that has background knowledge associated with it, where the label is **attention
+    over the background knowledge**.  This is basically identical to BackgroundInstance, except for
     the label.  In that case, the label is taken from the wrapped instance.  In this case, the
     label is over the background knowledge itself.
 
