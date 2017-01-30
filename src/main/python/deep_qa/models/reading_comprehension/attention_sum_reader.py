@@ -62,7 +62,7 @@ class AttentionSumReader(TextTrainer):
         document_input = Input(shape=self._get_sentence_shape(self.max_passage_length),
                                dtype='int32',
                                name="document_input")
-        # shape: (batch size, max number of options, num_options)
+        # shape: (batch size, num_options, options_length)
         options_input = Input(shape=(self.num_options,) + self._get_sentence_shape(self.max_option_length),
                               dtype='int32', name="options_input")
         # shape: (batch size, question_length, embedding size)
