@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 import logging
-import pickle
+import dill as pickle
 
 from keras import backend as K
 from keras.layers import Dense, Dropout, Input, Layer, TimeDistributed

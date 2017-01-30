@@ -8,14 +8,11 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.index.query.QueryBuilders
 
 import scala.collection.mutable
-
 import org.json4s._
-
 import com.mattg.pipeline.Step
 import com.mattg.util.FileUtil
 import com.mattg.util.JsonHelper
-
-import org.allenai.deep_qa.data.BackgroundCorpusSearcher
+import org.allenai.deep_qa.data.{BackgroundCorpusSearcher, BoostedQuery, Query, StringQuery}
 
 
 /**
@@ -42,7 +39,8 @@ import org.allenai.deep_qa.data.BackgroundCorpusSearcher
  */
 trait BackgroundCorpusSearcherStep extends SentenceProducer {
 
-  val baseSearcherParams = Seq("type", "searcher", "sentences", "sentence format") ++ baseParams
+  val baseSearcherParams = Seq("type", "searcher", "sentences", "sentence format", 
+      "question boost", "answer boost") ++ baseParams
 
   lazy val searcher = BackgroundCorpusSearcher.create(params \ "searcher")
 
@@ -81,7 +79,7 @@ class DefaultBackgroundCorpusSearcherStep(
   JsonHelper.ensureNoExtras(params, name, validParams)
 
   // TODO(matt): Is there a way to get this from the sentence producer, instead of from a param?
-  val formatChoices = Seq("plain sentence", "question and answer")
+  val formatChoices = Seq("plain sentence", "question and answer", "question and answer boosted")
   val sentenceFormat = JsonHelper.extractChoiceWithDefault(
     params,
     "sentence format",
@@ -97,14 +95,39 @@ class DefaultBackgroundCorpusSearcherStep(
   override def _runStep() {
     // TODO(matt): might want to make this streaming, for large input files
     val lines = fileUtil.readLinesFromFile(sentencesFile)
-    val indexedSentences = lines.map(line => {
+    val indexedSentences: Seq[(Int, Seq[Query])] = lines.map(line => {
       val fields = line.split("\t")
       sentenceFormat match {
-        case "plain sentence" => (fields(0).toInt, Seq(fields(1)))
+        case "plain sentence" => (fields(0).toInt, Seq(new StringQuery(fields(1))))
         case "question and answer" => {
+          val questionText = fields(1)
           val answers = fields(2).split("###")
-          val queries = answers.map(fields(1) + " " + _).toSeq
-          (fields(0).toInt, Seq(fields(1)) ++ queries)
+          val stringQueries = answers
+              .map(answer => new StringQuery(questionText + " " + answer))
+              .toSeq
+          (fields(0).toInt, Seq(new StringQuery(questionText)) ++ stringQueries)
+        }
+        case "question and answer boosted" => {
+          // Get the boosting values for question and answer
+          val questionBoost = JsonHelper.extractWithDefault(
+            params,
+            "question boost",
+            1.0f
+          )
+          val answerBoost = JsonHelper.extractWithDefault(
+            params,
+            "answer boost",
+            1.0f
+          )
+          val questionText = fields(1)
+          val answers = fields(2).split("###")
+          val stringQueries = answers
+              .map(answer => new StringQuery(questionText + " " + answer))
+              .toSeq
+          val boostedQueries = answers
+              .map(answer => new BoostedQuery(Seq((questionText, questionBoost), (answer, answerBoost))))
+              .toSeq
+          (fields(0).toInt, Seq(new StringQuery(questionText)) ++ stringQueries ++ boostedQueries)
         }
       }
     })
@@ -113,6 +136,7 @@ class DefaultBackgroundCorpusSearcherStep(
       val keptPassages = queries.flatMap(query => {
         searcher.getBackground(query)
       }).toSet.toSeq
+
       (index, keptPassages)
     }).seq
     outputBackground(backgroundPassages)

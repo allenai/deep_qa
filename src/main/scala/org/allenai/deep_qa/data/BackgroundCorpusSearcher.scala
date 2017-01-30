@@ -6,12 +6,12 @@ import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.index.query.QueryBuilders
-
 import com.mattg.util.JsonHelper
 
 import scala.collection.mutable
-
 import org.json4s._
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * A BackgroundCorpusSearcher takes a statement/question/query and does a search over some corpus
@@ -22,7 +22,7 @@ abstract class BackgroundCorpusSearcher(params: JValue) {
 
   val numPassagesPerQuery = JsonHelper.extractWithDefault(params, "num passages per query", 10)
 
-  def getBackground(query: String): Seq[String]
+  def getBackground(query: Query): Seq[String]
 }
 
 object BackgroundCorpusSearcher {
@@ -82,18 +82,37 @@ class LuceneBackgroundCorpusSearcher(params: JValue) extends BackgroundCorpusSea
   lazy val settings = Settings.builder().put("cluster.name", esClusterName).build()
   lazy val esClient = TransportClient.builder().settings(settings).build().addTransportAddress(address)
 
-  override def getBackground(query: String): Seq[String] = {
+  override def getBackground(query: Query): Seq[String] = {
+    // Make the bool query and the more-or-less canonical query string for the
+    // consolidation step (below)
+    val queryBuilder = QueryBuilders.boolQuery()
+    val queryString: String = query match {
+      case stringQuery: StringQuery => {
+        queryBuilder.should(QueryBuilders.matchQuery("text", stringQuery.query))
+        stringQuery.query
+      }
+      case boostedQuery: BoostedQuery => {
+        for ((qString, boostAmt) <- boostedQuery.boostedQueries) {
+          queryBuilder.should(QueryBuilders.matchQuery("text", qString).boost(boostAmt))
+        }
+        boostedQuery.boostedQueries.map(_._1).mkString(" ")
+      }
+      case _ => throw new NotImplementedError(s"ERROR: Query type not supported.")
+    }
+    //Perform the search
     val response = esClient.prepareSearch(esIndexName)
-      .setTypes("sentence")
-      .setQuery(QueryBuilders.matchQuery("text", query))
-      .setFrom(0).setSize(numPassagesPerQuery * hitMultiplier).setExplain(true)
-      .execute()
-      .actionGet()
+        .setTypes("sentence")
+        .setQuery(queryBuilder)
+        .setFrom(0).setSize(numPassagesPerQuery * hitMultiplier).setExplain(true)
+        .execute()
+        .actionGet()
     val passages = response.getHits().getHits().map(hit => {
       hit.sourceAsMap().get("text").asInstanceOf[String]
     })
-    consolidateHits(query, passages, numPassagesPerQuery)
+    consolidateHits(queryString, passages, numPassagesPerQuery)
   }
+
+
 
   def consolidateHits(query: String, hits: Seq[String], maxToKeep: Int): Seq[String] = {
     val kept = new mutable.HashSet[String]
@@ -126,3 +145,17 @@ class LuceneBackgroundCorpusSearcher(params: JValue) extends BackgroundCorpusSea
     return true
   }
 }
+
+
+// trait used for handling various types of queries
+trait Query {}
+
+
+// Query type for basic string queries
+case class StringQuery(query: String = "") extends Query {}
+
+
+// Query type for boosting different portions of the query
+case class BoostedQuery(boostedQueries: Seq[(String, Float)]) extends Query () {}
+
+

@@ -10,6 +10,6 @@
   "max_knowledge_length": 30,
   "num_tuple_slots": 3,
   "num_answer_options": 4,
-  "train_files": ["/home/pdasigi/data/ai2_omnibus/omnibus_4_train_question_and_options.tsv",
-                  "/home/pdasigi/data/ai2_omnibus/omnibus_4_train_background_as_tuples.tsv"]
+  "train_files": ["/Users/rebeccas/data/questions.tsv",
+                  "/Users/rebeccas/data/questions_background_as_tuples.tsv"]
 }

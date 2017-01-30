@@ -25,6 +25,9 @@ grpcio
 grpcio-tools
 pyhocon
 
+# Used to pickle more complex structures
+dill
+
 # Type checking for python
 typing
 

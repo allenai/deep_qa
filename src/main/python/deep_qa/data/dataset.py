@@ -194,7 +194,7 @@ class IndexedDataset(Dataset):
         if not lengths:
             return max_lengths
         for key in lengths[0]:
-            max_lengths[key] = max(x[key] for x in lengths)
+            max_lengths[key] = max(x[key] if key in x else 0 for x in lengths)
         return max_lengths
 
     def pad_instances(self, max_lengths: Dict[str, int]=None):
