@@ -87,7 +87,7 @@ class AttentionSumReader(TextTrainer):
 
         # Here we take the dot product of `encoded_question` and each word
         # vector in `encoded_document`.
-        # shape: (batch size, max docuent length in words)
+        # shape: (batch size, max document length in words)
         document_probabilities = Attention(name='question_document_softmax')([encoded_question,
                                                                               encoded_document])
         # We sum together the weights of words that match each option.
