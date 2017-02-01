@@ -104,14 +104,21 @@ class ParameterizedKnowledgeSelector(Layer):
     This layer concatenates the memory vector with each background sentence, passes them through a
     non-linearity, then does a softmax to get attention weights.
 
-    Equations:
-    Inputs: :math:`u` is the sentence encoding, :math:`z_t` are the background sentence encodings
-    Weights: :math:`W_1` (called ``self.dense_weights``), :math`v` (called ``self.dot_bias``)
-    Output: :math:``a_t``
+    Inputs:
+        - A sentence encoding :math:`u`, with shape ``(batch_size, encoding_dim)``
+        - Background sentence encodings :math:`z_t` with shape ``(batch_size, knowledge_length, encoding_dim)``
 
-    :math:``m_t = tanh(W_1 * concat(z_t, u))``
-    :math:``q_t = dot(v, m_t)``
-    :math:``a_t = softmax(q_t)``
+    Weights:
+        - :math:`W_1` (called ``self.dense_weights``)
+        - :math:`v` (called ``self.dot_bias``)
+
+    Output:
+        - :math:`a_t`
+
+    Equations:
+        - :math:`m_t = tanh(W_1 * concat(z_t, u))`
+        - :math:`q_t = dot(v, m_t)`
+        - :math:`a_t = softmax(q_t)`
     """
 
     def __init__(self,
@@ -144,15 +151,22 @@ class ParameterizedKnowledgeSelector(Layer):
 
     def call(self, x, mask=None):
         '''
-        Equations repeated from above:
-        Inputs: :math:`u` is the sentence encoding, :math:`z_t` are the background sentence encodings
-        Weights: :math:`W_1` (called ``self.dense_weights``), :math:`v` (called ``self.dot_bias``)
-        Output: :math:`a_t`
+        Inputs:
+            - A sentence encoding :math:`u`, with shape ``(batch_size, encoding_dim)``
+            - Background sentence encodings :math:`z_t` with shape ``(batch_size, knowledge_length, encoding_dim)``
 
-        1. :math:`zu_t = concat(z_t, u)`
-        2. :math:`m_t = tanh(dot(W_1, zu_t))`
-        3. :math:`q_t = dot(v, m_t)`
-        4. :math:`a_t = softmax(q_t)`
+        Weights:
+            - :math:`W_1` (called ``self.dense_weights``)
+            - :math:`v` (called ``self.dot_bias``)
+
+        Output:
+            - :math:`a_t`
+
+        Equations:
+            - 1. :math:`zu_t = concat(z_t, u)`
+            - 2. :math:`m_t = tanh(dot(W_1, zu_t))`
+            - 3. :math:`q_t = dot(v, m_t)`
+            - 4. :math:`a_t = softmax(q_t)`
 
         Here we actually implement the logic of these equations.  We label each step with its
         number and the variable above that it's computing.  The implementation looks more complex
@@ -258,23 +272,23 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
         Equations repeated from above.
 
         Inputs:
-            - :math:`u` is the sentence encoding
-            - :math:`y` is the memory encoding
-            - :math:`z_t` are the background sentence encodings
+            - A sentence encoding :math:`u`, with shape ``(batch_size, encoding_dim)``
+            - A memory encoding :math:`y`, with shape ``(batch_size, encoding_dim)``
+            - Background sentence encodings :math:`z_t` with shape ``(batch_size, knowledge_length, encoding_dim)``
 
         Weights:
             - :math:`W_1` (called ``self.dense_weights``)
             - :math:`v` (called ``self.dot_bias``)
-            - :math`b_1`, :math`b_2` are bias vectors.
+            - :math:`b_1`, :math:`b_2` are bias vectors.
 
         Output:
             - :math`a_t`
 
-
-        1. :math:`zu_t = concat(z_t*u, z_t*y, |z_t - u|, |z_t - y|)`
-        2. :math:`m_t = tanh(dot(W_1, zu_t) + b_1)`
-        3. :math:`q_t = dot(v, m_t) + b_2`
-        4. :math:`a_t = softmax(q_t)`
+        Equations:
+            - 1. :math:`zu_t = concat(z_t*u, z_t*y, |z_t - u|, |z_t - y|)`
+            - 2. :math:`m_t = tanh(dot(W_1, zu_t) + b_1)`
+            - 3. :math:`q_t = dot(v, m_t) + b_2`
+            - 4. :math:`a_t = softmax(q_t)`
 
         Here we actually implement the logic of these equations.  We label each step with its
         number and the variable above that it's computing.  The implementation looks more complex
