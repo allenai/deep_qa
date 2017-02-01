@@ -60,7 +60,7 @@ class QuestionAnswerSimilarity(TextTrainer):
         answer_embedding = self._embed_input(answer_input)
 
         # Then we encode the question and answers using some encoder.
-        question_encoder = self._get_sentence_encoder()
+        question_encoder = self._get_encoder()
         encoded_question = question_encoder(question_embedding)
         # TODO(matt): make the dropout a parameter (should probably be "encoder_dropout", in
         # TextTrainer).

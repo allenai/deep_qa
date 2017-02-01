@@ -72,7 +72,7 @@ class AttentionSumReader(TextTrainer):
         document_embedding = self._embed_input(document_input)
 
         # We encode the question embeddings with some encoder.
-        question_encoder = self._get_sentence_encoder()
+        question_encoder = self._get_encoder()
         # shape: (batch size, 2*embedding size)
         encoded_question = question_encoder(question_embedding)
 

@@ -86,7 +86,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
 
         # We need to encode just the answer and knowledge, not the question.
         # We'll use the same encoder for both, but we just need to wrap the encoder one more time for knowledge.
-        sentence_encoder = self._get_sentence_encoder()
+        sentence_encoder = self._get_encoder()
         answer_encoder = EncoderWrapper(sentence_encoder, name='answer_encoder')
         knowledge_encoder = EncoderWrapper(EncoderWrapper(sentence_encoder), name='knowledge_encoder')
 

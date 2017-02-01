@@ -96,7 +96,7 @@ class AttentionPretrainer(TextPretrainer):
         background_input_layer, background_embedding = self.trainer._get_embedded_sentence_input(
                 input_shape=background_shape, name_prefix="pretraining_background")
 
-        sentence_encoder = self.trainer._get_sentence_encoder()
+        sentence_encoder = self.trainer.get_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
 

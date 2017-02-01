@@ -38,7 +38,7 @@ class TrueFalseModel(TextTrainer):
 
         # Step 2: Pass the sequences of word vectors through the sentence encoder to get a sentence
         # vector..
-        sentence_encoder = self._get_sentence_encoder()
+        sentence_encoder = self._get_encoder()
         sentence_encoding = sentence_encoder(word_embeddings)
 
         # Add a dropout after LSTM.

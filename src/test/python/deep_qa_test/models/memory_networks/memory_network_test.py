@@ -37,13 +37,15 @@ class TestMemoryNetwork(TestCase):
     def test_train_does_not_crash_with_cnn_encoder(self):
         args = {
                 'max_sentence_length': 5,
-                'encoder': {'type': 'cnn', 'ngram_filter_sizes': [2, 3], 'num_filters': 5}
+                'encoder': {'default': {'type': 'cnn',
+                                        'ngram_filter_sizes': [2, 3],
+                                        'num_filters': 5}}
                 }
         model = get_model(MemoryNetwork, args)
         model.train()
 
     def test_train_does_not_crash_with_positional_encoder(self):
-        args = {'encoder': {'type': 'positional'}}
+        args = {'encoder': {'default': {'type': 'positional'}}}
         model = get_model(MemoryNetwork, args)
         model.train()
 

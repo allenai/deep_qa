@@ -8,6 +8,7 @@ from keras.layers import Dense, Dropout, Input, Layer, TimeDistributed
 from overrides import overrides
 import numpy
 
+from ..common.checks import ConfigurationError
 from ..common.params import get_choice_with_default
 from ..data.dataset import TextDataset
 from ..data.instances.instance import Instance, TextInstance
@@ -24,67 +25,82 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class TextTrainer(Trainer):
+    # pylint: disable=line-too-long
     """
     This is a Trainer that deals with word sequences as its fundamental data type (any TextDataset
     or TextInstance subtype is fine).  That means we have to deal with padding, with converting
     words (or characters) to indices, and encoding word sequences.  This class adds methods on top
     of Trainer to deal with all of that stuff.
+
+    Parameters
+    ----------
+    pretrained_embeddings_file: string, optional
+        If specified, we will use the vectors in this file as our embedding layer.  You can
+        optionally keep these fixed or fine tune them, or learn a projection on top of them.
+    fine_tune_embeddings: bool, optional (default=False)
+        If we're using pre-trained embeddings, should we fine tune them?
+    project_embeddings: bool, optional (default=False)
+        Should we have a projection layer on top of our embedding layer? (mostly useful with
+        pre-trained embeddings)
+    embedding_size: int, optional (default=50)
+        Number of dimensions to use for word embeddings.  Also used by default for setting hidden
+        layer sizes in things like LSTMs, if you don't specify an output size in the ``encoder``
+        params.
+    embedding_dropout: float, optional (default=0.5)
+        Dropout parameter to apply to the word embedding layer
+    max_sentence_length: int, optional (default=None)
+        Upper limit on length of word sequences in the training data. Ignored during testing (we
+        use the value set at training time, either from this parameter or from a loaded model).  If
+        this is not set, we'll calculate a max length from the data.
+    max_word_length: int, optional (default=None)
+        Upper limit on length of words in the training data. Only applicable for "words and
+        characters" text encoding.
+    tokenizer: Dict[str, Any], optional (default={})
+        Which tokenizer to use for ``TextInstances``.  See ``deep_qa.data.tokenizers.tokenizer``
+        for more information.
+    encoder: Dict[str, Dict[str, Any]], optional (default={'default': {}})
+        These parameters specify the kind of encoder used to encode any word sequence input.  An
+        encoder takes a sequence of vectors and returns a single vector.
+
+        If given, this must be a dict, where each key is a name that can be used for encoders in
+        the model, and the value corresponding to the key is a set of parameters that will be
+        passed on to the constructor of the encoder.  We will use the "type" key in this dict
+        (which must match one of the keys in `encoders`) to determine the type of the encoder, then
+        pass the remaining args to the encoder constructor.
+
+        Hint: Use ``"lstm"`` or ``"cnn"`` for sentences, ``"treelstm"`` for logical forms, and
+        ``"bow"`` for either.
+    encoder_fallback_behavior: string, optional (default="crash")
+        Determines the behavior when an encoder is asked for by name, but you have not given
+        parameters for an encoder with that name.  See ``_get_encoder`` for more information.
+    seq2seq_encoder: Dict[str, Dict[str, Any]], optional (default={'default': {'encoder_params': {}, 'wrapper_params: {}}})
+        Like ``encoder``, except seq2seq encoders return a sequence of vectors instead of a single
+        vector (the difference between our "encoders" and "seq2seq encoders" is the difference in
+        Keras between ``LSTM()`` and ``LSTM(return_sequences=True)``).
     """
+    # pylint: enable=line-too-long
     def __init__(self, params: Dict[str, Any]):
-
-        # If specified, we will use the vectors in this file and learn a projection matrix to get
-        # word vectors of dimension `embedding_size`, instead of learning the embedding matrix
-        # ourselves.
         self.pretrained_embeddings_file = params.pop('pretrained_embeddings_file', None)
-
-        # If we're using pre-trained embeddings, should we fine tune them?
         self.fine_tune_embeddings = params.pop('fine_tune_embeddings', False)
-
-        # Should we have a projection layer on top of our embedding layer? (mostly useful with
-        # pre-trained embeddings)
         self.project_embeddings = params.pop('project_embeddings', False)
-
-        # Number of dimensions to use for word embeddings
         self.embedding_size = params.pop('embedding_size', 50)
-
-        # Dropout parameter to apply to the word embedding layer
         self.embedding_dropout = params.pop('embedding_dropout', 0.5)
-
-        # Upper limit on length of word sequences in the training data. Ignored during testing (we
-        # use the value set at training time, either from this parameter or from a loaded model).
-        # If this is not set, we'll calculate a max length from the data.
         self.max_sentence_length = params.pop('max_sentence_length', None)
-
-        # Upper limit on length of words in the training data. Only applicable for "words and
-        # characters" text encoding.
         self.max_word_length = params.pop('max_word_length', None)
 
-        # Which tokenizer to use for TextInstances.
+        tokenizer_params = params.pop('tokenizer', {})
+        tokenizer_choice = get_choice_with_default(tokenizer_params, 'type', list(tokenizers.keys()))
+        self.tokenizer = tokenizers[tokenizer_choice](tokenizer_params)
         # Note that the way this works is a little odd - we need each Instance object to do the
         # right thing when we call instance.words() and instance.to_indexed_instance().  So we set
         # a class variable on TextInstance so that _all_ TextInstance objects use the setting that
         # we read here.
-        tokenizer_params = params.pop('tokenizer', {})
-        tokenizer_choice = get_choice_with_default(tokenizer_params, 'type', list(tokenizers.keys()))
-        self.tokenizer = tokenizers[tokenizer_choice](tokenizer_params)
         TextInstance.tokenizer = self.tokenizer
 
-        # These parameters specify the kind of encoder used to encode any word sequence input.
-        # If given, this must be a dict.  We will use the "type" key in this dict (which must match
-        # one of the keys in `encoders`) to determine the type of the encoder, then pass the
-        # remaining args to the encoder constructor.
-        # Hint: Use lstm or cnn for sentences, treelstm for logical forms, and bow for either.
-        self.encoder_params = params.pop('encoder', {})
-
-        # With some text_encodings, you can have separate sentence encoders and word encoders
-        # (where sentence encoders combine word vectors into sentence vectors, and word encoders
-        # combine character vectors into sentence vectors).  If you want to have separate encoders,
-        # here's your chance to specify the word encoder.
-        self.word_encoder_params = params.pop('word_encoder', self.encoder_params)
-
-        self.seq2seq_encoder_params = params.pop('seq2seq_encoder', {"encoder_params": {},
-                                                                     "wrapper_params": {}})
-
+        self.encoder_params = params.pop('encoder', {'default': {}})
+        self.encoder_fallback_behavior = params.pop('encoder_fallback_behavior', 'crash')
+        self.seq2seq_encoder_params = params.pop('seq2seq_encoder', {'default': {"encoder_params": {},
+                                                                                 "wrapper_params": {}}})
         super(TextTrainer, self).__init__(params)
 
         self.name = "TextTrainer"
@@ -94,9 +110,8 @@ class TextTrainer(Trainer):
         # don't want to set them now, because they use max length information that only gets set
         # after reading the training data.
         self.embedding_layers = {}
-        self.sentence_encoder_layer = None
-        self.word_encoder_layer = None
-        self.seq2seq_encoder_layer = None
+        self.encoder_layers = {}
+        self.seq2seq_encoder_layers = {}
         self._sentence_encoder_model = None
 
     @overrides
@@ -153,7 +168,7 @@ class TextTrainer(Trainer):
         layers and initializing their variables.
 
         Note that this specifically looks for the layers defined by _get_embedded_sentence_input
-        and _get_sentence_encoder.  If you change any of that in a subclass, or add other layers
+        and _get_encoder.  If you change any of that in a subclass, or add other layers
         that are re-used, you must override this method, or loading models will break.  Similarly,
         if you change code in those two methods (e.g., making the sentence encoder into two
         layers), this method must be changed accordingly.
@@ -183,15 +198,12 @@ class TextTrainer(Trainer):
                         self.embedding_layers[embedding_name] = (None, layer)
                     else:
                         self.embedding_layers[embedding_name] = (layer, None)
-            elif layer.name == "sentence_encoder":
-                logger.info("  Found sentence encoder")
-                self.sentence_encoder_layer = layer
-            elif layer.name == "timedist_sentence_encoder":
-                logger.info("  Found sentence encoder")
-                if self.sentence_encoder_layer is None:
-                    self.sentence_encoder_layer = layer
-                else:
-                    logger.warning("  FOUND DUPLICATE SENTENCE ENCODER LAYER!  NOT SURE WHAT TO DO!")
+            if '_seq2seq_encoder' in layer.name:
+                seq2seq_encoder_type = layer.name.replace("_seq2seq_encoder", "")
+                self.seq2seq_encoder_layers[seq2seq_encoder_type] = layer
+            elif 'encoder' in layer.name:
+                sentence_encoder_type = layer.name.replace("_sentence_encoder", "")
+                self.encoder_layers[sentence_encoder_type] = layer
 
     def get_sentence_vector(self, sentence: str):
         """
@@ -360,34 +372,63 @@ class TextTrainer(Trainer):
                                                name=name + '_projection')
         return embedding_layer, projection_layer
 
-    def _get_sentence_encoder(self):
+    def _get_encoder(self, name="default", fallback_behavior: str=None):
         """
         A sentence encoder takes as input a sequence of word embeddings, and returns as output a
         single vector encoding the sentence.  This is typically either a simple RNN or an LSTM, but
         could be more complex, if the "sentence" is actually a logical form.
-        """
-        if self.sentence_encoder_layer is None:
-            self.sentence_encoder_layer = self._get_new_sentence_encoder()
-        return self.sentence_encoder_layer
 
-    def _get_new_sentence_encoder(self, name="sentence_encoder"):
-        # The code that follows would be destructive to self.encoder_params (lots of calls to
-        # params.pop()), but we may need to create several encoders.  So we'll make a copy and use
-        # that instead of self.encoder_params.
-        return self._get_new_encoder(deepcopy(self.encoder_params), name)
+        Parameters
+        ----------
+        name : str, optional (default="default")
+            The name of the encoder.  Multiple calls to ``_get_encoder`` using the same name will
+            return the same encoder.  To get parameters for creating the encoder, we look in
+            ``self.encoder_params``, which is specified by the ``encoder`` parameter in
+            ``self.__init__``.  If ``name`` is not a key in ``self.encoder_params``, the behavior
+            is defined by the ``fallback_behavior`` parameter.
+        fallback_behavior : str, optional (default=None)
+            Determines what to do when ``name`` is not a key in ``self.encoder_params``.  If you
+            pass ``None`` (the default), we will use ``self.encoder_fallback_behavior``, specified
+            by the ``encoder_fallback_behavior`` in ``self.__init__``.  There are three options:
 
-    def _get_word_encoder(self):
+            - ``"crash"``: raise an error.  This is the default for
+              ``self.encoder_fallback_behavior``.  The intention is to help you find bugs - if you
+              specify a particular encoder name in ``self._build_model`` without giving a fallback
+              behavior, you probably wanted to use a particular set of parameters, so we crash if
+              they are not provided.
+            - ``"use default params"``: In this case, we return a new encoder created with
+              ``self.encoder_params["default"]``.
+            - ``"use default encoder"``: In this case, we `reuse` the encoder created with
+              ``self.encoder_params["default"]``.  This effectively changes the ``name`` parameter
+              to ``"default"`` when the given ``name`` is not in ``self.encoder_params``.
         """
-        This is like a sentence encoder, but for sentences; we don't just use
-        self._get_sentence_encoder() for this, because we allow different models to be specified
-        for this.
-        """
-        if self.word_encoder_layer is None:
-            self.word_encoder_layer = self._get_new_word_encoder()
-        return self.word_encoder_layer
-
-    def _get_new_word_encoder(self, name="word_encoder"):
-        return self._get_new_encoder(deepcopy(self.word_encoder_params), name)
+        if fallback_behavior is None:
+            fallback_behavior = self.encoder_fallback_behavior
+        if name in self.encoder_layers:
+            # If we've already created this encoder, we can just return it.
+            return self.encoder_layers[name]
+        if name not in self.encoder_params:
+            # If we haven't, we need to check that we _can_ create it, and decide _how_ to create
+            # it.
+            if fallback_behavior == "crash":
+                raise ConfigurationError("You asked for a named encoder (" + name + "), but "
+                                         "did not provide parameters for that encoder")
+            elif fallback_behavior == "use default encoder":
+                name = "default"
+                params = deepcopy(self.encoder_params[name])
+            elif fallback_behavior == "use default params":
+                params = deepcopy(self.encoder_params["default"])
+            else:
+                raise ConfigurationError("Unrecognized fallback behavior: " + fallback_behavior)
+        else:
+            params = deepcopy(self.encoder_params[name])
+        if name not in self.encoder_layers:
+            # We need to check if we've already created this again, because in some cases we change
+            # the name in the logic above.
+            encoder_layer_name = name + "_encoder"
+            new_encoder = self._get_new_encoder(params, encoder_layer_name)
+            self.encoder_layers[name] = new_encoder
+        return self.encoder_layers[name]
 
     def _get_new_encoder(self, params: Dict[str, Any], name: str):
         encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
@@ -397,16 +438,18 @@ class TextTrainer(Trainer):
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
-    def _get_seq2seq_encoder(self, input_shape):
+    def _get_seq2seq_encoder(self, input_shape, name="default"):
         """
         A seq2seq encoder takes as input a sequence of word embeddings, and returns as output a
         sequence of vectors.
         """
-        if self.seq2seq_encoder_layer is None:
-            params = deepcopy(self.seq2seq_encoder_params)
+
+        if name not in self.seq2seq_encoder_layers:
+            encoder_layer_name = name + "_seq2seq_encoder"
+            params = deepcopy(self.seq2seq_encoder_params[name])
             params["wrapper_params"]["input_shape"] = input_shape
-            self.seq2seq_encoder_layer = self._get_new_seq2seq_encoder(params)
-        return self.seq2seq_encoder_layer
+            self.seq2seq_encoder_layers[name] = self._get_new_seq2seq_encoder(params, encoder_layer_name)
+        return self.seq2seq_encoder_layers[name]
 
     def _get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
         encoder_params = params["encoder_params"]
@@ -433,7 +476,7 @@ class TextTrainer(Trainer):
         """
         sentence_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
         embedded_input = self._embed_input(sentence_input)
-        encoder_layer = self._get_sentence_encoder()
+        encoder_layer = self._get_encoder()
         encoded_input = encoder_layer(embedded_input)
         self._sentence_encoder_model = DeepQaModel(input=sentence_input, output=encoded_input)
 

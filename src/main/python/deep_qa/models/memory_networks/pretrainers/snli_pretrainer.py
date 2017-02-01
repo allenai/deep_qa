@@ -53,7 +53,7 @@ class SnliEntailmentPretrainer(TextPretrainer):
         embedded_text = self.trainer._embed_input(text_input)
         embedded_hypothesis = self.trainer._embed_input(hypothesis_input)
 
-        sentence_encoder = self.trainer._get_sentence_encoder()
+        sentence_encoder = self.trainer._get_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
         text_encoding = sentence_encoder(embedded_text)
@@ -122,7 +122,7 @@ class SnliAttentionPretrainer(TextPretrainer):
         embedded_text = self.trainer._embed_input(text_input)
         embedded_hypothesis = self.trainer._embed_input(hypothesis_input)
 
-        sentence_encoder = self.trainer._get_sentence_encoder()
+        sentence_encoder = self.trainer._get_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
         text_encoding = sentence_encoder(embedded_text)

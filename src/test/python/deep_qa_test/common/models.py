@@ -19,7 +19,7 @@ def get_model(cls, additional_arguments=None):
     params['train_files'] = [TRAIN_FILE]
     params['validation_files'] = [VALIDATION_FILE]
     params['embedding_size'] = 5
-    params['encoder'] = {'type': 'bow'}
+    params['encoder'] = {"default": {'type': 'bow'}}
     params['num_epochs'] = 1
     params['keras_validation_split'] = 0.0
     if is_model_with_background(cls):

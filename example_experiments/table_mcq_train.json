@@ -1,36 +1,38 @@
 {
-  "model_class": "MultipleTrueFalseMemoryNetwork",
-  "model_serialization_prefix": "models/table_mcq/pretrained",
-  "encoder": {
-    "type": "bow"
-  },
-  "knowledge_selector": {
-    "type": "dot_product"
-  },
-  "memory_updater": {
-    "type": "sum"
-  },
-  "entailment_input_combiner": {
-    "type": "memory_only"
-  },
-  "debug": {
-    "layer_names": ["timedist_knowledge_selector_0", "answer_option_softmax"],
-    "data": "training"
-  },
-  "num_memory_layers": 1,
-  "patience": 5,
-  "train_files": [
-    "/home/mattg/data/table_mcq_test/test_data.tsv",
-    "/home/mattg/data/table_mcq_test/test_data_background.tsv"
-  ],
-  "pretrainers": [
-    {
-      "type": "AttentionPretrainer",
-      "num_epochs": 40,
-      "train_files": [
+    "model_class": "MultipleTrueFalseMemoryNetwork",
+    "model_serialization_prefix": "models/table_mcq/pretrained",
+    "encoder": {
+        "default":{
+            "type": "bow"
+        }
+    },
+    "knowledge_selector": {
+        "type": "dot_product"
+    },
+    "memory_updater": {
+        "type": "sum"
+    },
+    "entailment_input_combiner": {
+        "type": "memory_only"
+    },
+    "debug": {
+        "layer_names": ["timedist_knowledge_selector_0", "answer_option_softmax"],
+        "data": "training"
+    },
+    "num_memory_layers": 1,
+    "patience": 5,
+    "train_files": [
         "/home/mattg/data/table_mcq_test/test_data.tsv",
-        "/home/mattg/data/table_mcq_test/test_data_labeled_background.tsv"
-      ]
-    }
-  ]
+        "/home/mattg/data/table_mcq_test/test_data_background.tsv"
+    ],
+    "pretrainers": [
+        {
+            "type": "AttentionPretrainer",
+            "num_epochs": 40,
+            "train_files": [
+                "/home/mattg/data/table_mcq_test/test_data.tsv",
+                "/home/mattg/data/table_mcq_test/test_data_labeled_background.tsv"
+            ]
+        }
+    ]
 }

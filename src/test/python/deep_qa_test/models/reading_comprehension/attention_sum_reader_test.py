@@ -19,15 +19,19 @@ class TestAttentionSumReader(TestCase):
     def test_train_does_not_crash(self):
         args = {
                 "encoder": {
-                        "type": "bi_gru",
-                        "output_dim": 7
+                        "default": {
+                                "type": "bi_gru",
+                                "output_dim": 7
+                        }
                 },
                 "seq2seq_encoder": {
-                        "type": "bi_gru",
-                        "encoder_params": {
-                                "output_dim": 7
-                        },
-                        "wrapper_params": {}
+                        "default": {
+                                "type": "bi_gru",
+                                "encoder_params": {
+                                        "output_dim": 7
+                                },
+                                "wrapper_params": {}
+                        }
                 },
                 "embedding_size": 5,
         }

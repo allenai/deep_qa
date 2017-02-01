@@ -1,15 +1,17 @@
 {
-  "model_class": "MultipleChoiceTupleEntailmentModel",
-  "model_serialization_prefix": "models/qa/multi_tuple",
-  "encoder": {
-    "type": "bow"
-  },
-  "patience": 5,
-  "max_sentence_length": 70,
-  "max_answer_length": 20,
-  "max_knowledge_length": 30,
-  "num_tuple_slots": 3,
-  "num_answer_options": 4,
-  "train_files": ["/Users/rebeccas/data/questions.tsv",
-                  "/Users/rebeccas/data/questions_background_as_tuples.tsv"]
+    "model_class": "MultipleChoiceTupleEntailmentModel",
+    "model_serialization_prefix": "models/qa/multi_tuple",
+    "encoder": {
+        "default": {
+            "type": "bow"
+        }
+    },
+    "patience": 5,
+    "max_sentence_length": 70,
+    "max_answer_length": 20,
+    "max_knowledge_length": 30,
+    "num_tuple_slots": 3,
+    "num_answer_options": 4,
+    "train_files": ["/Users/rebeccas/data/questions.tsv",
+                    "/Users/rebeccas/data/questions_background_as_tuples.tsv"]
 }

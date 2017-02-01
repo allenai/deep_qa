@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from overrides import overrides
 
 import numpy
-from keras.layers import Dropout, Input, merge
+from keras.layers import Dropout, Input, Layer, merge
 
 from ...common.params import get_choice_with_default
 from ...data.dataset import TextDataset
@@ -166,6 +166,16 @@ class MemoryNetwork(TextTrainer):
         """
         return (self.max_knowledge_length,) + self._get_sentence_shape()
 
+    def _time_distribute_question_encoder(self, question_encoder: Layer):
+        """
+        If necessary, add wrappers around the question encoder so that the encoder can be applied
+        to the model input.  This is necessary if you have a separate "question" representation for
+        four answer options, for instance.  By default, we just return the input
+        ``question_encoder``.
+        """
+        # pylint: disable=no-self-use
+        return question_encoder
+
     def _get_knowledge_axis(self):
         """
         We need to merge and concatenate things in the course of the memory network, and we do it
@@ -180,17 +190,17 @@ class MemoryNetwork(TextTrainer):
         # pylint: disable=no-self-use
         return 1
 
-    def _get_knowledge_encoder(self, name='knowledge_encoder'):
+    def _get_knowledge_encoder(self, question_encoder, name='knowledge_encoder'):
         '''
         Instantiates a new KnowledgeEncoder. This can be overridden as in the MultipleChoiceMN case,
         we would pass is_multiple_choice=True, so that any post-processing after the background has
         been encoded is TimeDistributed across the possible answer options.
         '''
         if name not in self.knowledge_encoders:
-            self.knowledge_encoders[name] = self._get_new_knowledge_encoder(name=name)
+            self.knowledge_encoders[name] = self._get_new_knowledge_encoder(question_encoder, name=name)
         return self.knowledge_encoders[name]
 
-    def _get_new_knowledge_encoder(self, name='knowledge_encoder'):
+    def _get_new_knowledge_encoder(self, question_encoder, name='knowledge_encoder'):
         # The code that follows would be destructive to self.knowledge_encoder_params (lots of
         # calls to params.pop()), but it's possible we'll want to call this more than once.  So
         # we'll make a copy and use that instead of self.knowledge_encoder_params.
@@ -200,7 +210,7 @@ class MemoryNetwork(TextTrainer):
         params['name'] = name
         params['encoding_dim'] = self.embedding_size
         params['knowledge_length'] = self.max_knowledge_length
-        params['question_encoder'] = self._get_sentence_encoder()
+        params['question_encoder'] = question_encoder
         params['has_multiple_backgrounds'] = self.has_multiple_backgrounds
         return knowledge_encoders[knowledge_encoder_type](params)
 
@@ -332,10 +342,13 @@ class MemoryNetwork(TextTrainer):
         knowledge_embedding = self._embed_input(knowledge_input)
 
         # Step 3: Encode the two embedded inputs.
-        question_encoder = self._get_sentence_encoder()
+        question_encoder = self._get_encoder()
+        question_encoder = self._time_distribute_question_encoder(question_encoder)
+        print("question embedding:", question_embedding)
         encoded_question = question_encoder(question_embedding)  # (samples, encoding_dim)
+        print("encoded question:", question_embedding)
 
-        knowledge_encoder = self._get_knowledge_encoder()
+        knowledge_encoder = self._get_knowledge_encoder(question_encoder)
         encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, encoding_dim)
 
         # Step 4: Pass the question, memory and background into a memory network loop.

@@ -1,5 +1,23 @@
-Core Training Utils
-===================
+Trainers
+========
+
+Trainer
+-------
+
+.. automodule:: deep_qa.training.trainer
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
+TextTrainer
+-----------
+
+.. automodule:: deep_qa.training.text_trainer
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
 
 models
 ------
@@ -14,24 +32,6 @@ optimizers
 ----------
 
 .. automodule:: deep_qa.training.optimizers
-    :members:
-    :noindex:
-    :undoc-members:
-    :show-inheritance:
-
-text_trainer
-------------
-
-.. automodule:: deep_qa.training.text_trainer
-    :members:
-    :noindex:
-    :undoc-members:
-    :show-inheritance:
-
-trainer
--------
-
-.. automodule:: deep_qa.training.trainer
     :members:
     :noindex:
     :undoc-members:

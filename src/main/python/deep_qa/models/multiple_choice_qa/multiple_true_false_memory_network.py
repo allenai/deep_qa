@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 from overrides import overrides
 
 import numpy
-from keras.layers import TimeDistributed
+from keras.layers import Layer, TimeDistributed
 
 from ..memory_networks.memory_network import MemoryNetwork
 from ...data.instances.true_false_instance import TrueFalseInstance
@@ -72,12 +72,8 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
         return (self.num_options, self.max_knowledge_length) + self._get_sentence_shape()
 
     @overrides
-    def _get_sentence_encoder(self):
-        # TODO(matt): add tests for saving and loading these models, to be sure that these names
-        # actually work as expected.  There are currently some Keras bugs stopping those tests from
-        # working, though.
-        base_sentence_encoder = super(MultipleTrueFalseMemoryNetwork, self)._get_sentence_encoder()
-        return EncoderWrapper(base_sentence_encoder, name="timedist_%s" % base_sentence_encoder.name)
+    def _time_distribute_question_encoder(self, question_encoder: Layer):
+        return EncoderWrapper(question_encoder, name="timedist_%s" % question_encoder.name)
 
     @overrides
     def _get_knowledge_axis(self):

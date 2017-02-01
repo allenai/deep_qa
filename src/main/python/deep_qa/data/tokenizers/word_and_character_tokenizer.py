@@ -13,9 +13,18 @@ from ...layers.wrappers import FixedTimeDistributed
 
 class WordAndCharacterTokenizer(Tokenizer):
     """
-    A WordAndCharacterTokenizer first splits strings into words, then splits those words into
-    characters, and returns a representation that contains _both_ a word index and a sequence of
+    A ``WordAndCharacterTokenizer`` first splits strings into words, then splits those words into
+    characters, and returns a representation that contains `both` a word index and a sequence of
     character indices for each word.
+
+    Notes
+    -----
+    In ``embed_input``, this ``Tokenizer`` uses an encoder to get a character-level word embedding,
+    which then gets concatenated with a standard word embedding from an embedding matrix.  To
+    specify the encoder to use for this character-level word embedding, use the ``"word"`` key in
+    the ``encoder`` parameter to your model (which should be a ``TextTrainer`` subclass - see the
+    documentation there for some more info).  If you do not give a ``"word"`` key in the
+    ``encoder`` dict, we'll create a new encoder using the ``"default"`` parameters.
     """
     def __init__(self, params: Dict[str, Any]):
         word_splitter_choice = get_choice_with_default(params, 'word_splitter', list(word_splitters.keys()))
@@ -86,7 +95,8 @@ class WordAndCharacterTokenizer(Tokenizer):
         # we _don't_ care here about whether the whole word will be masked, as the word_embedding
         # will carry that information, so the output mask returned by the TimeDistributed layer
         # here will be ignored.
-        word_encoder = FixedTimeDistributed(text_trainer._get_word_encoder())
+        word_encoder = FixedTimeDistributed(
+                text_trainer._get_encoder(name="word", fallback_behavior="use default params"))
         # We might need to TimeDistribute this again, if our input has ndim higher than 3.
         for _ in range(3, K.ndim(characters)):
             word_encoder = FixedTimeDistributed(word_encoder, name="timedist_" + word_encoder.name)

@@ -1,32 +1,33 @@
 {
-  "model_class": "SoftmaxMemoryNetwork",
-  "model_serialization_prefix": "models/babi_task1/",
-  "encoder": {
-    "type": "bow"
-  },
-  "knowledge_encoder": {
-    "type": "temporal"
-  },
-  "embedding_size": 20,
-  "knowledge_selector": {
-    "type": "dot_product"
-  },
-  "memory_updater": {
-    "type": "sum"
-  },
-  "debug": {
-    "layer_names": [
-      "knowledge_selector_0",
-      "final_softmax"
-    ],
-    "data": "training"
-  },
-  "num_epochs": 60,
-  "num_memory_layers": 1,
-  "patience": 5,
-  "train_files": [
-    "/efs/data/dlfa/facebook/babi_v1.0/processed/task_1_train.tsv",
-    "/efs/data/dlfa/facebook/babi_v1.0/processed/task_1_background.tsv"
-  ]
+    "model_class": "SoftmaxMemoryNetwork",
+    "model_serialization_prefix": "models/babi_task1/",
+    "encoder": {
+        "default": {
+            "type": "bow"
+        }
+    },
+    "knowledge_encoder": {
+        "type": "temporal"
+    },
+    "embedding_size": 20,
+    "knowledge_selector": {
+        "type": "dot_product"
+    },
+    "memory_updater": {
+        "type": "sum"
+    },
+    "debug": {
+        "layer_names": [
+            "knowledge_selector_0",
+            "final_softmax"
+        ],
+        "data": "training"
+    },
+    "num_epochs": 60,
+    "num_memory_layers": 1,
+    "patience": 5,
+    "train_files": [
+        "/efs/data/dlfa/facebook/babi_v1.0/processed/task_1_train.tsv",
+        "/efs/data/dlfa/facebook/babi_v1.0/processed/task_1_background.tsv"
+    ]
 }
-

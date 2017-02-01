@@ -33,7 +33,7 @@ class EncoderPretrainer(TextPretrainer):
                                                                                                   "first_sentence")
         second_sentence_input, embedded_second_sentence = self.trainer._get_embedded_sentence_input(
                 sentence_shape, "second_sentence")
-        sentence_encoder = self.trainer._get_sentence_encoder()
+        sentence_encoder = self.trainer.get_encoder()
         while isinstance(sentence_encoder, TimeDistributed):
             sentence_encoder = sentence_encoder.layer
         encoded_first_sentence = sentence_encoder(embedded_first_sentence)

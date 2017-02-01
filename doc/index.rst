@@ -48,6 +48,14 @@ This library has several main components:
    self
 
 .. toctree::
+   :caption: Models
+   :hidden:
+
+   training/about_trainers
+   training/trainers
+   training/pretrainers
+
+.. toctree::
    :caption: Layers
    :hidden:
 
@@ -95,14 +103,6 @@ This library has several main components:
    common/about_common
    common/checks
    common/params
-
-.. toctree::
-   :caption: Trainer Utils
-   :hidden:
-
-   training/about_training
-   training/core_training
-   training/pretraining
 
 .. toctree::
    :hidden:

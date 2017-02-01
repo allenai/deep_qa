@@ -1,25 +1,27 @@
 {
-  "model_class": "MultipleTrueFalseMemoryNetwork",
-  "model_serialization_prefix": "models/example",
-  "encoder": {
-    "type": "bow"
-  },
-  "knowledge_selector": {
-    "type": "dot_product"
-  },
-  "memory_updater": {
-    "type": "sum"
-  },
-  "entailment_input_combiner": {
-    "type": "memory_only"
-  },
-  "num_memory_layers": 1,
-  "max_sentence_length": 125,
-  "patience": 5,
-  "show_summary_with_masking_info": true,
-  //"max_training_instances": 10,
-  "train_files": [
-    "data/science/omnibus_questions/processed_questions.tsv",
-    "data/science/omnibus_questions/processed_questions_background.tsv"
-  ]
+    "model_class": "MultipleTrueFalseMemoryNetwork",
+    "model_serialization_prefix": "models/example",
+    "encoder": {
+        "default": {
+            "type": "bow"
+        }
+    },
+    "knowledge_selector": {
+        "type": "dot_product"
+    },
+    "memory_updater": {
+        "type": "sum"
+    },
+    "entailment_input_combiner": {
+        "type": "memory_only"
+    },
+    "num_memory_layers": 1,
+    "max_sentence_length": 125,
+    "patience": 5,
+    "show_summary_with_masking_info": true,
+    //"max_training_instances": 10,
+    "train_files": [
+        "data/science/omnibus_questions/processed_questions.tsv",
+        "data/science/omnibus_questions/processed_questions_background.tsv"
+    ]
 }

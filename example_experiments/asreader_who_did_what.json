@@ -3,15 +3,19 @@
     "model_serialization_prefix": "models/multiple_choice_qa/asreader",
     "preferred_backend": "theano",
     "encoder": {
-        "type": "bi_gru",
-        "output_dim": 384
+        "default": {
+            "type": "bi_gru",
+            "output_dim": 384
+        }
     },
     "seq2seq_encoder": {
-        "type": "bi_gru",
-        "encoder_params": {
-            "output_dim": 384
-        },
-        "wrapper_params": {}
+        "default": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "output_dim": 384
+            },
+            "wrapper_params": {}
+        }
     },
     "optimizer": {"type": "adam",
                   "clipnorm": 10.0

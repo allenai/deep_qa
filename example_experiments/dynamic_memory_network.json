@@ -1,29 +1,31 @@
 {
-  "model_class": "MultipleTrueFalseMemoryNetwork",
-  "model_serialization_prefix": "models/dmn",
-  "encoder": {
-    "type": "positional"
-  },
-  "knowledge_encoder": {
-    "type": "bi_gru"
-  },
-  "knowledge_selector": {
-    "type": "dynamic_MN"
-  },
-  "knowledge_combiner": {
-    "type": "attentive_gru"
-  },
-  "memory_updater": {
-    "type": "dense_concat"
-  },
-  "entailment_input_combiner": {
-    "type": "memory_only"
-  },
-  "num_memory_layers": 1,
-  "max_sentence_length": 125,
-  "max_training_instances": 10,
-  "train_files": [
-    "data/science/omnibus_questions/processed_questions.tsv",
-    "data/science/omnibus_questions/processed_questions_background.tsv"
-  ]
+    "model_class": "MultipleTrueFalseMemoryNetwork",
+    "model_serialization_prefix": "models/dmn",
+    "encoder": {
+        "default":{
+            "type": "positional"
+        }
+    },
+    "knowledge_encoder": {
+        "type": "bi_gru"
+    },
+    "knowledge_selector": {
+        "type": "dynamic_MN"
+    },
+    "knowledge_combiner": {
+        "type": "attentive_gru"
+    },
+    "memory_updater": {
+        "type": "dense_concat"
+    },
+    "entailment_input_combiner": {
+        "type": "memory_only"
+    },
+    "num_memory_layers": 1,
+    "max_sentence_length": 125,
+    "max_training_instances": 10,
+    "train_files": [
+        "data/science/omnibus_questions/processed_questions.tsv",
+        "data/science/omnibus_questions/processed_questions_background.tsv"
+    ]
 }
