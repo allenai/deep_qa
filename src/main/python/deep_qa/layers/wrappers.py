@@ -61,13 +61,13 @@ class TimeDistributedWithMask(FixedTimeDistributed):
     we call the wrapped layer to compute the mask for that portion of the input, then aggregate
     them.
     """
-    def compute_mask(self, x, mask=None):
-        if mask is None:
+    def compute_mask(self, x, input_mask=None):
+        if input_mask is None:
             return None
         input_shape = self.input_spec[0].shape
         input_length = input_shape[1] if input_shape[1] else K.shape(x)[1]
         reshaped_x = K.reshape(x, (-1,) + input_shape[2:])  # (batch_size * timesteps, ...)
-        mask_ndim = K.ndim(mask)
+        mask_ndim = K.ndim(input_mask)
         input_ndim = K.ndim(x)
         if mask_ndim == input_ndim:
             mask_shape = input_shape
@@ -76,14 +76,23 @@ class TimeDistributedWithMask(FixedTimeDistributed):
         else:
             raise Exception("Mask is of an unexpected shape. Mask's ndim: %s, input's ndim %s" %
                             (mask_ndim, input_ndim))
-        reshaped_mask = K.reshape(mask, (-1,) + mask_shape[2:])  # (batch_size * timesteps, ...)
-        output_mask = self.layer.compute_mask(reshaped_x, mask=reshaped_mask)
+        reshaped_mask = K.reshape(input_mask, (-1,) + mask_shape[2:])  # (batch_size * timesteps, ...)
+        output_mask = self.layer.compute_mask(reshaped_x, input_mask=reshaped_mask)
         if output_mask is None:
             return None
         output_mask_shape = self.layer.get_output_mask_shape_for((input_shape[0],) + input_shape[2:])
         reshaped_shape = (-1, input_length) + output_mask_shape[1:]
         outputs = K.reshape(output_mask, reshaped_shape)
         return outputs
+
+class TimeDistributedWithPassThroughMask(FixedTimeDistributed):
+    """
+    In this TimeDistributed subclass, we just pass the input mask through, whatever it is.
+    """
+    def compute_mask(self, x, input_mask=None):
+        # pylint: disable=unused-argument
+        return input_mask
+
 
 class EncoderWrapper(FixedTimeDistributed):
     '''
@@ -96,13 +105,13 @@ class EncoderWrapper(FixedTimeDistributed):
     to mask the entire sequence.  EncoderWrapper returns a mask with the same dimension as the
     input sequences, where sequences are masked if _all_ of their words were masked.
     '''
-    def compute_mask(self, x, mask=None):
+    def compute_mask(self, x, input_mask=None):
         # pylint: disable=unused-argument
         # Input mask (coming from Embedding) will be of shape (batch_size, knowledge_length, num_words).
         # Output mask should be of shape (batch_size, knowledge_length) with 0s for background sentences that
         #       are all padding.
-        if mask is None:
+        if input_mask is None:
             return None
         else:
             # An output bit is 0 only if the  bits corresponding to all input words are 0.
-            return K.any(mask, axis=-1)
+            return K.any(input_mask, axis=-1)

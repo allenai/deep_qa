@@ -76,12 +76,12 @@ class AttentionSumReader(TextTrainer):
         # shape: (batch size, 2*embedding size)
         encoded_question = question_encoder(question_embedding)
 
-        # We encode the document with a seq2seq encoder. Note that
-        # this is not the same encoder as used for the question
-        # TODO(nelson): Enable using the same encoder for both
-        # document and question.
-        seq2seq_input_shape = self._get_sentence_shape(self.max_passage_length) + (self.embedding_size,)
-        document_encoder = self._get_seq2seq_encoder(input_shape=seq2seq_input_shape)
+        # We encode the document with a seq2seq encoder. Note that this is not the same encoder as
+        # used for the question.
+        # TODO(nelson): Enable using the same encoder for both document and question.  (This would
+        # be hard in our current code; you would need a method to transform an encoder into a
+        # seq2seq encoder.)
+        document_encoder = self._get_seq2seq_encoder()
         # shape: (batch size, document_length, 2*embedding size)
         encoded_document = document_encoder(document_embedding)
 

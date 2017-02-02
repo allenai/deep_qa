@@ -7,24 +7,28 @@ from ...tensors.similarity_functions import similarity_functions
 
 class MatrixAttention(Layer):
     '''
-    This Layer takes two matrices as input and returns a matrix of attentions.
+    This ``Layer`` takes two matrices as input and returns a matrix of attentions.
 
-    We compute the similarity between the each row in each matrix and return unnormalized
-    similarity scores.  We don't worry about zeroing out any masked values, because we propagate a
-    correct mask.
+    We compute the similarity between each row in each matrix and return unnormalized similarity
+    scores.  We don't worry about zeroing out any masked values, because we propagate a correct
+    mask.
 
     By default similarity is computed with a dot product, but you can alternatively use a
     parameterized similarity function if you wish.
 
-    This is largely similar to using TimeDistributed(Attention), except the result is unnormalized,
-    and we return a mask, so you can do a masked normalization with the result.  You should use
-    this instead of TimeDistributed(Attention) if you want to compute multiple normalizations of
-    the attention matrix.
+    This is largely similar to using ``TimeDistributed(Attention)``, except the result is
+    unnormalized, and we return a mask, so you can do a masked normalization with the result.  You
+    should use this instead of ``TimeDistributed(Attention)`` if you want to compute multiple
+    normalizations of the attention matrix.
 
-    Input shapes:
-        matrix_1: (batch_size, num_rows_1, embedding_dim), with mask (batch_size, num_rows_1)
-        matrix_2: (batch_size, num_rows_2, embedding_dim), with mask (batch_size, num_rows_2)
-    Output shape: (batch_size, num_rows_1, num_rows_2), with mask of same shape
+    Input:
+        - matrix_1: ``(batch_size, num_rows_1, embedding_dim)``, with mask
+          ``(batch_size, num_rows_1)``
+        - matrix_2: ``(batch_size, num_rows_2, embedding_dim)``, with mask
+          ``(batch_size, num_rows_2)``
+
+    Output:
+        - ``(batch_size, num_rows_1, num_rows_2)``, with mask of same shape
     '''
     def __init__(self, **kwargs):
         self.supports_masking = True
@@ -39,7 +43,8 @@ class MatrixAttention(Layer):
         self.similarity_function = similarity_functions[sim_function_choice](**similarity_function_params)
 
     def build(self, input_shape):
-        self.trainable_weights = self.similarity_function.initialize_weights(input_shape)
+        similarity_function_shape = self.get_output_shape_for(input_shape) + (input_shape[0][-1],)
+        self.trainable_weights = self.similarity_function.initialize_weights(similarity_function_shape)
         super(MatrixAttention, self).build(input_shape)
 
     def compute_mask(self, inputs, mask=None):
@@ -56,10 +61,14 @@ class MatrixAttention(Layer):
         mask_2 = K.cast(K.expand_dims(mask_2, dim=1), 'float32')
         return K.cast(K.batch_dot(mask_1, mask_2), 'uint8')
 
-    def get_output_shape_for(self, input_shapes):
-        return (input_shapes[0][0], input_shapes[0][1], input_shapes[1][1])
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0][0], input_shape[0][1], input_shape[1][1])
 
     def call(self, inputs, mask=None):
+        """
+        NOTE: This does not work if ``num_rows_1`` or ``num_rows_2`` is ``None``!  I tried to get
+        it to work, but ``K.dot()`` breaks.
+        """
         matrix_1, matrix_2 = inputs
         num_rows_1 = K.int_shape(matrix_1)[1]
         num_rows_2 = K.int_shape(matrix_2)[1]

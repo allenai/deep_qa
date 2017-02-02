@@ -105,7 +105,7 @@ class WordAndCharacterTokenizer(Tokenizer):
         merge_mode = lambda inputs: K.concatenate(inputs, axis=-1)
         def merge_shape(input_shapes):
             output_shape = list(input_shapes[0])
-            output_shape[-1] *= 2
+            output_shape[-1] += input_shapes[1][-1]
             return tuple(output_shape)
         merge_mask = lambda masks: masks[0]
 

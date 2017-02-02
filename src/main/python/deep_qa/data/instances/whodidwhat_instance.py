@@ -158,7 +158,6 @@ class IndexedWhoDidWhatInstance(IndexedQuestionPassageInstance):
             padded_options.append(self.pad_word_sequence(indices, max_lengths))
         self.option_indices = padded_options
 
-
     @overrides
     def as_training_data(self):
         question_array = np.asarray(self.question_indices, dtype='int32')

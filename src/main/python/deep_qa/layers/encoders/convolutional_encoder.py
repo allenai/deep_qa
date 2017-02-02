@@ -55,7 +55,6 @@ class CNNEncoder(Layer):
 
     def build(self, input_shape):
         input_length = input_shape[1]  # number of words
-        input_dim = input_shape[-1]
         # We define convolution, maxpooling and dense layers first.
         self.convolution_layers = [Convolution1D(nb_filter=self.num_filters,
                                                  filter_length=ngram_size,
@@ -65,7 +64,7 @@ class CNNEncoder(Layer):
                                    for ngram_size in self.ngram_filter_sizes]
         self.max_pooling_layers = [MaxPooling1D(pool_length=input_length - ngram_size + 1)
                                    for ngram_size in self.ngram_filter_sizes]
-        self.projection_layer = Dense(input_dim)
+        self.projection_layer = Dense(self.output_dim)
         # Building all layers because these sub-layers are not explitly part of the computatonal graph.
         for convolution_layer, max_pooling_layer in zip(self.convolution_layers, self.max_pooling_layers):
             convolution_layer.build(input_shape)

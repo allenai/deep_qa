@@ -9,3 +9,12 @@ AttentionSumReader
     :noindex:
     :undoc-members:
     :show-inheritance:
+
+BidirectionalAttentionFlow
+--------------------------
+
+.. automodule:: deep_qa.models.reading_comprehension.bidirectional_attention
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:

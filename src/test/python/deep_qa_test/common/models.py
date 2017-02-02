@@ -18,7 +18,7 @@ def get_model(cls, additional_arguments=None):
     params['model_serialization_prefix'] = TEST_DIR
     params['train_files'] = [TRAIN_FILE]
     params['validation_files'] = [VALIDATION_FILE]
-    params['embedding_size'] = 5
+    params['embedding_size'] = 6
     params['encoder'] = {"default": {'type': 'bow'}}
     params['num_epochs'] = 1
     params['keras_validation_split'] = 0.0
@@ -135,12 +135,6 @@ def write_question_answer_memory_network_files():
         train_background.write('4\tsb5\tsb6\n')
 
 
-def is_memory_network(cls):
-    if issubclass(cls, MemoryNetwork):
-        return True
-    return False
-
-
 def write_who_did_what_files():
     with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:
         train_file.write('1\tpassage1\tleftcontext1\trightcontext1\tanswer1###answer2\t0\n')
@@ -150,6 +144,22 @@ def write_who_did_what_files():
         train_file.write('2\tm a os e z p\ta b\tc d\tanswer3###answer4\t1\n')
         train_file.write('3\tx e q m\te d w f d\ts a\tanswer5###answer6###answer9\t2\n')
         train_file.write('4\tj aq ei q l\te fj\tk w q\tanswer7###answer8\t0\n')
+
+
+def write_span_prediction_files():
+    with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:
+        train_file.write('1\tquestion 1\tpassage with answer\t13,18\n')
+    with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
+        train_file.write('1\tquestion 1\tpassage1 with answer1\t14,20\n')
+        train_file.write('2\tquestion 2\tpassage2 with answer2\t0,8\n')
+        train_file.write('3\tquestion 3\tpassage3 with answer3\t9,13\n')
+        train_file.write('4\tquestion 4\tpassage4 with answer4\t14,20\n')
+
+
+def is_memory_network(cls):
+    if issubclass(cls, MemoryNetwork):
+        return True
+    return False
 
 
 def is_model_with_background(cls):

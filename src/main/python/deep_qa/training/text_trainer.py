@@ -77,6 +77,10 @@ class TextTrainer(Trainer):
         Like ``encoder``, except seq2seq encoders return a sequence of vectors instead of a single
         vector (the difference between our "encoders" and "seq2seq encoders" is the difference in
         Keras between ``LSTM()`` and ``LSTM(return_sequences=True)``).
+    seq2seq_encoder_fallback_behavior: string, optional (default="crash")
+        Determines the behavior when a seq2seq encoder is asked for by name, but you have not given
+        parameters for an encoder with that name.  See ``_get_seq2seq_encoder`` for more
+        information.
     """
     # pylint: enable=line-too-long
     def __init__(self, params: Dict[str, Any]):
@@ -101,6 +105,7 @@ class TextTrainer(Trainer):
         self.encoder_fallback_behavior = params.pop('encoder_fallback_behavior', 'crash')
         self.seq2seq_encoder_params = params.pop('seq2seq_encoder', {'default': {"encoder_params": {},
                                                                                  "wrapper_params": {}}})
+        self.seq2seq_encoder_fallback_behavior = params.pop('seq2seq_encoder_fallback_behavior', 'crash')
         super(TextTrainer, self).__init__(params)
 
         self.name = "TextTrainer"
@@ -135,7 +140,11 @@ class TextTrainer(Trainer):
             inputs = [numpy.asarray(x) for x in zip(*inputs)]
         else:
             inputs = numpy.asarray(inputs)
-        return inputs, numpy.asarray(labels)
+        if isinstance(labels[0], tuple):
+            labels = [numpy.asarray(x) for x in zip(*labels)]
+        else:
+            labels = numpy.asarray(labels)
+        return inputs, labels
 
     @overrides
     def _prepare_instance(self, instance: TextInstance, make_batch: bool=True):
@@ -389,7 +398,8 @@ class TextTrainer(Trainer):
         fallback_behavior : str, optional (default=None)
             Determines what to do when ``name`` is not a key in ``self.encoder_params``.  If you
             pass ``None`` (the default), we will use ``self.encoder_fallback_behavior``, specified
-            by the ``encoder_fallback_behavior`` in ``self.__init__``.  There are three options:
+            by the ``encoder_fallback_behavior`` parameter to ``self.__init__``.  There are three
+            options:
 
             - ``"crash"``: raise an error.  This is the default for
               ``self.encoder_fallback_behavior``.  The intention is to help you find bugs - if you
@@ -438,17 +448,66 @@ class TextTrainer(Trainer):
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
-    def _get_seq2seq_encoder(self, input_shape, name="default"):
+    def _get_seq2seq_encoder(self, name="default", fallback_behavior: str=None):
         """
-        A seq2seq encoder takes as input a sequence of word embeddings, and returns as output a
-        sequence of vectors.
-        """
+        A seq2seq encoder takes as input a sequence of vectors, and returns as output a sequence of
+        vectors.  This method is essentially identical to ``_get_encoder``, except that it gives an
+        encoder that returns a sequence of vectors instead of a single vector.
 
-        if name not in self.seq2seq_encoder_layers:
-            encoder_layer_name = name + "_seq2seq_encoder"
+        Parameters
+        ----------
+        name : str, optional (default="default")
+            The name of the encoder.  Multiple calls to ``_get_seq2seq_encoder`` using the same
+            name will return the same encoder.  To get parameters for creating the encoder, we look
+            in ``self.seq2seq_encoder_params``, which is specified by the ``seq2seq_encoder``
+            parameter in ``self.__init__``.  If ``name`` is not a key in
+            ``self.seq2seq_encoder_params``, the behavior is defined by the ``fallback_behavior``
+            parameter.
+        fallback_behavior : str, optional (default=None)
+            Determines what to do when ``name`` is not a key in ``self.seq2seq_encoder_params``.
+            If you pass ``None`` (the default), we will use
+            ``self.seq2seq_encoder_fallback_behavior``, specified by the
+            ``seq2seq_encoder_fallback_behavior`` parameter to ``self.__init__``.  There are three
+            options:
+
+            - ``"crash"``: raise an error.  This is the default for
+              ``self.seq2seq_encoder_fallback_behavior``.  The intention is to help you find bugs -
+              if you specify a particular encoder name in ``self._build_model`` without giving a
+              fallback behavior, you probably wanted to use a particular set of parameters, so we
+              crash if they are not provided.
+            - ``"use default params"``: In this case, we return a new encoder created with
+              ``self.seq2seq_encoder_params["default"]``.
+            - ``"use default encoder"``: In this case, we `reuse` the encoder created with
+              ``self.seq2seq_encoder_params["default"]``.  This effectively changes the ``name``
+              parameter to ``"default"`` when the given ``name`` is not in
+              ``self.seq2seq_encoder_params``.
+        """
+        if fallback_behavior is None:
+            fallback_behavior = self.seq2seq_encoder_fallback_behavior
+        if name in self.seq2seq_encoder_layers:
+            # If we've already created this encoder, we can just return it.
+            return self.seq2seq_encoder_layers[name]
+        if name not in self.seq2seq_encoder_params:
+            # If we haven't, we need to check that we _can_ create it, and decide _how_ to create
+            # it.
+            if fallback_behavior == "crash":
+                raise ConfigurationError("You asked for a named seq2seq encoder (" + name + "), "
+                                         "but did not provide parameters for that encoder")
+            elif fallback_behavior == "use default encoder":
+                name = "default"
+                params = deepcopy(self.seq2seq_encoder_params[name])
+            elif fallback_behavior == "use default params":
+                params = deepcopy(self.seq2seq_encoder_params["default"])
+            else:
+                raise ConfigurationError("Unrecognized fallback behavior: " + fallback_behavior)
+        else:
             params = deepcopy(self.seq2seq_encoder_params[name])
-            params["wrapper_params"]["input_shape"] = input_shape
-            self.seq2seq_encoder_layers[name] = self._get_new_seq2seq_encoder(params, encoder_layer_name)
+        if name not in self.seq2seq_encoder_layers:
+            # We need to check if we've already created this again, because in some cases we change
+            # the name in the logic above.
+            encoder_layer_name = name + "_encoder"
+            new_encoder = self._get_new_seq2seq_encoder(params, encoder_layer_name)
+            self.seq2seq_encoder_layers[name] = new_encoder
         return self.seq2seq_encoder_layers[name]
 
     def _get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
