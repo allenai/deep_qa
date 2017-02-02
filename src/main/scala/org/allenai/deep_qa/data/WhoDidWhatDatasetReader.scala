@@ -7,8 +7,8 @@ import scala.collection.mutable
 import scala.xml
 import scala.sys.process.Process
 
-class WhoDidWhatDatasetReader(fileUtil: FileUtil) extends DatasetReader[WhoDidWhatInstance] with LazyLogging {
-  override def readFile(filename: String): Dataset[WhoDidWhatInstance] = {
+class WhoDidWhatDatasetReader(fileUtil: FileUtil) extends DatasetReader[McQuestionAnswerInstance] with LazyLogging {
+  override def readFile(filename: String): Dataset[McQuestionAnswerInstance] = {
     // We replace non-breaking spaces (&nbsp;) in input files with regular spaces
     // and back up the original file at inputFile.bak
     logger.info(s"""Removing non-breaking spaces in ${filename}, backing up original input file at ${filename}.bak""")
@@ -40,7 +40,11 @@ class WhoDidWhatDatasetReader(fileUtil: FileUtil) extends DatasetReader[WhoDidWh
     } yield (passage, leftContext, rightContext, answerOptions, label)
 
     val instances = instanceTuples.map { case (passage, leftContext, rightContext, answerOptions, label) => {
-      WhoDidWhatInstance(passage, leftContext, rightContext, answerOptions, Some(label))
+      // To form the cloze-style question, [left_context] is concatenated with "XXX",
+      // and then with [right_context]. "XXX" is the blank to be filled with one
+      // of the answer options.
+      val question = s"${leftContext} XXX ${rightContext}".trim
+      McQuestionAnswerInstance(passage, question, answerOptions, Some(label))
     }}
     Dataset(instances)
   }

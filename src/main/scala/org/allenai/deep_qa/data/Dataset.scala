@@ -34,4 +34,5 @@ object DatasetReader {
   readers.put("squad", (fileUtil) => new SquadDatasetReader(fileUtil))
   readers.put("who did what", (fileUtil) => new WhoDidWhatDatasetReader(fileUtil))
   readers.put("newsqa", (fileUtil) => new NewsQaDatasetReader(fileUtil))
+  readers.put("johannes", (fileUtil) => new JohannesDatasetReader(fileUtil))
 }

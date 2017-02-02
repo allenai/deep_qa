@@ -76,7 +76,7 @@ class LuceneBackgroundCorpusSearcher(params: JValue) extends BackgroundCorpusSea
   val esUrl = JsonHelper.extractWithDefault(params, "elastic search index url", "aristo-es1.dev.ai2")
   val esPort = JsonHelper.extractWithDefault(params, "elastic search index port", 9300)
   val esClusterName = JsonHelper.extractWithDefault(params, "elastic search cluster name", "aristo-es")
-  val esIndexName = JsonHelper.extractWithDefault(params, "elastic search index name", "busc")
+  val esIndexName = JsonHelper.extractWithDefault(params, "elastic search index name", Seq("busc"))
 
   lazy val address = new InetSocketTransportAddress(new InetSocketAddress(esUrl, esPort))
   lazy val settings = Settings.builder().put("cluster.name", esClusterName).build()
@@ -100,7 +100,7 @@ class LuceneBackgroundCorpusSearcher(params: JValue) extends BackgroundCorpusSea
       case _ => throw new NotImplementedError(s"ERROR: Query type not supported.")
     }
     //Perform the search
-    val response = esClient.prepareSearch(esIndexName)
+    val response = esClient.prepareSearch(esIndexName.toSeq: _*)
         .setTypes("sentence")
         .setQuery(queryBuilder)
         .setFrom(0).setSize(numPassagesPerQuery * hitMultiplier).setExplain(true)

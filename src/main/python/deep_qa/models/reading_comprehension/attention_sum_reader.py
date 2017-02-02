@@ -2,7 +2,7 @@ from typing import Any, Dict
 from overrides import overrides
 from keras.layers import Input
 
-from ...data.instances.whodidwhat_instance import WhoDidWhatInstance
+from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
 from ...layers.attention.attention import Attention
 from ...layers.option_attention_sum import OptionAttentionSum
 from ...layers.l1_normalize import L1Normalize
@@ -110,7 +110,7 @@ class AttentionSumReader(TextTrainer):
         """
         Return the instance type that the model trains on.
         """
-        return WhoDidWhatInstance
+        return McQuestionAnswerInstance
 
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:

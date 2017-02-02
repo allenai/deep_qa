@@ -89,6 +89,15 @@ logical_form_instance
     :undoc-members:
     :show-inheritance:
 
+mc_question_answer_instance
+---------------------------
+
+.. automodule:: deep_qa.data.instances.mc_question_answer_instance
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 multiple_true_false_instance
 ----------------------------
 
@@ -147,15 +156,6 @@ tuple_instance
 --------------
 
 .. automodule:: deep_qa.data.instances.tuple_instance
-    :members:
-    :noindex:
-    :undoc-members:
-    :show-inheritance:
-
-whodidwhat_instance
--------------------
-
-.. automodule:: deep_qa.data.instances.whodidwhat_instance
     :members:
     :noindex:
     :undoc-members:
