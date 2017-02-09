@@ -367,7 +367,8 @@ class TextTrainer(Trainer):
             embedding_layer = PretrainedEmbeddings.get_embedding_layer(
                     self.pretrained_embeddings_file,
                     self.data_indexer,
-                    self.fine_tune_embeddings)
+                    self.fine_tune_embeddings,
+                    name=name)
         else:
             # TimeDistributedEmbedding works with inputs of any shape.
             embedding_layer = TimeDistributedEmbedding(

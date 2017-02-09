@@ -1,5 +1,7 @@
 # pylint: disable=invalid-name
 import codecs
+import gzip
+import shutil
 
 from deep_qa.models.memory_networks.memory_network import MemoryNetwork
 from deep_qa.models.multiple_choice_qa.multiple_true_false_similarity import MultipleTrueFalseSimilarity
@@ -10,6 +12,8 @@ from .constants import TRAIN_BACKGROUND
 from .constants import VALIDATION_FILE
 from .constants import VALIDATION_BACKGROUND
 from .constants import SNLI_FILE
+from .constants import PRETRAINED_VECTORS_FILE
+from .constants import PRETRAINED_VECTORS_GZIP
 
 
 def get_model(cls, additional_arguments=None):
@@ -155,6 +159,15 @@ def write_span_prediction_files():
         train_file.write('3\tquestion 3\tpassage3 with answer3\t9,13\n')
         train_file.write('4\tquestion 4\tpassage4 with answer4\t14,20\n')
 
+
+def write_pretrained_vector_files():
+    # write the file
+    with codecs.open(PRETRAINED_VECTORS_FILE, 'w', 'utf-8') as vector_file:
+        vector_file.write('word2 0.21 0.57 0.51 0.31\n')
+        vector_file.write('sentence1 0.81 0.48 0.19 0.47\n')
+    # compress the file
+    with open(PRETRAINED_VECTORS_FILE, 'rb') as f_in, gzip.open(PRETRAINED_VECTORS_GZIP, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
 
 def is_memory_network(cls):
     if issubclass(cls, MemoryNetwork):

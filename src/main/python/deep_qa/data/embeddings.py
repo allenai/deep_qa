@@ -22,7 +22,8 @@ class PretrainedEmbeddings:
     def get_embedding_layer(embeddings_filename: str,
                             data_indexer: DataIndexer,
                             trainable=False,
-                            log_misses=False):
+                            log_misses=False,
+                            name="pretrained_embedding"):
         """
         Reads a pre-trained embedding file and generates a Keras Embedding layer that has weights
         initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or
@@ -97,4 +98,4 @@ class PretrainedEmbeddings:
                                         mask_zero=True,
                                         weights=[embedding_matrix],
                                         trainable=trainable,
-                                        name="embedding")
+                                        name=name)
