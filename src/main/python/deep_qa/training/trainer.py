@@ -63,6 +63,9 @@ class Trainer:
         self.patience = params.pop('patience', 1)
         # Log directory for tensorboard.
         self.tensorboard_log = params.pop('tensorboard_log', None)
+        # Tensorboard histogram frequency: note that activating the tensorboard histgram (frequency > 0) can
+        # drastically increase model training time.  Please set frequency with consideration to desired runtime.
+        self.tensorboard_histogram_freq = params.pop('tensorboard_histogram_freq', 0)
 
         # The files containing the data that should be used for training.  See
         # _load_dataset_from_files().
@@ -315,7 +318,8 @@ class Trainer:
             if K.backend() == 'theano':
                 raise ConfigurationError("Tensorboard logging is only compatibile with Tensorflow. "
                                          "Change the backend using the KERAS_BACKEND environment variable.")
-            tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log)
+            tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log,
+                                                    histogram_freq=self.tensorboard_histogram_freq)
             callbacks.append(tensorboard_visualisation)
 
         if self.debug_params:
