@@ -19,6 +19,15 @@ Additive
     :undoc-members:
     :show-inheritance:
 
+BiGRUIndexSelector
+------------------
+
+.. automodule:: deep_qa.layers.bigru_index_selector
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 ComplexConcat
 -------------
 
@@ -86,6 +95,15 @@ OptionAttentionSum
 ------------------
 
 .. automodule:: deep_qa.layers.option_attention_sum
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
+Overlap
+-------
+
+.. automodule:: deep_qa.layers.overlap
     :members:
     :noindex:
     :undoc-members:

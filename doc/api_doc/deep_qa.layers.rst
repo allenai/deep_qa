@@ -24,6 +24,14 @@ deep_qa.layers.additive
     :undoc-members:
     :show-inheritance:
 
+deep_qa.layers.bigru_index_selector
+------------------------------------
+
+.. automodule:: deep_qa.layers.bigru_index_selector
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 deep_qa.layers.complex_concat
 -----------------------------
 
@@ -84,6 +92,14 @@ deep_qa.layers.option_attention_sum
 -----------------------------------
 
 .. automodule:: deep_qa.layers.option_attention_sum
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+deep_qa.layers.overlap
+----------------------
+
+.. automodule:: deep_qa.layers.overlap
     :members:
     :undoc-members:
     :show-inheritance:
