@@ -2,8 +2,6 @@ from keras import backend as K
 from keras.layers import Layer
 from overrides import overrides
 
-from ...tensors.backend import switch
-
 
 class WeightedSum(Layer):
     '''
@@ -63,7 +61,8 @@ class WeightedSum(Layer):
         if matrix_mask is not None:
             matrix_mask = K.expand_dims(matrix_mask, dim=-1)
             matrix_mask = self._expand_matrix_if_necessary(matrix_mask, attention_vector)
-            matrix = switch(matrix_mask, matrix, K.zeros_like(matrix))
+            # Doing a multiply here instead of a `switch` to avoid allocating another large tensor.
+            matrix = K.cast(matrix_mask, 'float32') * matrix
         return K.sum(K.expand_dims(attention_vector, dim=-1) * matrix, -2)
 
     @staticmethod

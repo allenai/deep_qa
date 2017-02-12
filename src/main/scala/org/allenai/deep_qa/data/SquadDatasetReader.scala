@@ -18,7 +18,7 @@ class SquadDatasetReader(fileUtil: FileUtil) extends DatasetReader[SpanPredictio
       JObject(question_jval) <- questions
       JField("question", JString(question)) <- question_jval
       JField("answers", JArray(answers)) <- question_jval
-    } yield (paragraph, question, answers)
+    } yield (paragraph.replace("\n", " "), question.replace("\n", ""), answers)
 
     val instances = instanceTuples.map { case (paragraph, question, answers) => {
       // There are several annotations for each of the questions in the dev set, and they don't

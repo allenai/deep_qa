@@ -50,6 +50,7 @@ class Trainer:
                                                          K.backend())
             logger.warning(warning_message)
 
+        self.batch_size = params.pop('batch_size', 32)
         # Upper limit on the number of training instances.  If this is set, and we get more than
         # this, we will truncate the data.
         self.max_training_instances = params.pop('max_training_instances', None)
@@ -281,7 +282,7 @@ class Trainer:
 
         # Now we actually train the model using various Keras callbacks to control training.
         callbacks = self._get_callbacks()
-        kwargs = {'nb_epoch': self.num_epochs, 'callbacks': [callbacks]}
+        kwargs = {'nb_epoch': self.num_epochs, 'callbacks': [callbacks], 'batch_size': self.batch_size}
         # We'll check for explicit validation data first; if you provided this, you definitely
         # wanted to use it for validation.  self.keras_validation_split is non-zero by default,
         # so you may have left it above zero on accident.

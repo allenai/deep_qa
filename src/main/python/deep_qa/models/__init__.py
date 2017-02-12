@@ -9,6 +9,7 @@ from .multiple_choice_qa.question_answer_memory_network import QuestionAnswerMem
 from .multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from .multiple_choice_qa.tuple_entailment import MultipleChoiceTupleEntailmentModel
 from .reading_comprehension.attention_sum_reader import AttentionSumReader
+from .reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
 from .text_classification.tree_lstm_model import TreeLSTMModel
 from .text_classification.true_false_model import TrueFalseModel
 
@@ -19,6 +20,7 @@ from .text_pretrainers.encoder_pretrainer import EncoderPretrainer
 
 concrete_models = {  # pylint: disable=invalid-name
         'AttentionSumReader': AttentionSumReader,
+        'BidirectionalAttentionFlow': BidirectionalAttentionFlow,
         'DecomposableAttention': DecomposableAttention,
         'DifferentiableSearchMemoryNetwork': DifferentiableSearchMemoryNetwork,
         'MemoryNetwork': MemoryNetwork,
