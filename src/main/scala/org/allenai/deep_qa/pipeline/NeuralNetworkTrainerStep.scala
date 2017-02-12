@@ -15,7 +15,7 @@ import scala.sys.process.ProcessLogger
  * This Step executes code in a subprocess to train a neural network using our DeepQA python
  * library.
  *
- * The basic command that we call is `python src/main/python/run_solver.py [param file]`.  We
+ * The basic command that we call is `python src/main/python/run_model.py [param file]`.  We
  * generate the param file given the parameters passed to this class.
  *
  * We don't use SubprocessStep here, even though we're calling a subprocess, because we need to run
@@ -63,14 +63,14 @@ class NeuralNetworkTrainerStep(
     ("model_serialization_prefix" -> modelPrefix) ~
     ("train_files" -> trainFiles)
   ) merge validationParams
-  val solverScript = "src/main/python/run_solver.py"
+  val modelScript = "src/main/python/run_model.py"
 
 
   override def _runStep() {
     logger.info("Writing model params to disk")
     fileUtil.writeContentsToFile(modelParamFile, pretty(render(modelParams)))
-    val command = s"""python ${solverScript} ${modelParamFile}"""
-    logger.info(s"Running the solver with command: $command")
+    val command = s"""python ${modelScript} ${modelParamFile}"""
+    logger.info(s"Running the model with command: $command")
     val process = Process(command)
     val exitCode = process.!(ProcessLogger(
       stdoutLine => {

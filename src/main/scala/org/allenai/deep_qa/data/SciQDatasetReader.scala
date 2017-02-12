@@ -7,7 +7,7 @@ import org.json4s._
 import org.json4s.Formats
 import org.json4s.native.JsonMethods.parse
 
-class JohannesDatasetReader(fileUtil: FileUtil) extends DatasetReader[McQuestionAnswerInstance] {
+class SciQDatasetReader(fileUtil: FileUtil) extends DatasetReader[McQuestionAnswerInstance] {
   override def readFile(filename: String): Dataset[McQuestionAnswerInstance] = {
     val json = parse(fileUtil.readFileContents(filename))
     val instanceTuples = for {

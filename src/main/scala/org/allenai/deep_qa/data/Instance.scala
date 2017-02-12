@@ -121,7 +121,7 @@ case class SpanPredictionInstance(
 
 /**
   * An Instance created for the task of multiple choice
-  * reading comprehension. Used by Johannes' dataset and
+  * reading comprehension. Used by the SciQ dataset and
   * the Who Did What dataset.
   */
 case class McQuestionAnswerInstance(

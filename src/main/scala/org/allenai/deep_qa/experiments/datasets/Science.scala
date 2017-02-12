@@ -26,6 +26,13 @@ object ScienceDatasets {
     ("output directory" -> outputDirectory)
   }
 
+  /////////////////////////////////////////////////////////////////////
+  // Omnibus Multiple True False
+  /////////////////////////////////////////////////////////////////////
+
+  /*
+   * Fourth grade with BUSC Background
+   */
   val omnibusMtfGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourTrainSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
@@ -37,6 +44,10 @@ object ScienceDatasets {
     "plain sentence",
     ScienceCorpora.buscElasticSearchIndex(10)
   )
+
+  /*
+   * Eighth grade with BUSC Background
+   */
 
   val omnibusMtfGradeEightTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeEightTrainSentences_multipleTrueFalse_appendAnswer,
@@ -50,6 +61,10 @@ object ScienceDatasets {
     ScienceCorpora.buscElasticSearchIndex(10)
   )
 
+  /*
+   * Fourth and Eighth grade with BUSC Background
+   */
+
   val omnibusMtfGradeFourAndEightTrainQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
     omnibusMtfGradeFourTrainQuestionsWithBuscBackground,
     omnibusMtfGradeEightTrainQuestionsWithBuscBackground
@@ -60,16 +75,54 @@ object ScienceDatasets {
     omnibusMtfGradeEightDevQuestionsWithBuscBackground
   ), "/efs/data/dlfa/processed/omnibus_4_8_dev/")
 
+  /////////////////////////////////////////////////////////////////////
+  // Diagram Multiple True False
+  /////////////////////////////////////////////////////////////////////
+
   val diagramMtfQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.ai2diagramSentences_multipleTrueFalse_appendAnswer,
     "plain sentence",
     ScienceCorpora.buscElasticSearchIndex(10)
   )
 
+  /////////////////////////////////////////////////////////////////////
+  // OpenQA Multiple True False
+  /////////////////////////////////////////////////////////////////////
+
   val openQaMtfQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.openQaAnimalAndGeneralScience_multipleTrueFalse_appendAnswer,
     "plain sentence",
     ScienceCorpora.buscElasticSearchIndex(10))
+
+  /////////////////////////////////////////////////////////////////////
+  // Omnibus QA
+  /////////////////////////////////////////////////////////////////////
+
+  /*
+   * Fourth Grade BUSC Background Files
+   */
+
+  val omnibusQaGradeFourTrainBuscBackgroundFile: JValue = SciQDatasets.makePassageBackgroundFile(
+    ScienceFiles.omnibusGradeFourTrainSentences_questionAndAnswer,
+    "question and answer",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val omnibusQaGradeFourDevBuscBackgroundFile: JValue = SciQDatasets.makePassageBackgroundFile(
+    ScienceFiles.omnibusGradeFourDevSentences_questionAndAnswer,
+    "question and answer",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val omnibusQaGradeFourTestBuscBackgroundFile: JValue = SciQDatasets.makePassageBackgroundFile(
+    ScienceFiles.omnibusGradeFourTestSentences_questionAndAnswer,
+    "question and answer",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  /*
+   * Fourth Grade Questions with BUSC Background (no multiple choice options)
+   */
 
   val omnibusQaGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeFourTrainSentences_questionAndAnswer,
@@ -83,6 +136,69 @@ object ScienceDatasets {
     ScienceCorpora.buscElasticSearchIndex(3)
   )
 
+  /*
+   * Fourth Grade Questions in RC Format (BUSC-fetched passage,
+   * question, answer options)
+   */
+
+  val omnibusRcGradeFourTrainQuestionsWithBuscBackground: JValue =
+    ("sentence producer type" -> "qa and background to rc") ~
+      ("sentences" -> ScienceFiles.omnibusGradeFourTrainSentences_questionAndAnswer) ~
+      ("background" -> omnibusQaGradeFourTrainBuscBackgroundFile)
+
+  val omnibusRcGradeFourDevQuestionsWithBuscBackground: JValue =
+    ("sentence producer type" -> "qa and background to rc") ~
+      ("sentences" -> ScienceFiles.omnibusGradeFourDevSentences_questionAndAnswer) ~
+      ("background" -> omnibusQaGradeFourDevBuscBackgroundFile)
+
+  val omnibusRcGradeFourTestQuestionsWithBuscBackground: JValue =
+    ("sentence producer type" -> "qa and background to rc") ~
+      ("sentences" -> ScienceFiles.omnibusGradeFourTestSentences_questionAndAnswer) ~
+      ("background" -> omnibusQaGradeFourTestBuscBackgroundFile)
+
+  /*
+   * Turn Omnibus-4 reading comprehension train, test, and dev files
+   * with BUSC background to datasets.
+   */
+
+  val omnibusFourTrainReadingComprehensionDataset: JValue =
+    ("dataset type" -> "from sentence producers") ~
+      ("data files" -> Seq(omnibusRcGradeFourTrainQuestionsWithBuscBackground))
+
+  val omnibusFourDevReadingComprehensionDataset: JValue =
+    ("dataset type" -> "from sentence producers") ~
+      ("data files" -> Seq(omnibusRcGradeFourDevQuestionsWithBuscBackground))
+
+  val omnibusFourTestReadingComprehensionDataset: JValue =
+    ("dataset type" -> "from sentence producers") ~
+      ("data files" -> Seq(omnibusRcGradeFourTestQuestionsWithBuscBackground))
+
+  /*
+   * Eighth Grade BUSC Background Files
+   */
+
+  val omnibusQaGradeEightTrainBuscBackgroundFile: JValue = SciQDatasets.makePassageBackgroundFile(
+    ScienceFiles.omnibusGradeEightTrainSentences_questionAndAnswer,
+    "question and answer",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val omnibusQaGradeEightDevBuscBackgroundFile: JValue = SciQDatasets.makePassageBackgroundFile(
+    ScienceFiles.omnibusGradeEightDevSentences_questionAndAnswer,
+    "question and answer",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val omnibusQaGradeEightTestBuscBackgroundFile: JValue = SciQDatasets.makePassageBackgroundFile(
+    ScienceFiles.omnibusGradeEightTestSentences_questionAndAnswer,
+    "question and answer",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  /*
+   * Eighth Grade Questions with BUSC Background (no multiple choice options)
+   */
+
   val omnibusQaGradeEightTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.omnibusGradeEightTrainSentences_questionAndAnswer,
     "question and answer",
@@ -95,11 +211,56 @@ object ScienceDatasets {
     ScienceCorpora.buscElasticSearchIndex(3)
   )
 
+  /*
+   * Eighth Grade Questions in RC Format (BUSC-fetched passage,
+   * question, answer options)
+   */
+
+  val omnibusRcGradeEightTrainQuestionsWithBuscBackground: JValue =
+    ("sentence producer type" -> "qa and background to rc") ~
+      ("sentences" -> ScienceFiles.omnibusGradeEightTrainSentences_questionAndAnswer) ~
+      ("background" -> omnibusQaGradeEightTrainBuscBackgroundFile)
+
+  val omnibusRcGradeEightDevQuestionsWithBuscBackground: JValue =
+    ("sentence producer type" -> "qa and background to rc") ~
+      ("sentences" -> ScienceFiles.omnibusGradeEightDevSentences_questionAndAnswer) ~
+      ("background" -> omnibusQaGradeEightDevBuscBackgroundFile)
+
+  val omnibusRcGradeEightTestQuestionsWithBuscBackground: JValue =
+    ("sentence producer type" -> "qa and background to rc") ~
+      ("sentences" -> ScienceFiles.omnibusGradeEightTestSentences_questionAndAnswer) ~
+      ("background" -> omnibusQaGradeEightTestBuscBackgroundFile)
+
+  /*
+   * Turn Omnibus-8 reading comprehension train, test, and dev files
+   * with BUSC background to datasets.
+   */
+
+  val omnibusEightTrainReadingComprehensionDataset: JValue =
+    ("dataset type" -> "from sentence producers") ~
+      ("data files" -> Seq(omnibusRcGradeEightTrainQuestionsWithBuscBackground))
+
+  val omnibusEightDevReadingComprehensionDataset: JValue =
+    ("dataset type" -> "from sentence producers") ~
+      ("data files" -> Seq(omnibusRcGradeEightDevQuestionsWithBuscBackground))
+
+  val omnibusEightTestReadingComprehensionDataset: JValue =
+    ("dataset type" -> "from sentence producers") ~
+      ("data files" -> Seq(omnibusRcGradeEightTestQuestionsWithBuscBackground))
+
+  /////////////////////////////////////////////////////////////////////
+  // Diagram QA
+  /////////////////////////////////////////////////////////////////////
+
   val diagramQaQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
     ScienceFiles.ai2diagramSentences_questionAndAnswer,
     "question and answer",
     ScienceCorpora.buscElasticSearchIndex(3)
   )
+
+  /////////////////////////////////////////////////////////////////////
+  // Table MC Questions
+  /////////////////////////////////////////////////////////////////////
 
   val tableMcqTrain: JValue =
     ("sentence producer type" -> "manually provided") ~
@@ -135,18 +296,18 @@ object ScienceDatasets {
 object ScienceFiles {
   def makeMultipleTrueFalseQuestionAnswerFile(questionFile: String, outputFile: String): JValue = {
     ("sentence producer type" -> "question interpreter") ~
-    ("create sentence indices" -> true) ~
-    ("question file" -> questionFile) ~
-    ("output file" -> outputFile) ~
-    ("interpreter" -> ("type" -> "append answer"))
+      ("create sentence indices" -> true) ~
+      ("question file" -> questionFile) ~
+      ("output file" -> outputFile) ~
+      ("interpreter" -> ("type" -> "append answer"))
   }
 
   def makeQuestionAnswerFile(questionFile: String, outputFile: String): JValue = {
     ("sentence producer type" -> "question interpreter") ~
-    ("create sentence indices" -> true) ~
-    ("question file" -> questionFile) ~
-    ("output file" -> outputFile) ~
-    ("interpreter" -> ("type" -> "question and answer"))
+      ("create sentence indices" -> true) ~
+      ("question file" -> questionFile) ~
+      ("output file" -> outputFile) ~
+      ("interpreter" -> ("type" -> "question and answer"))
   }
 
   val omnibusGradeFourTrainSentences_multipleTrueFalse_appendAnswer: JValue =
@@ -191,6 +352,12 @@ object ScienceFiles {
       "/efs/data/dlfa/processed/omnibus_4_dev/question_and_answer/questions.tsv"
     )
 
+  val omnibusGradeFourTestSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/omnibus_4_test.tsv",
+      "/efs/data/dlfa/processed/omnibus_4_test/question_and_answer/questions.tsv"
+    )
+
   val omnibusGradeEightTrainSentences_questionAndAnswer: JValue =
     makeQuestionAnswerFile(
       "/efs/data/dlfa/questions/omnibus_8_train.tsv",
@@ -202,6 +369,13 @@ object ScienceFiles {
       "/efs/data/dlfa/questions/omnibus_8_dev.tsv",
       "/efs/data/dlfa/processed/omnibus_8_dev/question_and_answer/questions.tsv"
     )
+
+  val omnibusGradeEightTestSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/omnibus_8_test.tsv",
+      "/efs/data/dlfa/processed/omnibus_8_test/question_and_answer/questions.tsv"
+    )
+
 
   val ai2diagramSentences_questionAndAnswer: JValue =
     makeQuestionAnswerFile(
@@ -224,23 +398,23 @@ object ScienceFiles {
 object ScienceCorpora {
   def buscElasticSearchIndex(numResults: Int): JValue =
     ("num passages per query" -> numResults) ~
-    ("elastic search index url" -> "aristo-es1.dev.ai2") ~
-    ("elastic search index port" -> 9300) ~
-    ("elastic search cluster name" -> "aristo-es") ~
-    ("elastic search index name" -> Seq("busc"))
+      ("elastic search index url" -> "aristo-es1.dev.ai2") ~
+      ("elastic search index port" -> 9300) ~
+      ("elastic search cluster name" -> "aristo-es") ~
+      ("elastic search index name" -> Seq("busc"))
 
   def aristoDefaultElasticSearchIndex(numResults: Int): JValue =
     ("num passages per query" -> numResults) ~
-    ("elastic search index url" -> "aristo-es1.dev.ai2") ~
-    ("elastic search index port" -> 9300) ~
-    ("elastic search cluster name" -> "aristo-es") ~
-    ("elastic search index name" -> Seq(
-      "barrons",
-      "websentences",
-      "ck12biov44",
-      "waterloo",
-      "wikipedia",
-      "simplewikipedia")
+      ("elastic search index url" -> "aristo-es1.dev.ai2") ~
+      ("elastic search index port" -> 9300) ~
+      ("elastic search cluster name" -> "aristo-es") ~
+      ("elastic search index name" -> Seq(
+        "barrons",
+        "websentences",
+        "ck12biov44",
+        "waterloo",
+        "wikipedia",
+        "simplewikipedia")
   )
 }
 

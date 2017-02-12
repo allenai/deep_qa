@@ -10,7 +10,7 @@ import os
 import re
 
 from argparse import ArgumentParser
-import pandas as pd
+import pandas
 from tqdm import tqdm
 from scipy.stats import mode
 
@@ -44,7 +44,7 @@ def isfloat(value):
 def clean_newsqa_csv(newsqa_file_path):
     logger.info("cleaning up %s", newsqa_file_path)
     # open the file as a csv
-    dataframe = pd.read_csv(newsqa_file_path, encoding='utf-8')
+    dataframe = pandas.read_csv(newsqa_file_path, encoding='utf-8')
     dirty_rows = dataframe.values.tolist()
     clean_rows = []
     clean_headers = ["question_text", "label", "answer_string", "passage"]
@@ -58,7 +58,7 @@ def clean_newsqa_csv(newsqa_file_path):
         raw_passage_text = row[6]
 
         # figure out the label span (answer_span)
-        if validated_answers and not pd.isnull(validated_answers):
+        if validated_answers and not pandas.isnull(validated_answers):
             # pick the validated answer with the most votes
             # in case of tie, pick the longest one
             validated_answers_dict = json.loads(validated_answers)
@@ -104,7 +104,7 @@ def clean_newsqa_csv(newsqa_file_path):
         clean_row.append(processed_passage_text)
         clean_rows.append(clean_row)
     # turn the list of rows into a dataframe, and write to CSV
-    dataframe = pd.DataFrame(clean_rows, columns=clean_headers)
+    dataframe = pandas.DataFrame(clean_rows, columns=clean_headers)
     folder, filename = os.path.split(newsqa_file_path)
     outdirectory = folder + "/cleaned/"
     os.makedirs(outdirectory, exist_ok=True)

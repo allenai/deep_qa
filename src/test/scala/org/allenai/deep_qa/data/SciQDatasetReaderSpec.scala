@@ -3,7 +3,7 @@ package org.allenai.deep_qa.data
 import com.mattg.util.FileUtil
 import org.scalatest._
 
-class JohannesDatasetReaderSpec extends FlatSpecLike with Matchers {
+class SciQDatasetReaderSpec extends FlatSpecLike with Matchers {
 
   val fileUtil = new FileUtil
   val support1 = "Mesophiles grow best in moderate temperature, typically between 25\u00b0C and " +
@@ -41,7 +41,7 @@ class JohannesDatasetReaderSpec extends FlatSpecLike with Matchers {
       |]""".stripMargin
   fileUtil.mkdirsForFile(datasetFile)
   fileUtil.writeContentsToFile(datasetFile, datasetFileContents)
-  val reader = new JohannesDatasetReader(fileUtil)
+  val reader = new SciQDatasetReader(fileUtil)
   // Note that the label is the index of the correct answer in the sorted sequence of options.
   val options1 = Seq("gymnosperms", "mesophilic organisms", "protozoa", "viruses")
   val options2 = Seq("centrifugal effect", "coriolis effect", "muon effect", "tropical effect")

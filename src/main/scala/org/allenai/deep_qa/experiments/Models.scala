@@ -8,16 +8,16 @@ import org.json4s.JsonDSL._
  */
 object Models {
   val multipleTrueFalseMemoryNetwork: JValue =
-    ("solver_class" -> "MultipleTrueFalseMemoryNetworkSolver")
+    ("model_class" -> "MultipleTrueFalseMemoryNetwork")
 
   val softmaxMemoryNetwork: JValue =
-    ("solver_class" -> "SoftmaxMemoryNetworkSolver")
+    ("model_class" -> "SoftmaxMemoryNetwork")
 
-  val quesitonAnswerMemoryNetwork: JValue =
-    ("solver_class" -> "QuestionAnswerMemoryNetworkSolver")
+  val questionAnswerMemoryNetwork: JValue =
+    ("model_class" -> "QuestionAnswerMemoryNetwork")
 
   val trueFalseMemoryNetwork: JValue =
-    ("solver_class" -> "MemoryNetworkSolver")
+    ("model_class" -> "MemoryNetwork")
 
   val basicMemoryNetworkComponents: JValue =
     ("knowledge_selector" -> ("type" -> "dot_product")) ~
@@ -32,9 +32,10 @@ object Models {
     ("num_memory_layers" -> 1)
 
   val decomposableAttentionSolver: JValue =
-    ("solver_class" -> "DecomposableAttentionSolver")
+    ("model_class" -> "DecomposableAttention")
+
   val multipleTrueFalseDecomposableAttentionSolver: JValue =
-    ("solver_class" -> "MultipleTrueFalseDecomposableAttentionSolver")
+    ("model_class" -> "MultipleTrueFalseDecomposableAttention")
 
   def endToEndMemoryNetwork(encoder: String, numMemoryLayers: Int): JValue =
     softmaxMemoryNetwork merge
@@ -44,6 +45,95 @@ object Models {
     ("encoder" -> ("type" -> encoder)) ~
     ("num_memory_layers" -> numMemoryLayers)
 
+  val attentionSumReader: JValue =
+    ("model_class" -> "AttentionSumReader") ~
+    ("patience" -> 1) ~
+    ("preferred_backend" -> "theano") ~
+    ("encoder" ->
+      ("default" ->
+        ("type" -> "bi_gru")~
+        ("output_dim" -> 384)
+      )
+    ) ~
+    ("seq2seq_encoder" ->
+      ("default" ->
+        ("type" -> "bi_gru") ~
+        ("encoder_params" ->
+          ("output_dim" -> 384)
+        ) ~
+        ("wrapper_params" -> JObject())
+      )
+    ) ~
+    ("optimizer" ->
+      ("type" -> "adam") ~
+      ("clipnorm" -> 10.0) ~
+      ("lr" -> 0.0005)
+    ) ~
+    ("embedding_dropout" -> 0.0) ~
+    ("patience" -> 0) ~
+    ("embedding_size" -> 256) ~
+    ("num_epochs" -> 5)
+
+  val gatedAttentionReader: JValue =
+    ("model_class" -> "GatedAttentionReader") ~
+    ("embedding_size" -> 100) ~
+    ("pretrained_embeddings_file" -> "/efs/data/dlfa/glove/glove.6B.100d.txt.gz") ~
+    ("fine_tune_embeddings" -> false) ~
+    ("project_embeddings" -> false) ~
+    ("num_gated_attention_layers" -> 3) ~
+    ("patience" -> 0) ~
+    ("preferred_backend" -> "theano") ~
+    ("encoder" ->
+      ("question_final" ->
+        ("type" -> "bi_gru")~
+        ("output_dim" -> 128)
+      )
+    ) ~
+    ("seq2seq_encoder" ->
+      ("question_0" ->
+        ("type" -> "bi_gru") ~
+        ("encoder_params" ->
+          ("output_dim" -> 128)
+        ) ~
+        ("wrapper_params" -> JObject())
+      ) ~
+      ("document_0" ->
+        ("type" -> "bi_gru") ~
+        ("encoder_params" ->
+          ("output_dim" -> 128)
+        ) ~
+        ("wrapper_params" -> JObject())
+      ) ~
+      ("question_1" ->
+        ("type" -> "bi_gru") ~
+        ("encoder_params" ->
+          ("output_dim" -> 128)
+        ) ~
+        ("wrapper_params" -> JObject())
+      ) ~
+      ("document_1" ->
+        ("type" -> "bi_gru") ~
+        ("encoder_params" ->
+          ("output_dim" -> 128)
+        ) ~
+        ("wrapper_params" -> JObject())
+      ) ~
+      ("document_final" ->
+        ("type" -> "bi_gru") ~
+        ("encoder_params" ->
+          ("output_dim" -> 128)
+        ) ~
+        ("wrapper_params" -> JObject())
+      )
+    ) ~
+    ("optimizer" ->
+      ("type" -> "adam") ~
+      ("clipnorm" -> 10.0) ~
+      ("lr" -> 0.0005)
+    ) ~
+    ("embedding_dropout" -> 0.0) ~
+    ("patience" -> 0) ~
+    ("num_epochs" -> 5)
 }
 
 object Debug {

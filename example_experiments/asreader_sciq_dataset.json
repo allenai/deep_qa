@@ -1,6 +1,6 @@
 {
     "model_class": "AttentionSumReader",
-    "model_serialization_prefix": "models/multiple_choice_qa/asreader_johannes",
+    "model_serialization_prefix": "models/multiple_choice_qa/asreader_sciq",
     "preferred_backend": "theano",
     "encoder": {
         "default": {
@@ -24,6 +24,6 @@
     "patience": 1,
     "embedding_size": 256,
     "num_epochs": 5,
-    "validation_files": ["/efs/data/dlfa/turk_johannes_questions/processed/dev_no_passage_with_background_as_passages.tsv"],
-    "train_files": ["/efs/data/dlfa/turk_johannes_questions/processed/train_no_passage_with_background_as_passages.tsv"]
+    "validation_files": ["/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
+    "train_files": ["/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]
 }
