@@ -268,3 +268,18 @@ class GatedAttentionReader(TextTrainer):
         lrate = LearningRateScheduler(_half_lr)
         callbacks.append(lrate)
         return callbacks
+
+    @classmethod
+    def _get_custom_objects(cls):
+        custom_objects = super(GatedAttentionReader, cls)._get_custom_objects()
+        custom_objects["Attention"] = Attention
+        custom_objects["BatchDot"] = BatchDot
+        custom_objects["BiGRUIndexSelector"] = BiGRUIndexSelector
+        custom_objects["GatedAttention"] = GatedAttention
+        custom_objects["L1Normalize"] = L1Normalize
+        custom_objects["MaskedSoftmax"] = MaskedSoftmax
+        custom_objects["OptionAttentionSum"] = OptionAttentionSum
+        custom_objects["Overlap"] = Overlap
+        custom_objects["VectorMatrixSplit"] = VectorMatrixSplit
+
+        return custom_objects

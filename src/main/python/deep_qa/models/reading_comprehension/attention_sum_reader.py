@@ -143,3 +143,11 @@ class AttentionSumReader(TextTrainer):
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[1]
         # TODO(matt): implement this correctly
+
+    @classmethod
+    def _get_custom_objects(cls):
+        custom_objects = super(AttentionSumReader, cls)._get_custom_objects()
+        custom_objects["Attention"] = Attention
+        custom_objects["L1Normalize"] = L1Normalize
+        custom_objects["OptionAttentionSum"] = OptionAttentionSum
+        return custom_objects

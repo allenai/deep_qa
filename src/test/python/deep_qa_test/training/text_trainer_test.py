@@ -5,7 +5,7 @@ import os
 import shutil
 
 import numpy
-
+from numpy.testing import assert_allclose
 from deep_qa.models.text_classification.true_false_model import TrueFalseModel
 from deep_qa.models.multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from ..common.constants import TEST_DIR
@@ -117,6 +117,26 @@ class TestTextTrainer(TestCase):
             assert numpy.all(word_masks[3, 2, :] == numpy.asarray([0, 0]))
         _output_debug_info.side_effect = new_debug
         model.train()
+
+    def test_load_model(self):
+        # train a model and serialize it.
+        args = {
+                'embedding_size': 4,
+                'save_models': True,
+                'tokenizer': {'type': 'words and characters'},
+                'show_summary_with_masking_info': True,
+        }
+        write_true_false_model_files()
+        model = get_model(TrueFalseModel, args)
+        model.train()
+
+        # load the model that we serialized
+        loaded_model = get_model(TrueFalseModel, args)
+        loaded_model.load_model()
+
+        # verify that original model and the loaded model predict the same outputs
+        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
+                        loaded_model.model.predict(model.__dict__["validation_input"]))
 
     @requires_tensorflow
     def test_tensorboard_logs_does_not_crash(self):

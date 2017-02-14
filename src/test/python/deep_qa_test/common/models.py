@@ -138,17 +138,17 @@ def write_question_answer_memory_network_files():
         train_background.write('3\tsb4\n')
         train_background.write('4\tsb5\tsb6\n')
 
-
 def write_who_did_what_files():
     with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:
-        train_file.write('1\tpassage1\tquestion1\tanswer1###answer2\t0\n')
+        train_file.write('1\tHe went to the store to buy goods.\tHe bought xxxxx\tgoods###store\t0\n')
+        train_file.write('1\tShe hiking on the weekend with her friend.'
+                         '\tShe went xxxxx\thiking###friend###weekend\t0\n')
     with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
         # document, question, answers
-        train_file.write('1\te q e q ka q o\ta b XXX e i d\tanswer1 word2###answer2\t0\n')
-        train_file.write('2\tm a os e z p\ta b XXX c d\tanswer3###answer4\t1\n')
-        train_file.write('3\tx e q m\te d w f d XXX s a\tanswer5###answer6###answer9\t2\n')
-        train_file.write('4\tj aq ei q l\te fj XXX k w q\tanswer7###answer8\t0\n')
-
+        train_file.write('1\tFred hit the ball with the bat.\tHe hit the ball with the xxxxx\tbat###ball\t0\n')
+        train_file.write('1\tShe walked the dog today.\tThe xxxxx was walked today.\tShe###dog###today\t1\n')
+        train_file.write('1\tHe kept typing at his desk.\tHe typed at  his xxxxx\tdesk###kept\t0\n')
+        train_file.write('1\tThe pup at the bone but not the biscuit.\tThe pup ate the xxxxx\tbone###biscuit\t0\n')
 
 def write_span_prediction_files():
     with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:

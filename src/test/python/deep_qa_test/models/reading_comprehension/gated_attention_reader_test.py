@@ -2,6 +2,7 @@
 from unittest import TestCase
 import os
 import shutil
+from numpy.testing import assert_allclose
 
 from deep_qa.models.reading_comprehension.gated_attention_reader import GatedAttentionReader
 from ...common.constants import TEST_DIR
@@ -18,8 +19,9 @@ class TestGatedAttention(TestCase):
 
     def test_cloze_train_does_not_crash(self):
         args = {
+                'save_models': True,
                 "qd_common_feature": True,
-                "cloze_token": "XXX",
+                "cloze_token": "xxxxx",
                 "num_gated_attention_layers": 1,
                 "tokenizer": {
                         "type": "words and characters"
@@ -50,11 +52,20 @@ class TestGatedAttention(TestCase):
                 },
                 "embedding_size": 4,
         }
-        solver = get_model(GatedAttentionReader, args)
-        solver.train()
+        model = get_model(GatedAttentionReader, args)
+        model.train()
+
+        # load the model that we serialized
+        loaded_model = get_model(GatedAttentionReader, args)
+        loaded_model.load_model()
+
+        # verify that original model and the loaded model predict the same outputs
+        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
+                        loaded_model.model.predict(model.__dict__["validation_input"]))
 
     def test_non_cloze_train_does_not_crash(self):
         args = {
+                'save_models': True,
                 "qd_common_feature": True,
                 "num_gated_attention_layers": 1,
                 "tokenizer": {
@@ -82,5 +93,12 @@ class TestGatedAttention(TestCase):
                 },
                 "embedding_size": 4,
         }
-        solver = get_model(GatedAttentionReader, args)
-        solver.train()
+        model = get_model(GatedAttentionReader, args)
+        model.train()
+        # load the model that we serialized
+        loaded_model = get_model(GatedAttentionReader, args)
+        loaded_model.load_model()
+
+        # verify that original model and the loaded model predict the same outputs
+        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
+                        loaded_model.model.predict(model.__dict__["validation_input"]))

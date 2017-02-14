@@ -579,4 +579,13 @@ class TextTrainer(Trainer):
         for value in encoders.values():
             if value.__name__ not in ['LSTM']:
                 custom_objects[value.__name__] = value
+        custom_objects["TimeDistributedEmbedding"] = TimeDistributedEmbedding
+
+        # These are used in the words_and_characters tokenizer.
+        # TODO(nelson/matt): We might consider making the Tokenizer API
+        # return custom objects.
+        from ..layers.wrappers import FixedTimeDistributed
+        custom_objects["FixedTimeDistributed"] = FixedTimeDistributed
+        from ..layers.vector_matrix_split import VectorMatrixSplit
+        custom_objects["VectorMatrixSplit"] = VectorMatrixSplit
         return custom_objects

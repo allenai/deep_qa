@@ -135,3 +135,8 @@ class OptionAttentionSum(Layer):
         # Now we divide the sums by the divisor we generated above.
         option_probabilities = sum_option_words_probabilities / divisor
         return option_probabilities
+
+    def get_config(self):
+        config = {'multiword_option_mode': self.multiword_option_mode}
+        base_config = super(OptionAttentionSum, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))

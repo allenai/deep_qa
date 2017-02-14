@@ -57,3 +57,8 @@ class BiGRUIndexSelector(Layer):
         selected_gru_b = K.sum(masked_gru_b, axis=1)
         selected_bigru = K.concatenate([selected_gru_f, selected_gru_b], axis=-1)
         return selected_bigru
+
+    def get_config(self):
+        config = {'target_index': self.target_index}
+        base_config = super(BiGRUIndexSelector, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
