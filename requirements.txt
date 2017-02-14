@@ -4,8 +4,8 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-# We need at least keras 1.2.0 due to the use of `keras.backend.int_shape()`
-keras>=1.2.1
+# We need at least keras 1.2.2 due to bugfixes in `keras.backend.batch_dot()`
+keras>=1.2.2
 h5py
 scikit-learn
 theano
