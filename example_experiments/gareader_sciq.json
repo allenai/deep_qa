@@ -1,0 +1,70 @@
+{
+    "embedding_size": 200,
+    "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+    "fine_tune_embeddings": False,
+    "project_embeddings": False,
+    "model_class": "GatedAttentionReader",
+    "model_serialization_prefix": "models/multiple_choice_qa/gareader_sciq",
+    "max_word_length": 10,
+    "num_gated_attention_layers": 3,
+    "preferred_backend": "theano",
+    "tokenizer": {
+        "type": "words and characters"
+    },
+    "encoder": {
+        "word": {
+            "type": "bi_gru",
+            "output_dim": 25,
+        },
+        "question_final":{
+            "type": "bi_gru",
+            "output_dim": 128
+        }
+    },
+    "seq2seq_encoder": {
+        "question_0": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "output_dim": 128
+            },
+            "wrapper_params": {}
+        },
+        "document_0": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "output_dim": 128
+            },
+            "wrapper_params": {}
+        },
+        "question_1": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "output_dim": 128
+            },
+            "wrapper_params": {}
+        },
+        "document_1": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "output_dim": 128
+            },
+            "wrapper_params": {}
+        },
+        "document_final": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "output_dim": 128
+            },
+            "wrapper_params": {}
+        }
+    },
+    "optimizer": {"type": "adam",
+                  "clipnorm": 10.0,
+                  "lr": 0.0005
+                 },
+    "embedding_dropout": 0.0,
+    "patience": 0,
+    "num_epochs": 10,
+    "validation_files": ["/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
+    "train_files": ["/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]
+}

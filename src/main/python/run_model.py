@@ -14,7 +14,7 @@ numpy.random.seed(1337)  # pylint: disable=no-member
 # Unless I find a better way to do this, we'll use ConfigFactory to read in a parameter file.
 # ConfigFactory.parse_file() returns a ConfigTree, which is a subclass of OrderedDict, so the
 # return value actually matches the type our code expects, anyway.
-from pyhocon import ConfigFactory
+import pyhocon
 
 from deep_qa.common.checks import ensure_pythonhashseed_set, log_keras_version_info
 from deep_qa.common.params import get_choice
@@ -29,8 +29,8 @@ def main():
 
     log_keras_version_info()
     param_file = sys.argv[1]
-    params = ConfigFactory.parse_file(param_file)
-
+    params = pyhocon.ConfigFactory.parse_file(param_file)
+    params = replace_none(params)
     model_type = get_choice(params, 'model_class', concrete_models.keys())
     model_class = concrete_models[model_type]
     model = model_class(params)
@@ -43,6 +43,14 @@ def main():
         # TODO(matt): figure out a way to specify which epoch you want to load a model from.
         model.load_model()
 
+
+def replace_none(dictionary):
+    for key in dictionary.keys():
+        if dictionary[key] == "None":
+            dictionary[key] = None
+        elif isinstance(dictionary[key], pyhocon.config_tree.ConfigTree):
+            dictionary[key] = replace_none(dictionary[key])
+    return dictionary
 
 if __name__ == "__main__":
     ensure_pythonhashseed_set()

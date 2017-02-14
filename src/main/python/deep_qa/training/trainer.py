@@ -328,6 +328,7 @@ class Trainer:
                                             self._debug(self.debug_params["layer_names"],
                                                         self.debug_params.get("masks", []), epoch))
             callbacks.append(debug_callback)
+            return CallbackList(callbacks)
 
         # Some witchcraft is happening here - we don't specify the epoch replacement variable
         # checkpointing string, because Keras does that within the callback if we specify it here.

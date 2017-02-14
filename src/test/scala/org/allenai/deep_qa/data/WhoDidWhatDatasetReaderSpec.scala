@@ -9,7 +9,7 @@ class WhoDidWhatDatasetReaderSpec extends FlatSpecLike with Matchers {
   val rightContext1 = "walked through the general managers meetings in Dana Point , Calif. , " +
     "last week as proud as a peacock ."
   val leftContext1 = ""
-  val question1 = s"XXX walked through the general managers meetings in Dana Point , Calif. , " +
+  val question1 = s"xxxxx walked through the general managers meetings in Dana Point , Calif. , " +
     "last week as proud as a peacock ."
   val passage1 = "Joe Maddon has won the American League Manager of the Year after guiding the " +
     "Tampa Bay Rays from baseball's basement to the World Series. Lou Piniella of the Chicago " +
@@ -26,7 +26,7 @@ class WhoDidWhatDatasetReaderSpec extends FlatSpecLike with Matchers {
     "limits on stem cell research and the expansion of oil and gas drilling , among other " +
     "issues , members of the team said Sunday ."
   val question2 = "President-elect Barack Obama is poised to move swiftly to reverse " +
-    "actions that XXX took using executive authority , and his transition team is reviewing " +
+    "actions that xxxxx took using executive authority , and his transition team is reviewing " +
     "limits on stem cell research and the expansion of oil and gas drilling , among other " +
     "issues , members of the team said Sunday ."
   val passage2 = "US president-elect Barack Obama is reviewing President George W. Bush's " +

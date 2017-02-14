@@ -40,10 +40,10 @@ class WhoDidWhatDatasetReader(fileUtil: FileUtil) extends DatasetReader[McQuesti
     } yield (passage, leftContext, rightContext, answerOptions, label)
 
     val instances = instanceTuples.map { case (passage, leftContext, rightContext, answerOptions, label) => {
-      // To form the cloze-style question, [left_context] is concatenated with "XXX",
-      // and then with [right_context]. "XXX" is the blank to be filled with one
+      // To form the cloze-style question, [left_context] is concatenated with "xxxxx",
+      // and then with [right_context]. "xxxxx" is the blank to be filled with one
       // of the answer options.
-      val question = s"${leftContext} XXX ${rightContext}".trim
+      val question = s"${leftContext} xxxxx ${rightContext}".trim
       McQuestionAnswerInstance(passage, question, answerOptions, Some(label))
     }}
     Dataset(instances)
