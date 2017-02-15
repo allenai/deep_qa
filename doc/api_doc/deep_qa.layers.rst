@@ -88,6 +88,14 @@ deep_qa.layers.memory_updaters
     :undoc-members:
     :show-inheritance:
 
+deep_qa.layers.noisy_or
+-----------------------------------
+
+.. automodule:: deep_qa.layers.noisy_or
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 deep_qa.layers.option_attention_sum
 -----------------------------------
 

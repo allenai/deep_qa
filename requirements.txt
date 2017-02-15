@@ -18,7 +18,7 @@ theano
 # https://developer.nvidia.com/cudnn
 # Note that if you want to use the GPU version, you have to `pip uninstall tensorflow`
 # and `pip install tensorflow-gpu`, since both cannot coexist. 
-tensorflow
+tensorflow==0.12.1
 
 # These are for running this as an Aristo solver using gRPC.
 grpcio

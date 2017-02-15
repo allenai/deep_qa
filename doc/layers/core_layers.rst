@@ -91,6 +91,15 @@ MemoryUpdaters
     :undoc-members:
     :show-inheritance:
 
+NoisyOr
+------------------
+
+.. automodule:: deep_qa.layers.noisy_or
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 OptionAttentionSum
 ------------------
 
