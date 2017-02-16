@@ -46,6 +46,19 @@ object MemoryNetworkExperiments {
     )
   }
 
+  def intermediateExperiment(
+    name: String,
+    modelParams: JValue,
+    trainingDataset: JValue=ScienceDatasets.intermediateMtfGradeFourAndEightTrainQuestionsWithBuscBackground
+  ): JValue = {
+    experiment(
+      name,
+      modelParams,
+      trainingDataset,
+      ScienceDatasets.intermediateMtfGradeFourAndEightDevQuestionsWithBuscBackground
+    )
+  }
+
   def tableMcqExperiment(name: String, modelParams: JValue): JValue = {
     experiment(
       name,
@@ -82,8 +95,18 @@ object MemoryNetworkExperiments {
   }
 
   def main(args: Array[String]) {
-    runExperimentWithTurkedQuestions()
-    runGeneratedQuestionsExperiment()
+    //runExperimentWithTurkedQuestions()
+    //runGeneratedQuestionsExperiment()
+    runIntermediateMemoryNetworkExperiment()
+  }
+
+  def runIntermediateMemoryNetworkExperiment() {
+    val baseline = intermediateExperiment(
+      "baseline mtfmn",
+      multipleChoiceMemoryNetwork
+    )
+    val models = Seq(baseline)
+    new Evaluator(Some("baseline_mtfmn_on_intermediate_set_2017_02_15"), models, fileUtil).runPipeline()
   }
 
   def runExperimentWithTurkedQuestions() {

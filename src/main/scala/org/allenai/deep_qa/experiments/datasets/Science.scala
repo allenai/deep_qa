@@ -76,6 +76,61 @@ object ScienceDatasets {
   ), "/efs/data/dlfa/processed/omnibus_4_8_dev/")
 
   /////////////////////////////////////////////////////////////////////
+  // "Intermediate" brittleness set Multiple True False
+  /////////////////////////////////////////////////////////////////////
+
+  val intermediateMtfGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeFourTrainSentences_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val intermediateMtfGradeFourDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeFourDevSentences_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val intermediateMtfGradeFourTestQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeFourTestSentences_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val intermediateMtfGradeEightTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeEightTrainSentences_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val intermediateMtfGradeEightDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeEightDevSentences_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val intermediateMtfGradeEightTestQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeEightTestSentences_multipleTrueFalse_appendAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(10)
+  )
+
+  val intermediateMtfGradeFourAndEightTrainQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    intermediateMtfGradeFourTrainQuestionsWithBuscBackground,
+    intermediateMtfGradeEightTrainQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_8_train/")
+
+  val intermediateMtfGradeFourAndEightDevQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    intermediateMtfGradeFourDevQuestionsWithBuscBackground,
+    intermediateMtfGradeEightDevQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_8_dev/")
+
+  val intermediateMtfGradeFourAndEightTestQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    intermediateMtfGradeFourTestQuestionsWithBuscBackground,
+    intermediateMtfGradeEightTestQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_8_test/")
+
+  /////////////////////////////////////////////////////////////////////
   // Diagram Multiple True False
   /////////////////////////////////////////////////////////////////////
 
@@ -249,6 +304,61 @@ object ScienceDatasets {
       ("data files" -> Seq(omnibusRcGradeEightTestQuestionsWithBuscBackground))
 
   /////////////////////////////////////////////////////////////////////
+  // "Intermediate" brittleness set Question Answer
+  /////////////////////////////////////////////////////////////////////
+
+  val intermediateQaGradeFourTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeFourTrainSentences_questionAndAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val intermediateQaGradeFourDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeFourDevSentences_questionAndAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val intermediateQaGradeFourTestQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeFourTestSentences_questionAndAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val intermediateQaGradeEightTrainQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeEightTrainSentences_questionAndAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val intermediateQaGradeEightDevQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeEightDevSentences_questionAndAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val intermediateQaGradeEightTestQuestionsWithBuscBackground: JValue = makeBackgroundDataset(
+    ScienceFiles.intermediateGradeEightTestSentences_questionAndAnswer,
+    "plain sentence",
+    ScienceCorpora.buscElasticSearchIndex(3)
+  )
+
+  val intermediateQaGradeFourAndEightTrainQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    intermediateQaGradeFourTrainQuestionsWithBuscBackground,
+    intermediateQaGradeEightTrainQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_8_train/")
+
+  val intermediateQaGradeFourAndEightDevQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    intermediateQaGradeFourDevQuestionsWithBuscBackground,
+    intermediateQaGradeEightDevQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_8_dev/")
+
+  val intermediateQaGradeFourAndEightTestQuestionsWithBuscBackground: JValue = makeCombinedDataset(Seq(
+    intermediateQaGradeFourTestQuestionsWithBuscBackground,
+    intermediateQaGradeEightTestQuestionsWithBuscBackground
+  ), "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_8_test/")
+
+  /////////////////////////////////////////////////////////////////////
   // Diagram QA
   /////////////////////////////////////////////////////////////////////
 
@@ -374,6 +484,78 @@ object ScienceFiles {
     makeQuestionAnswerFile(
       "/efs/data/dlfa/questions/omnibus_8_test.tsv",
       "/efs/data/dlfa/processed/omnibus_8_test/question_and_answer/questions.tsv"
+    )
+
+  val intermediateGradeFourTrainSentences_multipleTrueFalse_appendAnswer: JValue =
+    makeMultipleTrueFalseQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_4_train.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_train/multiple_tf/append_answer/sentences.tsv"
+    )
+
+  val intermediateGradeFourDevSentences_multipleTrueFalse_appendAnswer: JValue =
+    makeMultipleTrueFalseQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_4_dev.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_dev/multiple_tf/append_answer/sentences.tsv"
+    )
+
+  val intermediateGradeFourTestSentences_multipleTrueFalse_appendAnswer: JValue =
+    makeMultipleTrueFalseQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_4_test.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_test/multiple_tf/append_answer/sentences.tsv"
+    )
+
+  val intermediateGradeEightTrainSentences_multipleTrueFalse_appendAnswer: JValue =
+    makeMultipleTrueFalseQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_8_train.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_8_train/multiple_tf/append_answer/sentences.tsv"
+    )
+
+  val intermediateGradeEightDevSentences_multipleTrueFalse_appendAnswer: JValue =
+    makeMultipleTrueFalseQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_8_dev.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_8_dev/multiple_tf/append_answer/sentences.tsv"
+    )
+
+  val intermediateGradeEightTestSentences_multipleTrueFalse_appendAnswer: JValue =
+    makeMultipleTrueFalseQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_8_test.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_8_test/multiple_tf/append_answer/sentences.tsv"
+    )
+
+  val intermediateGradeFourTrainSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_4_train.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_train/question_and_answer/questions.tsv"
+    )
+
+  val intermediateGradeFourDevSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_4_dev.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_dev/question_and_answer/questions.tsv"
+    )
+
+  val intermediateGradeFourTestSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_4_test.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_4_test/question_and_answer/questions.tsv"
+    )
+
+  val intermediateGradeEightTrainSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_8_train.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_8_train/question_and_answer/questions.tsv"
+    )
+
+  val intermediateGradeEightDevSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_8_dev.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_8_dev/question_and_answer/questions.tsv"
+    )
+
+  val intermediateGradeEightTestSentences_questionAndAnswer: JValue =
+    makeQuestionAnswerFile(
+      "/efs/data/dlfa/questions/intermediate/intermediate_8_test.tsv",
+      "/efs/data/dlfa/questions/intermediate/processed/intermediate_8_test/question_and_answer/questions.tsv"
     )
 
 
