@@ -25,6 +25,14 @@ deep_qa.layers.entailment_models.multiple_choice_tuple_entailment
     :undoc-members:
     :show-inheritance:
 
+deep_qa.layers.entailment_models.tuple_match
+-----------------------------------------------------------------
+
+.. automodule:: deep_qa.layers.entailment_models.tuple_match
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 deep_qa.layers.entailment_models.word_alignment
 -----------------------------------------------
 

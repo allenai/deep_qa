@@ -28,6 +28,15 @@ MultipleChoiceTupleEntailment
     :undoc-members:
     :show-inheritance:
 
+TupleMatch
+-----------------------------
+
+.. automodule:: deep_qa.layers.entailment_models.tuple_match
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 WordAlignment
 -------------
 
