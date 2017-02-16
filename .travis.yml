@@ -19,5 +19,8 @@ env:
     # pylint checks skip the tests
     - RUN_PYLINT="true" SKIP_TESTS="true"
 
+notifications:
+  email: false
+
 install: source build_tools/travis/install.sh
 script: bash build_tools/travis/test_script.sh
