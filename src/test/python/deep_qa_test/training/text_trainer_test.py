@@ -6,6 +6,8 @@ import shutil
 
 import numpy
 from numpy.testing import assert_allclose
+from deep_qa.common.params import get_choice_with_default
+from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification.true_false_model import TrueFalseModel
 from deep_qa.models.multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from ..common.constants import TEST_DIR
@@ -25,6 +27,13 @@ class TestTextTrainer(TestCase):
 
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
+
+    def test_get_encoder_works_without_params(self):
+        model = get_model(TrueFalseModel, {'encoder': {}})
+        encoder = model._get_encoder()
+        encoder_type = get_choice_with_default({}, "type", list(encoders.keys()))
+        expected_encoder = encoders[encoder_type](**{})
+        assert isinstance(encoder, expected_encoder.__class__)
 
     @mock.patch.object(TrueFalseModel, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):

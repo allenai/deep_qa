@@ -418,7 +418,7 @@ class TextTrainer(Trainer):
         if name in self.encoder_layers:
             # If we've already created this encoder, we can just return it.
             return self.encoder_layers[name]
-        if name not in self.encoder_params:
+        if name not in self.encoder_params and name != "default":
             # If we haven't, we need to check that we _can_ create it, and decide _how_ to create
             # it.
             if fallback_behavior == "crash":
@@ -432,7 +432,7 @@ class TextTrainer(Trainer):
             else:
                 raise ConfigurationError("Unrecognized fallback behavior: " + fallback_behavior)
         else:
-            params = deepcopy(self.encoder_params[name])
+            params = deepcopy(self.encoder_params.get(name, {}))
         if name not in self.encoder_layers:
             # We need to check if we've already created this again, because in some cases we change
             # the name in the logic above.
