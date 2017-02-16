@@ -1,25 +1,23 @@
-sudo: required
+# use new container-based travis workers
+sudo: false
 dist: trusty
-language: scala
-scala:
-  - 2.11.7
-jdk:
-  - oraclejdk8
-addons:
-  apt:
-    packages:
-      - libblas-dev
-      - liblapack-dev
-      - gfortran
-before_install:
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  - rm -rf $HOME/miniconda_dlfa && bash miniconda.sh -b -p $HOME/miniconda_dlfa
-  - export PATH="$HOME/miniconda_dlfa/bin:$PATH"
-before_script:
-  - pip install -r requirements.txt
-script:
-  - sbt clean test
+
+language: python
+
 cache:
   directories:
-    - $HOME/.ivy2/cache
-    - $HOME/.sbt/boot/
+  - /home/travis/download
+  - /home/travis/miniconda
+  - /home/travis/.cache/pip
+
+env:
+  matrix:
+    # test tensorflow keras backend
+    - KERAS_BACKEND="tensorflow"
+    # test theano keras backend
+    - KERAS_BACKEND="theano"
+    # pylint checks skip the tests
+    - RUN_PYLINT="true" SKIP_TESTS="true"
+
+install: source build_tools/travis/install.sh
+script: bash build_tools/travis/test_script.sh
