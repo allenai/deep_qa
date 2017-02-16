@@ -1,4 +1,4 @@
-[![Build Status](https://semaphoreci.com/api/v1/projects/b3480192-615d-4981-ba34-62afeb9d9ae6/953929/shields_badge.svg)](https://semaphoreci.com/allenai/deep_qa)
+[![Build Status](https://api.travis-ci.org/allenai/deep_qa.svg?branch=master)](https://travis-ci.org/allenai/deep_qa)
 [![Documentation Status](https://readthedocs.org/projects/deep-qa/badge/?version=latest)](http://deep-qa.readthedocs.io/en/latest/?badge=latest)
 
 # Deep QA
