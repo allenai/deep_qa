@@ -63,7 +63,7 @@ class CharacterSpanInstance(QuestionPassageInstance):
             question, passage, label = fields
             index = None
         else:
-            raise RuntimeError("Unrecognized line format: " + line)
+            raise RuntimeError("Unrecognized line format (" + str(len(fields)) + " columns): " + line)
         label_fields = label.split(",")
         span_begin = int(label_fields[0])
         span_end = int(label_fields[1])

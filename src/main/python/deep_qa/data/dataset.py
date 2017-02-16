@@ -116,7 +116,10 @@ class TextDataset(Dataset):
         labels.sort(key=lambda x: str(x[0]))
         label_counts = [(label, len([x for x in group]))
                         for label, group in itertools.groupby(labels, lambda x: x[0])]
-        logger.info("Finished reading dataset; label counts: %s", str(label_counts))
+        label_count_str = str(label_counts)
+        if len(label_count_str) > 100:
+            label_count_str = label_count_str[:100] + '...'
+        logger.info("Finished reading dataset; label counts: %s", label_count_str)
         return TextDataset(instances)
 
     @staticmethod

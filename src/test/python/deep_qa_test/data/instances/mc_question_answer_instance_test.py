@@ -91,7 +91,7 @@ class TestMcQuestionAnswerInstance:
         assert indexed_instance.label == 1
 
 
-class TestIndexedQuestionAnswerInstance(TestCase):
+class TestIndexedMcQuestionAnswerInstance(TestCase):
     def setUp(self):
         self.instance = IndexedMcQuestionAnswerInstance([1, 2, 3, 5, 6],
                                                         [2, 3, 4, 5, 6, 7],
@@ -110,7 +110,7 @@ class TestIndexedQuestionAnswerInstance(TestCase):
         self.instance.pad({'num_question_words': 7, 'num_passage_words': 9,
                            'num_option_words': 2, 'num_options': 3})
         assert self.instance.question_indices == [0, 0, 1, 2, 3, 5, 6]
-        assert self.instance.passage_indices == [0, 0, 0, 2, 3, 4, 5, 6, 7]
+        assert self.instance.passage_indices == [2, 3, 4, 5, 6, 7, 0, 0, 0]
         assert self.instance.option_indices[0] == [0, 2]
         assert self.instance.option_indices[1] == [3, 5]
         assert self.instance.option_indices[2] == [0, 6]
@@ -119,7 +119,7 @@ class TestIndexedQuestionAnswerInstance(TestCase):
         self.instance.pad({'num_question_words': 3, 'num_passage_words': 4,
                            'num_option_words': 1, 'num_options': 4})
         assert self.instance.question_indices == [3, 5, 6]
-        assert self.instance.passage_indices == [4, 5, 6, 7]
+        assert self.instance.passage_indices == [2, 3, 4, 5]
         assert self.instance.option_indices[0] == [2]
         assert self.instance.option_indices[1] == [5]
         assert self.instance.option_indices[2] == [6]
@@ -130,7 +130,7 @@ class TestIndexedQuestionAnswerInstance(TestCase):
         self.instance.pad({'num_question_words': 3, 'num_passage_words': 4,
                            'num_option_words': 1, 'num_options': 1})
         assert self.instance.question_indices == [3, 5, 6]
-        assert self.instance.passage_indices == [4, 5, 6, 7]
+        assert self.instance.passage_indices == [2, 3, 4, 5]
         assert self.instance.option_indices[0] == [2]
         assert len(self.instance.option_indices) == 1
 
@@ -140,5 +140,5 @@ class TestIndexedQuestionAnswerInstance(TestCase):
         inputs, label = self.instance.as_training_data()
         assert np.all(label == np.asarray([0, 1, 0, 0]))
         assert np.all(inputs[0] == np.asarray([0, 0, 1, 2, 3, 5, 6]))
-        assert np.all(inputs[1] == np.asarray([4, 5, 6, 7]))
+        assert np.all(inputs[1] == np.asarray([2, 3, 4, 5]))
         assert np.all(inputs[2] == np.asarray([[0, 2], [3, 5], [0, 6], [0, 0]]))

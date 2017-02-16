@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import Any, Dict
 
 from keras.layers import Dense, Input, merge
@@ -191,10 +190,6 @@ class BidirectionalAttentionFlow(TextTrainer):
 
         return DeepQaModel(input=[question_input, passage_input],
                            output=[span_begin_probabilities, span_end_probabilities])
-
-    def _get_seq2seq_params(self):
-        params = deepcopy(self.seq2seq_encoder_params)
-        return params
 
     def _instance_type(self):  # pylint: disable=no-self-use
         return CharacterSpanInstance

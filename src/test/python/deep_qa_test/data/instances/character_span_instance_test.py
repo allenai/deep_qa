@@ -69,5 +69,5 @@ class TestCharacterSpanInstance:
         assert numpy.all(label[0] == numpy.asarray([0, 0, 1, 0, 0, 0]))
         assert numpy.all(label[1] == numpy.asarray([0, 0, 1, 0, 0, 0]))
         assert numpy.all(question_array == numpy.asarray([dogs_index, eat_index, question_index]))
-        assert numpy.all(passage_array == numpy.asarray([0, 0, dogs_index, eat_index, cats_index,
-                                                         period_index]))
+        assert numpy.all(passage_array == numpy.asarray([dogs_index, eat_index, cats_index,
+                                                         period_index, 0, 0]))

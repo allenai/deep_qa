@@ -141,3 +141,29 @@ object SciQDatasets {
       ("data files" -> Seq(SciQDatasets.readingComprehensionTrainWithBuscBackgroundFile))
 
 }
+
+object SciQDirectAnswer {
+  def sciQFile(sciQDir: String, split: String, version: String="1.0"): JValue = {
+    val outputDirectory = sciQDir + "processed/"
+    val inputFile = sciQDir + s"${split}-v${version}.json"
+    val outputFiles = Seq(outputDirectory + s"${split}.tsv")
+    ("sentence producer type" -> "dataset reader") ~
+    ("reader" -> "squad") ~
+    ("input file" -> inputFile) ~
+    ("output files" -> outputFiles)
+  }
+
+  def sciQDataset(sciQDir: String, split: String, version: String="1.0"): JValue = {
+    val file = sciQFile(sciQDir, split, version)
+    ("data files" -> List(file))
+  }
+
+  val baseDir = "/efs/data/dlfa/sciq_da/"
+
+  val trainFile = sciQFile(baseDir, "train")
+  val trainDataset = sciQDataset(baseDir, "train")
+  val devFile = sciQFile(baseDir, "dev")
+  val devDataset = sciQDataset(baseDir, "dev")
+  val testFile = sciQFile(baseDir, "test")
+  val testDataset = sciQDataset(baseDir, "test")
+}

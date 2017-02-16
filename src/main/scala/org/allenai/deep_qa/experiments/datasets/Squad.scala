@@ -30,4 +30,3 @@ object SquadDatasets {
   val devFile = squadFile(baseDir, "dev")
   val devDataset = squadDataset(baseDir, "dev")
 }
-

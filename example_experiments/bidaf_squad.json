@@ -19,10 +19,10 @@
     },
     // This is not quite the same as Min's paper; we don't have encoder dropout yet.
     "embedding_dropout": 0.2,
-    "batch_size": 20,
-    "patience": 1,
+    "batch_size": 10,
+    "patience": 3,
     "embedding_size": 100,
-    "num_epochs": 12,
+    "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",
       "lr": 0.5
