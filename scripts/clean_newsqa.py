@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 
 def main():
-    LOG_FMT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=LOG_FMT)
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_format)
     parser = ArgumentParser(description=("Clean up a CSV file in "
                                          "the NewsQA dataset."))
     parser.add_argument('input_csv', nargs='+',
@@ -45,7 +45,7 @@ def clean_newsqa_csv(newsqa_file_path):
     logger.info("cleaning up %s", newsqa_file_path)
     # open the file as a csv
     dataframe = pandas.read_csv(newsqa_file_path, encoding='utf-8')
-    dirty_rows = dataframe.values.tolist()
+    dirty_rows = dataframe.values.tolist()  # pylint: disable=no-member
     clean_rows = []
     clean_headers = ["question_text", "label", "answer_string", "passage"]
     for row in tqdm(dirty_rows):
@@ -114,4 +114,3 @@ def clean_newsqa_csv(newsqa_file_path):
 
 if __name__ == '__main__':
     main()
-

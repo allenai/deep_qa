@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 
 def main():
-    LOG_FMT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=LOG_FMT)
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_format)
     parser = ArgumentParser(description=("Transform a raw Omnibus TSV "
                                          "to the format that the pipeline "
                                          "expects."))
@@ -32,7 +32,7 @@ def main():
         all_clean_file_rows.extend(clean_omnibus_csv(omnibus_file))
     # turn the list of rows into a dataframe, and write to TSV
     dataframe = pandas.DataFrame(all_clean_file_rows)
-    folder, filename = os.path.split(omnibus_file)
+    folder, filename = os.path.split(arguments.input_csv[-1])
     outdirectory = folder + "/cleaned/"
     os.makedirs(outdirectory, exist_ok=True)
     outpath = outdirectory + filename + ".clean"
@@ -46,8 +46,8 @@ def clean_omnibus_csv(omnibus_file_path):
     logger.info("cleaning up %s", omnibus_file_path)
     # open the file as a csv
     dataframe = pandas.read_csv(omnibus_file_path, sep="\t",
-                            encoding='utf-8', header=None,
-                            quoting=csv.QUOTE_NONE)
+                                encoding='utf-8', header=None,
+                                quoting=csv.QUOTE_NONE)
     dataframe_trimmed = dataframe[[3, 9]]
     clean_rows = dataframe_trimmed.values.tolist()
     return clean_rows

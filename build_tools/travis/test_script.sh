@@ -19,7 +19,7 @@ run_tests() {
 }
 
 if [[ "$RUN_PYLINT" == "true" ]]; then
-    source pylint.sh
+    source scripts/pylint.sh
 fi
 
 if [[ "$SKIP_TESTS" != "true" ]]; then
