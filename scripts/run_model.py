@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 # These have to be before we do any import from keras.  It would be nice to be able to pass in a
@@ -16,6 +17,7 @@ numpy.random.seed(1337)  # pylint: disable=no-member
 # return value actually matches the type our code expects, anyway.
 import pyhocon
 
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from deep_qa.common.checks import ensure_pythonhashseed_set, log_keras_version_info
 from deep_qa.common.params import get_choice
 from deep_qa.models import concrete_models

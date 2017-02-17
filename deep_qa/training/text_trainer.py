@@ -426,7 +426,7 @@ class TextTrainer(Trainer):
                                          "did not provide parameters for that encoder")
             elif fallback_behavior == "use default encoder":
                 name = "default"
-                params = deepcopy(self.encoder_params[name])
+                params = deepcopy(self.encoder_params.get(name, {}))
             elif fallback_behavior == "use default params":
                 params = deepcopy(self.encoder_params["default"])
             else:
