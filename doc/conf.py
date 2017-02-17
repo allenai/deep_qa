@@ -23,7 +23,7 @@ import sphinx_rtd_theme
 import os
 import sys
 import inspect
-sys.path.insert(0, os.path.abspath('../src/main/python/'))
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- General configuration ------------------------------------------------
@@ -238,4 +238,4 @@ def linkcode_resolve(domain, info):
         linespec = ""
 
     filename = info['module'].replace('.', '/')
-    return "http://github.com/allenai/deep_qa/blob/master/src/main/python/%s.py%s" % (filename, linespec)
+    return "http://github.com/allenai/deep_qa/blob/master/%s.py%s" % (filename, linespec)

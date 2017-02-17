@@ -6,41 +6,38 @@
 Home
 ====
 
-This repository contains code for training deep learning systems to do question
-answering tasks. Our primary focus is on Aristo's science questions, though we
-can run various models on several popular datasets.
+DeepQA is a library built on top of Keras to make NLP easier.  There are four main benefits to
+this library:
 
-This code is a mix of scala (for data processing / pipeline management) and
-python (for actually training and executing deep models with Keras / Theano /
-TensorFlow).
-
-I think there are two main contributions that this library makes:
-
-1. We provide a nice interface to training, validating, and debugging Keras
-models. Instead of writing code to run an experiment, you just specify a JSON
-file that describes your experiment, and our library will run it for you
-(assuming you only want to use the components that we've implemented).
-
-2. We've implemented several variants of memory networks, neural network
-architectures that attempt a kind of reasoning over background knowledge, that
-are not trivial to implement. We've done this in a way that is configurable and
-extendable, such that you can easily run experiments with several different
-memory network variants just by changing some parameters in a configuration
-file, or implement a new idea just by writing a new component.
+#. It is hard to get NLP right in Keras.  There are a lot of issues around padding sequences and
+   masking that are not handled well in the main Keras code, and we have well-tested code that
+   does the right thing for, e.g., computing attentions over padded sequences, or distributing text
+   encoders across several sentences or words.
+#. We have implemented a base class, ``TextTrainer``, that provides a nice, consistent API around
+   building NLP models in Keras.  This API has functionality around processing data instances,
+   embedding words and/or characters, easily getting various kinds of sentence encoders, and so on.
+#. We provide a nice interface to training, validating, and debugging Keras models.  It is very
+   easy to experiment with variants of a model family, just by changing some parameters in a JSON
+   file.  For example, you can go from using fixed GloVe vectors to represent words, to fine-tuning
+   those embeddings, to using a concatenation of word vectors and a character-level CNN to
+   represent words, just by changing parameters in a JSON experiment file.  If your model is built
+   using the ``TextTrainer`` API, all of this works transparently to the model class - the model
+   just knows that it's getting some kind of word vector.
+#. We have implemented a number of state-of-the-art models, particularly focused around question
+   answering systems (though we've dabbled in models for other tasks, as well).  The actual model
+   code for these systems are typically 50 lines or less.
 
 This library has several main components:
 
-* A training module, which has a bunch of helper code for training Keras models
-  of various kinds.
-* A solvers module, specifying particular Keras models for question answering
-  (in Aristo, we call a question answering system a "solver", which is where the
-  name comes from).
-* A layers module, which contains code for custom Keras Layers that we have
-  written.
-* A data module, containing code for reading in data from files and converting
-  it into numpy arrays suitable for use with Keras.
-* A common module, which has a few random things dealing with reading parameters
-  and a few other things.
+* A ``training`` module, which has a bunch of helper code for training Keras models of various
+  kinds.
+* A ``models`` module, containing implementations of actual Keras models grouped around various
+  prediction tasks.
+* A ``layers`` module, which contains code for custom Keras Layers that we have written.
+* A ``data`` module, containing code for reading in data from files and converting it into numpy
+  arrays suitable for use with Keras.
+* A ``common`` module, which has a few random things dealing with reading parameters and a few
+  other things.
 
 .. toctree::
    :hidden:
