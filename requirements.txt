@@ -59,6 +59,10 @@ pytest-pythonpath
 # Allows generation of coverage reports with pytest.
 pytest-cov
 
+# Allows codecov to generate coverage reports
+coverage
+codecov
+
 #### LIBRARIES USED IN SCRIPTS ####
 # argument parsing in for data cleaning scripts
 argparse
