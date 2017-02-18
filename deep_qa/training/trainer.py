@@ -334,7 +334,8 @@ class Trainer:
         # checkpointing string, because Keras does that within the callback if we specify it here.
         if self.save_models:
             checkpointing = ModelCheckpoint(self.model_prefix + "_weights_epoch={epoch:d}.h5",
-                                            save_best_only=True, save_weights_only=True)
+                                            save_best_only=True, save_weights_only=True,
+                                            monitor=self.validation_metric)
             callbacks.append(checkpointing)
 
         return CallbackList(callbacks)
