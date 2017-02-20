@@ -3,11 +3,14 @@ from typing import List
 
 from overrides import overrides
 
+
 class WordSplitter:
     """
-    A WordSplitter splits strings into words.  This is typically called a "tokenizer" in NLP, but
-    we need "Tokenizer" to refer to something else, so we're using WordSplitter here instead.
+    A ``WordSplitter`` splits strings into words.  This is typically called a "tokenizer" in NLP,
+    but we need ``Tokenizer`` to refer to something else, so we're using ``WordSplitter`` here
+    instead.
     """
+
     def split_words(self, sentence: str) -> List[str]:
         raise NotImplementedError
 
@@ -87,7 +90,7 @@ class NltkWordSplitter(WordSplitter):
         from nltk.tokenize import word_tokenize
         return word_tokenize(sentence.lower())
 
+
 word_splitters = OrderedDict()  # pylint: disable=invalid-name
-word_splitters['default'] = SimpleWordSplitter
 word_splitters['simple'] = SimpleWordSplitter
 word_splitters['nltk'] = NltkWordSplitter

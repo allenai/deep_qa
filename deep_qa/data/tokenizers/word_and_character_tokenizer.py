@@ -5,9 +5,8 @@ from keras import backend as K
 from keras.layers import merge
 
 from .tokenizer import Tokenizer
-from .word_splitter import word_splitters
+from .word_processor import WordProcessor
 from ..data_indexer import DataIndexer
-from ...common.params import get_choice_with_default
 from ...layers.vector_matrix_split import VectorMatrixSplit
 from ...layers.wrappers.time_distributed import TimeDistributed
 
@@ -15,7 +14,8 @@ class WordAndCharacterTokenizer(Tokenizer):
     """
     A ``WordAndCharacterTokenizer`` first splits strings into words, then splits those words into
     characters, and returns a representation that contains `both` a word index and a sequence of
-    character indices for each word.
+    character indices for each word.  See the documention for ``WordTokenizer`` for a note about
+    naming, and the typical notion of "tokenization" in NLP.
 
     Notes
     -----
@@ -27,13 +27,12 @@ class WordAndCharacterTokenizer(Tokenizer):
     ``encoder`` dict, we'll create a new encoder using the ``"default"`` parameters.
     """
     def __init__(self, params: Dict[str, Any]):
-        word_splitter_choice = get_choice_with_default(params, 'word_splitter', list(word_splitters.keys()))
-        self.word_splitter = word_splitters[word_splitter_choice]()
+        self.word_processor = WordProcessor(params.get('processor', {}))
         super(WordAndCharacterTokenizer, self).__init__(params)
 
     @overrides
     def tokenize(self, text: str) -> List[str]:
-        return self.word_splitter.split_words(text)
+        return self.word_processor.get_tokens(text)
 
     @overrides
     def get_words_for_indexer(self, text: str) -> Dict[str, List[str]]:
@@ -42,9 +41,7 @@ class WordAndCharacterTokenizer(Tokenizer):
         return {'words': words, 'characters': characters}
 
     @overrides
-    def index_text(self,
-                   text: str,
-                   data_indexer: DataIndexer) -> List:
+    def index_text(self, text: str, data_indexer: DataIndexer) -> List:
         words = self.tokenize(text)
         arrays = []
         for word in words:
