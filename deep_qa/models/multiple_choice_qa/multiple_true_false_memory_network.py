@@ -7,7 +7,7 @@ from keras.layers import Layer, TimeDistributed
 from ..memory_networks.memory_network import MemoryNetwork
 from ...data.instances.true_false_instance import TrueFalseInstance
 from ...data.instances.multiple_true_false_instance import MultipleTrueFalseInstance
-from ...layers.wrappers import EncoderWrapper
+from ...layers.wrappers.encoder_wrapper import EncoderWrapper
 
 
 class MultipleTrueFalseMemoryNetwork(MemoryNetwork):

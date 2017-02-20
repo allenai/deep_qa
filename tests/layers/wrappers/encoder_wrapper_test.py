@@ -7,7 +7,8 @@ from keras.layers import Input
 
 from deep_qa.layers.encoders import BOWEncoder
 from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
-from deep_qa.layers.wrappers import EncoderWrapper, OutputMask
+from deep_qa.layers.wrappers.encoder_wrapper import EncoderWrapper
+from deep_qa.layers.wrappers.output_mask import OutputMask
 from deep_qa.training.models import DeepQaModel
 
 

@@ -162,12 +162,3 @@ VectorMatrixSplit
     :noindex:
     :undoc-members:
     :show-inheritance:
-
-Wrappers
---------
-
-.. automodule:: deep_qa.layers.wrappers
-    :members:
-    :noindex:
-    :undoc-members:
-    :show-inheritance:

@@ -12,7 +12,7 @@ from ..common.checks import ConfigurationError
 from ..common.params import get_choice
 from ..data.dataset import Dataset
 from ..data.instances.instance import Instance
-from ..layers.wrappers import OutputMask
+from ..layers.wrappers.output_mask import OutputMask
 from .models import DeepQaModel
 from .optimizers import optimizer_from_params
 

@@ -6,7 +6,8 @@ from keras.layers import Input, merge
 from .multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
 from ...layers.attention.masked_softmax import MaskedSoftmax
 from ...layers.top_knowledge_selector import TopKnowledgeSelector
-from ...layers.wrappers import TimeDistributedWithMask, EncoderWrapper
+from ...layers.wrappers.time_distributed_with_mask import TimeDistributedWithMask
+from ...layers.wrappers.encoder_wrapper import EncoderWrapper
 from ...training.models import DeepQaModel
 
 class MultipleTrueFalseDecomposableAttention(MultipleTrueFalseMemoryNetwork):

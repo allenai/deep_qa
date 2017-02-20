@@ -58,10 +58,11 @@ This library has several main components:
 
    layers/about_layers
    layers/core_layers
+   layers/attention
    layers/backend
    layers/encoders
    layers/entailment_models
-   layers/attention
+   layers/wrappers
 
 .. toctree::
    :caption: Models

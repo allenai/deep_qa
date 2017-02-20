@@ -11,7 +11,7 @@ from ...layers.backend.max import Max
 from ...layers.backend.repeat import Repeat
 from ...layers.complex_concat import ComplexConcat
 from ...layers.highway import Highway
-from ...layers.wrappers import TimeDistributedWithPassThroughMask
+from ...layers.wrappers.time_distributed import TimeDistributed
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 
@@ -100,9 +100,9 @@ class BidirectionalAttentionFlow(TextTrainer):
         # layer gets applied to two inputs with different numbers of time steps.
         for i in range(self.num_highway_layers):
             highway_layer = Highway(activation=self.highway_activation, name='highway_{}'.format(i))
-            question_layer = TimeDistributedWithPassThroughMask(highway_layer, name=highway_layer.name + "_qtd")
+            question_layer = TimeDistributed(highway_layer, name=highway_layer.name + "_qtd")
             question_embedding = question_layer(question_embedding)
-            passage_layer = TimeDistributedWithPassThroughMask(highway_layer, name=highway_layer.name + "_ptd")
+            passage_layer = TimeDistributed(highway_layer, name=highway_layer.name + "_ptd")
             passage_embedding = passage_layer(passage_embedding)
 
         # Then we pass the question and passage through a seq2seq encoder (like a biLSTM).  This
@@ -165,7 +165,7 @@ class BidirectionalAttentionFlow(TextTrainer):
         # output size 1 (basically a dot product of a vector of weights and the passage vectors),
         # then do a softmax to get a position.
         span_begin_input = merge([final_merged_passage, modeled_passage], mode='concat')
-        span_begin_weights = TimeDistributedWithPassThroughMask(Dense(output_dim=1))(span_begin_input)
+        span_begin_weights = TimeDistributed(Dense(output_dim=1))(span_begin_input)
         # Shape: (batch_size, num_passage_words)
         span_begin_probabilities = MaskedSoftmax(name="span_begin_softmax")(span_begin_weights)
 
@@ -185,7 +185,7 @@ class BidirectionalAttentionFlow(TextTrainer):
                                                   fallback_behavior="use default params")
         span_end_representation = final_seq2seq(span_end_representation)
         span_end_input = merge([final_merged_passage, span_end_representation], mode='concat')
-        span_end_weights = TimeDistributedWithPassThroughMask(Dense(output_dim=1))(span_end_input)
+        span_end_weights = TimeDistributed(Dense(output_dim=1))(span_end_input)
         span_end_probabilities = MaskedSoftmax(name="span_end_softmax")(span_end_weights)
 
         return DeepQaModel(input=[question_input, passage_input],

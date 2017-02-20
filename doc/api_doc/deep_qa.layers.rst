@@ -150,11 +150,3 @@ deep_qa.layers.vector_matrix_split
     :members:
     :undoc-members:
     :show-inheritance:
-
-deep_qa.layers.wrappers
------------------------
-
-.. automodule:: deep_qa.layers.wrappers
-    :members:
-    :undoc-members:
-    :show-inheritance:

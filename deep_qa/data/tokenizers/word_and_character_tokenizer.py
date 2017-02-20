@@ -9,7 +9,7 @@ from .word_splitter import word_splitters
 from ..data_indexer import DataIndexer
 from ...common.params import get_choice_with_default
 from ...layers.vector_matrix_split import VectorMatrixSplit
-from ...layers.wrappers import FixedTimeDistributed
+from ...layers.wrappers.time_distributed import TimeDistributed
 
 class WordAndCharacterTokenizer(Tokenizer):
     """
@@ -95,11 +95,11 @@ class WordAndCharacterTokenizer(Tokenizer):
         # we _don't_ care here about whether the whole word will be masked, as the word_embedding
         # will carry that information, so the output mask returned by the TimeDistributed layer
         # here will be ignored.
-        word_encoder = FixedTimeDistributed(
+        word_encoder = TimeDistributed(
                 text_trainer._get_encoder(name="word", fallback_behavior="use default params"))
         # We might need to TimeDistribute this again, if our input has ndim higher than 3.
         for _ in range(3, K.ndim(characters)):
-            word_encoder = FixedTimeDistributed(word_encoder, name="timedist_" + word_encoder.name)
+            word_encoder = TimeDistributed(word_encoder, name="timedist_" + word_encoder.name)
         word_encoding = word_encoder(character_embedding)
 
         merge_mode = lambda inputs: K.concatenate(inputs, axis=-1)

@@ -1,0 +1,102 @@
+from keras import backend as K
+from keras.layers import InputSpec, TimeDistributed as KerasTimeDistributed
+from overrides import overrides
+
+class TimeDistributed(KerasTimeDistributed):
+    """
+    This class fixes two bugs in Keras: (1) the input mask is not passed to the wrapped layer, and
+    (2) Keras' TimeDistributed currently only allows a single input, not a list.  We currently
+    don't handle the case where the _output_ of the wrapped layer is a list, however.  (Not that
+    that's particularly hard, we just haven't needed it yet, so haven't implemented it.)
+    """
+    @overrides
+    def build(self, input_shape):
+        if isinstance(input_shape, tuple):
+            input_shape = [input_shape]
+        assert all(len(shape) >= 3 for shape in input_shape), "Need 3 dims to TimeDistribute"
+        all_timesteps = [i[1] for i in input_shape]
+        assert len(set(all_timesteps)) == 1, "Tensors must have same number of timesteps"
+        self.input_spec = [InputSpec(shape=shape) for shape in input_shape]
+        if not self.layer.built:
+            child_input_shape = [(shape[0],) + shape[2:] for shape in input_shape]
+            if len(input_shape) == 1:
+                child_input_shape = child_input_shape[0]
+            self.layer.build(child_input_shape)
+            self.layer.built = True
+        self.built = True
+
+    @overrides
+    def get_output_shape_for(self, input_shape):
+        if not isinstance(input_shape, list):
+            input_shape = [input_shape]
+        child_input_shape = [(shape[0],) + shape[2:] for shape in input_shape]
+        timesteps = input_shape[0][1]
+        if len(input_shape) == 1:
+            child_input_shape = child_input_shape[0]
+        child_output_shape = self.layer.get_output_shape_for(child_input_shape)
+        return (child_output_shape[0], timesteps) + child_output_shape[1:]
+
+    @staticmethod
+    def reshape_inputs_and_masks(inputs, masks):
+        reshaped_xs = []
+        reshaped_masks = []
+        for x_i, mask_i in zip(inputs, masks):
+            input_shape = K.int_shape(x_i)
+            reshaped_x = K.reshape(x_i, (-1,) + input_shape[2:])  # (batch_size * timesteps, ...)
+            if mask_i is not None:
+                mask_ndim = K.ndim(mask_i)
+                input_ndim = K.ndim(x_i)
+                if mask_ndim == input_ndim:
+                    mask_shape = input_shape
+                elif mask_ndim == input_ndim - 1:
+                    mask_shape = input_shape[:-1]
+                else:
+                    raise Exception("Mask is of an unexpected shape. Mask's ndim: %s, input's ndim %s" %
+                                    (mask_ndim, input_ndim))
+                mask_i = K.reshape(mask_i, (-1,) + mask_shape[2:])  # (batch_size * timesteps, ...)
+            reshaped_xs.append(reshaped_x)
+            reshaped_masks.append(mask_i)
+        if len(inputs) == 1:
+            reshaped_xs = reshaped_xs[0]
+            reshaped_masks = reshaped_masks[0]
+        return reshaped_xs, reshaped_masks
+
+    @overrides
+    def call(self, x, mask=None):
+        print("Input to TimeDistributed:", x, "; wrapped layer is:", self.layer)
+        # Much of this is copied from the Keras 1.0(ish) version of TimeDistributed, though we've
+        # modified it quite a bit, to fix the problems mentioned in the docstring and to use better
+        # names.
+        if not isinstance(x, list):
+            x = [x]
+            mask = [mask]
+        timesteps = K.int_shape(x[0])[1]
+        input_shape = [K.int_shape(x_i) for x_i in x]
+        if len(x) == 1:
+            input_shape = input_shape[0]
+        first_input_shape = self.input_spec[0].shape
+        if len(x) == 1 and first_input_shape[0]:
+            # The batch size is passed when defining the layer in some cases (for example if it is
+            # stateful).  We respect the input shape in that case and don't reshape the input. This
+            # is slower.  K.rnn also expects only a single tensor, so we can't do this if we have
+            # multiple inputs.
+            def step(x_i, states):  # pylint: disable=unused-argument
+                output = self.layer.call(x_i)
+                return output, []
+            _, outputs, _ = K.rnn(step, x, mask=mask, input_states=[])
+        else:
+            reshaped_xs, reshaped_masks = self.reshape_inputs_and_masks(x, mask)
+            outputs = self.layer.call(reshaped_xs, mask=reshaped_masks)
+            output_shape = self.get_output_shape_for(input_shape)
+            outputs = K.reshape(outputs, (-1, timesteps) + output_shape[2:])
+        return outputs
+
+    @overrides
+    def compute_mask(self, input, input_mask=None):  # pylint: disable=redefined-builtin
+        if isinstance(input_mask, list):
+            if not any(input_mask):
+                return None
+            else:
+                raise RuntimeError("This version of TimeDistributed doesn't handle multiple masked "
+                                   "inputs!  Use a subclass of TimeDistributed instead.")
+        return input_mask

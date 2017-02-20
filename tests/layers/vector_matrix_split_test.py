@@ -6,7 +6,7 @@ from keras.models import Model
 
 from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
 from deep_qa.layers.vector_matrix_split import VectorMatrixSplit
-from deep_qa.layers.wrappers import OutputMask
+from deep_qa.layers.wrappers.output_mask import OutputMask
 
 class TestVectorMatrixSplit:
     def test_split_works_correctly_on_word_indices(self):

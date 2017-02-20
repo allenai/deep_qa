@@ -6,7 +6,7 @@ from keras.layers import Embedding, Input
 from keras.models import Model
 
 from deep_qa.layers.attention.matrix_attention import MatrixAttention
-from deep_qa.layers.wrappers import OutputMask
+from deep_qa.layers.wrappers.output_mask import OutputMask
 
 class TestMatrixAttentionLayer:
     def test_call_works_on_simple_input(self):

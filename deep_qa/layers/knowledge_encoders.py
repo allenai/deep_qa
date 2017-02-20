@@ -11,7 +11,7 @@ from keras.layers.wrappers import Bidirectional
 from keras.layers.recurrent import GRU
 
 from .additive import Additive
-from .wrappers import EncoderWrapper
+from .wrappers.encoder_wrapper import EncoderWrapper
 
 
 class IndependentKnowledgeEncoder:

@@ -10,7 +10,7 @@ from ..memory_network import MemoryNetwork
 from ....common.checks import ConfigurationError
 from ....data.dataset import TextDataset
 from ....data.instances import instances
-from ....layers.wrappers import EncoderWrapper
+from ....layers.wrappers.encoder_wrapper import EncoderWrapper
 from ....training.models import DeepQaModel
 from ....training.pretraining.text_pretrainer import TextPretrainer
 
