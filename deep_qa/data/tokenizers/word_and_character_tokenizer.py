@@ -27,7 +27,7 @@ class WordAndCharacterTokenizer(Tokenizer):
     ``encoder`` dict, we'll create a new encoder using the ``"default"`` parameters.
     """
     def __init__(self, params: Dict[str, Any]):
-        self.word_processor = WordProcessor(params.get('processor', {}))
+        self.word_processor = WordProcessor(params.pop('processor', {}))
         super(WordAndCharacterTokenizer, self).__init__(params)
 
     @overrides

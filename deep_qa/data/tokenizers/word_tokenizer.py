@@ -26,7 +26,7 @@ class WordTokenizer(Tokenizer):
         of available parameters.
     """
     def __init__(self, params: Dict[str, Any]):
-        self.word_processor = WordProcessor(params.get('processor', {}))
+        self.word_processor = WordProcessor(params.pop('processor', {}))
         super(WordTokenizer, self).__init__(params)
 
     @overrides
