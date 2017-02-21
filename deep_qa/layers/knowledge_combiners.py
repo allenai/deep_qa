@@ -50,6 +50,15 @@ class WeightedAverageKnowledgeCombiner(Layer):
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], input_shape[2] - 1)
 
+    @overrides
+    def get_config(self):
+        config = {
+                "output_dim": -1,
+                "input_length": -1
+                }
+        base_config = super(WeightedAverageKnowledgeCombiner, self).get_config()
+        config.update(base_config)
+        return config
 
 class AttentiveGRUKnowledgeCombiner(GRU):
     '''
@@ -231,6 +240,7 @@ class AttentiveGRUKnowledgeCombiner(GRU):
             del self.initial_weights
 
         self.built = True
+
     @overrides
     def preprocess_input(self, x):
         '''

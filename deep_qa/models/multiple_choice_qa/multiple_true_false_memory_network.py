@@ -105,6 +105,15 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
         dataset = super(MultipleTrueFalseMemoryNetwork, self)._load_dataset_from_files(files)
         return dataset.to_question_dataset()
 
+    @classmethod
+    @overrides
+    def _get_custom_objects(cls):
+        custom_objects = super(MultipleTrueFalseMemoryNetwork, cls)._get_custom_objects()
+        custom_objects['EncoderWrapper'] = EncoderWrapper
+        from ...layers.attention.masked_softmax import MaskedSoftmax
+        custom_objects['MaskedSoftmax'] = MaskedSoftmax
+        return custom_objects
+
     @overrides
     def _render_layer_outputs(self, instance: MultipleTrueFalseInstance, outputs: Dict[str, numpy.array]) -> str:
         result = ""

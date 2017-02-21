@@ -4,6 +4,8 @@ from unittest import TestCase, mock
 import os
 import shutil
 
+from numpy.testing.utils import assert_allclose
+
 from deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
 from ...common.constants import TEST_DIR
 from ...common.models import get_model
@@ -21,9 +23,15 @@ class TestMultipleTrueFalseMemoryNetwork(TestCase):
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
 
-    def test_train_does_not_crash(self):
-        model = get_model(MultipleTrueFalseMemoryNetwork)
+    def test_model_trains_and_loads_correctly(self):
+        model = get_model(MultipleTrueFalseMemoryNetwork, {'save_models': True})
         model.train()
+
+        loaded_model = get_model(MultipleTrueFalseMemoryNetwork)
+        loaded_model.load_model()
+
+        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
+                        loaded_model.model.predict(model.__dict__["validation_input"]))
 
     @mock.patch.object(MultipleTrueFalseMemoryNetwork, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):

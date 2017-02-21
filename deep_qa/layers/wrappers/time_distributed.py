@@ -24,6 +24,11 @@ class TimeDistributed(KerasTimeDistributed):
             self.layer.build(child_input_shape)
             self.layer.built = True
         self.built = True
+        # It's important that we call Wrapper.build() here, because it sets some important member
+        # variables.  But we can't call KerasTimeDistributed.build(), because it assumes only one
+        # input, which we're trying to fix.  So we use super(KerasTimeDistributed, self).build()
+        # here on purpose - this is not a copy-paste bug.
+        super(KerasTimeDistributed, self).build(input_shape)  # pylint: disable=bad-super-call
 
     @overrides
     def get_output_shape_for(self, input_shape):
@@ -63,7 +68,6 @@ class TimeDistributed(KerasTimeDistributed):
 
     @overrides
     def call(self, x, mask=None):
-        print("Input to TimeDistributed:", x, "; wrapped layer is:", self.layer)
         # Much of this is copied from the Keras 1.0(ish) version of TimeDistributed, though we've
         # modified it quite a bit, to fix the problems mentioned in the docstring and to use better
         # names.

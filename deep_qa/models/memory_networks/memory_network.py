@@ -132,9 +132,10 @@ class MemoryNetwork(TextTrainer):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(MemoryNetwork, cls)._get_custom_objects()
-        for object_dict in [updaters, selectors, entailment_input_combiners]:
+        for object_dict in [updaters, selectors, entailment_input_combiners, knowledge_combiners]:
             for value in object_dict.values():
                 custom_objects[value.__name__] = value
+        custom_objects['VectorMatrixMerge'] = VectorMatrixMerge
         return custom_objects
 
     @overrides
