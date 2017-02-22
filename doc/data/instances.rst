@@ -152,6 +152,15 @@ true_false_instance
     :undoc-members:
     :show-inheritance:
 
+tuple_inference_instance
+---------------------------
+
+.. automodule:: deep_qa.data.instances.tuple_inference_instance
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 tuple_instance
 --------------
 

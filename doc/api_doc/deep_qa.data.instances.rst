@@ -57,7 +57,7 @@ deep_qa.data.instances.multiple_true_false_instance
     :undoc-members:
     :show-inheritance:
 
- deep_qa.data.instances.mc_question_answer_instance
+deep_qa.data.instances.mc_question_answer_instance
 ---------------------------------------------------
 
 .. automodule:: deep_qa.data.instances.mc_question_answer_instance
@@ -103,6 +103,15 @@ deep_qa.data.instances.true_false_instance
 
 .. automodule:: deep_qa.data.instances.true_false_instance
     :members:
+    :undoc-members:
+    :show-inheritance:
+
+deep_qa.data.instances.tuple_inference_instance
+---------------------------------------------------
+
+.. automodule:: deep_qa.data.instances.tuple_inference_instance
+    :members:
+    :noindex:
     :undoc-members:
     :show-inheritance:
 
