@@ -24,13 +24,13 @@ class SumMemoryUpdater(Layer):
     We can't just do a merge() here because we want to be able to TimeDistribute this layer, so we
     need to do some fancy footwork with the input vector.
     """
-    def __init__(self, encoding_dim, name="sum_memory_updater", **kwargs):
+    def __init__(self, output_dim, name="sum_memory_updater", **kwargs):
         super(SumMemoryUpdater, self).__init__(name=name, **kwargs)
-        self.encoding_dim = encoding_dim
+        self.output_dim = output_dim
         self.mode = 'sum'
 
     def call(self, x, mask=None):
-        _, current_memory, attended_knowledge = split_updater_inputs(x, self.encoding_dim)
+        _, current_memory, attended_knowledge = split_updater_inputs(x, self.output_dim)
         return current_memory + attended_knowledge
 
     def get_output_shape_for(self, input_shape):
@@ -38,7 +38,7 @@ class SumMemoryUpdater(Layer):
 
     def get_config(self):
         base_config = super(SumMemoryUpdater, self).get_config()
-        config = {'encoding_dim': self.encoding_dim}
+        config = {'output_dim': self.output_dim}
         config.update(base_config)
         return config
 
@@ -53,24 +53,17 @@ class DenseConcatNoQuestionMemoryUpdater(Dense):
     Because the input to the memory updater is already concatenated, we just remove the question
     representation and then send this through the Dense layer.
     """
-    def __init__(self, encoding_dim, name="dense_concat_memory_updater", **kwargs):
-        self.encoding_dim = encoding_dim
-        super(DenseConcatNoQuestionMemoryUpdater, self).__init__(encoding_dim, name=name, **kwargs)
+    def __init__(self, output_dim, name="dense_concat_memory_updater", **kwargs):
+        super(DenseConcatNoQuestionMemoryUpdater, self).__init__(output_dim, name=name, **kwargs)
 
     def call(self, x, mask=None):
         # For this memory update, we don't need the question encoding. This is the first
         # concatentated vector, so we remove it.
-        x = x[:, self.encoding_dim:]
+        x = x[:, self.output_dim:]
         return super(DenseConcatNoQuestionMemoryUpdater, self).call(x)
 
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], int(input_shape[1] / 3))
-
-    def get_config(self):
-        base_config = super(DenseConcatNoQuestionMemoryUpdater, self).get_config()
-        config = {'encoding_dim': self.output_dim}
-        config.update(base_config)
-        return config
 
 
 class DenseConcatMemoryUpdater(Dense):
@@ -78,15 +71,15 @@ class DenseConcatMemoryUpdater(Dense):
     This MemoryUpdater concatenates the question vector, memory vector and the aggregated knowledge
     vector and then passes them through a Dense layer.
 
-    Because the input to the memory updater is already concatenated, we just remove the question
-    represenation and then send this through the Dense layer.
+    Because the input to the memory updater is already concatenated, we just send this through the
+    Dense layer.
     """
-    def __init__(self, encoding_dim, name="dense_concat_memory_updater", **kwargs):
-        self.encoding_dim = encoding_dim
-        super(DenseConcatMemoryUpdater, self).__init__(encoding_dim, name=name, **kwargs)
+    def __init__(self, output_dim, name="dense_concat_memory_updater", **kwargs):
+        super(DenseConcatMemoryUpdater, self).__init__(output_dim, name=name, **kwargs)
 
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], int(input_shape[1] / 3))
+
 
 updaters = OrderedDict()  # pylint: disable=invalid-name
 updaters['dense_concat'] = DenseConcatMemoryUpdater

@@ -274,7 +274,7 @@ class MemoryNetwork(TextTrainer):
         params = deepcopy(self.memory_updater_params)
         updater_type = get_choice_with_default(params, "type", list(updaters.keys()))
         params['name'] = name
-        params['encoding_dim'] = self.embedding_size
+        params['output_dim'] = self.embedding_size
         return updaters[updater_type](**params)
 
     def _get_entailment_input_combiner(self):
