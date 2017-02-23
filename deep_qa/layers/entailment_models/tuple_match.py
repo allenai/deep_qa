@@ -34,35 +34,52 @@ class TupleMatch(Layer):
     ----------
     - num_hidden_layers : int, default=1
         Number of hidden layers in the shallow NN.
+
     - hidden_layer_width : int, default=4
         The number of nodes in each of the NN hidden layers.
+
     - initialization : string, default='glorot_uniform'
         The initialization of the NN weights
+
     - hidden_layer_activation : string, default='relu'
         The activation of the NN hidden layers
+
     - final_activation : string, default='sigmoid'
         The activation of the NN output layer
+
+    Notes
+    _____
+    This layer is incompatible with the WordsAndCharacters tokenizer.
     """
 
     def __init__(self, num_hidden_layers: int=1, hidden_layer_width: int=4,
-                 initialization: str='glorot_uniform', hidden_layer_activation: str='relu',
-                 final_activation: str='sigmoid'):
+                 initialization: str='glorot_uniform', hidden_layer_activation: str='tanh',
+                 final_activation: str='sigmoid', **kwargs):
         self.input_dim = None
         self.supports_masking = True
         # Parameters for the shallow neural network
         self.num_hidden_layers = num_hidden_layers
         self.hidden_layer_width = hidden_layer_width
-        self.hidden_layer_init = initializations.get(initialization)
-        self.hidden_layer_activation = activations.get(hidden_layer_activation)
-        self.final_activation = activations.get(final_activation)
+        self.hidden_layer_init = initialization
+        self.hidden_layer_activation = hidden_layer_activation
+        self.final_activation = final_activation
         self.hidden_layer_weights = []
         self.score_layer = None
-        super(TupleMatch, self).__init__()
+        super(TupleMatch, self).__init__(**kwargs)
 
+    def get_config(self):
+        base_config = super(TupleMatch, self).get_config()
+        config = {'num_hidden_layers': self.num_hidden_layers,
+                  'hidden_layer_width': self.hidden_layer_width,
+                  'initialization': self.hidden_layer_init,
+                  'hidden_layer_activation': self.hidden_layer_activation,
+                  'final_activation': self.final_activation}
+        config.update(base_config)
+        return config
 
     def get_output_shape_for(self, input_shapes):
         #pylint: disable=unused-argument
-        return (input_shapes[0], 1)
+        return (input_shapes[0][0], 1)
 
 
     def build(self, input_shape):
@@ -72,13 +89,13 @@ class TupleMatch(Layer):
         hidden_layer_input_dim = input_shape[0][1]
         for i in range(self.num_hidden_layers):
             hidden_layer = self.add_weight(shape=(hidden_layer_input_dim, self.hidden_layer_width),
-                                           initializer=self.hidden_layer_init,
+                                           initializer=initializations.get(self.hidden_layer_init),
                                            name='%s_hiddenlayer_%d' % (self.name, i))
             self.hidden_layer_weights.append(hidden_layer)
             hidden_layer_input_dim = self.hidden_layer_width
         # Add the weights for the final layer.
         self.score_layer = self.add_weight(shape=(self.hidden_layer_width, 1),
-                                           initializer=self.hidden_layer_init,
+                                           initializer=initializations.get(self.hidden_layer_init),
                                            name='%s_score' % self.name)
 
 
@@ -117,7 +134,7 @@ class TupleMatch(Layer):
 
         # Exclude zeros (i.e. padded elements) from matching each other.
         # tuple1_mask is 1 if tuple1 has a real element, 0 if it's a padding element.
-        tiled_tuple1_mask = K.cast(K.not_equal(tiled_tuple1, K.zeros_like(tiled_tuple1, dtype='float32')),
+        tiled_tuple1_mask = K.cast(K.not_equal(tiled_tuple1, K.zeros_like(tiled_tuple1, dtype='int32')),
                                    dtype='float32')
         zeros_excluded_overlap = tuple_words_overlap * tiled_tuple1_mask
 
@@ -145,8 +162,8 @@ class TupleMatch(Layer):
         normalized_slot_overlap = slot_overlap_sums / divisor
         # shape: (batch size, hidden_layer_width)
         raw_entailment = apply_feed_forward(normalized_slot_overlap, self.hidden_layer_weights,
-                                            self.hidden_layer_activation)
+                                            activations.get(self.hidden_layer_activation))
         # shape: (batch size, 1)
-        final_score = self.final_activation(K.dot(raw_entailment, self.score_layer))
+        final_score = activations.get(self.final_activation)(K.dot(raw_entailment, self.score_layer))
 
         return final_score

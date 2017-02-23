@@ -37,3 +37,9 @@ class Repeat(Layer):
     @overrides
     def call(self, x, mask=None):
         return K.repeat_elements(K.expand_dims(x, self.axis), self.repetitions, self.axis)
+
+    def get_config(self):
+        base_config = super(Repeat, self).get_config()
+        config = {'axis': self.axis, 'repetitions': self.repetitions}
+        config.update(base_config)
+        return config

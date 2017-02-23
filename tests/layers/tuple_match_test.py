@@ -15,8 +15,8 @@ class TestTupleMatch(TestCase):
         num_slots = 3
         t1_words_per_slot = 4
         t2_words_per_slot = 3
-        self.tuple1_input = Input(shape=(num_slots, t1_words_per_slot), dtype='float32', name="input_tuple1")
-        self.tuple2_input = Input(shape=(num_slots, t2_words_per_slot), dtype='float32', name="input_tuple2")
+        self.tuple1_input = Input(shape=(num_slots, t1_words_per_slot), dtype='int32', name="input_tuple1")
+        self.tuple2_input = Input(shape=(num_slots, t2_words_per_slot), dtype='int32', name="input_tuple2")
         self.num_hidden_layers = 1
         self.hidden_layer_width = 2
         self.hidden_layer_activation = 'linear'

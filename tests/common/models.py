@@ -150,6 +150,19 @@ def write_who_did_what_files():
         train_file.write('1\tHe kept typing at his desk.\tHe typed at  his xxxxx\tdesk###kept\t0\n')
         train_file.write('1\tThe pup at the bone but not the biscuit.\tThe pup ate the xxxxx\tbone###biscuit\t0\n')
 
+def write_tuple_inference_files():
+    with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:
+        train_file.write('1\tss<>v f d<>oo o<>c$$$s<>v ff<>o i###ss r<>v<>o e<>o ee\tss ss<>ve gg<>o sd<>ccs\t0\n')
+    with codecs.open(TRAIN_FILE, 'w', 'utf-8') as train_file:
+        # document, question, answers
+        train_file.write('1\tss<>v<>oo o<>c$$$s e<>ff<>o ii i###ss r<>rr<>o e<>o ee\tss<>ve gg<>o sd<>ccs\t0\n')
+        train_file.write('2\tsg g<>vg<>oo o<>c$$$s e<>v ff<>o ii i###ss<>v rr<>o e<>o ee###hh kk<>hdj d<>hh\t' +
+                         'ss ss<>ve gg<>o sd<>ccs\t2\n')
+        train_file.write('3\ts r<>v f d<>o ss<>c$$$s e<>v ff<>o ss i$$$r<>v ss<>s o e<>o ee\tss ss<>v g<>o sd' +
+                         '<>ccs\t0\n')
+        train_file.write('4\tty y<>cf fv ss<>s ss<>c$$$rt e<>vv f<>oss i i###ss<>v<>os e<>o ee\tss ss<>ve gg<>o ' +
+                         'sd<>ccs\t1\n')
+
 def write_span_prediction_files():
     with codecs.open(VALIDATION_FILE, 'w', 'utf-8') as train_file:
         train_file.write('1\tquestion 1\tpassage with answer\t13,18\n')

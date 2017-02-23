@@ -1,0 +1,30 @@
+{
+    "tokenizer":{
+     "processor": {
+      "word_splitter": "simple",
+      "word_filter": "stopwords",
+      "word_stemmer": "porter"
+      }
+    },
+    "model_class": "TupleInferenceModel",
+    "model_serialization_prefix": "models/qa/multi_svo_background_tuple",
+    "optimizer": {
+      "type": "adam"
+    },
+    "keras_validation_split": 0.1,
+    "patience": 50,
+    "num_epochs": 50,
+    "tuple_match": {
+                        "num_hidden_layers": 1,
+                        "hidden_layer_width": 4,
+                        "hidden_layer_activation": "tanh",
+                        "final_activation": "sigmoid"
+    },
+    "noisy_or_param_init": "uniform",
+    "num_question_tuples": 30,
+    "num_background_tuples": 70,
+    "num_tuple_slots": 4,
+    "word_sequence_length": 5,
+    "num_answer_options": 4,
+    "train_files": ["/Users/rebeccas/data/tmOmni4/queryTuples.txt.labeled"]
+}

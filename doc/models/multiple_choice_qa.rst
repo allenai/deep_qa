@@ -65,3 +65,12 @@ TupleEntailment
     :noindex:
     :undoc-members:
     :show-inheritance:
+
+TupleInference
+------------------------------
+
+.. automodule:: deep_qa.models.multiple_choice_qa.tuple_inference
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:

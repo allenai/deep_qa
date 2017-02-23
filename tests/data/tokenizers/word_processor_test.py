@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+
 from deep_qa.data.tokenizers.word_processor import WordProcessor
 
 
