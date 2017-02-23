@@ -139,4 +139,5 @@ class OptionAttentionSum(Layer):
     def get_config(self):
         config = {'multiword_option_mode': self.multiword_option_mode}
         base_config = super(OptionAttentionSum, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        config.update(base_config)
+        return config

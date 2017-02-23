@@ -21,8 +21,9 @@ class TestGatedAttention(TestCase):
         args = {
                 'save_models': True,
                 "qd_common_feature": True,
+                "gating_function": "+",
                 "cloze_token": "xxxxx",
-                "num_gated_attention_layers": 1,
+                "num_gated_attention_layers": 2,
                 "tokenizer": {
                         "type": "words and characters"
                 },
@@ -33,6 +34,20 @@ class TestGatedAttention(TestCase):
                         }
                 },
                 "seq2seq_encoder": {
+                        "question_0": {
+                                "type": "bi_gru",
+                                "encoder_params": {
+                                        "output_dim": 3
+                                },
+                                "wrapper_params": {}
+                        },
+                        "document_0": {
+                                "type": "bi_gru",
+                                "encoder_params": {
+                                        "output_dim": 3
+                                },
+                                "wrapper_params": {}
+                        },
                         "document_final": {
                                 "type": "bi_gru",
                                 "encoder_params": {
@@ -54,10 +69,16 @@ class TestGatedAttention(TestCase):
         }
         model = get_model(GatedAttentionReader, args)
         model.train()
+        # verify that the gated attention function was set properly
+        assert model.gating_function == "+"
+        assert model.gating_function == model.model.get_layer("gated_attention_0").gating_function
 
         # load the model that we serialized
         loaded_model = get_model(GatedAttentionReader, args)
         loaded_model.load_model()
+        # verify that the gated attention function was set properly
+        assert loaded_model.gating_function == "+"
+        assert loaded_model.gating_function == loaded_model.model.get_layer("gated_attention_0").gating_function
 
         # verify that original model and the loaded model predict the same outputs
         assert_allclose(model.model.predict(model.__dict__["validation_input"]),
@@ -67,7 +88,8 @@ class TestGatedAttention(TestCase):
         args = {
                 'save_models': True,
                 "qd_common_feature": True,
-                "num_gated_attention_layers": 1,
+                "num_gated_attention_layers": 2,
+                "gating_function": "+",
                 "tokenizer": {
                         "type": "words and characters"
                 },
@@ -83,6 +105,20 @@ class TestGatedAttention(TestCase):
 
                 },
                 "seq2seq_encoder": {
+                        "question_0": {
+                                "type": "bi_gru",
+                                "encoder_params": {
+                                        "output_dim": 3
+                                },
+                                "wrapper_params": {}
+                        },
+                        "document_0": {
+                                "type": "bi_gru",
+                                "encoder_params": {
+                                        "output_dim": 3
+                                },
+                                "wrapper_params": {}
+                        },
                         "document_final": {
                                 "type": "bi_gru",
                                 "encoder_params": {
@@ -95,9 +131,16 @@ class TestGatedAttention(TestCase):
         }
         model = get_model(GatedAttentionReader, args)
         model.train()
+        # verify that the gated attention function was set properly
+        assert model.gating_function == "+"
+        assert model.gating_function == model.model.get_layer("gated_attention_0").gating_function
+
         # load the model that we serialized
         loaded_model = get_model(GatedAttentionReader, args)
         loaded_model.load_model()
+        # verify that the gated attention function was set properly
+        assert loaded_model.gating_function == "+"
+        assert loaded_model.gating_function == loaded_model.model.get_layer("gated_attention_0").gating_function
 
         # verify that original model and the loaded model predict the same outputs
         assert_allclose(model.model.predict(model.__dict__["validation_input"]),

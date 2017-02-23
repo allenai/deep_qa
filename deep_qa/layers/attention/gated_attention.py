@@ -56,23 +56,21 @@ class GatedAttention(Layer):
     To find out how we calculated equation 1, see the GatedAttentionReader model (roughly,
     a ``masked_batch_dot`` and a ``masked_softmax``)
     """
-    def __init__(self, **kwargs):
+    def __init__(self, gating_function="*", **kwargs):
         self.supports_masking = True
         # We need to wait until below to actually handle this, because self.name gets set in
         # super.__init__.
         # allowed gating functions are "*" (multiply), "+" (sum), and "||" (concatenate)
-        self.gating_function = kwargs.pop('gating_function', "*")
+        self.gating_function = gating_function
         if self.gating_function not in GATING_FUNCTIONS:
             raise ConfigurationError("Invalid gating function "
                                      "{}, expected one of {}".format(self.gating_function,
                                                                      GATING_FUNCTIONS))
-
         super(GatedAttention, self).__init__(**kwargs)
 
     def compute_mask(self, inputs, mask=None):
         # pylint: disable=unused-argument
         return mask[0]
-
 
     def get_output_shape_for(self, input_shapes):
         return (input_shapes[0][0], input_shapes[0][1], input_shapes[0][2])
@@ -124,3 +122,9 @@ class GatedAttention(Layer):
             raise ConfigurationError("Invalid gating function "
                                      "{}, expected one of {}".format(self.gating_function,
                                                                      GATING_FUNCTIONS))
+
+    def get_config(self):
+        config = {'gating_function': self.gating_function}
+        base_config = super(GatedAttention, self).get_config()
+        config.update(base_config)
+        return config

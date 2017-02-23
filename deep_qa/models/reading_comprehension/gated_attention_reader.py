@@ -46,6 +46,11 @@ class GatedAttentionReader(TextTrainer):
         Used to calculate the attention over the document, as the model does it
         differently for cloze vs non-cloze datasets.
 
+    gating_function: str, optional (default="*")
+        The gating function to use in the Gated Attention layer. ``"*"`` is for
+        elementwise multiplication, ``"+"`` is for elementwise addition, and
+        ``"|"`` is for concatenation.
+
     gated_attention_dropout: float, optional (default=0.3)
         The proportion of units to drop out after each gated attention layer.
 
@@ -63,6 +68,8 @@ class GatedAttentionReader(TextTrainer):
         self.multiword_option_mode = params.pop('multiword_option_mode', "mean")
         # number of gated attention layers to use
         self.num_gated_attention_layers = params.pop('num_gated_attention_layers', 3)
+        # gating function to use, either "*", "+", or "|"
+        self.gating_function = params.pop('gating_function', "*")
         # dropout proportion after each gated attention layer.
         self.gated_attention_dropout = params.pop('gated_attention_dropout', 0.3)
         # If you are using the model on a cloze (fill in the blank) dataset,
@@ -152,7 +159,8 @@ class GatedAttentionReader(TextTrainer):
             # (batch size, document length, question length)
             normalized_qd_attention = MaskedSoftmax()([qd_attention])
 
-            gated_attention_layer = GatedAttention()
+            gated_attention_layer = GatedAttention(self.gating_function,
+                                                   name="gated_attention_{}".format(i))
             # shape: (batch size, document_length, 2*seq2seq hidden size)
             document_embedding = gated_attention_layer([encoded_document,
                                                         encoded_question,

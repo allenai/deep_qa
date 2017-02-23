@@ -25,13 +25,20 @@ if [[ ! -d /home/travis/miniconda3 ]]
     export PATH=/home/travis/miniconda3/bin:$PATH
     echo $PATH
     conda update --yes conda
+    # If we are running pylint, use Python 3.5.2 due to
+    # bug in pylint. https://github.com/PyCQA/pylint/issues/1295
+    conda create -n testenv352 --yes python=3.5.2
     conda create -n testenv --yes python=3.5
 fi
 cd ..
 popd
 
-# create a python 3.5 environment
-source activate testenv
+# Activate the python environment we created.
+if [[ "$RUN_PYLINT" == "true" ]]; then
+    source activate testenv352
+else
+    source activate testenv
+fi
 
 # Install requirements via pip in our conda environment
 pip install -r requirements.txt
