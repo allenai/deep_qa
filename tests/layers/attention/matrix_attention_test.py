@@ -1,14 +1,24 @@
 # pylint: disable=no-self-use,invalid-name
+from unittest import TestCase
+import os
+import shutil
 
 import numpy
-from numpy.testing import assert_almost_equal
-from keras.layers import Embedding, Input
-from keras.models import Model
+from numpy.testing import assert_allclose
+from keras.layers import Dense, Embedding, Input
+from keras.models import Model, load_model
 
 from deep_qa.layers.attention.matrix_attention import MatrixAttention
 from deep_qa.layers.wrappers.output_mask import OutputMask
+from ...common.constants import TEST_DIR
 
-class TestMatrixAttentionLayer:
+class TestMatrixAttentionLayer(TestCase):
+    def setUp(self):
+        os.makedirs(TEST_DIR, exist_ok=True)
+
+    def tearDown(self):
+        shutil.rmtree(TEST_DIR)
+
     def test_call_works_on_simple_input(self):
         sentence_1_length = 2
         sentence_2_length = 3
@@ -22,7 +32,31 @@ class TestMatrixAttentionLayer:
         sentence_2_tensor = numpy.asarray([[[1, 1, 1], [-1, 0, 1], [-1, -1, -1]]])
         attention_tensor = model.predict([sentence_1_tensor, sentence_2_tensor])
         assert attention_tensor.shape == (1, sentence_1_length, sentence_2_length)
-        assert_almost_equal(attention_tensor, [[[3, 0, -3], [0, 2, 0]]])
+        assert_allclose(attention_tensor, [[[3, 0, -3], [0, 2, 0]]])
+
+    def test_model_loads_correctly(self):
+        sentence_1_length = 2
+        sentence_2_length = 3
+        embedding_dim = 3
+        sentence_1_embedding = Input(shape=(sentence_1_length, embedding_dim), dtype='float32')
+        sentence_2_embedding = Input(shape=(sentence_2_length, embedding_dim,), dtype='float32')
+        similarity_function_params = {'type': 'linear', 'combination': 'x,y,x*y'}
+        attention_layer = MatrixAttention(similarity_function=similarity_function_params)
+        attention = attention_layer([sentence_1_embedding, sentence_2_embedding])
+        attention = Dense(2)(attention)
+        model = Model(input=[sentence_1_embedding, sentence_2_embedding], output=[attention])
+
+        sentence_1_tensor = numpy.asarray([[[1, 1, 1], [-1, 0, 1]]])
+        sentence_2_tensor = numpy.asarray([[[1, 1, 1], [-1, 0, 1], [-1, -1, -1]]])
+        model_file = TEST_DIR + "model.tmp"
+        before_loading = model.predict([sentence_1_tensor, sentence_2_tensor])
+
+        model.save(model_file)
+        model = load_model(model_file,  # pylint: disable=redefined-variable-type
+                           custom_objects={'MatrixAttention': MatrixAttention})
+        after_loading = model.predict([sentence_1_tensor, sentence_2_tensor])
+
+        assert_allclose(before_loading, after_loading)
 
     def test_call_handles_masking_properly(self):
         sentence_length = 4
@@ -49,5 +83,5 @@ class TestMatrixAttentionLayer:
                                         [0, 0, 0, 0],
                                         [0, 1, 0, 1],
                                         [0, 1, 0, 1]]])
-        assert_almost_equal(attention_tensor, expected_attention)
-        assert_almost_equal(attention_mask, expected_mask)
+        assert_allclose(attention_tensor, expected_attention)
+        assert_allclose(attention_mask, expected_mask)

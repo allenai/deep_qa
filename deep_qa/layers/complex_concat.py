@@ -45,7 +45,8 @@ class ComplexConcat(Layer):
     def __init__(self, combination: str, axis: int=-1, **kwargs):
         self.supports_masking = True
         self.axis = axis
-        self.combinations = combination.split(",")
+        self.combination = combination
+        self.combinations = self.combination.split(",")
         self.num_combinations = len(self.combinations)
         super(ComplexConcat, self).__init__(**kwargs)
 
@@ -106,3 +107,11 @@ class ComplexConcat(Layer):
             if first_length != second_length:
                 raise ConfigurationError("Cannot combine two tensors with different shapes!")
             return first_length
+
+    def get_config(self):
+        config = {"combination": self.combination,
+                  "axis": self.axis,
+                 }
+        base_config = super(ComplexConcat, self).get_config()
+        config.update(base_config)
+        return config

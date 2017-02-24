@@ -3,6 +3,7 @@ from unittest import TestCase
 import logging
 import os
 import shutil
+from numpy.testing import assert_allclose
 
 from deep_qa.models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
 from deep_qa.common.checks import log_keras_version_info
@@ -23,9 +24,18 @@ class TestBidirectionalAttentionFlow(TestCase):
         shutil.rmtree(TEST_DIR)
 
     @requires_tensorflow
-    def test_train_does_not_crash(self):
+    def test_trains_and_loads_correctly(self):
         args = {
+                'save_models': True,
                 'show_summary_with_masking_info': True,
                 }
-        solver = get_model(BidirectionalAttentionFlow, args)
-        solver.train()
+        model = get_model(BidirectionalAttentionFlow, args)
+        model.train()
+
+        # load the model that we serialized
+        loaded_model = get_model(BidirectionalAttentionFlow, args)
+        loaded_model.load_model()
+
+        # verify that original model and the loaded model predict the same outputs
+        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
+                        loaded_model.model.predict(model.__dict__["validation_input"]))

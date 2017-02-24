@@ -128,7 +128,8 @@ class BidirectionalAttentionFlow(TextTrainer):
         # words for each passage word.
         passage_question_attention = MaskedSoftmax()(passage_question_similarity)
         # Shape: (batch_size, num_passage_words, embedding_size * 2)
-        passage_question_vectors = WeightedSum()([encoded_question, passage_question_attention])
+        passage_question_vectors = WeightedSum(name="passage_question_vectors")([encoded_question,
+                                                                                 passage_question_attention])
 
         # Min's paper finds, for each document word, the most similar question word to it, and
         # computes a single attention over the whole document using these max similarities.
@@ -137,7 +138,8 @@ class BidirectionalAttentionFlow(TextTrainer):
         # Shape: (batch_size, num_passage_words)
         question_passage_attention = MaskedSoftmax()(question_passage_similarity)
         # Shape: (batch_size, embedding_size * 2)
-        question_passage_vector = WeightedSum()([encoded_passage, question_passage_attention])
+        question_passage_vector = WeightedSum(name="question_passage_vector")([encoded_passage,
+                                                                               question_passage_attention])
 
         # Then he repeats this question/passage vector for every word in the passage, and uses it
         # as an additional input to the hidden layers above.
@@ -176,8 +178,10 @@ class BidirectionalAttentionFlow(TextTrainer):
         # weighted passage representation and concatenation before doing the final biLSTM (though
         # his figure makes it clear this is what he intended; he just wrote the equations wrong).
         # Shape: (batch_size, num_passage_words, embedding_size * 2)
-        passage_weighted_by_predicted_span = repeat_layer(WeightedSum()([modeled_passage,
-                                                                         span_begin_probabilities]))
+        sum_layer = WeightedSum(name="passage_weighted_by_predicted_span")
+        repeat_layer = Repeat(axis=1, repetitions=self.num_passage_words)
+        passage_weighted_by_predicted_span = repeat_layer(sum_layer([modeled_passage,
+                                                                     span_begin_probabilities]))
         span_end_representation = ComplexConcat(combination="1,2,3,2*3")([final_merged_passage,
                                                                           modeled_passage,
                                                                           passage_weighted_by_predicted_span])
@@ -214,3 +218,14 @@ class BidirectionalAttentionFlow(TextTrainer):
     def _set_max_lengths_from_model(self):
         self.max_sentence_length = self.model.get_input_shape_at(0)[1]
         # TODO(matt): implement this correctly
+
+    @classmethod
+    def _get_custom_objects(cls):
+        custom_objects = super(BidirectionalAttentionFlow, cls)._get_custom_objects()
+        custom_objects["ComplexConcat"] = ComplexConcat
+        custom_objects["MaskedSoftmax"] = MaskedSoftmax
+        custom_objects["MatrixAttention"] = MatrixAttention
+        custom_objects["Max"] = Max
+        custom_objects["Repeat"] = Repeat
+        custom_objects["WeightedSum"] = WeightedSum
+        return custom_objects

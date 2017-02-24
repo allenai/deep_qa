@@ -104,7 +104,8 @@ class CNNEncoder(Layer):
         return None
 
     def get_config(self):
-        config = {"num_filters": self.num_filters,
+        config = {"output_dim": self.output_dim,
+                  "num_filters": self.num_filters,
                   "ngram_filter_sizes": self.ngram_filter_sizes,
                   "conv_layer_activation": self.conv_layer_activation,
                   "l1_regularization": self.l1_regularization,
