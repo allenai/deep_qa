@@ -37,7 +37,8 @@ class MatrixAttention(Layer):
     Parameters
     ----------
     similarity_function_params: Dict[str, Any], default={}
-        These parameters get passed to a similarity function (see :ref:`Similarity Functions`
+        These parameters get passed to a similarity function (see
+        :mod:`deep_qa.tensors.similarity_functions`
         for more info on what's acceptable).  The default
         similarity function with no parameters is a simple dot product.
     '''

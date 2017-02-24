@@ -38,7 +38,6 @@ sys.path.insert(0, os.path.abspath('../'))
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.linkcode',
-              'sphinx.ext.autosectionlabel',
               'numpydoc',
               'sphinx.ext.autosummary'
 ]
