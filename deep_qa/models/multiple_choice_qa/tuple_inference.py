@@ -4,28 +4,31 @@ from keras.layers import Input
 from overrides import overrides
 
 from deep_qa.data.instances.tuple_inference_instance import TupleInferenceInstance
+from deep_qa.layers.tuple_matchers.word_overlap_tuple_match import WordOverlapTupleMatch
+from deep_qa.layers.tuple_matchers import tuple_matchers
 from ...layers.attention.masked_softmax import MaskedSoftmax
-from ...layers.backend.squeeze import Squeeze
 from ...layers.backend.repeat import Repeat
-from ...layers.entailment_models.tuple_match import TupleMatch
+from ...layers.backend.squeeze import Squeeze
 from ...layers.noisy_or import NoisyOr
 from ...layers.wrappers.time_distributed import TimeDistributed
 from ...training.models import DeepQaModel
 from ...training.text_trainer import TextTrainer
+from ...common.params import get_choice_with_default
 
 
 class TupleInferenceModel(TextTrainer):
     """
     This ``TextTrainer`` implements the TupleEntailment model of Tushar.  It takes a set of tuples from the
-    question and its answer candidates and a set of background knowledge tuples and looks for lexical
-    overlap/entailment between the corresponding tuple slots.  The result is a probability distribution over
+    question and its answer candidates and a set of background knowledge tuples and looks for entailment
+    between the corresponding tuple slots.  The result is a probability distribution over
     the answer options based on how well they align with the background tuples, given the question text.  We
     consider this alignment to be a form of soft inference, hence the model name.
 
     Parameters
     ----------
     tuple_match_params: Dict[str, Any]
-        Parameters for initializing the inner entailment model (here ``TupleMatch``).
+        Parameters for selecting and then initializing the inner entailment model, one of the TupleMatch
+        models.
 
     noisy_or_param_init: str, default='uniform'
         The initialization for the noise parameters in the ``NoisyOr`` layers.
@@ -58,6 +61,10 @@ class TupleInferenceModel(TextTrainer):
         self.num_slot_words = params.pop('word_sequence_length', 5)
         self.word_character_length = params.pop('word_character_length', None)
         self.num_options = params.pop('num_answer_options', 4)
+        tuple_match_choice = get_choice_with_default(self.tuple_match_params,
+                                                     "type",
+                                                     list(tuple_matchers.keys()))
+        self.tuple_match = tuple_matchers[tuple_match_choice]
         super(TupleInferenceModel, self).__init__(params)
 
         self.name = 'TupleInferenceModel'
@@ -70,7 +77,7 @@ class TupleInferenceModel(TextTrainer):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(TupleInferenceModel, cls)._get_custom_objects()
-        custom_objects['TupleMatch'] = TupleMatch
+        custom_objects['WordOverlapTupleMatch'] = WordOverlapTupleMatch
         custom_objects['MaskedSoftmax'] = MaskedSoftmax
         custom_objects['NoisyOr'] = NoisyOr
         custom_objects['Repeat'] = Repeat
@@ -108,7 +115,9 @@ class TupleInferenceModel(TextTrainer):
         inputs for each of the answer choices, i.e., each :math:`A^c \in \mathcal{A}`), and the background input,
         :math:`\mathcal{K}`, get tiled to be the same size.  They are then aligned tuple-by-tuple: each of the
         background tuples, :math:`k_j` is compared to each of the answer tuples, :math:`a_i^c`, to create a
-        support/entailment score, :math:`s_{ij}^c`. Then, for each answer tuple, :math:`a_i^c \in A^c` we combine
+        support/entailment score, :math:`s_{ij}^c`.  This score is determined using the selected ``TupleMatch``
+        layer.
+        Then, for each answer tuple, :math:`a_i^c \in A^c` we combine
         the scores for each :math:`k_j \in K` using noisy-or to get the entailment score for the given answer
         choice tuple:
             :math:`s_i^c = 1 - \prod_{j=1:J}(1 - q_1 * s_{ij}^c)`
@@ -140,7 +149,7 @@ class TupleInferenceModel(TextTrainer):
         tiled_background = Repeat(axis=2, repetitions=self.num_question_tuples)(tiled_background)
 
         # Initialize the layer that does the tuple-matching (i.e., entailment).
-        tuple_match = TupleMatch(**self.tuple_match_params)
+        tuple_match = self.tuple_match(**self.tuple_match_params)
         # These TimeDistributed wrappers correspond to distributing across each of num_options,
         # num_question_tuples, and num_background_tuples.
         match_layer = TimeDistributed(TimeDistributed(TimeDistributed(tuple_match)))

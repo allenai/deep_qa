@@ -11,10 +11,11 @@
     "optimizer": {
       "type": "adam"
     },
-    "keras_validation_split": 0.1,
+    "keras_validation_split": 0.2,
     "patience": 50,
     "num_epochs": 50,
     "tuple_match": {
+                        "type": "word_overlap",
                         "num_hidden_layers": 1,
                         "hidden_layer_width": 4,
                         "hidden_layer_activation": "tanh",
@@ -22,9 +23,9 @@
     },
     "noisy_or_param_init": "uniform",
     "num_question_tuples": 30,
-    "num_background_tuples": 70,
+    "num_background_tuples": 50,
     "num_tuple_slots": 4,
     "word_sequence_length": 5,
     "num_answer_options": 4,
-    "train_files": ["/Users/rebeccas/data/tmOmni4/queryTuples.txt.labeled"]
+    "train_files": ["/Users/rebeccas/data/brittleness/omni4_train_brittleness.tuples.labeled"]
 }

@@ -1,12 +1,12 @@
 from keras import backend as K
 from keras import initializations, activations
-from keras.layers import Layer
-
 from overrides import overrides
+
 from ...tensors.backend import switch, apply_feed_forward
+from .tuple_match import TupleMatch
 
 
-class TupleMatch(Layer):
+class WordOverlapTupleMatch(TupleMatch):
     r"""
     This layer takes as input two tensors cprresponding to two tuples, an answer tuple and a background tuple,
     and calculates the degree to which the background tuple `entails` the answer tuple.  Entailment is
@@ -65,10 +65,10 @@ class TupleMatch(Layer):
         self.final_activation = final_activation
         self.hidden_layer_weights = []
         self.score_layer = None
-        super(TupleMatch, self).__init__(**kwargs)
+        super(WordOverlapTupleMatch, self).__init__(**kwargs)
 
     def get_config(self):
-        base_config = super(TupleMatch, self).get_config()
+        base_config = super(WordOverlapTupleMatch, self).get_config()
         config = {'num_hidden_layers': self.num_hidden_layers,
                   'hidden_layer_width': self.hidden_layer_width,
                   'initialization': self.hidden_layer_init,
@@ -77,13 +77,8 @@ class TupleMatch(Layer):
         config.update(base_config)
         return config
 
-    def get_output_shape_for(self, input_shapes):
-        #pylint: disable=unused-argument
-        return (input_shapes[0][0], 1)
-
-
     def build(self, input_shape):
-        super(TupleMatch, self).build(input_shape)
+        super(WordOverlapTupleMatch, self).build(input_shape)
 
         # Add the weights for the hidden layers.
         hidden_layer_input_dim = input_shape[0][1]

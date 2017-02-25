@@ -90,9 +90,9 @@ class TextTuple:
         for element in tuple_fields[2:]:
             if element.startswith("context:"):
                 context = element[8:]
-            elif element.startswith("L:"):
+            elif element.startswith("l:"):
                 location = element[2:]
-            elif element.startswith("T:"):
+            elif element.startswith("t:"):
                 time = element[2:]
             elif element.startswith("source:"):
                 source = element[7:]
