@@ -8,7 +8,7 @@ from keras.models import Model
 from numpy.testing import assert_array_almost_equal
 from scipy.stats import logistic
 
-from deep_qa.layers.tuple_matchers.word_overlap_tuple_match import WordOverlapTupleMatch
+from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
 
 
 class TestWordOverlapTupleMatch(TestCase):
@@ -36,8 +36,8 @@ class TestWordOverlapTupleMatch(TestCase):
 
     def test_general_case(self):
 
-        match_layer = WordOverlapTupleMatch(self.num_hidden_layers, self.hidden_layer_width,
-                                            hidden_layer_activation=self.hidden_layer_activation)
+        match_layer = WordOverlapTupleMatcher(self.num_hidden_layers, self.hidden_layer_width,
+                                              hidden_layer_activation=self.hidden_layer_activation)
         output = match_layer([self.tuple1_input, self.tuple2_input])
         model = Model([self.tuple1_input, self.tuple2_input], output)
 
@@ -62,17 +62,17 @@ class TestWordOverlapTupleMatch(TestCase):
         # Here, since tuple3 is all padding, we want to return a mask value of 0 for this pair
         tuple1 = K.variable(self.tuple1)
         tuple3 = K.variable(self.tuple3)
-        calculated_mask_exclude = K.eval(WordOverlapTupleMatch(self.num_hidden_layers,
-                                                               self.hidden_layer_width,
-                                                               hidden_layer_activation=self.hidden_layer_activation)
+        calculated_mask_exclude = K.eval(WordOverlapTupleMatcher(self.num_hidden_layers,
+                                                                 self.hidden_layer_width,
+                                                                  hidden_layer_activation=self.hidden_layer_activation)
                                          .compute_mask([tuple1, tuple3], [None, None]))
         assert_array_almost_equal(calculated_mask_exclude, np.array([0], dtype='int32'))
 
         # Test when tuple2 is valid.
         # Here, since tuple2 is valid, we want to return a mask value of 1 for this pair
         tuple2 = K.variable(self.tuple2)
-        calculated_mask_include = K.eval(WordOverlapTupleMatch(self.num_hidden_layers,
-                                                               self.hidden_layer_width,
-                                                               hidden_layer_activation=self.hidden_layer_activation)
+        calculated_mask_include = K.eval(WordOverlapTupleMatcher(self.num_hidden_layers,
+                                                                 self.hidden_layer_width,
+                                                                 hidden_layer_activation=self.hidden_layer_activation)
                                          .compute_mask([tuple1, tuple2], [None, None]))
         assert_array_almost_equal(calculated_mask_include, np.array([1], dtype='int32'))

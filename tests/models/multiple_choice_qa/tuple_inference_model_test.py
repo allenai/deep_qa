@@ -18,9 +18,9 @@ class TestTupleInferenceModel(TestCase):
         shutil.rmtree(TEST_DIR)
 
     def test_model_trains_and_loads_correctly(self):
-        args = {"tuple_match": {"num_hidden_layers": 1,
-                                "hidden_layer_width": 4,
-                                "hidden_layer_activation": "tanh"},
+        args = {"tuple_matcher": {"num_hidden_layers": 1,
+                                  "hidden_layer_width": 4,
+                                  "hidden_layer_activation": "tanh"},
                 "num_question_tuples": 5,
                 "num_background_tuples": 5,
                 "num_tuple_slots": 4,

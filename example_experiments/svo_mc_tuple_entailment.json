@@ -14,7 +14,7 @@
     "keras_validation_split": 0.2,
     "patience": 50,
     "num_epochs": 50,
-    "tuple_match": {
+    "tuple_matcher": {
                         "type": "word_overlap",
                         "num_hidden_layers": 1,
                         "hidden_layer_width": 4,

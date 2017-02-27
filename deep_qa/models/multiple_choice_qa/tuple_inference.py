@@ -1,10 +1,10 @@
 from typing import Dict, Any
 
-from keras.layers import Input
+from keras.layers import Input, Layer
 from overrides import overrides
 
 from deep_qa.data.instances.tuple_inference_instance import TupleInferenceInstance
-from deep_qa.layers.tuple_matchers.word_overlap_tuple_match import WordOverlapTupleMatch
+from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
 from deep_qa.layers.tuple_matchers import tuple_matchers
 from ...layers.attention.masked_softmax import MaskedSoftmax
 from ...layers.backend.repeat import Repeat
@@ -18,17 +18,18 @@ from ...common.params import get_choice_with_default
 
 class TupleInferenceModel(TextTrainer):
     """
-    This ``TextTrainer`` implements the TupleEntailment model of Tushar.  It takes a set of tuples from the
-    question and its answer candidates and a set of background knowledge tuples and looks for entailment
-    between the corresponding tuple slots.  The result is a probability distribution over
-    the answer options based on how well they align with the background tuples, given the question text.  We
-    consider this alignment to be a form of soft inference, hence the model name.
+    This ``TextTrainer`` implements the TupleEntailment model of Tushar.  It takes a set of tuples
+    from the question and its answer candidates and a set of background knowledge tuples and looks
+    for entailment between the corresponding tuple slots.  The result is a probability distribution
+    over the answer options based on how well they align with the background tuples, given the
+    question text.  We consider this alignment to be a form of soft inference, hence the model
+    name.
 
     Parameters
     ----------
-    tuple_match_params: Dict[str, Any]
-        Parameters for selecting and then initializing the inner entailment model, one of the TupleMatch
-        models.
+    tuple_matcher: Dict[str, Any]
+        Parameters for selecting and then initializing the inner entailment model, one of the
+        TupleMatch models.
 
     noisy_or_param_init: str, default='uniform'
         The initialization for the noise parameters in the ``NoisyOr`` layers.
@@ -45,26 +46,32 @@ class TupleInferenceModel(TextTrainer):
     num_slot_words: int, default=5
         The number of words in each slot of the tuples.
 
-    word_character_length: int, default=None
-        The length of the word representations, if using, e.g., when using the WordAndCharacterTokenizer.
-
     num_options: int, default=4
         The number of answer options/candidates.
 
     """
     def __init__(self, params: Dict[str, Any]):
-        self.tuple_match_params = params.pop('tuple_match', {})
         self.noisy_or_param_init = params.pop('noisy_or_param_init', 'uniform')
         self.num_question_tuples = params.pop('num_question_tuples', 10)
         self.num_background_tuples = params.pop('num_background_tuples', 10)
         self.num_tuple_slots = params.pop('num_tuple_slots', 4)
         self.num_slot_words = params.pop('word_sequence_length', 5)
-        self.word_character_length = params.pop('word_character_length', None)
         self.num_options = params.pop('num_answer_options', 4)
-        tuple_match_choice = get_choice_with_default(self.tuple_match_params,
-                                                     "type",
-                                                     list(tuple_matchers.keys()))
-        self.tuple_match = tuple_matchers[tuple_match_choice]
+        tuple_matcher_params = params.pop('tuple_matcher', {})
+        tuple_matcher_choice = get_choice_with_default(tuple_matcher_params,
+                                                       "type",
+                                                       list(tuple_matchers.keys()))
+        tuple_matcher_class = tuple_matchers[tuple_matcher_choice]
+        # This is a little ugly, but necessary, because the Keras Layer API treats arguments
+        # differently than our model API, and we need access to the TextTrainer object in the tuple
+        # matcher if it's not a Layer.
+        if issubclass(tuple_matcher_class, Layer):
+            # These TimeDistributed wrappers correspond to distributing across each of num_options,
+            # num_question_tuples, and num_background_tuples.
+            match_layer = tuple_matcher_class(**tuple_matcher_params)
+            self.tuple_matcher = TimeDistributed(TimeDistributed(TimeDistributed(match_layer)))
+        else:
+            self.tuple_matcher(self, tuple_matcher_params)
         super(TupleInferenceModel, self).__init__(params)
 
         self.name = 'TupleInferenceModel'
@@ -77,7 +84,8 @@ class TupleInferenceModel(TextTrainer):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(TupleInferenceModel, cls)._get_custom_objects()
-        custom_objects['WordOverlapTupleMatch'] = WordOverlapTupleMatch
+        # TODO(matt): Figure out a better way to handle the concrete TupleMatchers here.
+        custom_objects['WordOverlapTupleMatcher'] = WordOverlapTupleMatcher
         custom_objects['MaskedSoftmax'] = MaskedSoftmax
         custom_objects['NoisyOr'] = NoisyOr
         custom_objects['Repeat'] = Repeat
@@ -148,15 +156,9 @@ class TupleInferenceModel(TextTrainer):
         # Next, add num_question_tuples.
         tiled_background = Repeat(axis=2, repetitions=self.num_question_tuples)(tiled_background)
 
-        # Initialize the layer that does the tuple-matching (i.e., entailment).
-        tuple_match = self.tuple_match(**self.tuple_match_params)
-        # These TimeDistributed wrappers correspond to distributing across each of num_options,
-        # num_question_tuples, and num_background_tuples.
-        match_layer = TimeDistributed(TimeDistributed(TimeDistributed(tuple_match)))
-
         # Find the matches between the question and background tuples.
         # shape: (batch size, num_options, num_question_tuples, num_background_tuples, 1)
-        matches = match_layer([tiled_question, tiled_background])
+        matches = self.tuple_matcher([tiled_question, tiled_background])
         # Squeeze to get rid of the last dim of length 1.
         # shape: (batch size, num_options, num_question_tuples, num_background_tuples)
         matches = Squeeze(axis=-1)(matches)
