@@ -5,7 +5,6 @@ from keras.layers import Embedding, Input
 from keras.models import Model
 
 from deep_qa.layers.attention.weighted_sum import WeightedSum
-from ...common.test_markers import requires_tensorflow
 
 class TestWeightedSumLayer:
     def test_call_works_on_simple_input(self):
@@ -66,7 +65,6 @@ class TestWeightedSumLayer:
                 numpy.testing.assert_almost_equal(aggregated_tensor[0, i, j], expected_tensor,
                                                   decimal=5)
 
-    @requires_tensorflow
     def test_call_handles_masking_properly(self):
         batch_size = 1
         vocab_size = 4

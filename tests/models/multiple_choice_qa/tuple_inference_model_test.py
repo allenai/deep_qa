@@ -34,4 +34,5 @@ class TestTupleInferenceModel(TestCase):
         loaded_model.load_model()
 
         assert_allclose(solver.model.predict(solver.__dict__["validation_input"]),
-                        loaded_model.model.predict(solver.__dict__["validation_input"]))
+                        loaded_model.model.predict(solver.__dict__["validation_input"]),
+                        rtol=1e-5)

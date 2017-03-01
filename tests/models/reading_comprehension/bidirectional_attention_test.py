@@ -9,7 +9,6 @@ from deep_qa.models.reading_comprehension.bidirectional_attention import Bidirec
 from deep_qa.common.checks import log_keras_version_info
 from ...common.constants import TEST_DIR
 from ...common.models import get_model, write_span_prediction_files
-from ...common.test_markers import requires_tensorflow
 
 
 class TestBidirectionalAttentionFlow(TestCase):
@@ -23,7 +22,6 @@ class TestBidirectionalAttentionFlow(TestCase):
     def tearDown(self):
         shutil.rmtree(TEST_DIR)
 
-    @requires_tensorflow
     def test_trains_and_loads_correctly(self):
         args = {
                 'save_models': True,

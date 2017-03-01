@@ -128,8 +128,8 @@ class BidirectionalAttentionFlow(TextTrainer):
         # words for each passage word.
         passage_question_attention = MaskedSoftmax()(passage_question_similarity)
         # Shape: (batch_size, num_passage_words, embedding_size * 2)
-        passage_question_vectors = WeightedSum(name="passage_question_vectors")([encoded_question,
-                                                                                 passage_question_attention])
+        weighted_sum_layer = WeightedSum(name="passage_question_vectors", use_masking=False)
+        passage_question_vectors = weighted_sum_layer([encoded_question, passage_question_attention])
 
         # Min's paper finds, for each document word, the most similar question word to it, and
         # computes a single attention over the whole document using these max similarities.
@@ -138,8 +138,8 @@ class BidirectionalAttentionFlow(TextTrainer):
         # Shape: (batch_size, num_passage_words)
         question_passage_attention = MaskedSoftmax()(question_passage_similarity)
         # Shape: (batch_size, embedding_size * 2)
-        question_passage_vector = WeightedSum(name="question_passage_vector")([encoded_passage,
-                                                                               question_passage_attention])
+        weighted_sum_layer = WeightedSum(name="question_passage_vector", use_masking=False)
+        question_passage_vector = weighted_sum_layer([encoded_passage, question_passage_attention])
 
         # Then he repeats this question/passage vector for every word in the passage, and uses it
         # as an additional input to the hidden layers above.
@@ -178,7 +178,7 @@ class BidirectionalAttentionFlow(TextTrainer):
         # weighted passage representation and concatenation before doing the final biLSTM (though
         # his figure makes it clear this is what he intended; he just wrote the equations wrong).
         # Shape: (batch_size, num_passage_words, embedding_size * 2)
-        sum_layer = WeightedSum(name="passage_weighted_by_predicted_span")
+        sum_layer = WeightedSum(name="passage_weighted_by_predicted_span", use_masking=False)
         repeat_layer = Repeat(axis=1, repetitions=self.num_passage_words)
         passage_weighted_by_predicted_span = repeat_layer(sum_layer([modeled_passage,
                                                                      span_begin_probabilities]))
