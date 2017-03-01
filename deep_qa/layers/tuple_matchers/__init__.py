@@ -20,7 +20,9 @@ several ``Layers`` to the input (e.g., to embed the words before doing some comp
 from collections import OrderedDict
 
 from .word_overlap_tuple_matcher import WordOverlapTupleMatcher
+from .encoded_tuple_matcher import EncodedTupleMatcher
 
 # The first item added here will be used as the default in some cases.
 tuple_matchers = OrderedDict() # pylint: disable=invalid-name
 tuple_matchers['word_overlap'] = WordOverlapTupleMatcher
+tuple_matchers['encoded_matcher'] = EncodedTupleMatcher

@@ -19,6 +19,15 @@ EncodedTupleMatcher
     :undoc-members:
     :show-inheritance:
 
+SlotSimilarityTupleMatcher
+---------
+
+.. automodule:: deep_qa.layers.tuple_matchers.slot_similarity_tuple_matcher
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 WordOverlapTupleMatcher
 ---------
 

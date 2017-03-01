@@ -10,6 +10,15 @@ bilinear
     :undoc-members:
     :show-inheritance:
 
+cosine_similarity
+--------
+
+.. automodule:: deep_qa.tensors.similarity_functions.cosine_similarity
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 dot_product
 -----------
 

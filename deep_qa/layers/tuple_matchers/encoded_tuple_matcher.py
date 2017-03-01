@@ -2,7 +2,9 @@ from collections import OrderedDict
 from typing import Any, Dict
 
 from ...layers.wrappers.encoder_wrapper import EncoderWrapper
+from ...layers.wrappers.time_distributed_with_mask import TimeDistributedWithMask
 from ...common.params import get_choice_with_default
+from .slot_similarity_tuple_matcher import SlotSimilarityTupleMatcher
 
 
 class EncodedTupleMatcher:
@@ -28,7 +30,7 @@ class EncodedTupleMatcher:
         if tuple_matcher_params is None:
             tuple_matcher_params = {}
         tuple_matcher_choice = get_choice_with_default(tuple_matcher_params,
-                                                       "type",
+                                                       "encoded_matcher_type",
                                                        list(encoded_tuple_matchers.keys()))
         self.tuple_matcher = encoded_tuple_matchers[tuple_matcher_choice](**tuple_matcher_params)
 
@@ -41,15 +43,18 @@ class EncodedTupleMatcher:
                                                        fallback_behavior="use default encoder")
         # We use separate encoders here in case the tuples have different shapes (e.g., different
         # numbers of slots, or number of words per slot).
-        tuple1_encoder = EncoderWrapper(EncoderWrapper(tuple_encoder), name="tuple1_encoder")
-        tuple2_encoder = EncoderWrapper(EncoderWrapper(tuple_encoder), name="tuple2_encoder")
+        tuple1_encoder = EncoderWrapper(EncoderWrapper(EncoderWrapper(EncoderWrapper(tuple_encoder),
+                                                                      name="tuple1_encoder")))
+        tuple2_encoder = EncoderWrapper(EncoderWrapper(EncoderWrapper(EncoderWrapper(tuple_encoder),
+                                                                      name="tuple2_encoder")))
         encoded_tuple1 = tuple1_encoder(embedded_tuple1)
         encoded_tuple2 = tuple2_encoder(embedded_tuple2)
-        # The three EncoderWrappers wrap around the first three dimensions of the inputs:
+        # The three TimeDistributedWithMask wrap around the first three dimensions of the inputs:
         # num_options, num_answer_tuple, and num_background_tuples.
-        match_layer = EncoderWrapper(EncoderWrapper(EncoderWrapper(self.tuple_matcher)))
+        match_layer = TimeDistributedWithMask(TimeDistributedWithMask(TimeDistributedWithMask(self.tuple_matcher)))
         return match_layer([encoded_tuple1, encoded_tuple2])
 
 
 # The first item added here will be used as the default in some cases.
 encoded_tuple_matchers = OrderedDict()  # pylint: disable=invalid-name
+encoded_tuple_matchers['slot_similarity'] = SlotSimilarityTupleMatcher

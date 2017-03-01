@@ -11,7 +11,7 @@ from scipy.stats import logistic
 from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
 
 
-class TestWordOverlapTupleMatch(TestCase):
+class TestWordOverlapTupleMatcher(TestCase):
 
     def setUp(self):
         num_slots = 3
@@ -52,6 +52,7 @@ class TestWordOverlapTupleMatch(TestCase):
         # Desired_overlap gets fed into the inner NN.
         dense1_activation = np.dot(desired_overlap, dense_hidden_weights)
         final_score = np.dot(dense1_activation, score_weights)
+        # Apply the final sigmoid activation function.
         desired_result = logistic.cdf(final_score)
         print(desired_result)
         result = model.predict([self.tuple1, self.tuple2])

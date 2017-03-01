@@ -15,11 +15,20 @@
     "patience": 50,
     "num_epochs": 50,
     "tuple_matcher": {
-                        "type": "word_overlap",
+                        "type": "encoded_matcher",
+                        "encoded_match_type": "slot_similarity",
+                        "similarity_function": {
+                          "type": "cosine_similarity"
+                        },
                         "num_hidden_layers": 1,
                         "hidden_layer_width": 4,
                         "hidden_layer_activation": "tanh",
                         "final_activation": "sigmoid"
+    },
+    "encoder": {
+        "default": {
+            "type": "bow"
+        }
     },
     "noisy_or_param_init": "uniform",
     "num_question_tuples": 30,
@@ -28,4 +37,5 @@
     "word_sequence_length": 5,
     "num_answer_options": 4,
     "train_files": ["/Users/rebeccas/data/brittleness/omni4_train_brittleness.tuples.labeled"]
+
 }

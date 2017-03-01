@@ -9,6 +9,14 @@ deep_qa.tensors.similarity_functions.bilinear
     :undoc-members:
     :show-inheritance:
 
+deep_qa.tensors.similarity_functions.cosine_similarity
+---------------------------------------------
+
+.. automodule:: deep_qa.tensors.similarity_functions.cosine_similarity
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 deep_qa.tensors.similarity_functions.dot_product
 ------------------------------------------------
 

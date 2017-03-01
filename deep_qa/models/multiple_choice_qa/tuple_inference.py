@@ -71,7 +71,7 @@ class TupleInferenceModel(TextTrainer):
             match_layer = tuple_matcher_class(**tuple_matcher_params)
             self.tuple_matcher = TimeDistributed(TimeDistributed(TimeDistributed(match_layer)))
         else:
-            self.tuple_matcher(self, tuple_matcher_params)
+            self.tuple_matcher = tuple_matcher_class(self, tuple_matcher_params)
         super(TupleInferenceModel, self).__init__(params)
 
         self.name = 'TupleInferenceModel'

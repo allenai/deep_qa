@@ -8,7 +8,7 @@ from ...tensors.backend import switch, apply_feed_forward
 
 class WordOverlapTupleMatcher(Layer):
     r"""
-    This layer takes as input two tensors cprresponding to two tuples, an answer tuple and a background tuple,
+    This layer takes as input two tensors corresponding to two tuples, an answer tuple and a background tuple,
     and calculates the degree to which the background tuple `entails` the answer tuple.  Entailment is
     determined by generating a set of entailment features from the tuples (the number of
     entailment_features = number of tuple slots), and then passing these features into a shallow NN to get an
@@ -48,14 +48,13 @@ class WordOverlapTupleMatcher(Layer):
         The activation of the NN output layer
 
     Notes
-    _____
+    -----
     This layer is incompatible with the WordsAndCharacters tokenizer.
     """
 
     def __init__(self, num_hidden_layers: int=1, hidden_layer_width: int=4,
                  initialization: str='glorot_uniform', hidden_layer_activation: str='tanh',
                  final_activation: str='sigmoid', **kwargs):
-        self.input_dim = None
         self.supports_masking = True
         # Parameters for the shallow neural network
         self.num_hidden_layers = num_hidden_layers
@@ -104,9 +103,7 @@ class WordOverlapTupleMatcher(Layer):
         # the whole tuple_match should be masked, so we would return a 0, otherwise we return a 1.  As such,
         # the shape of the returned mask is (batch size, 1).
         input1, input2 = input
-        mask1 = K.cast(K.any(input1), 'int32')
-        mask2 = K.cast(K.any(input2), 'int32')
-        return (mask1 + mask2) >= 2
+        return K.any(input1) * K.any(input2)
 
     def call(self, x, mask=None):
         tuple1_input, tuple2_input = x      # tuple1 shape: (batch size, num_slots, num_slot_words_t1)
@@ -134,7 +131,7 @@ class WordOverlapTupleMatcher(Layer):
                                    dtype='float32')
         zeros_excluded_overlap = tuple_words_overlap * tiled_tuple1_mask
 
-        # Find non-padding elememts in tuple1.
+        # Find non-padding elements in tuple1.
         # shape: (batch size, num_slots, num_slot_words_tuple1)
         non_padded_tuple1 = K.cast(K.not_equal(tuple1_input, K.zeros_like(tuple1_input)), 'float32')
         # Count these non-padded elements to know how many words were in each slot of tuple1.
