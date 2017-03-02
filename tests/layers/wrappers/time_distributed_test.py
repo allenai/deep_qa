@@ -27,6 +27,8 @@ class TestTimeDistributed(TestCase):
                                      [[1], [0], [2]]], dtype='float32')
 
         expected_result = (batch_input_1 ** batch_input_2 + 1)
+        # In TimeDistributed, we reshape tensors whose final dimension is 1, so we need to do that here.
+        if numpy.shape(expected_result)[-1] == 1:
+            expected_result = numpy.reshape(expected_result, numpy.shape(expected_result)[:-1])
         result = model.predict([batch_input_1, batch_input_2])
-        print(result.shape)
         assert_array_almost_equal(result, expected_result)

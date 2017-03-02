@@ -8,6 +8,12 @@ class TimeDistributed(KerasTimeDistributed):
     (2) Keras' TimeDistributed currently only allows a single input, not a list.  We currently
     don't handle the case where the _output_ of the wrapped layer is a list, however.  (Not that
     that's particularly hard, we just haven't needed it yet, so haven't implemented it.)
+
+    Notes
+    -----
+    If the output shape for TimeDistributed has a final dimension of 1, we essentially sqeeze it,
+    reshaping to have one fewer dimension.  That change takes place in the actual ``call`` method as well as
+    the ``get_output_shape_for`` method.
     """
     @overrides
     def build(self, input_shape):
@@ -39,7 +45,10 @@ class TimeDistributed(KerasTimeDistributed):
         if len(input_shape) == 1:
             child_input_shape = child_input_shape[0]
         child_output_shape = self.layer.get_output_shape_for(child_input_shape)
-        return (child_output_shape[0], timesteps) + child_output_shape[1:]
+        reshaped_shape = (child_output_shape[0], timesteps) + child_output_shape[1:]
+        if reshaped_shape[-1] == 1:
+            reshaped_shape = reshaped_shape[:-1]
+        return reshaped_shape
 
     def get_output_mask_shape_for(self, input_shape):
         if not isinstance(input_shape, list):
@@ -102,7 +111,10 @@ class TimeDistributed(KerasTimeDistributed):
             reshaped_xs, reshaped_masks = self.reshape_inputs_and_masks(x, mask)
             outputs = self.layer.call(reshaped_xs, mask=reshaped_masks)
             output_shape = self.get_output_shape_for(input_shape)
-            outputs = K.reshape(outputs, (-1, timesteps) + output_shape[2:])
+            reshaped_shape = (-1, timesteps) + output_shape[2:]
+            if reshaped_shape[-1] == 1:
+                reshaped_shape = reshaped_shape[:-1]
+            outputs = K.reshape(outputs, reshaped_shape)
         return outputs
 
     @overrides

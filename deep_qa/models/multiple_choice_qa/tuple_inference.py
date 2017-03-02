@@ -159,9 +159,6 @@ class TupleInferenceModel(TextTrainer):
         # Find the matches between the question and background tuples.
         # shape: (batch size, num_options, num_question_tuples, num_background_tuples, 1)
         matches = self.tuple_matcher([tiled_question, tiled_background])
-        # Squeeze to get rid of the last dim of length 1.
-        # shape: (batch size, num_options, num_question_tuples, num_background_tuples)
-        matches = Squeeze(axis=-1)(matches)
 
         # Find the probability that any given question tuple is entailed by the given background tuples.
         # shape: (batch size, num_options, num_question_tuples)
