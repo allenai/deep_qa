@@ -103,7 +103,8 @@ class WordOverlapTupleMatcher(Layer):
         # the whole tuple_match should be masked, so we would return a 0, otherwise we return a 1.  As such,
         # the shape of the returned mask is (batch size, 1).
         input1, input2 = input
-        return K.any(input1) * K.any(input2)
+        mask = K.any(input1, axis=[1, 2]) * K.any(input2, axis=[1, 2])
+        return K.expand_dims(mask)
 
     def call(self, x, mask=None):
         tuple1_input, tuple2_input = x      # tuple1 shape: (batch size, num_slots, num_slot_words_t1)

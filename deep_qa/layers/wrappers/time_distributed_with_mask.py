@@ -20,7 +20,7 @@ class TimeDistributedWithMask(TimeDistributed):
         if not isinstance(input_mask, list):
             x = [x]
             input_mask = [input_mask]
-        if not any(input_mask):
+        if not any([mask is not None for mask in input_mask]):
             return None
         timesteps = K.int_shape(x[0])[1]
         input_shape = [K.int_shape(x_i) for x_i in x]
@@ -30,7 +30,12 @@ class TimeDistributedWithMask(TimeDistributed):
         output_mask = self.layer.compute_mask(reshaped_xs, input_mask=reshaped_masks)
         if output_mask is None:
             return None
-        output_mask_shape = self.layer.get_output_mask_shape_for((input_shape[0],) + input_shape[2:])
+        child_input_shape = [(input_shape_i[0],) + input_shape_i[2:] for input_shape_i in input_shape]
+        if len(child_input_shape) == 0:
+            child_input_shape = child_input_shape[0]
+        output_mask_shape = self.layer.get_output_mask_shape_for(child_input_shape)
         reshaped_shape = (-1, timesteps) + output_mask_shape[1:]
+        if reshaped_shape[-1] == 1:
+            reshaped_shape = reshaped_shape[:-1]
         outputs = K.reshape(output_mask, reshaped_shape)
         return outputs

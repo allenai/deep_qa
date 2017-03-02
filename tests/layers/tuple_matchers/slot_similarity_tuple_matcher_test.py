@@ -28,7 +28,6 @@ class TestSlotSimilarityTupleMatcher(TestCase):
         # tuple2 shape: (batch size, num_slots, embed_dimension)
         self.tuple2 = numpy.random.rand(1, num_slots, embed_dimension)
 
-
     def test_general_case(self):
 
         match_layer = SlotSimilarityTupleMatcher({"type": "cosine_similarity"},
@@ -58,27 +57,29 @@ class TestSlotSimilarityTupleMatcher(TestCase):
         # Test when one tuple is all padding.
         # Here, since tuple3 is all padding, we want to return a mask value of 0 for this pair
         tuple1 = K.variable(self.tuple1)
-        mask1 = K.variable(numpy.asarray([1,1,1]))
+        mask1 = K.variable(numpy.asarray([[1,1,1]]))
         tuple2 = K.variable(self.tuple2)
-        mask2 = K.variable(numpy.asarray([0, 0, 0]))
+        mask2 = K.variable(numpy.asarray([[0, 0, 0]]))
         calculated_mask_exclude = K.eval(
             SlotSimilarityTupleMatcher({"type": "cosine_similarity"},
                                        self.num_hidden_layers,
                                        self.hidden_layer_width,
                                        hidden_layer_activation=self.hidden_layer_activation)
                 .compute_mask([tuple1, tuple2], [mask1, mask2]))
-        assert_array_almost_equal(calculated_mask_exclude, numpy.array([0], dtype='int32'))
+        assert_array_almost_equal(calculated_mask_exclude, numpy.array([[0]], dtype='int32'))
+        assert calculated_mask_exclude.shape == (1, 1,)
 
         # Test when tuple2 is valid.
         # Here, since tuple2 is valid, we want to return a mask value of 1 for this pair
-        mask2 = K.variable(numpy.asarray([0, 1, 0]))
+        mask2 = K.variable(numpy.asarray([[0, 1, 0]]))
         calculated_mask_include = K.eval(
             SlotSimilarityTupleMatcher({"type": "cosine_similarity"},
                                        self.num_hidden_layers,
                                        self.hidden_layer_width,
                                        hidden_layer_activation=self.hidden_layer_activation)
                 .compute_mask([tuple1, tuple2], [mask1, mask2]))
-        assert_array_almost_equal(calculated_mask_include, numpy.array([1], dtype='int32'))
+        assert_array_almost_equal(calculated_mask_include, numpy.array([[1]], dtype='int32'))
+        assert calculated_mask_include.shape == (1, 1,)
 
     def test_handles_input_masks_correctly(self):
         mask_layer = Masking(mask_value=0.0)

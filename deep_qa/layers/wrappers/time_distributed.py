@@ -41,6 +41,16 @@ class TimeDistributed(KerasTimeDistributed):
         child_output_shape = self.layer.get_output_shape_for(child_input_shape)
         return (child_output_shape[0], timesteps) + child_output_shape[1:]
 
+    def get_output_mask_shape_for(self, input_shape):
+        if not isinstance(input_shape, list):
+            input_shape = [input_shape]
+        child_input_shape = [(shape[0],) + shape[2:] for shape in input_shape]
+        timesteps = input_shape[0][1]
+        if len(input_shape) == 1:
+            child_input_shape = child_input_shape[0]
+        child_output_shape = self.layer.get_output_mask_shape_for(child_input_shape)
+        return (child_output_shape[0], timesteps) + child_output_shape[1:]
+
     @staticmethod
     def reshape_inputs_and_masks(inputs, masks):
         reshaped_xs = []
