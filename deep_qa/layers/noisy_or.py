@@ -83,6 +83,9 @@ class NoisyOr(Layer):
     def call(self, inputs, mask=None):
         # shape: (batch size, ..., num_probs, ...)
         probabilities = inputs
+        if mask is not None:
+            probabilities *= mask
+
         noisy_probs = self.noise_parameter * probabilities
 
         # shape: (batch size, ..., num_probs, ...)
