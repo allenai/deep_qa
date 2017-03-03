@@ -1,7 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 from keras import initializations
 from keras.layers import Input, merge
@@ -14,9 +11,10 @@ from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
 from deep_qa.layers.wrappers.encoder_wrapper import EncoderWrapper
 from deep_qa.layers.wrappers.output_mask import OutputMask
 from deep_qa.training.models import DeepQaModel
+from ..common.test_case import DeepQaTestCase
 
 
-class TestKnowledgeSelector(TestCase):
+class TestKnowledgeSelector(DeepQaTestCase):
     def test_hardmax(self):
         num_samples = 10
         knowledge_length = 5
@@ -36,7 +34,7 @@ class TestKnowledgeSelector(TestCase):
                                      numpy.argmax(input_value, axis=1)))
 
 
-class TestDotProductKnowledgeSelector(TestCase):
+class TestDotProductKnowledgeSelector(DeepQaTestCase):
     def test_on_masked_input(self):
         # TODO(matt): I don't really like having to build the whole model up to the attention
         # component here, but I'm not sure how to just test the selector with the right mask

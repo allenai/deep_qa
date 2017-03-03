@@ -1,55 +1,44 @@
 # pylint: disable=no-self-use,invalid-name
 
-from unittest import TestCase
-import os
-import shutil
-
 from deep_qa.models.memory_networks.pretrainers.snli_pretrainer import SnliEntailmentPretrainer
 from deep_qa.models.memory_networks.pretrainers.snli_pretrainer import SnliAttentionPretrainer
 from deep_qa.models.memory_networks.memory_network import MemoryNetwork
 from deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
 from deep_qa.models.multiple_choice_qa.question_answer_memory_network import QuestionAnswerMemoryNetwork
-from ....common.constants import TEST_DIR
-from ....common.constants import SNLI_FILE
-from ....common.models import get_model
-from ....common.models import write_memory_network_files
-from ....common.models import write_snli_file
+from ....common.test_case import DeepQaTestCase
 
 
-class TestSnliPretrainers(TestCase):
+class TestSnliPretrainers(DeepQaTestCase):
     # pylint: disable=protected-access
 
     def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
-        write_snli_file()
-        write_memory_network_files()
-        self.pretrainer_params = {"train_files": [SNLI_FILE]}
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
+        super(TestSnliPretrainers, self).setUp()
+        self.write_snli_file()
+        self.write_memory_network_files()
+        self.pretrainer_params = {"train_files": [self.SNLI_FILE]}
 
     def test_entailment_pretraining_does_not_crash_with_memory_network(self):
-        model = get_model(MemoryNetwork)
+        model = self.get_model(MemoryNetwork)
         pretrainer = SnliEntailmentPretrainer(model, self.pretrainer_params)
         pretrainer.train()
 
     def test_entailment_pretraining_does_not_crash_with_multiple_true_false_memory_network(self):
-        model = get_model(MultipleTrueFalseMemoryNetwork)
+        model = self.get_model(MultipleTrueFalseMemoryNetwork)
         pretrainer = SnliEntailmentPretrainer(model, self.pretrainer_params)
         pretrainer.train()
 
     def test_attention_pretraining_does_not_crash_with_memory_network(self):
-        model = get_model(MemoryNetwork)
+        model = self.get_model(MemoryNetwork)
         pretrainer = SnliAttentionPretrainer(model, self.pretrainer_params)
         pretrainer.train()
 
     def test_attention_pretraining_does_not_crash_with_multiple_true_false_memory_network(self):
-        model = get_model(MultipleTrueFalseMemoryNetwork)
+        model = self.get_model(MultipleTrueFalseMemoryNetwork)
         pretrainer = SnliAttentionPretrainer(model, self.pretrainer_params)
         pretrainer.train()
 
     def test_attention_pretraining_does_not_crash_with_question_answer_memory_network(self):
-        model = get_model(QuestionAnswerMemoryNetwork)
+        model = self.get_model(QuestionAnswerMemoryNetwork)
         pretrainer = SnliAttentionPretrainer(model, self.pretrainer_params)
         pretrainer.train()
 
@@ -62,14 +51,14 @@ class TestSnliPretrainers(TestCase):
                         {
                                 'type': 'SnliEntailmentPretrainer',
                                 'num_epochs': 1,
-                                'train_files': [SNLI_FILE]
+                                'train_files': [self.SNLI_FILE]
                                 },
                         {
                                 'type': 'SnliAttentionPretrainer',
                                 'num_epochs': 1,
-                                'train_files': [SNLI_FILE]
+                                'train_files': [self.SNLI_FILE]
                                 },
                         ]
                 }
-        model = get_model(MemoryNetwork, args)
+        model = self.get_model(MemoryNetwork, args)
         model.train()

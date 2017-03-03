@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
 import numpy
 from numpy.testing import assert_almost_equal
 import keras.backend as K
@@ -8,9 +7,10 @@ from keras.models import Model
 
 from deep_qa.layers.backend.batch_dot import BatchDot
 from deep_qa.layers.wrappers.output_mask import OutputMask
+from ...common.test_case import DeepQaTestCase
 
 
-class TestBatchDotLayer(TestCase):
+class TestBatchDotLayer(DeepQaTestCase):
     def test_compute_mask_basic(self):
         batch_size = 2
         # test the case where the tensors are even

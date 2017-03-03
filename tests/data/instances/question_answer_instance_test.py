@@ -1,16 +1,15 @@
 # pylint: disable=no-self-use,invalid-name
-
 from typing import List
-from unittest import TestCase
 
 import numpy
 
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.question_answer_instance import IndexedQuestionAnswerInstance
 from deep_qa.data.instances.question_answer_instance import QuestionAnswerInstance
+from ...common.test_case import DeepQaTestCase
 
 
-class TestQuestionAnswerInstance(TestCase):
+class TestQuestionAnswerInstance(DeepQaTestCase):
     def instance_to_line(self, question: str, answers: List[str], label: int, index=None):
         line = ''
         if index is not None:
@@ -62,8 +61,9 @@ class TestQuestionAnswerInstance(TestCase):
         assert indexed_instance.option_indices[1] == [oov_index, oov_index, d_index]
 
 
-class TestIndexedQuestionAnswerInstance(TestCase):
+class TestIndexedQuestionAnswerInstance(DeepQaTestCase):
     def setUp(self):
+        super(TestIndexedQuestionAnswerInstance, self).setUp()
         self.instance = IndexedQuestionAnswerInstance([1, 2, 3],
                                                       [[2, 3], [4], [5, 6]],
                                                       1)

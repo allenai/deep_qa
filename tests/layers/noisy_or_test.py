@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use, invalid-name
-
-from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
@@ -8,8 +6,9 @@ from keras import backend as K
 from keras.layers import Input
 from keras.models import Model
 from deep_qa.layers.noisy_or import NoisyOr, BetweenZeroAndOne
+from ..common.test_case import DeepQaTestCase
 
-class TestNoisyOr(TestCase):
+class TestNoisyOr(DeepQaTestCase):
     def test_general_case(self):
 
         input_layer = Input(shape=(3, 2,), dtype='float32', name="input")

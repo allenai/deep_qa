@@ -1,11 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
 import numpy as np
 
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.mc_question_answer_instance import McQuestionAnswerInstance
 from deep_qa.data.instances.mc_question_answer_instance import IndexedMcQuestionAnswerInstance
+from ...common.test_case import DeepQaTestCase
 
 
 class TestMcQuestionAnswerInstance:
@@ -91,8 +90,9 @@ class TestMcQuestionAnswerInstance:
         assert indexed_instance.label == 1
 
 
-class TestIndexedMcQuestionAnswerInstance(TestCase):
+class TestIndexedMcQuestionAnswerInstance(DeepQaTestCase):
     def setUp(self):
+        super(TestIndexedMcQuestionAnswerInstance, self).setUp()
         self.instance = IndexedMcQuestionAnswerInstance([1, 2, 3, 5, 6],
                                                         [2, 3, 4, 5, 6, 7],
                                                         [[2], [3, 5], [6]],

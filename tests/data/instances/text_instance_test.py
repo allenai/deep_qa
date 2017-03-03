@@ -1,12 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.tokenizers import tokenizers
 from deep_qa.data.instances.true_false_instance import IndexedTrueFalseInstance, TrueFalseInstance
 
+from ...common.test_case import DeepQaTestCase
 
 class TestTextInstance:
     """
@@ -52,8 +50,7 @@ class TestTextInstance:
         TextInstance.tokenizer = tokenizers['words']({})
 
 
-class TestIndexedInstance(TestCase):
-
+class TestIndexedInstance(DeepQaTestCase):
     def test_get_lengths_works_with_words_and_characters(self):
         instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
         assert instance.get_lengths() == {'word_sequence_length': 2, 'word_character_length': 3}

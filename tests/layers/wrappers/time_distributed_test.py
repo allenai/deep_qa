@@ -1,14 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
-
 import numpy
 from numpy.testing import assert_array_almost_equal
 from keras.layers import Input, Lambda
 from keras.models import Model
 
 from deep_qa.layers.wrappers.time_distributed import TimeDistributed
+from ...common.test_case import DeepQaTestCase
 
-class TestTimeDistributed(TestCase):
+class TestTimeDistributed(DeepQaTestCase):
     def test_handles_multiple_inputs(self):
         input_layer_1 = Input(shape=(3, 1), dtype='int32')
         input_layer_2 = Input(shape=(3, 1), dtype='int32')

@@ -1,33 +1,25 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase, mock
-import os
-import shutil
+from unittest import mock
 
 from numpy.testing.utils import assert_allclose
 
 from deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
-from ...common.constants import TEST_DIR
-from ...common.models import get_model
-from ...common.models import write_multiple_true_false_memory_network_files
+from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 
 
-class TestMultipleTrueFalseMemoryNetwork(TestCase):
+class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
     # pylint: disable=protected-access
 
     def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
-        write_multiple_true_false_memory_network_files()
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
+        super(TestMultipleTrueFalseMemoryNetwork, self).setUp()
+        self.write_multiple_true_false_memory_network_files()
 
     def test_model_trains_and_loads_correctly(self):
-        model = get_model(MultipleTrueFalseMemoryNetwork, {'save_models': True})
+        model = self.get_model(MultipleTrueFalseMemoryNetwork, {'save_models': True})
         model.train()
 
-        loaded_model = get_model(MultipleTrueFalseMemoryNetwork)
+        loaded_model = self.get_model(MultipleTrueFalseMemoryNetwork)
         loaded_model.load_model()
 
         assert_allclose(model.model.predict(model.__dict__["validation_input"]),
@@ -48,7 +40,7 @@ class TestMultipleTrueFalseMemoryNetwork(TestCase):
                                 ],
                         }
                 }
-        model = get_model(MultipleTrueFalseMemoryNetwork, args)
+        model = self.get_model(MultipleTrueFalseMemoryNetwork, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
             # We're going to check in here that the attentions and so on are properly masked.  In
@@ -87,7 +79,7 @@ class TestMultipleTrueFalseMemoryNetwork(TestCase):
                                 ],
                         }
                 }
-        model = get_model(MultipleTrueFalseMemoryNetwork, args)
+        model = self.get_model(MultipleTrueFalseMemoryNetwork, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
             # We're going to check two things in here: that the shape of combined word embedding is
@@ -121,5 +113,5 @@ class TestMultipleTrueFalseMemoryNetwork(TestCase):
     @requires_tensorflow
     def test_train_does_not_crash_using_adaptive_recurrence(self):
         args = {'recurrence_mode': {'type': 'adaptive'}}
-        model = get_model(MultipleTrueFalseMemoryNetwork, args)
+        model = self.get_model(MultipleTrueFalseMemoryNetwork, args)
         model.train()

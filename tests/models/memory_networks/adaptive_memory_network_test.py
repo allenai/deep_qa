@@ -1,37 +1,22 @@
-
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-import os
-import shutil
-
-from deep_qa.models.memory_networks.memory_network import MemoryNetwork
-
 import keras.backend as K
 
-from ...common.constants import TEST_DIR
-from ...common.models import get_model
-from ...common.models import write_memory_network_files
+from deep_qa.models.memory_networks.memory_network import MemoryNetwork
+from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 
 
 @requires_tensorflow
-class TestAdaptiveMemoryNetwork(TestCase):
+class TestAdaptiveMemoryNetwork(DeepQaTestCase):
     # pylint: disable=protected-access
-
-    def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
-        write_memory_network_files()
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
-
     def test_train_does_not_crash(self):
+        self.write_memory_network_files()
         args = {'recurrence_mode': {'type': 'adaptive'}, 'knowledge_selector': {'type': 'parameterized'}}
-        model = get_model(MemoryNetwork, args)
+        model = self.get_model(MemoryNetwork, args)
         model.train()
 
     def test_tf_and_keras_optimise_identical_variables(self):
+        self.write_memory_network_files()
         # Make sure that the variables designated as trainable by tensorflow
         # are the same as those designated as trainable by Keras. These could
         # not be equal, for instance, if we manage to use a Keras layer without
@@ -48,7 +33,7 @@ class TestAdaptiveMemoryNetwork(TestCase):
                 'recurrence_mode': {'type': 'adaptive'},
                 'knowledge_selector': {'type': 'parameterized'}
         }
-        solver = get_model(MemoryNetwork, args)
+        solver = self.get_model(MemoryNetwork, args)
         solver.training_dataset = solver._load_dataset_from_files(solver.train_files)
         solver.train_input, solver.train_labels = solver._prepare_data(solver.training_dataset, for_train=True)
         model = solver._build_model()

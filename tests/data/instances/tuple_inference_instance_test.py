@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
 import numpy
 
 from deep_qa.data.data_indexer import DataIndexer
@@ -8,10 +6,12 @@ from deep_qa.data.dataset import TextDataset
 from deep_qa.data.instances.tuple_inference_instance import TupleInferenceInstance, IndexedTupleInferenceInstance
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.tokenizers import WordAndCharacterTokenizer, tokenizers
+from ...common.test_case import DeepQaTestCase
 
 
-class TestTupleInferenceInstance(TestCase):
+class TestTupleInferenceInstance(DeepQaTestCase):
     def setUp(self):
+        super(TestTupleInferenceInstance, self).setUp()
         q_idx = 0
         answer_options = ("cat<>is<>a mammal<>context: which is nocturnal mammal$$$cat<>is<>nocturnal<>which " +
                           "is a nocturnal mammal###snake<>is<>a mammal<>which is a nocturnal " +
@@ -64,7 +64,6 @@ class TestTupleInferenceInstance(TestCase):
         self.indexed_instance = IndexedTupleInferenceInstance([answer_1, answer_2, answer_3],
                                                               background_all, 2, 0)
 
-
     def test_load_from_file_splits_correctly(self):
         # test general case
         assert len(self.instance.answer_tuples) == 2
@@ -79,7 +78,6 @@ class TestTupleInferenceInstance(TestCase):
         assert len(self.instance_2.answer_tuples[1]) == 0
         # test no background tuples
         assert len(self.instance_3.background_tuples) == 0
-
 
     def test_words_method(self):
         words = self.instance.words()['words']

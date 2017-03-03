@@ -1,23 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
-import os
-import shutil
-
 from numpy.testing.utils import assert_allclose
 
 from deep_qa.models.multiple_choice_qa.tuple_inference import TupleInferenceModel
-from ...common.constants import TEST_DIR
-from ...common.models import get_model, write_tuple_inference_files
+from ...common.test_case import DeepQaTestCase
 
-class TestTupleInferenceModel(TestCase):
-    def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
-        write_tuple_inference_files()
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
-
+class TestTupleInferenceModel(DeepQaTestCase):
     def test_model_trains_and_loads_correctly(self):
+        self.write_tuple_inference_files()
         args = {"tuple_matcher": {"num_hidden_layers": 1,
                                   "hidden_layer_width": 4,
                                   "hidden_layer_activation": "tanh"},
@@ -27,10 +16,10 @@ class TestTupleInferenceModel(TestCase):
                 "word_sequence_length": 10,
                 "num_answer_options": 4,
                 "save_models": True}
-        solver = get_model(TupleInferenceModel, args)
+        solver = self.get_model(TupleInferenceModel, args)
         solver.train()
 
-        loaded_model = get_model(TupleInferenceModel)
+        loaded_model = self.get_model(TupleInferenceModel)
         loaded_model.load_model()
 
         assert_allclose(solver.model.predict(solver.__dict__["validation_input"]),

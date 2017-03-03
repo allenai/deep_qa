@@ -1,10 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 
 from deep_qa.data.instances.true_false_instance import IndexedTrueFalseInstance, TrueFalseInstance
+from ...common.test_case import DeepQaTestCase
 
 
 class TestTrueFalseInstance:
@@ -90,7 +88,7 @@ class TestTrueFalseInstance:
         assert t.words() == {'words': ['and', ',', 'i', 'have', 'commas', '.']}
 
 
-class TestIndexedTrueFalseInstance(TestCase):
+class TestIndexedTrueFalseInstance(DeepQaTestCase):
     def test_get_lengths_returns_length_of_word_indices(self):
         instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
         assert instance.get_lengths() == {'word_sequence_length': 4}

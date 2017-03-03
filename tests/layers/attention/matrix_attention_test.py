@@ -1,8 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
-import os
-import shutil
-
 import numpy
 from numpy.testing import assert_allclose
 from keras.layers import Dense, Embedding, Input
@@ -10,15 +6,9 @@ from keras.models import Model, load_model
 
 from deep_qa.layers.attention.matrix_attention import MatrixAttention
 from deep_qa.layers.wrappers.output_mask import OutputMask
-from ...common.constants import TEST_DIR
+from ...common.test_case import DeepQaTestCase
 
-class TestMatrixAttentionLayer(TestCase):
-    def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
-
+class TestMatrixAttentionLayer(DeepQaTestCase):
     def test_call_works_on_simple_input(self):
         sentence_1_length = 2
         sentence_2_length = 3
@@ -48,7 +38,7 @@ class TestMatrixAttentionLayer(TestCase):
 
         sentence_1_tensor = numpy.asarray([[[1, 1, 1], [-1, 0, 1]]])
         sentence_2_tensor = numpy.asarray([[[1, 1, 1], [-1, 0, 1], [-1, -1, -1]]])
-        model_file = TEST_DIR + "model.tmp"
+        model_file = self.TEST_DIR + "model.tmp"
         before_loading = model.predict([sentence_1_tensor, sentence_2_tensor])
 
         model.save(model_file)

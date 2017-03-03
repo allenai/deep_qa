@@ -1,7 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 from keras.layers import Input
 
@@ -10,9 +7,10 @@ from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
 from deep_qa.layers.wrappers.encoder_wrapper import EncoderWrapper
 from deep_qa.layers.wrappers.output_mask import OutputMask
 from deep_qa.training.models import DeepQaModel
+from ...common.test_case import DeepQaTestCase
 
 
-class TestEncoderWrapper(TestCase):
+class TestEncoderWrapper(DeepQaTestCase):
     def test_mask_is_computed_correctly(self):
         # TODO(matt): I don't really like having to build a model to test this, but I'm not sure of
         # how else to do it.

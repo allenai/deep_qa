@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use
-from unittest import TestCase
-
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from keras import backend as K
@@ -9,11 +7,12 @@ from keras.models import Model
 from scipy.stats import logistic
 
 from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
+from ...common.test_case import DeepQaTestCase
 
 
-class TestWordOverlapTupleMatcher(TestCase):
-
+class TestWordOverlapTupleMatcher(DeepQaTestCase):
     def setUp(self):
+        super(TestWordOverlapTupleMatcher, self).setUp()
         num_slots = 3
         t1_words_per_slot = 4
         t2_words_per_slot = 3

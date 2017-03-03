@@ -1,25 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-import os
-import shutil
-
 from deep_qa.models.multiple_choice_qa.question_answer_memory_network import QuestionAnswerMemoryNetwork
-from ...common.constants import TEST_DIR
-from ...common.models import get_model
-from ...common.models import write_question_answer_memory_network_files
+from ...common.test_case import DeepQaTestCase
 
 
-class TestQuestionAnswerMemoryNetwork(TestCase):
-    # pylint: disable=protected-access
-
-    def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
-        write_question_answer_memory_network_files()
-
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
-
+class TestQuestionAnswerMemoryNetwork(DeepQaTestCase):
     def test_train_does_not_crash(self):
-        model = get_model(QuestionAnswerMemoryNetwork)
+        self.write_question_answer_memory_network_files()
+        model = self.get_model(QuestionAnswerMemoryNetwork)
         model.train()

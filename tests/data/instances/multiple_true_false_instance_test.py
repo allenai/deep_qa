@@ -1,16 +1,15 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 
 from deep_qa.data.instances.background_instance import IndexedBackgroundInstance
 from deep_qa.data.instances.multiple_true_false_instance import IndexedMultipleTrueFalseInstance
 from deep_qa.data.instances.true_false_instance import IndexedTrueFalseInstance
+from ...common.test_case import DeepQaTestCase
 
 
-class TestIndexedMultipleTrueFalseInstance(TestCase):
+class TestIndexedMultipleTrueFalseInstance(DeepQaTestCase):
     def setUp(self):
+        super(TestIndexedMultipleTrueFalseInstance, self).setUp()
         # We'll just test with underlying IndexedTrueFalseInstances for most of these, because it's
         # simpler.
         self.instance = IndexedMultipleTrueFalseInstance(

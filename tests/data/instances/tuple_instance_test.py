@@ -1,10 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 
 from deep_qa.data.instances.tuple_instance import IndexedTupleInstance, TupleInstance
+from ...common.test_case import DeepQaTestCase
 
 
 class TestTupleInstance:
@@ -28,7 +26,7 @@ class TestTupleInstance:
         assert t.words() == {'words': ['this', 'is', 'a', 'triple']}
 
 
-class TestIndexedTupleInstance(TestCase):
+class TestIndexedTupleInstance(DeepQaTestCase):
     def test_get_lengths_returns_length_of_longest_slot(self):
         instance = IndexedTupleInstance([[1, 2], [3, 4, 5], [6]], True)
         assert instance.get_lengths() == {'word_sequence_length': 3, 'num_slots': 3}

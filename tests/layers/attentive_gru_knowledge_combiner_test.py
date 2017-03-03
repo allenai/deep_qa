@@ -1,14 +1,14 @@
-
-
+# pylint: disable=no-self-use
 import numpy
+
 from keras.layers import Input, Embedding, merge
 from keras.models import Model
 import keras.backend as K
+
 from deep_qa.layers.knowledge_combiners import AttentiveGRUKnowledgeCombiner
 
 
 class TestAttentiveGRUKnowledgeCombiner:
-    # pylint: disable=no-self-use
     def test_on_unmasked_input(self):
 
         sentence_length = 5

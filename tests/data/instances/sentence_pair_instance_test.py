@@ -1,13 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 
 from deep_qa.data.instances.sentence_pair_instance import IndexedSentencePairInstance
+from ...common.test_case import DeepQaTestCase
 
 
-class TestIndexedSentencePairInstance(TestCase):
+class TestIndexedSentencePairInstance(DeepQaTestCase):
     def test_get_lengths_returns_max_of_both_sentences(self):
         instance = IndexedSentencePairInstance([1, 2, 3], [1], True)
         assert instance.get_lengths() == {'word_sequence_length': 3}

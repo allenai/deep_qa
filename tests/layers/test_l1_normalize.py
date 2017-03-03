@@ -1,14 +1,14 @@
-from unittest import TestCase
+# pylint: disable=no-self-use
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
 from keras.layers import Input, Masking
 from keras.models import Model
 from deep_qa.layers.l1_normalize import L1Normalize
+from ..common.test_case import DeepQaTestCase
 
 
-class TestL1Normalize(TestCase):
-    # pylint: disable=no-self-use
+class TestL1Normalize(DeepQaTestCase):
     def test_general_case(self):
         input_length = 6
 

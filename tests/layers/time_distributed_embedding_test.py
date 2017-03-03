@@ -1,14 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-
 import numpy
 from keras.layers import Input
 from keras import backend as K
 
 from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
+from ..common.test_case import DeepQaTestCase
 
-class TestTimeDistributedEmbeddings(TestCase):
+
+class TestTimeDistributedEmbeddings(DeepQaTestCase):
     def test_time_distributed_embedding_masking(self):
         input_layer = Input(shape=(2, 3), dtype='int32')
         embedding = TimeDistributedEmbedding(input_dim=3, output_dim=5, mask_zero=True)

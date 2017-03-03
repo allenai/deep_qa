@@ -1,8 +1,0 @@
-TEST_DIR = './TMP_TEST/'
-TRAIN_FILE = TEST_DIR + 'train_file'
-VALIDATION_FILE = TEST_DIR + 'validation_file'
-TRAIN_BACKGROUND = TEST_DIR + 'train_background'
-VALIDATION_BACKGROUND = TEST_DIR + 'validation_background'
-SNLI_FILE = TEST_DIR + 'snli_file'
-PRETRAINED_VECTORS_FILE = TEST_DIR + 'pretrained_glove_vectors_file'
-PRETRAINED_VECTORS_GZIP = TEST_DIR + 'pretrained_glove_vectors_file.gz'

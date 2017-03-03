@@ -1,12 +1,14 @@
+# pylint: disable=no-self-use
 import numpy
 from numpy.testing import assert_almost_equal
+
 from keras.layers import Input
 from keras.models import Model
+
 from deep_qa.layers.bigru_index_selector import BiGRUIndexSelector
 
 
 class TestBiGRUIndexSelector():
-    # pylint: disable=no-self-use
     def test_batched_case(self):
         document_length = 5
         gru_hidden_dim = 2

@@ -1,14 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
-
-from unittest import TestCase
-import os
-import shutil
-
 from deep_qa.data.dataset import Dataset, TextDataset
 from deep_qa.data.instances.true_false_instance import TrueFalseInstance
 from deep_qa.data.instances.labeled_background_instance import LabeledBackgroundInstance
 
-from ..common.constants import TEST_DIR
+from ..common.test_case import DeepQaTestCase
+
 
 class TestDataset:
     def test_merge(self):
@@ -18,15 +14,10 @@ class TestDataset:
         merged = dataset1.merge(dataset2)
         assert merged.instances == instances
 
-class TestTextDataset(TestCase):
-    def setUp(self):
-        os.makedirs(TEST_DIR, exist_ok=True)
 
-    def tearDown(self):
-        shutil.rmtree(TEST_DIR)
-
+class TestTextDataset(DeepQaTestCase):
     def test_read_from_file_with_no_default_label(self):
-        filename = TEST_DIR + 'test_dataset_file'
+        filename = self.TEST_DIR + 'test_dataset_file'
         with open(filename, 'w') as datafile:
             datafile.write("1\tinstance1\t0\n")
             datafile.write("2\tinstance2\t1\n")
@@ -47,12 +38,12 @@ class TestTextDataset(TestCase):
         assert instance.label is None
 
     def test_read_labeled_background_from_file_loads_correct_instances(self):
-        filename = TEST_DIR + 'test_dataset_file'
+        filename = self.TEST_DIR + 'test_dataset_file'
         with open(filename, 'w') as datafile:
             datafile.write("1\tinstance1\t0\n")
             datafile.write("2\tinstance2\t1\n")
             datafile.write("3\tinstance3\n")
-        background_filename = TEST_DIR + 'test_dataset_background'
+        background_filename = self.TEST_DIR + 'test_dataset_background'
         with open(background_filename, 'w') as datafile:
             datafile.write("1\t2\tb1\tb2\tb3\tb4\n")
             datafile.write("2\t1,3\tb1\tb2\tb3\tb4\n")
