@@ -9,7 +9,7 @@ from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification.true_false_model import TrueFalseModel
 from deep_qa.models.multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from ..common.test_case import DeepQaTestCase
-from ..common.test_markers import requires_tensorflow
+from ..common.test_markers import requires_tensorflow, requires_theano
 
 
 class TestTextTrainer(DeepQaTestCase):
@@ -134,6 +134,46 @@ class TestTextTrainer(DeepQaTestCase):
         # verify that original model and the loaded model predict the same outputs
         assert_allclose(model.model.predict(model.__dict__["validation_input"]),
                         loaded_model.model.predict(model.__dict__["validation_input"]))
+
+
+    @requires_theano
+    def test_load_model_and_fit(self):
+        # train a model and serialize it.
+        args = {
+                'embedding_size': 4,
+                'save_models': True,
+                'tokenizer': {'type': 'words and characters'},
+                'show_summary_with_masking_info': True,
+        }
+        self.write_true_false_model_files()
+        model = self.get_model(TrueFalseModel, args)
+        model.train()
+
+        # load the model that we serialized
+        loaded_model = self.get_model(TrueFalseModel, args)
+        loaded_model.load_model()
+
+        # verify that original model and the loaded model predict the same outputs
+        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
+                        loaded_model.model.predict(model.__dict__["validation_input"]))
+
+        # now fit both models on some more data, and ensure that we get the same results.
+        self.write_additional_true_false_model_files()
+        # pylint: disable=unused-variable
+        train_data, val_data = loaded_model.prepare_data(loaded_model.train_files,
+                                                         loaded_model.max_training_instances,
+                                                         loaded_model.validation_files,
+                                                         update_data_indexer=False)
+        _, train_input, train_labels = train_data
+        # _, validation_input, _ = val_data
+        model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
+        loaded_model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
+
+        # verify that original model and the loaded model predict the same outputs
+        # TODO(matt): fix the randomness that occurs here.
+        # assert_allclose(model.model.predict(validation_input),
+        #                 loaded_model.model.predict(validation_input))
+
 
     @requires_tensorflow
     def test_tensorboard_logs_does_not_crash(self):

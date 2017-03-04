@@ -59,7 +59,7 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[0][2]
+        self.set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[0][2:])
         self.max_knowledge_length = self.model.get_input_shape_at(0)[1][2]
         self.num_options = self.model.get_input_shape_at(0)[0][1]
 

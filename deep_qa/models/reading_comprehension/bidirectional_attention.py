@@ -216,8 +216,14 @@ class BidirectionalAttentionFlow(TextTrainer):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[1]
-        # TODO(matt): implement this correctly
+        self.num_question_words = self.model.get_input_shape_at(0)[0][1]
+        self.num_passage_words = self.model.get_input_shape_at(0)[1][1]
+        # We need to pass this slice of the passage input shape to the superclass
+        # mainly to set self.max_word_length. The decision of whether to pass
+        # the passage input or the question input is arbitrary, as the
+        # two word lengths are guaranteed to be the same and BiDAF ignores
+        # self.max_sentence_length.
+        self.set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][2:])
 
     @classmethod
     def _get_custom_objects(cls):

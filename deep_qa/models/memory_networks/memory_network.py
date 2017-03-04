@@ -345,9 +345,7 @@ class MemoryNetwork(TextTrainer):
         # Step 3: Encode the two embedded inputs.
         question_encoder = self._get_encoder()
         question_encoder = self._time_distribute_question_encoder(question_encoder)
-        print("question embedding:", question_embedding)
         encoded_question = question_encoder(question_embedding)  # (samples, encoding_dim)
-        print("encoded question:", question_embedding)
 
         knowledge_encoder = self._get_knowledge_encoder(question_encoder)
         encoded_knowledge = knowledge_encoder(knowledge_embedding)  # (samples, knowledge_len, encoding_dim)

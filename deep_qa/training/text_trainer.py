@@ -121,13 +121,14 @@ class TextTrainer(Trainer):
         self._sentence_encoder_model = None
 
     @overrides
-    def _prepare_data(self, dataset: TextDataset, for_train: bool):
+    def _prepare_data(self, dataset: TextDataset, for_train: bool,
+                      update_data_indexer=True):
         """
         Takes dataset, which could be a complex tuple for some classes, and produces as output a
         tuple of (inputs, labels), which can be used directly with Keras to either train or
         evaluate self.model.
         """
-        if for_train:
+        if for_train and update_data_indexer:
             self.data_indexer.fit_word_dictionary(dataset)
         logger.info("Indexing dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
@@ -275,6 +276,29 @@ class TextTrainer(Trainer):
         can pad the test data if we just loaded a saved model.
         """
         raise NotImplementedError
+
+    def set_text_lengths_from_model_input(self, input_slice):
+        """
+        Given an input slice (a tuple) from a model representing the max
+        length of the sentences and the max length of each words, set the
+        padding max lengths.
+
+        Parameters
+        ----------
+        input_slice : tuple
+            A slice from a concrete model class that represents an input
+            word sequence. The tuple must be of length one or two, and the
+            first dimension should correspond to the length of the sentences
+            while the second dimension (if provided) should correspond to the
+            max length of the words in each sentence.
+        """
+        if len(input_slice) > 2:
+            raise ValueError("Length of input tuple must be "
+                             "2 or 1, got input tuple of "
+                             "length {}".format(len(input_slice)))
+        self.max_sentence_length = input_slice[0]
+        if len(input_slice) == 2:
+            self.max_word_length = input_slice[1]
 
     def _instance_type(self) -> Instance:
         """

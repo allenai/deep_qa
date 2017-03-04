@@ -50,7 +50,8 @@ class TextPretrainer(Pretrainer):
         self.trainer.data_indexer.fit_word_dictionary(dataset)
 
     @overrides
-    def _prepare_data(self, dataset: TextDataset, for_train: bool):
+    def _prepare_data(self, dataset: TextDataset, for_train: bool,
+                      update_data_indexer=True):
         """
         This does basically the same thing as TextTrainer._prepare_data(), except for the things
         done when for_train is True.  We also rely on our contained Trainer instance for some of

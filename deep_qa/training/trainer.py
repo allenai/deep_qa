@@ -83,6 +83,10 @@ class Trainer:
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
 
+        # A dict of additional arguments to the fit method. These get added to
+        # the options already captured by other arguments.
+        self.fit_kwargs = params.pop('fit_kwargs', {})
+
         # This is a debugging setting, mostly - we have written a custom model.summary() method
         # that supports showing masking info, to help understand what's going on with the masks.
         self.show_summary_with_masking = params.pop('show_summary_with_masking_info', False)
@@ -140,7 +144,7 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def _prepare_data(self, dataset: Dataset, for_train: bool):
+    def _prepare_data(self, dataset: Dataset, for_train: bool, update_data_indexer=True):
         """
         Takes a raw dataset and converts it into training inputs and labels that can be used to
         either train a model or make predictions.
@@ -218,6 +222,26 @@ class Trainer:
         """
         raise NotImplementedError
 
+    def prepare_data(self, train_files, max_training_instances,
+                     validation_files, update_data_indexer=True):
+        logger.info("Getting training data")
+        training_dataset = self._load_dataset_from_files(train_files)
+        if max_training_instances is not None:
+            logger.info("Truncating the training dataset to %d instances", max_training_instances)
+            training_dataset = training_dataset.truncate(max_training_instances)
+        train_input, train_labels = self._prepare_data(training_dataset,
+                                                       for_train=True,
+                                                       update_data_indexer=update_data_indexer)
+        validation_dataset = validation_input = validation_labels = None
+        if validation_files:
+            logger.info("Getting validation data")
+            validation_dataset = self._load_dataset_from_files(validation_files)
+            validation_input, validation_labels = self._prepare_data(validation_dataset,
+                                                                     for_train=False,
+                                                                     update_data_indexer=update_data_indexer)
+        return ((training_dataset, train_input, train_labels),
+                (validation_dataset, validation_input, validation_labels))
+
     def train(self):
         '''
         Trains the model.
@@ -235,17 +259,10 @@ class Trainer:
             self._process_pretraining_data()
 
         # First we need to prepare the data that we'll use for training.
-        logger.info("Getting training data")
-        self.training_dataset = self._load_dataset_from_files(self.train_files)
-        if self.max_training_instances is not None:
-            logger.info("Truncating the training dataset to %d instances", self.max_training_instances)
-            self.training_dataset = self.training_dataset.truncate(self.max_training_instances)
-        self.train_input, self.train_labels = self._prepare_data(self.training_dataset, for_train=True)
-        if self.validation_files:
-            logger.info("Getting validation data")
-            self.validation_dataset = self._load_dataset_from_files(self.validation_files)
-            self.validation_input, self.validation_labels = self._prepare_data(self.validation_dataset,
-                                                                               for_train=False)
+        train_data, val_data = self.prepare_data(self.train_files, self.max_training_instances,
+                                                 self.validation_files)
+        self.training_dataset, self.train_input, self.train_labels = train_data
+        self.validation_dataset, self.validation_input, self.validation_labels = val_data
 
         # We need to actually do pretraining _after_ we've loaded the training data, though, as we
         # need to build the models to be consistent between training and pretraining.  The training
@@ -290,6 +307,9 @@ class Trainer:
             kwargs['validation_data'] = (self.validation_input, self.validation_labels)
         elif self.keras_validation_split > 0.0:
             kwargs['validation_split'] = self.keras_validation_split
+
+        # add the user-specified arguments to fit
+        kwargs.update(self.fit_kwargs)
         # We now pass all the arguments to the model's fit function, which does all of the training.
         history = self.model.fit(self.train_input, self.train_labels, **kwargs)
         # After finishing training, we save the best weights and
