@@ -1,11 +1,13 @@
 # pylint: disable=invalid-name
+from copy import deepcopy
 from unittest import TestCase
 import codecs
-from copy import deepcopy
 import gzip
 import logging
 import os
 import shutil
+
+import numpy
 
 from deep_qa.common.checks import log_keras_version_info
 from deep_qa.models.memory_networks.memory_network import MemoryNetwork
@@ -53,6 +55,12 @@ class DeepQaTestCase(TestCase):
                 params[key] = deepcopy(value)
         return cls(params)
 
+    @staticmethod
+    def one_hot(index, length):
+        vector = numpy.zeros(length)
+        vector[index] = 1
+        return vector
+
     def write_snli_file(self):
         with codecs.open(self.SNLI_FILE, 'w', 'utf-8') as snli_file:
             snli_file.write('1\ttext1\thypothesis1\tentails\n')
@@ -61,6 +69,18 @@ class DeepQaTestCase(TestCase):
             snli_file.write('4\ttext4\thypothesis4\tneutral\n')
             snli_file.write('5\ttext5\thypothesis5\tentails\n')
             snli_file.write('6\ttext6\thypothesis6\tcontradicts\n')
+
+    def write_sequence_tagging_files(self):
+        with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
+            train_file.write('cats###N\tare###V\tanimals###N\t.###.\n')
+            train_file.write('dogs###N\tare###V\tanimals###N\t.###.\n')
+            train_file.write('snakes###N\tare###V\tanimals###N\t.###.\n')
+            train_file.write('birds###N\tare###V\tanimals###N\t.###.\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('horses###N\tare###V\tanimals###N\t.###.\n')
+            validation_file.write('cows###N\tare###V\tanimals###N\t.###.\n')
+            validation_file.write('monkeys###N\tare###V\tanimals###N\t.###.\n')
+            validation_file.write('caterpillars###N\tare###V\tanimals###N\t.###.\n')
 
     def write_true_false_model_files(self):
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:

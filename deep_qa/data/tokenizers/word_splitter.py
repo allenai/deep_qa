@@ -91,6 +91,21 @@ class NltkWordSplitter(WordSplitter):
         return word_tokenize(sentence.lower())
 
 
+class NoOpWordSplitter(WordSplitter):
+    """
+    This is a word splitter that does nothing.  We're playing a little loose with python's dynamic
+    typing, breaking the typical WordSplitter API a bit and assuming that you've already split
+    ``sentence`` into a list somehow, so you don't need to do anything else here.  For example, the
+    ``PreTokenizedTaggingInstance`` requires this word splitter, because it reads in pre-tokenized
+    data from a file.
+    """
+    @overrides
+    def split_words(self, sentence: str) -> List[str]:
+        assert isinstance(sentence, list), "This splitter is only meant to be used for pre-split text"
+        return sentence
+
+
 word_splitters = OrderedDict()  # pylint: disable=invalid-name
 word_splitters['simple'] = SimpleWordSplitter
 word_splitters['nltk'] = NltkWordSplitter
+word_splitters['no_op'] = NoOpWordSplitter

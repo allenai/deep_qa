@@ -9,6 +9,7 @@ from .multiple_choice_qa.multiple_true_false_similarity import MultipleTrueFalse
 from .multiple_choice_qa.question_answer_memory_network import QuestionAnswerMemoryNetwork
 from .multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from .multiple_choice_qa.tuple_entailment import MultipleChoiceTupleEntailmentModel
+from .sequence_tagging.simple_tagger import SimpleTagger
 from .reading_comprehension.attention_sum_reader import AttentionSumReader
 from .reading_comprehension.gated_attention_reader import GatedAttentionReader
 from .reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
@@ -33,6 +34,7 @@ concrete_models = {  # pylint: disable=invalid-name
         'MultipleChoiceTupleEntailmentModel': MultipleChoiceTupleEntailmentModel,
         'QuestionAnswerMemoryNetwork': QuestionAnswerMemoryNetwork,
         'QuestionAnswerSimilarity': QuestionAnswerSimilarity,
+        'SimpleTagger': SimpleTagger,
         'SoftmaxMemoryNetwork': SoftmaxMemoryNetwork,
         'TreeLSTMModel': TreeLSTMModel,
         'TrueFalseModel': TrueFalseModel,

@@ -1,14 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
-
 from typing import Tuple
 
 import numpy
 
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.character_span_instance import CharacterSpanInstance
+from ...common.test_case import DeepQaTestCase
 
 
-class TestCharacterSpanInstance:
+class TestCharacterSpanInstance(DeepQaTestCase):
     @staticmethod
     def instance_to_line(question: str, passage: str, label: Tuple[int, int],
                          index=None):

@@ -37,7 +37,7 @@ class WordAndCharacterTokenizer(Tokenizer):
     @overrides
     def get_words_for_indexer(self, text: str) -> Dict[str, List[str]]:
         words = self.tokenize(text)
-        characters = [char for char in text]
+        characters = [char for word in words for char in word]
         return {'words': words, 'characters': characters}
 
     @overrides
