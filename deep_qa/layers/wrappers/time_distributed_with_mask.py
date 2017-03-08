@@ -20,8 +20,6 @@ class TimeDistributedWithMask(TimeDistributed):
         if not isinstance(input_mask, list):
             x = [x]
             input_mask = [input_mask]
-        if not any([mask is not None for mask in input_mask]):
-            return None
         timesteps = K.int_shape(x[0])[1]
         input_shape = [K.int_shape(x_i) for x_i in x]
         if len(x) == 1:

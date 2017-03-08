@@ -8,9 +8,8 @@ from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlap
 from deep_qa.layers.tuple_matchers import tuple_matchers
 from ...layers.attention.masked_softmax import MaskedSoftmax
 from ...layers.backend.repeat import Repeat
-from ...layers.backend.squeeze import Squeeze
 from ...layers.noisy_or import NoisyOr
-from ...layers.wrappers.time_distributed import TimeDistributed
+from ...layers.wrappers.time_distributed_with_mask import TimeDistributedWithMask
 from ...training.models import DeepQaModel
 from ...training.text_trainer import TextTrainer
 from ...common.params import get_choice_with_default
@@ -69,7 +68,8 @@ class TupleInferenceModel(TextTrainer):
             # These TimeDistributed wrappers correspond to distributing across each of num_options,
             # num_question_tuples, and num_background_tuples.
             match_layer = tuple_matcher_class(**tuple_matcher_params)
-            self.tuple_matcher = TimeDistributed(TimeDistributed(TimeDistributed(match_layer)))
+            self.tuple_matcher = TimeDistributedWithMask(
+                    TimeDistributedWithMask(TimeDistributedWithMask(match_layer)))
         else:
             self.tuple_matcher = tuple_matcher_class(self, tuple_matcher_params)
         super(TupleInferenceModel, self).__init__(params)
@@ -89,7 +89,7 @@ class TupleInferenceModel(TextTrainer):
         custom_objects['MaskedSoftmax'] = MaskedSoftmax
         custom_objects['NoisyOr'] = NoisyOr
         custom_objects['Repeat'] = Repeat
-        custom_objects['Squeeze'] = Squeeze
+        custom_objects['TimeDistributedWithMask'] = TimeDistributedWithMask
         return custom_objects
 
     @overrides

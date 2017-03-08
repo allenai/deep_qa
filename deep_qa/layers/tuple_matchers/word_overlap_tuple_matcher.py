@@ -106,6 +106,11 @@ class WordOverlapTupleMatcher(Layer):
         mask = K.any(input1, axis=[1, 2]) * K.any(input2, axis=[1, 2])
         return K.expand_dims(mask)
 
+    def get_output_mask_shape_for(self, input_shape):  # pylint: disable=no-self-use
+        # input_shape is [(batch_size, num_slots, num_slot_words_t1), (batch_size, num_slots, num_slot_words_t2)]
+        mask_shape = (input_shape[0][0], 1)
+        return mask_shape
+
     def call(self, x, mask=None):
         tuple1_input, tuple2_input = x      # tuple1 shape: (batch size, num_slots, num_slot_words_t1)
                                             # tuple2 shape: (batch size, num_slots, num_slot_words_t2)
