@@ -58,7 +58,7 @@ class TestTimeDistributedWithMask(DeepQaTestCase):
         numpy.testing.assert_array_almost_equal(expected_mask, actual_mask)
 
     def test_returns_masks_if_no_input_mask(self):
-        # For this test, we use WordOverlapTupleMatcher, which takes no input mask, but 
+        # For this test, we use WordOverlapTupleMatcher, which takes no input mask, but
         # returns an output mask.  We're using an input of shape (batch_size, num_options,
         # num_tuples, num_slots, num_words).
         tuple_input = Input(shape=(2, 3, 4, 5), dtype='int32')
