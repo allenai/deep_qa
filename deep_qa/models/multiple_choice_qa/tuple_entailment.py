@@ -54,7 +54,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
     @overrides
     def _get_max_lengths(self) -> Dict[str, int]:
         return {
-                'word_sequence_length': self.max_sentence_length,
+                'num_sentence_words': self.num_sentence_words,
                 'answer_length': self.max_answer_length,
                 'background_sentences': self.max_knowledge_length,
                 'num_options': self.num_options,
@@ -63,7 +63,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
 
     @overrides
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.max_sentence_length = max_lengths['word_sequence_length']
+        self.num_sentence_words = max_lengths['num_sentence_words']
         self.max_answer_length = max_lengths['answer_length']
         self.max_knowledge_length = max_lengths['background_sentences']
         self.num_options = max_lengths['num_options']
@@ -76,9 +76,9 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
 
     @overrides
     def _build_model(self):
-        question_input = Input((self.max_sentence_length,), dtype='int32', name='question_input')
+        question_input = Input((self.num_sentence_words,), dtype='int32', name='question_input')
         answer_input = Input((self.num_options, self.max_answer_length), dtype='int32', name='answer_input')
-        knowledge_input = Input((self.max_knowledge_length, self.num_slots, self.max_sentence_length),
+        knowledge_input = Input((self.max_knowledge_length, self.num_slots, self.num_sentence_words),
                                 dtype='int32', name='knowledge_input')
         question_embedding = self._embed_input(question_input)
         answer_embedding = self._embed_input(answer_input)

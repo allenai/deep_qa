@@ -29,21 +29,21 @@ class TestTupleInstance:
 class TestIndexedTupleInstance(DeepQaTestCase):
     def test_get_lengths_returns_length_of_longest_slot(self):
         instance = IndexedTupleInstance([[1, 2], [3, 4, 5], [6]], True)
-        assert instance.get_lengths() == {'word_sequence_length': 3, 'num_slots': 3}
+        assert instance.get_lengths() == {'num_sentence_words': 3, 'num_slots': 3}
 
     def test_pad_adds_zeros_on_all_slots(self):
         instance = IndexedTupleInstance([[1, 2], [3, 4, 5], [6]], True)
-        instance.pad({'word_sequence_length': 4, 'num_slots': 3})
+        instance.pad({'num_sentence_words': 4, 'num_slots': 3})
         assert instance.word_indices == [[0, 0, 1, 2], [0, 3, 4, 5], [0, 0, 0, 6]]
 
     def test_pad_slots_concatenates_at_end(self):
         instance = IndexedTupleInstance([[1, 2], [3, 4], [5, 6], [7, 8]], True)
-        instance.pad({'word_sequence_length': 4, 'num_slots': 3})
+        instance.pad({'num_sentence_words': 4, 'num_slots': 3})
         assert instance.word_indices == [[0, 0, 1, 2], [0, 0, 3, 4], [5, 6, 7, 8]]
 
     def test_pad_adjusts_slots_before_length(self):
         instance = IndexedTupleInstance([[1, 2], [3, 4], [5, 6], [7, 8]], True)
-        instance.pad({'word_sequence_length': 2, 'num_slots': 3})
+        instance.pad({'num_sentence_words': 2, 'num_slots': 3})
         print(instance.word_indices)
         assert instance.word_indices == [[1, 2], [3, 4], [7, 8]]
 

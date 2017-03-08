@@ -55,10 +55,10 @@ class TestTextInstance(DeepQaTestCase):
 class TestIndexedInstance(DeepQaTestCase):
     def test_get_lengths_works_with_words_and_characters(self):
         instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
-        assert instance.get_lengths() == {'word_sequence_length': 2, 'word_character_length': 3}
+        assert instance.get_lengths() == {'num_sentence_words': 2, 'num_word_characters': 3}
 
     def test_pad_word_sequence_handles_words_and_characters(self):
         instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
         padded = instance.pad_word_sequence(instance.word_indices,
-                                            {'word_sequence_length': 3, 'word_character_length': 4})
+                                            {'num_sentence_words': 3, 'num_word_characters': 4})
         assert padded == [[0, 0, 0, 0], [1, 2, 0, 0], [3, 1, 2, 0]]

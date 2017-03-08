@@ -11,14 +11,14 @@ class TestIndexedTaggingInstance(DeepQaTestCase):
         self.instance = IndexedTaggingInstance([1, 2, 3, 4], [4, 5, 6])
 
     def test_get_lengths_returns_correct_lengths(self):
-        assert self.instance.get_lengths() == {'word_sequence_length': 4}
+        assert self.instance.get_lengths() == {'num_sentence_words': 4}
 
     def test_pad_truncates_correctly(self):
-        self.instance.pad({'word_sequence_length': 2})
+        self.instance.pad({'num_sentence_words': 2})
         assert self.instance.text_indices == [1, 2]
 
     def test_pad_adds_padding_correctly(self):
-        self.instance.pad({'word_sequence_length': 6})
+        self.instance.pad({'num_sentence_words': 6})
         assert self.instance.text_indices == [1, 2, 3, 4, 0, 0]
 
     def test_as_training_data_produces_correct_arrays(self):

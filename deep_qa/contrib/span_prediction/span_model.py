@@ -20,15 +20,15 @@ from loaders import  load_parses, read_barrons, get_science_terms # pylint: disa
 
 
 # constrained legal span lengths. Upper diagonal band in begin vs. end matrix.
-def legal_spans(max_sentence_length, max_span_length):
-    for span in product(range(0, max_sentence_length), range(0, max_sentence_length)):
+def legal_spans(num_sentence_words, max_span_length):
+    for span in product(range(0, num_sentence_words), range(0, num_sentence_words)):
         if span[0] >= span[1] or span[1] - span[0] > max_span_length:
             continue
         yield span
 
 
 def create_training_examples(statement_list: List[List[str]], trees, training_spans,
-                             training: bool, max_span_length, max_sentence_length,
+                             training: bool, max_span_length, num_sentence_words,
                              args, pos_tags, constituents, k=1):
     """
     This function defines a training set for span prediction.
@@ -66,7 +66,7 @@ def create_training_examples(statement_list: List[List[str]], trees, training_sp
         sentence_candidate_span_examples = []   # when training.
 
         # loop across different spans for given sentence
-        for span in legal_spans(max_sentence_length, max_span_length):  #globally legal
+        for span in legal_spans(num_sentence_words, max_span_length):  #globally legal
             if span[1] > len(statement):
                 continue
             if span[0] > len(statement):
@@ -260,7 +260,7 @@ def main():
 
     # general characteristics of sentences/ spans
     max_span_length = max([span[1]-span[0] for span in training_spans])     #11
-    max_sentence_length = max([len(stmnt) for stmnt in training_statements])    #46
+    num_sentence_words = max([len(stmnt) for stmnt in training_statements])    #46
 
 
 
@@ -283,7 +283,7 @@ def main():
     all_examples, all_labels, examples_per_sentence, _ = \
                     create_training_examples(training_statements, training_trees,
                                              training_spans, True,
-                                             max_span_length, max_sentence_length,
+                                             max_span_length, num_sentence_words,
                                              args, pos_tags, constituents)
 
 
@@ -430,7 +430,7 @@ def main():
         # compute features for barron's
         _, _, barron_span_features, span_indexes = \
         create_training_examples(barron_statements, barron_trees, False, False,
-                                 max_span_length, max_sentence_length, args, pos_tags,
+                                 max_span_length, num_sentence_words, args, pos_tags,
                                  constituents)
 
 

@@ -91,16 +91,16 @@ class TestTrueFalseInstance:
 class TestIndexedTrueFalseInstance(DeepQaTestCase):
     def test_get_lengths_returns_length_of_word_indices(self):
         instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
-        assert instance.get_lengths() == {'word_sequence_length': 4}
+        assert instance.get_lengths() == {'num_sentence_words': 4}
 
     def test_pad_adds_zeros_on_left(self):
         instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
-        instance.pad({'word_sequence_length': 5})
+        instance.pad({'num_sentence_words': 5})
         assert instance.word_indices == [0, 1, 2, 3, 4]
 
     def test_pad_truncates_from_right(self):
         instance = IndexedTrueFalseInstance([1, 2, 3, 4], True)
-        instance.pad({'word_sequence_length': 3})
+        instance.pad({'num_sentence_words': 3})
         assert instance.word_indices == [2, 3, 4]
 
     def test_as_training_data_produces_correct_numpy_arrays(self):

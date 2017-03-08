@@ -235,16 +235,16 @@ class IndexedInstance(Instance):
         Because ``TextEncoders`` can return complex data structures, we might
         actually have several things to pad for a single word sequence. We
         check for that and handle it in a single spot here. We return a
-        dictionary containing 'word_sequence_length', which is the number of
+        dictionary containing 'num_sentence_words', which is the number of
         words in word_indices. If the word representations also contain
         characters, the dictionary additionally contains a
-        'word_character_length' key, with a value corresponding to the longest
+        'num_word_characters' key, with a value corresponding to the longest
         word in the sequence.
         """
-        lengths = {'word_sequence_length': len(word_indices)}
+        lengths = {'num_sentence_words': len(word_indices)}
         if len(word_indices) > 0 and not isinstance(word_indices[0], int):
             if isinstance(word_indices[0], list):
-                lengths['word_character_length'] = max([len(word) for word in word_indices])
+                lengths['num_word_characters'] = max([len(word) for word in word_indices])
             # There might someday be other cases we're missing here, but we'll punt for now.
         return lengths
 
@@ -285,14 +285,14 @@ class IndexedInstance(Instance):
         direction, you can.
         """
         default_value = lambda: 0
-        if 'word_character_length' in lengths:
+        if 'num_word_characters' in lengths:
             default_value = lambda: []
 
         padded_word_sequence = IndexedInstance.pad_sequence_to_length(
-                word_sequence, lengths['word_sequence_length'], default_value, truncate_from_right)
-        if 'word_character_length' in lengths:
+                word_sequence, lengths['num_sentence_words'], default_value, truncate_from_right)
+        if 'num_word_characters' in lengths:
             padded_word_sequence = [IndexedInstance.pad_sequence_to_length(
-                    word, lengths['word_character_length'], truncate_from_right=False)
+                    word, lengths['num_word_characters'], truncate_from_right=False)
                                     for word in padded_word_sequence]
         return padded_word_sequence
 

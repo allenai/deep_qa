@@ -19,7 +19,7 @@
         "type": "memory_only"
     },
     "num_memory_layers": 1,
-    "max_sentence_length": 125,
+    "num_sentence_words": 125,
     "patience": 5,
     "show_summary_with_masking_info": true,
     "train_files": [

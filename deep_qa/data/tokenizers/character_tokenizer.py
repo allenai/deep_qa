@@ -45,5 +45,5 @@ class CharacterTokenizer(Tokenizer):
     def get_max_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
         # Note that `sentence_length` here is the number of _characters_ in the sentence, because
         # of how `self.index_text` works.  And even though the name isn't great, we'll use
-        # `word_sequence_length` for the key to this, so that the rest of the code is simpler.
-        return {'word_sequence_length': sentence_length}
+        # `num_sentence_words` for the key to this, so that the rest of the code is simpler.
+        return {'num_sentence_words': sentence_length}

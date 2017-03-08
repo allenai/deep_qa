@@ -128,4 +128,4 @@ class WordAndCharacterTokenizer(Tokenizer):
 
     @overrides
     def get_max_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
-        return {'word_sequence_length': sentence_length, 'word_character_length': word_length}
+        return {'num_sentence_words': sentence_length, 'num_word_characters': word_length}

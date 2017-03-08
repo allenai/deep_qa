@@ -92,7 +92,7 @@ class IndexedTupleInstance(IndexedInstance):
     @overrides
     def get_lengths(self) -> Dict[str, int]:
         # We care only about the longest slot here because all slots will be padded to the same length.
-        return {'word_sequence_length': max([len(indices) for indices in self.word_indices]),
+        return {'num_sentence_words': max([len(indices) for indices in self.word_indices]),
                 'num_slots': len(self.word_indices)}
 
     @overrides

@@ -70,20 +70,20 @@ class TestIndexedQuestionAnswerInstance(DeepQaTestCase):
 
     def test_get_lengths_returns_three_correct_lengths(self):
         assert self.instance.get_lengths() == {
-                'word_sequence_length': 3,
+                'num_sentence_words': 3,
                 'answer_length': 2,
                 'num_options': 3
                 }
 
     def test_pad_calls_pad_on_all_options(self):
-        self.instance.pad({'word_sequence_length': 2, 'answer_length': 2, 'num_options': 3})
+        self.instance.pad({'num_sentence_words': 2, 'answer_length': 2, 'num_options': 3})
         assert self.instance.question_indices == [2, 3]
         assert self.instance.option_indices[0] == [2, 3]
         assert self.instance.option_indices[1] == [0, 4]
         assert self.instance.option_indices[2] == [5, 6]
 
     def test_pad_adds_empty_options_when_necessary(self):
-        self.instance.pad({'word_sequence_length': 1, 'answer_length': 1, 'num_options': 4})
+        self.instance.pad({'num_sentence_words': 1, 'answer_length': 1, 'num_options': 4})
         assert self.instance.question_indices == [3]
         assert self.instance.option_indices[0] == [3]
         assert self.instance.option_indices[1] == [4]
@@ -92,13 +92,13 @@ class TestIndexedQuestionAnswerInstance(DeepQaTestCase):
         assert len(self.instance.option_indices) == 4
 
     def test_pad_removes_options_when_necessary(self):
-        self.instance.pad({'word_sequence_length': 1, 'answer_length': 1, 'num_options': 1})
+        self.instance.pad({'num_sentence_words': 1, 'answer_length': 1, 'num_options': 1})
         assert self.instance.question_indices == [3]
         assert self.instance.option_indices[0] == [3]
         assert len(self.instance.option_indices) == 1
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
-        self.instance.pad({'word_sequence_length': 3, 'answer_length': 2, 'num_options': 3})
+        self.instance.pad({'num_sentence_words': 3, 'answer_length': 2, 'num_options': 3})
         inputs, label = self.instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 1, 0]))
         assert numpy.all(inputs[0] == numpy.asarray([1, 2, 3]))

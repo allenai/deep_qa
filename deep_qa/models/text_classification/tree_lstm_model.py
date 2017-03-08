@@ -36,7 +36,7 @@ class TreeLSTMModel(TextTrainer):
         # Step 1: Initialze the transition inputs.
         # Length of transitions (ops) is an upper limit on the stack and buffer sizes. So we'll use
         # that to initialize the stack and buffer in the LSTM.
-        buffer_ops_limit = self.max_sentence_length
+        buffer_ops_limit = self.num_sentence_words
         stack_limit = buffer_ops_limit
 
         # The transitions input has an extra trailing dimension to make the concatenation with the
@@ -80,7 +80,7 @@ class TreeLSTMModel(TextTrainer):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[0][1]
+        self.num_sentence_words = self.model.get_input_shape_at(0)[0][1]
         # TODO(matt): set the max transition length.
 
     @classmethod

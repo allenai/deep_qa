@@ -7,7 +7,7 @@
         }
     },
     "patience": 5,
-    "max_sentence_length": 70,
+    "num_sentence_words": 70,
     "max_answer_length": 70,
     "train_files": ["data/science/omnibus_questions/processed_questions_and_answers.tsv"]
 }

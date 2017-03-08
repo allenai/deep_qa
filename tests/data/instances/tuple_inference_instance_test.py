@@ -102,7 +102,7 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         max_lengths = {'num_question_tuples': num_question_tuples,
                        'num_background_tuples': num_background_tuples,
                        'num_slots': num_slots,
-                       'word_sequence_length': slot_length,
+                       'num_sentence_words': slot_length,
                        'num_options': num_options}
         indexed.pad(max_lengths)
         assert len(indexed.answers_indexed) == num_options
@@ -122,7 +122,7 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         max_lengths = {'num_question_tuples': 2,
                        'num_background_tuples': 3,
                        'num_slots': 2,
-                       'word_sequence_length': 2,
+                       'num_sentence_words': 2,
                        'num_options': 3}
         self.indexed_instance.pad(max_lengths)
 
@@ -161,9 +161,9 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         max_lengths = {'num_question_tuples': 1,
                        'num_background_tuples': 1,
                        'num_slots': 2,
-                       'word_sequence_length': 2,
+                       'num_sentence_words': 2,
                        'num_options': 1,
-                       'word_character_length': 3}
+                       'num_word_characters': 3}
         indexed.pad(max_lengths)
         expected_indexed_tuple = [[[0, 0, 0], [a_word_index, a_index, 0]],
                                   [[a_word_index, a_index, 0], [sentence_index, s_index, e_index]]]

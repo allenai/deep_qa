@@ -251,9 +251,9 @@ class GatedAttentionReader(TextTrainer):
         Set the padding lengths of the model.
         """
         # TODO(nelson): superclass complains that there is no
-        # word_sequence_length key, so we set it to None here.
+        # num_sentence_words key, so we set it to None here.
         # We should probably patch up / organize the API.
-        max_lengths["word_sequence_length"] = None
+        max_lengths["num_sentence_words"] = None
         super(GatedAttentionReader, self)._set_max_lengths(max_lengths)
         self.max_question_length = max_lengths['num_question_words']
         self.max_passage_length = max_lengths['num_passage_words']
@@ -262,7 +262,7 @@ class GatedAttentionReader(TextTrainer):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[1]
+        self.num_sentence_words = self.model.get_input_shape_at(0)[1]
         # TODO(matt): implement this correctly
 
     @overrides

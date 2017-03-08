@@ -49,11 +49,11 @@ class TextTrainer(Trainer):
         params.
     embedding_dropout: float, optional (default=0.5)
         Dropout parameter to apply to the word embedding layer
-    max_sentence_length: int, optional (default=None)
+    num_sentence_words: int, optional (default=None)
         Upper limit on length of word sequences in the training data. Ignored during testing (we
         use the value set at training time, either from this parameter or from a loaded model).  If
         this is not set, we'll calculate a max length from the data.
-    max_word_length: int, optional (default=None)
+    num_word_characters: int, optional (default=None)
         Upper limit on length of words in the training data. Only applicable for "words and
         characters" text encoding.
     tokenizer: Dict[str, Any], optional (default={})
@@ -90,8 +90,8 @@ class TextTrainer(Trainer):
         self.project_embeddings = params.pop('project_embeddings', False)
         self.embedding_size = params.pop('embedding_size', 50)
         self.embedding_dropout = params.pop('embedding_dropout', 0.5)
-        self.max_sentence_length = params.pop('max_sentence_length', None)
-        self.max_word_length = params.pop('max_word_length', None)
+        self.num_sentence_words = params.pop('num_sentence_words', None)
+        self.num_word_characters = params.pop('num_word_characters', None)
 
         tokenizer_params = params.pop('tokenizer', {})
         tokenizer_choice = get_choice_with_default(tokenizer_params, 'type', list(tokenizers.keys()))
@@ -225,7 +225,7 @@ class TextTrainer(Trainer):
             self._build_sentence_encoder_model()
         instance = TrueFalseInstance(sentence, True)
         indexed_instance = instance.to_indexed_instance(self.data_indexer)
-        indexed_instance.pad({'word_sequence_length': self.max_sentence_length})
+        indexed_instance.pad({'num_sentence_words': self.num_sentence_words})
         instance_input, _ = indexed_instance.as_training_data()
         encoded_instance = self._sentence_encoder_model.predict(numpy.asarray([instance_input]))
         return encoded_instance[0]
@@ -240,7 +240,7 @@ class TextTrainer(Trainer):
         have additional padding dimensions, call super()._get_max_lengths() and then update the
         dictionary.
         """
-        return self.tokenizer.get_max_lengths(self.max_sentence_length, self.max_word_length)
+        return self.tokenizer.get_max_lengths(self.num_sentence_words, self.num_word_characters)
 
     def _set_max_lengths(self, max_lengths: Dict[str, int]):
         """
@@ -249,8 +249,8 @@ class TextTrainer(Trainer):
         variables given a dictionary of lengths, perhaps computed from training data or loaded from
         a saved model.
         """
-        self.max_sentence_length = max_lengths['word_sequence_length']
-        self.max_word_length = max_lengths.get('word_character_length', None)
+        self.num_sentence_words = max_lengths['num_sentence_words']
+        self.num_word_characters = max_lengths.get('num_word_characters', None)
 
     @overrides
     def _set_params_from_model(self):
@@ -296,9 +296,9 @@ class TextTrainer(Trainer):
             raise ValueError("Length of input tuple must be "
                              "2 or 1, got input tuple of "
                              "length {}".format(len(input_slice)))
-        self.max_sentence_length = input_slice[0]
+        self.num_sentence_words = input_slice[0]
         if len(input_slice) == 2:
-            self.max_word_length = input_slice[1]
+            self.num_word_characters = input_slice[1]
 
     def _instance_type(self) -> Instance:
         """
@@ -318,14 +318,14 @@ class TextTrainer(Trainer):
     def _get_sentence_shape(self, sentence_length: int=None) -> Tuple[int]:
         """
         Returns a tuple specifying the shape of a tensor representing a sentence.  This is not
-        necessarily just (self.max_sentence_length,), because different text_encodings lead to
+        necessarily just (self.num_sentence_words,), because different text_encodings lead to
         different tensor shapes.
         """
         if sentence_length is None:
             # This can't be the default value for the function argument, because
-            # self.max_sentence_length will not have been set at class creation time.
-            sentence_length = self.max_sentence_length
-        return self.tokenizer.get_sentence_shape(sentence_length, self.max_word_length)
+            # self.num_sentence_words will not have been set at class creation time.
+            sentence_length = self.num_sentence_words
+        return self.tokenizer.get_sentence_shape(sentence_length, self.num_word_characters)
 
     def _embed_input(self, input_layer: Layer, embedding_name: str="embedding"):
         """
@@ -556,10 +556,10 @@ class TextTrainer(Trainer):
         embedding sequences, and the part of the model that gets us from word embedding sequences
         to sentence vectors.
 
-        This must be called after self.max_sentence_length has been set, which happens when
+        This must be called after self.num_sentence_words has been set, which happens when
         self._get_training_data() is called.
         """
-        sentence_input = Input(shape=(self.max_sentence_length,), dtype='int32', name="sentence_input")
+        sentence_input = Input(shape=(self.num_sentence_words,), dtype='int32', name="sentence_input")
         embedded_input = self._embed_input(sentence_input)
         encoder_layer = self._get_encoder()
         encoded_input = encoder_layer(embedded_input)

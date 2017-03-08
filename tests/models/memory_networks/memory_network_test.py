@@ -24,7 +24,7 @@ class TestMemoryNetwork(DeepQaTestCase):
 
     def test_train_does_not_crash_with_cnn_encoder(self):
         args = {
-                'max_sentence_length': 5,
+                'num_sentence_words': 5,
                 'encoder': {'default': {'type': 'cnn',
                                         'ngram_filter_sizes': [2, 3],
                                         'num_filters': 5}}

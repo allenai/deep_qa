@@ -27,7 +27,7 @@ class TestDifferentiableSearchMemoryNetwork(DeepQaTestCase):
         args = {
                 'corpus_path': self.corpus_path,
                 'model_serialization_prefix': './',
-                'max_sentence_length': 3,
+                'num_sentence_words': 3,
                 }
         model = self.get_model(DifferentiableSearchMemoryNetwork, args)
         model.encoder_model = FakeEncoder()
@@ -37,11 +37,11 @@ class TestDifferentiableSearchMemoryNetwork(DeepQaTestCase):
         args = {
                 'corpus_path': self.corpus_path,
                 'model_serialization_prefix': './',
-                'max_sentence_length': 5,
+                'num_sentence_words': 5,
                 }
         model = self.get_model(DifferentiableSearchMemoryNetwork, args)
         model.encoder_model = FakeEncoder()
         model._initialize_lsh()
-        model.max_sentence_length = 5
+        model.num_sentence_words = 5
         model.max_knowledge_length = 2
         model.get_nearest_neighbors(TrueFalseInstance("this is a sentence", True))

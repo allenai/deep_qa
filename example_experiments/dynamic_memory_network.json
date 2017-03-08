@@ -22,7 +22,7 @@
         "type": "memory_only"
     },
     "num_memory_layers": 1,
-    "max_sentence_length": 125,
+    "num_sentence_words": 125,
     "max_training_instances": 10,
     "train_files": [
         "data/science/omnibus_questions/processed_questions.tsv",

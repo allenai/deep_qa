@@ -13,7 +13,7 @@ class TestTupleInferenceModel(DeepQaTestCase):
                 "num_question_tuples": 5,
                 "num_background_tuples": 5,
                 "num_tuple_slots": 4,
-                "word_sequence_length": 10,
+                "num_sentence_words": 10,
                 "num_answer_options": 4,
                 "save_models": True}
         solver = self.get_model(TupleInferenceModel, args)

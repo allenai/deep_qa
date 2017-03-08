@@ -54,7 +54,7 @@ class TupleInferenceModel(TextTrainer):
         self.num_question_tuples = params.pop('num_question_tuples', 10)
         self.num_background_tuples = params.pop('num_background_tuples', 10)
         self.num_tuple_slots = params.pop('num_tuple_slots', 4)
-        self.num_slot_words = params.pop('word_sequence_length', 5)
+        self.num_slot_words = params.pop('num_sentence_words', 5)
         self.num_options = params.pop('num_answer_options', 4)
         tuple_matcher_params = params.pop('tuple_matcher', {})
         tuple_matcher_choice = get_choice_with_default(tuple_matcher_params,
@@ -98,7 +98,7 @@ class TupleInferenceModel(TextTrainer):
         max_lengths['num_question_tuples'] = self.num_question_tuples
         max_lengths['num_background_tuples'] = self.num_background_tuples
         max_lengths['num_slots'] = self.num_tuple_slots
-        max_lengths['word_sequence_length'] = self.num_slot_words
+        max_lengths['num_sentence_words'] = self.num_slot_words
         max_lengths['num_options'] = self.num_options
         return max_lengths
 
@@ -108,7 +108,7 @@ class TupleInferenceModel(TextTrainer):
         self.num_question_tuples = max_lengths['num_question_tuples']
         self.num_background_tuples = max_lengths['num_background_tuples']
         self.num_tuple_slots = max_lengths['num_slots']
-        self.num_slot_words = max_lengths['word_sequence_length']
+        self.num_slot_words = max_lengths['num_sentence_words']
         self.num_options = max_lengths['num_options']
 
     @overrides

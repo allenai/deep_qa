@@ -69,7 +69,7 @@ class QuestionAnswerSimilarity(TextTrainer):
         # This needs to use a new encoder because we can't compile the same LSTM with two different
         # padding lengths...  If you really want to use the same LSTM for both questions and
         # answers, pad the answers to the same dimension as the questions, replacing
-        # self.max_answer_length with self.max_sentence_length everywhere.
+        # self.max_answer_length with self.num_sentence_words everywhere.
         answer_encoder = EncoderWrapper(question_encoder, name="answer_encoder")
         encoded_answers = answer_encoder(answer_embedding)
 
@@ -103,5 +103,5 @@ class QuestionAnswerSimilarity(TextTrainer):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.max_sentence_length = self.model.get_input_shape_at(0)[1]
+        self.num_sentence_words = self.model.get_input_shape_at(0)[1]
         # TODO(matt): implement this correctly

@@ -8,13 +8,13 @@ from ...common.test_case import DeepQaTestCase
 class TestIndexedSentencePairInstance(DeepQaTestCase):
     def test_get_lengths_returns_max_of_both_sentences(self):
         instance = IndexedSentencePairInstance([1, 2, 3], [1], True)
-        assert instance.get_lengths() == {'word_sequence_length': 3}
+        assert instance.get_lengths() == {'num_sentence_words': 3}
         instance = IndexedSentencePairInstance([1, 2, 3], [1, 2, 3, 4], True)
-        assert instance.get_lengths() == {'word_sequence_length': 4}
+        assert instance.get_lengths() == {'num_sentence_words': 4}
 
     def test_pad_pads_both_sentences(self):
         instance = IndexedSentencePairInstance([1, 2], [3, 4], True)
-        instance.pad({'word_sequence_length': 3})
+        instance.pad({'num_sentence_words': 3})
         assert instance.first_sentence_indices == [0, 1, 2]
         assert instance.second_sentence_indices == [0, 3, 4]
 
