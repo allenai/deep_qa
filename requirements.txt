@@ -59,6 +59,9 @@ pytest-pythonpath
 # Allows generation of coverage reports with pytest.
 pytest-cov
 
+# Allows marking tests as flaky, to be rerun if they fail
+flaky
+
 # Allows codecov to generate coverage reports
 coverage
 codecov

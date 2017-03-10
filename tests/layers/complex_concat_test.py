@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 
 import numpy
+from flaky import flaky
 from keras.layers import Input
 from keras.models import Model
 
@@ -25,6 +26,7 @@ class TestComplexConcatLayer:
         assert concat_tensor.shape == (3, 4, 5, 7*4)
         numpy.testing.assert_almost_equal(concat_tensor, numpy.concatenate(input_tensors, axis=-1))
 
+    @flaky
     def test_call_handles_complex_combinations(self):
         input_shape = (3, 4, 5, 7)
         input_1 = Input(shape=input_shape[1:], dtype='float32')
