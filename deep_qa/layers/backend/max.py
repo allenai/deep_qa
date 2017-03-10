@@ -7,11 +7,11 @@ from ...tensors.backend import switch, very_negative_like
 
 class Max(Layer):
     """
-    This `Layer` performs a max over some dimension.  Keras has a similar layer called
-    `GlobalMaxPooling1D`, but it is not as configurable as this one, and it does not support
+    This ``Layer`` performs a max over some dimension.  Keras has a similar layer called
+    ``GlobalMaxPooling1D``, but it is not as configurable as this one, and it does not support
     masking.
 
-    If the mask is not `None`, it must be the same shape as the input.
+    If the mask is not ``None``, it must be the same shape as the input.
 
     Input:
         - A tensor of arbitrary shape (having at least 3 dimensions).
@@ -43,3 +43,10 @@ class Max(Layer):
         if mask is not None:
             x = switch(mask, x, very_negative_like(x))
         return K.max(x, axis=self.axis)
+
+    @overrides
+    def get_config(self):
+        config = {'axis': self.axis}
+        base_config = super(Max, self).get_config()
+        config.update(base_config)
+        return config
