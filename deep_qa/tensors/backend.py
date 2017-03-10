@@ -32,6 +32,18 @@ def switch(cond, then_tensor, else_tensor):
         return T.switch(cond, then_tensor, else_tensor)
 
 
+def cumulative_sum(tensor, axis=-1):
+    """
+    Keras' backend does not have tf.cumsum().  We're adding it here.
+    """
+    if K.backend() == 'tensorflow':
+        import tensorflow as tf
+        return tf.cumsum(tensor, axis=axis)
+    else:
+        import theano.tensor as T
+        return T.cumsum(tensor, axis=axis)
+
+
 def very_negative_like(tensor):
     return K.ones_like(tensor) * VERY_NEGATIVE_NUMBER
 

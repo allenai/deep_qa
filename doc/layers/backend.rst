@@ -13,6 +13,15 @@ BatchDot
     :undoc-members:
     :show-inheritance:
 
+Envelope
+--------
+
+.. automodule:: deep_qa.layers.backend.envelope
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 Max
 ---
 
