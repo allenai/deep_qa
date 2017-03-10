@@ -250,6 +250,14 @@ class BidirectionalAttentionFlow(TextTrainer):
 
     @staticmethod
     def get_best_span(span_begin_probs, span_end_probs):
+        if len(span_begin_probs.shape) > 2 or len(span_end_probs.shape) > 2:
+            raise ValueError("Input shapes must be (X,) or (1,X)")
+        if len(span_begin_probs.shape) == 2:
+            assert span_begin_probs.shape[0] == 1, "2D input must have an initial dimension of 1"
+            span_begin_probs = span_begin_probs.flatten()
+        if len(span_end_probs.shape) == 2:
+            assert span_end_probs.shape[0] == 1, "2D input must have an initial dimension of 1"
+            span_end_probs = span_end_probs.flatten()
         max_span_probability = 0
         best_word_span = (0, 1)
         begin_span_argmax = 0

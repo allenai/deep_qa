@@ -64,3 +64,13 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
         # the final best span returned is actually (1, 3) because we treat the
         # end span as being exclusive.
         assert begin_end_idxs == (1, 3)
+
+        # test higher-order input
+        span_begin_probs = numpy.array([[0.1, 0.3, 0.05, 0.3, 0.25]])
+        span_end_probs = numpy.array([[0.5, 0.1, 0.2, 0.05, 0.15]])
+        begin_end_idxs = BidirectionalAttentionFlow.get_best_span(span_begin_probs,
+                                                                  span_end_probs)
+        # Note that while the max is 0.3 (index 1 of start) * 0.2 (index 2 of start),
+        # the final best span returned is actually (1, 3) because we treat the
+        # end span as being exclusive.
+        assert begin_end_idxs == (1, 3)
