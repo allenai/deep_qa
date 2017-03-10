@@ -222,8 +222,8 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def prepare_data(self, train_files, max_training_instances,
-                     validation_files, update_data_indexer=True):
+    def prepare_data(self, train_files, max_training_instances=None,
+                     validation_files=None, update_data_indexer=True):
         logger.info("Getting training data")
         training_dataset = self._load_dataset_from_files(train_files)
         if max_training_instances is not None:

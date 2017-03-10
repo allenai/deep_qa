@@ -242,7 +242,7 @@ class DeepQaTestCase(TestCase):
 
     def write_span_prediction_files(self):
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tquestion 1\tpassage with answer\t13,18\n')
+            train_file.write('1\tquestion 1 with extra words\tpassage with answer and a reallylongword\t13,18\n')
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             train_file.write('1\tquestion 1\tpassage1 with answer1\t14,20\n')
             train_file.write('2\tquestion 2\tpassage2 with answer2\t0,8\n')
