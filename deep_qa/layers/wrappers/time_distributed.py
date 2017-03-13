@@ -15,6 +15,10 @@ class TimeDistributed(KerasTimeDistributed):
     reshaping to have one fewer dimension.  That change takes place in the actual ``call`` method as well as
     the ``get_output_shape_for`` method.
     """
+    def __init__(self, layer, keep_dims=False, **kwargs):
+        self.keep_dims = keep_dims
+        super(TimeDistributed, self).__init__(layer, **kwargs)
+
     @overrides
     def build(self, input_shape):
         if isinstance(input_shape, tuple):
@@ -46,7 +50,7 @@ class TimeDistributed(KerasTimeDistributed):
             child_input_shape = child_input_shape[0]
         child_output_shape = self.layer.get_output_shape_for(child_input_shape)
         reshaped_shape = (child_output_shape[0], timesteps) + child_output_shape[1:]
-        if reshaped_shape[-1] == 1:
+        if reshaped_shape[-1] == 1 and not self.keep_dims:
             reshaped_shape = reshaped_shape[:-1]
         return reshaped_shape
 
@@ -112,7 +116,7 @@ class TimeDistributed(KerasTimeDistributed):
             outputs = self.layer.call(reshaped_xs, mask=reshaped_masks)
             output_shape = self.get_output_shape_for(input_shape)
             reshaped_shape = (-1, timesteps) + output_shape[2:]
-            if reshaped_shape[-1] == 1:
+            if reshaped_shape[-1] == 1 and not self.keep_dims:
                 reshaped_shape = reshaped_shape[:-1]
             outputs = K.reshape(outputs, reshaped_shape)
         return outputs
@@ -126,3 +130,10 @@ class TimeDistributed(KerasTimeDistributed):
                 raise RuntimeError("This version of TimeDistributed doesn't handle multiple masked "
                                    "inputs!  Use a subclass of TimeDistributed instead.")
         return input_mask
+
+    @overrides
+    def get_config(self):
+        base_config = super(TimeDistributed, self).get_config()
+        config = {'keep_dims': self.keep_dims}
+        config.update(base_config)
+        return config
