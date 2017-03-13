@@ -17,6 +17,14 @@ deep_qa.layers.tuple_matchers.encoded_tuple_matcher
     :undoc-members:
     :show-inheritance:
 
+deep_qa.layers.tuple_matchers.threshold_tuple_matcher
+----------------------------------
+
+.. automodule:: deep_qa.layers.tuple_matchers.threshold_tuple_matcher
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 deep_qa.layers.tuple_matchers.slot_similarity_tuple_matcher
 ----------------------------------
 

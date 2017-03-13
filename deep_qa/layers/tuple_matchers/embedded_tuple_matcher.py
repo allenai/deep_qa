@@ -1,9 +1,9 @@
 from collections import OrderedDict
 from typing import Any, Dict
 
-from keras.layers import TimeDistributed
-
-from ....common.params import get_choice_with_default
+from ..wrappers.time_distributed_with_mask import TimeDistributedWithMask
+from .threshold_tuple_matcher import ThresholdTupleMatcher
+from ...common.params import get_choice_with_default
 
 
 class EmbeddedTupleMatcher:
@@ -28,7 +28,7 @@ class EmbeddedTupleMatcher:
         if tuple_matcher_params is None:
             tuple_matcher_params = {}
         tuple_matcher_choice = get_choice_with_default(tuple_matcher_params,
-                                                       "type",
+                                                       "embedded_matcher_type",
                                                        list(embedded_tuple_matchers.keys()))
         self.tuple_matcher = embedded_tuple_matchers[tuple_matcher_choice](**tuple_matcher_params)
 
@@ -37,9 +37,12 @@ class EmbeddedTupleMatcher:
         tuple1, tuple2 = inputs
         embedded_tuple1 = self.text_trainer._embed_input(tuple1)
         embedded_tuple2 = self.text_trainer._embed_input(tuple2)
-        match_layer = TimeDistributed(TimeDistributed(TimeDistributed(self.tuple_matcher)))
+        # The three TimeDistributedWithMasks wrap around the first three dimensions of the inputs:
+        # num_options, num_answer_tuple, and num_background_tuples.
+        match_layer = TimeDistributedWithMask(TimeDistributedWithMask(TimeDistributedWithMask(self.tuple_matcher)))
         return match_layer([embedded_tuple1, embedded_tuple2])
 
 
 # The first item added here will be used as the default in some cases.
 embedded_tuple_matchers = OrderedDict()  # pylint: disable=invalid-name
+embedded_tuple_matchers['threshold'] = ThresholdTupleMatcher

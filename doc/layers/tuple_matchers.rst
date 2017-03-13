@@ -19,6 +19,15 @@ EncodedTupleMatcher
     :undoc-members:
     :show-inheritance:
 
+ThresholdTupleMatcher
+---------
+
+.. automodule:: deep_qa.layers.tuple_matchers.threshold_tuple_matcher
+    :members:
+    :noindex:
+    :undoc-members:
+    :show-inheritance:
+
 SlotSimilarityTupleMatcher
 ---------
 
