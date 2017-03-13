@@ -1,12 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 from numpy.testing import assert_allclose
+from flaky import flaky
 
 from deep_qa.models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
 from ...common.test_case import DeepQaTestCase
 
 
 class TestBidirectionalAttentionFlow(DeepQaTestCase):
+    @flaky
     def test_trains_and_loads_correctly(self):
         self.write_span_prediction_files()
         args = {

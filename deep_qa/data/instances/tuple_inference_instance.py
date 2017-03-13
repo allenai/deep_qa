@@ -193,8 +193,12 @@ class TupleInferenceInstance(TextInstance):
     @classmethod
     def read_from_line(cls, line: str, default_label: int=None):
         """
-        Reads a TupleInstances from a line.  The format has one option (currently):
-            [question index][tab][all question+answer tuples][tab][background tuples][tab][label]
+        Reads a TupleInferenceInstance from a line.  The format has two options (currently):
+            Option 1:
+                [question index][tab][all question+answer tuples][tab][background tuples][tab][label]
+            Option 2:
+                same as option 1, but [question text][tab] comes immediately after the question index,
+                following the tab. Currently, the question text is not used.
         The question+answer tuples are formatted as:
             [a_1-tuple_1]$$$...$$$[a_1-tuple_n]###...###[a+_m-tuple_1]$$$...$$$[a_m-tuple_p]
         such that ``$$$`` serves as the tuple delimiter and ``###`` serves as the answer candidate
@@ -219,7 +223,10 @@ class TupleInferenceInstance(TextInstance):
         later.
         """
         fields = line.split("\t")
-        if len(fields) == 4:
+        if len(fields) == 5:
+            index, _, answers_string, background_string, label = fields
+            index = int(index)
+        elif len(fields) == 4:
             index, answers_string, background_string, label = fields
             index = int(index)
         elif len(fields) == 3:
