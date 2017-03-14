@@ -1,5 +1,9 @@
+from copy import deepcopy
+from typing import Any, Dict
+
 from keras import backend as K
 from keras.layers import Layer
+from overrides import overrides
 
 from ...common.params import get_choice_with_default
 from ...tensors.masked_operations import masked_softmax
@@ -20,31 +24,44 @@ class Attention(Layer):
         vector: (batch_size, embedding_dim), mask is ignored if provided
         matrix: (batch_size, num_rows, embedding_dim), with mask (batch_size, num_rows)
     Output shape: (batch_size, num_rows), no mask (masked input rows have value 0 in the output)
+
+    Parameters
+    ----------
+    similarity_function_params: Dict[str, Any], default={}
+        These parameters get passed to a similarity function (see
+        :mod:`deep_qa.tensors.similarity_functions` for more info on what's acceptable).  The
+        default similarity function with no parameters is a simple dot product.
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, similarity_function: Dict[str, Any]=None, **kwargs):
         self.supports_masking = True
-        # We need to wait until below to actually handle this, because self.name gets set in
-        # super.__init__.
-        similarity_function_params = kwargs.pop('similarity_function', {})
         super(Attention, self).__init__(**kwargs)
-        sim_function_choice = get_choice_with_default(similarity_function_params,
+        self.similarity_function_params = deepcopy(similarity_function)
+        if similarity_function is None:
+            similarity_function = {}
+        sim_function_choice = get_choice_with_default(similarity_function,
                                                       'type',
                                                       list(similarity_functions.keys()))
-        similarity_function_params['name'] = self.name + '_similarity_function'
-        self.similarity_function = similarity_functions[sim_function_choice](**similarity_function_params)
+        similarity_function['name'] = self.name + '_similarity_function'
+        self.similarity_function = similarity_functions[sim_function_choice](**similarity_function)
 
+    @overrides
     def build(self, input_shape):
-        self.trainable_weights = self.similarity_function.initialize_weights(input_shape)
+        tensor_1_dim = input_shape[0][-1]
+        tensor_2_dim = input_shape[1][-1]
+        self.trainable_weights = self.similarity_function.initialize_weights(tensor_1_dim, tensor_2_dim)
         super(Attention, self).build(input_shape)
 
+    @overrides
     def compute_mask(self, inputs, mask=None):
         # pylint: disable=unused-argument
         # We do not need a mask beyond this layer.
         return None
 
+    @overrides
     def get_output_shape_for(self, input_shapes):
         return (input_shapes[1][0], input_shapes[1][1])
 
+    @overrides
     def call(self, inputs, mask=None):
         vector, matrix = inputs
         matrix_mask = mask[1]
@@ -52,3 +69,10 @@ class Attention(Layer):
         tiled_vector = K.repeat_elements(K.expand_dims(vector, dim=1), num_rows, axis=1)
         similarities = self.similarity_function.compute_similarity(tiled_vector, matrix)
         return masked_softmax(similarities, matrix_mask)
+
+    @overrides
+    def get_config(self):
+        base_config = super(Attention, self).get_config()
+        config = {'similarity_function': self.similarity_function_params}
+        config.update(base_config)
+        return config

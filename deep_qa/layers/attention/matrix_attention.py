@@ -38,14 +38,11 @@ class MatrixAttention(Layer):
     ----------
     similarity_function_params: Dict[str, Any], default={}
         These parameters get passed to a similarity function (see
-        :mod:`deep_qa.tensors.similarity_functions`
-        for more info on what's acceptable).  The default
-        similarity function with no parameters is a simple dot product.
+        :mod:`deep_qa.tensors.similarity_functions` for more info on what's acceptable).  The
+        default similarity function with no parameters is a simple dot product.
     '''
     def __init__(self, similarity_function: Dict[str, Any]=None, **kwargs):
         self.supports_masking = True
-        # We need to wait until below to actually handle this, because self.name gets set in
-        # super.__init__.
         super(MatrixAttention, self).__init__(**kwargs)
         self.similarity_function_params = deepcopy(similarity_function)
         if similarity_function is None:
@@ -58,8 +55,9 @@ class MatrixAttention(Layer):
 
     @overrides
     def build(self, input_shape):
-        similarity_function_shape = self.get_output_shape_for(input_shape) + (input_shape[0][-1],)
-        self.trainable_weights = self.similarity_function.initialize_weights(similarity_function_shape)
+        tensor_1_dim = input_shape[0][-1]
+        tensor_2_dim = input_shape[1][-1]
+        self.trainable_weights = self.similarity_function.initialize_weights(tensor_1_dim, tensor_2_dim)
         super(MatrixAttention, self).build(input_shape)
 
     @overrides

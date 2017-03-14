@@ -13,7 +13,7 @@ If you want to compute a similarity between tensors of different sizes, you need
 in the appropriate dimensions to make them the same before you can use these functions.  The
 Attention and MatrixAttention layers do this.
 """
-from typing import List, Tuple
+from typing import List
 
 from keras import activations, initializations
 
@@ -23,11 +23,21 @@ class SimilarityFunction:
         self.init = initializations.get(initialization)
         self.activation = activations.get(activation)
 
-    def initialize_weights(self, input_shape: Tuple[int]) -> List['K.variable']:
+    def initialize_weights(self, tensor_1_dim: int, tensor_2_dim: int) -> List['K.variable']:
         """
         Called in a `Layer.build()` method that uses this SimilarityFunction, here we both
         initialize whatever weights are necessary for this similarity function, and return them so
         they can be included in `Layer.trainable_weights`.
+
+
+        Parameters
+        ----------
+        tensor_1_dim : int
+            The last dimension (typically ``embedding_dim``) of the first input tensor.  We need
+            this so we can initialize weights appropriately.
+        tensor_2_dim : int
+            The last dimension (typically ``embedding_dim``) of the second input tensor.  We need
+            this so we can initialize weights appropriately.
         """
         raise NotImplementedError
 

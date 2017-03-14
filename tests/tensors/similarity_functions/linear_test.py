@@ -9,18 +9,18 @@ from deep_qa.tensors.similarity_functions.linear import Linear
 class TestLinearSimilarityFunction:
     def test_initialize_weights_returns_correct_weight_sizes(self):
         linear = Linear(name='linear', combination='x,y')
-        weights = linear.initialize_weights(input_shape=(2, 4, 3))
+        weights = linear.initialize_weights(3, 6)
         assert isinstance(weights, list) and len(weights) == 2
         weight_vector, bias = weights
-        assert K.int_shape(weight_vector) == (3 * 2, 1)
+        assert K.int_shape(weight_vector) == (9, 1)
         assert K.int_shape(bias) == (1,)
 
     def test_compute_similarity_does_a_weighted_product(self):
         linear = Linear(name='linear', combination='x,y')
         linear.weight_vector = K.variable(numpy.asarray([[-.3], [.5], [2.0], [-1.0]]))
         linear.bias = K.variable(numpy.asarray([.1]))
-        a_vectors = numpy.asarray([[[1, 1], [-1, -1]]])
-        b_vectors = numpy.asarray([[[1, 0], [0, 1]]])
+        a_vectors = numpy.asarray([[[1, 1, 1], [-1, -1, 0]]])
+        b_vectors = numpy.asarray([[[0], [1]]])
         result = K.eval(linear.compute_similarity(K.variable(a_vectors), K.variable(b_vectors)))
         assert result.shape == (1, 2,)
         assert_almost_equal(result, [[2.3, -1.1]])

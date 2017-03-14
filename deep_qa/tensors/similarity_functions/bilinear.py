@@ -1,6 +1,7 @@
-from typing import List, Tuple
+from typing import List
 
 from keras import backend as K
+from overrides import overrides
 
 from .similarity_function import SimilarityFunction
 
@@ -16,13 +17,14 @@ class Bilinear(SimilarityFunction):
         self.weight_matrix = None
         self.bias = None
 
-    def initialize_weights(self, input_shape: Tuple[int]) -> List['K.variable']:
-        embedding_dim = input_shape[-1]
-        self.weight_matrix = self.init((embedding_dim, embedding_dim),
+    @overrides
+    def initialize_weights(self, tensor_1_dim: int, tensor_2_dim: int) -> List['K.variable']:
+        self.weight_matrix = self.init((tensor_1_dim, tensor_2_dim),
                                        name='{}_dense'.format(self.name))
         self.bias = self.init((1,), name='{}_bias'.format(self.name))
         return [self.weight_matrix, self.bias]
 
+    @overrides
     def compute_similarity(self, tensor_1, tensor_2):
         dot_product = K.sum(K.dot(tensor_1, self.weight_matrix) * tensor_2, axis=-1)
         if K.backend() == 'theano':

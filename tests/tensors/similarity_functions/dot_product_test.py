@@ -9,7 +9,7 @@ from deep_qa.tensors.similarity_functions.dot_product import DotProduct
 class TestDotProductSimilarityFunction:
     dot_product = DotProduct(name='dot_product')
     def test_initialize_weights_returns_empty(self):
-        weights = self.dot_product.initialize_weights(input_shape=(2, 3))
+        weights = self.dot_product.initialize_weights(3, 3)
         assert isinstance(weights, list) and len(weights) == 0
 
     def test_compute_similarity_does_a_dot_product(self):

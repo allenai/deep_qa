@@ -9,10 +9,16 @@ from deep_qa.tensors.similarity_functions.bilinear import Bilinear
 class TestBilinearSimilarityFunction:
     def test_initialize_weights_returns_correct_weight_sizes(self):
         bilinear = Bilinear(name='bilinear')
-        weights = bilinear.initialize_weights(input_shape=(2, 4, 3))
+        weights = bilinear.initialize_weights(3, 3)
         assert isinstance(weights, list) and len(weights) == 2
         weight_vector, bias = weights
         assert K.int_shape(weight_vector) == (3, 3)
+        assert K.int_shape(bias) == (1,)
+
+        weights = bilinear.initialize_weights(2, 5)
+        assert isinstance(weights, list) and len(weights) == 2
+        weight_vector, bias = weights
+        assert K.int_shape(weight_vector) == (2, 5)
         assert K.int_shape(bias) == (1,)
 
     def test_compute_similarity_does_a_bilinear_product(self):
@@ -28,10 +34,10 @@ class TestBilinearSimilarityFunction:
 
     def test_compute_similarity_works_with_higher_order_tensors(self):
         bilinear = Bilinear(name='bilinear')
-        weights = numpy.random.rand(7, 7)
+        weights = numpy.random.rand(4, 7)
         bilinear.weight_matrix = K.variable(weights)
         bilinear.bias = K.variable(numpy.asarray([0]))
-        a_vectors = numpy.random.rand(5, 4, 3, 6, 7)
+        a_vectors = numpy.random.rand(5, 4, 3, 6, 4)
         b_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         result = K.eval(bilinear.compute_similarity(K.variable(a_vectors), K.variable(b_vectors)))
         assert result.shape == (5, 4, 3, 6)
