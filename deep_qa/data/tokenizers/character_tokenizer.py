@@ -15,7 +15,7 @@ class CharacterTokenizer(Tokenizer):
 
     @overrides
     def tokenize(self, text: str) -> List[str]:
-        return [char for char in text]
+        return list(text)
 
     @overrides
     def get_words_for_indexer(self, text: str) -> Dict[str, List[str]]:

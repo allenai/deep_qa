@@ -57,8 +57,14 @@ class TestIndexedInstance(DeepQaTestCase):
         instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
         assert instance.get_lengths() == {'num_sentence_words': 2, 'num_word_characters': 3}
 
-    def test_pad_word_sequence_handles_words_and_characters(self):
+    def test_pad_word_sequence_handles_words_and_characters_less(self):
         instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
         padded = instance.pad_word_sequence(instance.word_indices,
                                             {'num_sentence_words': 3, 'num_word_characters': 4})
         assert padded == [[0, 0, 0, 0], [1, 2, 0, 0], [3, 1, 2, 0]]
+
+    def test_pad_word_sequence_handles_words_and_characters_greater(self):
+        instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
+        padded = instance.pad_word_sequence(instance.word_indices,
+                                            {'num_sentence_words': 5, 'num_word_characters': 4})
+        assert padded == [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [1, 2, 0, 0], [3, 1, 2, 0]]

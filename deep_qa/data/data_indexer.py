@@ -1,5 +1,5 @@
 from collections import defaultdict
-
+import tqdm
 
 class DataIndexer:
     """
@@ -34,12 +34,12 @@ class DataIndexer:
         appear at least min_count times.
         """
         namespace_word_counts = defaultdict(lambda: defaultdict(int))
-        for instance in dataset.instances:
+        for instance in tqdm.tqdm(dataset.instances):
             namespace_dict = instance.words()
             for namespace in namespace_dict:
                 for word in namespace_dict[namespace]:
                     namespace_word_counts[namespace][word] += 1
-        for namespace in namespace_word_counts:
+        for namespace in tqdm.tqdm(namespace_word_counts):
             for word, count in namespace_word_counts[namespace].items():
                 if count >= min_count:
                     self.add_word_to_index(word, namespace)

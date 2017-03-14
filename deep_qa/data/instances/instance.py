@@ -17,6 +17,7 @@ all of the concrete ``Instance`` types will have both a ``TextInstance`` and a
 corresponding ``IndexedInstance``, which you can see in the individual files
 for each ``Instance`` type.
 """
+import itertools
 from typing import Any, Callable, Dict, List
 
 from ..tokenizers import tokenizers
@@ -291,9 +292,24 @@ class IndexedInstance(Instance):
         padded_word_sequence = IndexedInstance.pad_sequence_to_length(
                 word_sequence, lengths['num_sentence_words'], default_value, truncate_from_right)
         if 'num_word_characters' in lengths:
-            padded_word_sequence = [IndexedInstance.pad_sequence_to_length(
-                    word, lengths['num_word_characters'], truncate_from_right=False)
-                                    for word in padded_word_sequence]
+            desired_length = lengths['num_word_characters']
+            longest_word = max(padded_word_sequence, key=len)
+            if desired_length > len(longest_word):
+                # since we want to pad to greater than the longest word, we add a
+                # "dummy word" to get the speed of itertools.zip_longest
+                padded_word_sequence.append([0]*desired_length)
+            # pad the list of lists to the longest sublist, appending 0's
+            words_padded_to_longest = list(zip(*itertools.zip_longest(*padded_word_sequence,
+                                                                      fillvalue=0)))
+            if desired_length > len(longest_word):
+                # now we remove the "dummy word" if we appended one.
+                words_padded_to_longest.pop()
+
+            # now we need to truncate all of them to our desired length.
+            # since truncate_from_right is always False, we chop off starting from
+            # the right.
+            padded_word_sequence = [list(word[:desired_length])
+                                    for word in words_padded_to_longest]
         return padded_word_sequence
 
     @staticmethod
@@ -334,14 +350,20 @@ class IndexedInstance(Instance):
         much of the question set up. If you want to truncate from the other
         direction, you can.
         """
-
-        padded_sequence = []
-        for _ in range(desired_length):
-            padded_sequence.append(default_value())
-        sequence_length = min(len(sequence), desired_length)
-        if sequence_length != 0:
+        if truncate_from_right:
+            truncated = sequence[-desired_length:]
+        else:
+            truncated = sequence[:desired_length]
+        if len(truncated) < desired_length:
+            # If the length of the truncated sequence is less than the desired
+            # length, we need to pad.
+            padding_sequence = [default_value()] * (desired_length - len(truncated))
             if truncate_from_right:
-                padded_sequence[-sequence_length:] = sequence[-sequence_length:]
+                # When we truncate from the right, we add zeroes to the front.
+                padding_sequence.extend(truncated)
+                return padding_sequence
             else:
-                padded_sequence[:sequence_length] = sequence[:sequence_length]
-        return padded_sequence
+                # When we do not truncate from the right, we add zeroes to the end.
+                truncated.extend(padding_sequence)
+                return truncated
+        return truncated

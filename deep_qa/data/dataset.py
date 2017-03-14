@@ -1,9 +1,10 @@
 import codecs
+from collections import OrderedDict
 import itertools
 import logging
-
-from collections import OrderedDict
 from typing import Dict, List
+
+import tqdm
 
 from .instances.instance import Instance, TextInstance, IndexedInstance
 from .instances.background_instance import BackgroundInstance
@@ -93,7 +94,7 @@ class TextDataset(Dataset):
         '''
         Converts the Dataset into an IndexedDataset, given a DataIndexer.
         '''
-        indexed_instances = [instance.to_indexed_instance(data_indexer) for instance in self.instances]
+        indexed_instances = [instance.to_indexed_instance(data_indexer) for instance in tqdm.tqdm(self.instances)]
         return IndexedDataset(indexed_instances)
 
     def to_question_dataset(self) -> 'Dataset':
@@ -106,7 +107,8 @@ class TextDataset(Dataset):
 
     @staticmethod
     def read_from_file(filename: str, instance_class, label: bool=None):
-        lines = [x.strip() for x in codecs.open(filename, "r", "utf-8").readlines()]
+        lines = [x.strip() for x in tqdm.tqdm(codecs.open(filename, "r",
+                                                          "utf-8").readlines())]
         return TextDataset.read_from_lines(lines, instance_class, label)
 
     @staticmethod
@@ -228,7 +230,7 @@ class IndexedDataset(Dataset):
                 lengths_to_use[key] = instance_max_lengths[key]
 
         logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
-        for instance in self.instances:
+        for instance in tqdm.tqdm(self.instances):
             instance.pad(lengths_to_use)
 
     def as_training_data(self):

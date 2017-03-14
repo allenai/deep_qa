@@ -129,6 +129,7 @@ class TextTrainer(Trainer):
         evaluate self.model.
         """
         if for_train and update_data_indexer:
+            logger.info("Fitting data indexer word dictionary.")
             self.data_indexer.fit_word_dictionary(dataset)
         logger.info("Indexing dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
