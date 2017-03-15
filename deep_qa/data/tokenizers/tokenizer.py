@@ -98,6 +98,10 @@ class Tokenizer:
         characters into the sentence as the given character span.  We try to handle a bit of error
         in the tokenization by checking `slack` tokens in either direction from that initial
         estimate.
+
+        The returned ``(begin, end)`` indices are `inclusive` for ``begin``, and `exclusive` for
+        ``end``.  So, for example, ``(2, 2)`` is an empty span, ``(2, 3)`` is the one-word span
+        beginning at token index 2, and so on.
         """
         # First we'll tokenize the span and the sentence, so we can count tokens and check for
         # matches.
@@ -112,14 +116,14 @@ class Tokenizer:
             index += 1
         # index is now the span start index.  Is it a match?
         if self._spans_match(tokenized_sentence, tokenized_span, index):
-            return (index, index + len(tokenized_span) - 1)
+            return (index, index + len(tokenized_span))
         for i in range(1, slack + 1):
             if self._spans_match(tokenized_sentence, tokenized_span, index + i):
-                return (index + i, index + i+ len(tokenized_span) - 1)
+                return (index + i, index + i+ len(tokenized_span))
             if self._spans_match(tokenized_sentence, tokenized_span, index - i):
-                return (index - i, index - i + len(tokenized_span) - 1)
+                return (index - i, index - i + len(tokenized_span))
         # No match; we'll just return our best guess.
-        return (index, index + len(tokenized_span) - 1)
+        return (index, index + len(tokenized_span))
 
     @staticmethod
     def _spans_match(sentence_tokens: List[str], span_tokens: List[str], index: int) -> bool:

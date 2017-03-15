@@ -54,25 +54,27 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
         #                 loaded_model.model.predict(validation_input))
 
     def test_get_best_span(self):
-        # Note that the best span cannot be (1, 1) (remember that the end span index)
-        # is exclusive) since even though
-        # 0.3 * 0.5 is the greatest value, the end span index is constrained
-        # to occur after the begin span index.
+        # Note that the best span cannot be (1, 0) since even though 0.3 * 0.5 is the greatest
+        # value, the end span index is constrained to occur after the begin span index.
         span_begin_probs = numpy.array([0.1, 0.3, 0.05, 0.3, 0.25])
         span_end_probs = numpy.array([0.5, 0.1, 0.2, 0.05, 0.15])
         begin_end_idxs = BidirectionalAttentionFlow.get_best_span(span_begin_probs,
                                                                   span_end_probs)
-        # Note that while the max is 0.3 (index 1 of start) * 0.2 (index 2 of start),
-        # the final best span returned is actually (1, 3) because we treat the
-        # end span as being exclusive.
-        assert begin_end_idxs == (1, 3)
+        assert begin_end_idxs == (1, 2)
 
-        # test higher-order input
-        span_begin_probs = numpy.array([[0.1, 0.3, 0.05, 0.3, 0.25]])
-        span_end_probs = numpy.array([[0.5, 0.1, 0.2, 0.05, 0.15]])
+        # Testing an edge case of the dynamic program here, for the order of when you update the
+        # best previous span position.  We should not get (1, 1), because that's an empty span.
+        span_begin_probs = numpy.array([0.4, 0.5, 0.1])
+        span_end_probs = numpy.array([0.3, 0.6, 0.1])
         begin_end_idxs = BidirectionalAttentionFlow.get_best_span(span_begin_probs,
                                                                   span_end_probs)
-        # Note that while the max is 0.3 (index 1 of start) * 0.2 (index 2 of start),
-        # the final best span returned is actually (1, 3) because we treat the
-        # end span as being exclusive.
-        assert begin_end_idxs == (1, 3)
+        assert begin_end_idxs == (0, 1)
+
+        # test higher-order input
+        # Note that the best span cannot be (1, 1) since even though 0.3 * 0.5 is the greatest
+        # value, the end span index is constrained to occur after the begin span index.
+        span_begin_probs = numpy.array([[0.1, 0.3, 0.05, 0.3, 0.25]])
+        span_end_probs = numpy.array([[0.1, 0.5, 0.2, 0.05, 0.15]])
+        begin_end_idxs = BidirectionalAttentionFlow.get_best_span(span_begin_probs,
+                                                                  span_end_probs)
+        assert begin_end_idxs == (1, 2)

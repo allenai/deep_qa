@@ -53,13 +53,14 @@ class TestCharacterSpanInstance(DeepQaTestCase):
         cats_index = data_indexer.add_word_to_index("cats")
         period_index = data_indexer.add_word_to_index(".")
         question_index = data_indexer.add_word_to_index("?")
+        stop_index = data_indexer.add_word_to_index(CharacterSpanInstance.stop_token)
         indexed_instance = instance.to_indexed_instance(data_indexer)
         assert indexed_instance.question_indices == [what_index, do_index,
                                                      dogs_index, eat_index,
                                                      question_index]
         assert indexed_instance.passage_indices == [dogs_index, eat_index,
-                                                    cats_index, period_index]
-        assert indexed_instance.label == (2, 2)
+                                                    cats_index, period_index, stop_index]
+        assert indexed_instance.label == (2, 3)
 
         # I put this test in here, instead of its own `test_as_training_data` test, to be sure that
         # the conversion to IndexedCharacterSpanIndex was performed correctly.
@@ -67,7 +68,7 @@ class TestCharacterSpanInstance(DeepQaTestCase):
         (question_array, passage_array), label = indexed_instance.as_training_data()
         assert isinstance(label, tuple)
         assert numpy.all(label[0] == numpy.asarray([0, 0, 1, 0, 0, 0]))
-        assert numpy.all(label[1] == numpy.asarray([0, 0, 1, 0, 0, 0]))
+        assert numpy.all(label[1] == numpy.asarray([0, 0, 0, 1, 0, 0]))
         assert numpy.all(question_array == numpy.asarray([dogs_index, eat_index, question_index]))
         assert numpy.all(passage_array == numpy.asarray([dogs_index, eat_index, cats_index,
-                                                         period_index, 0, 0]))
+                                                         period_index, stop_index, 0]))

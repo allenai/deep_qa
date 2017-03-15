@@ -11,9 +11,12 @@ class TestTokenizer:
         "first performances since giving birth to Blue Ivy."
 
     def test_char_span_to_token_span_handles_easy_cases(self):
+        # "January 7, 2012"
         token_span = self.tokenizer.char_span_to_token_span(self.passage, (3, 18))
-        assert token_span == (1, 4)
+        assert token_span == (1, 5)
+        # "Lenox Hill Hospital"
         token_span = self.tokenizer.char_span_to_token_span(self.passage, (91, 110))
-        assert token_span == (22, 24)
+        assert token_span == (22, 25)
+        # "Lenox Hill Hospital in New York."
         token_span = self.tokenizer.char_span_to_token_span(self.passage, (91, 123))
-        assert token_span == (22, 28)
+        assert token_span == (22, 29)

@@ -9,6 +9,10 @@ ls $HOME/.cache/pip
 # conda-based environment instead
 deactivate
 
+# Add the miniconda bin directory to $PATH
+export PATH=/home/travis/miniconda3/bin:$PATH
+echo $PATH
+
 # Use the miniconda installer for setup of conda itself
 pushd .
 cd
@@ -22,8 +26,6 @@ if [[ ! -f /home/travis/miniconda3/bin/activate ]]
                 -O miniconda.sh
     fi
     chmod +x miniconda.sh && ./miniconda.sh -b -f
-    export PATH=/home/travis/miniconda3/bin:$PATH
-    echo $PATH
     conda update --yes conda
     # If we are running pylint, use Python 3.5.2 due to
     # bug in pylint. https://github.com/PyCQA/pylint/issues/1295

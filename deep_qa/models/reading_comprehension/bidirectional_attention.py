@@ -263,15 +263,17 @@ class BidirectionalAttentionFlow(TextTrainer):
         begin_span_argmax = 0
         for j, _ in enumerate(span_begin_probs):
             val1 = span_begin_probs[begin_span_argmax]
-            if val1 < span_begin_probs[j]:
-                val1 = span_begin_probs[j]
-                begin_span_argmax = j
-
             val2 = span_end_probs[j]
+
             if val1 * val2 > max_span_probability:
                 best_word_span = (begin_span_argmax, j)
                 max_span_probability = val1 * val2
-        # Note that this function returns an exclusive span
-        # end, while we assume that it was trained in an
-        # inclusive span end setting.
-        return (best_word_span[0], best_word_span[1] + 1)
+
+            # We need to update best_span_argmax here _after_ we've checked the current span
+            # position, so that we don't allow things like (1, 1), which are empty spans.  We've
+            # added a special stop symbol to the end of the passage, so this still allows for all
+            # valid spans over the passage.
+            if val1 < span_begin_probs[j]:
+                val1 = span_begin_probs[j]
+                begin_span_argmax = j
+        return (best_word_span[0], best_word_span[1])
