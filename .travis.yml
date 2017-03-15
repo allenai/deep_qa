@@ -7,7 +7,7 @@ language: python
 cache:
   directories:
   - /home/travis/download
-  - /home/travis/miniconda
+  - /home/travis/miniconda3
   - /home/travis/.cache/pip
 
 env:
