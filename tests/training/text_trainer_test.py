@@ -9,7 +9,6 @@ from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification.true_false_model import TrueFalseModel
 from deep_qa.models.multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from ..common.test_case import DeepQaTestCase
-from ..common.test_markers import requires_tensorflow, requires_theano
 
 
 class TestTextTrainer(DeepQaTestCase):
@@ -135,8 +134,6 @@ class TestTextTrainer(DeepQaTestCase):
         assert_allclose(model.model.predict(model.__dict__["validation_input"]),
                         loaded_model.model.predict(model.__dict__["validation_input"]))
 
-
-    @requires_theano
     def test_load_model_and_fit(self):
         # train a model and serialize it.
         args = {
@@ -173,13 +170,6 @@ class TestTextTrainer(DeepQaTestCase):
         # TODO(matt): fix the randomness that occurs here.
         # assert_allclose(model.model.predict(validation_input),
         #                 loaded_model.model.predict(validation_input))
-
-
-    @requires_tensorflow
-    def test_tensorboard_logs_does_not_crash(self):
-        self.write_true_false_model_files()
-        model = self.get_model(TrueFalseModel, {'tensorboard_log': self.TEST_DIR})
-        model.train()
 
     def test_pretrained_embeddings_works_correctly(self):
         self.write_true_false_model_files()

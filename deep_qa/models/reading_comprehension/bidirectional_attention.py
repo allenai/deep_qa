@@ -148,9 +148,10 @@ class BidirectionalAttentionFlow(TextTrainer):
         tiled_question_passage_vector = repeat_layer(question_passage_vector)
 
         # Shape: (batch_size, num_passage_words, embedding_size * 8)
-        final_merged_passage = ComplexConcat(combination='1,2,1*2,1*3')([encoded_passage,
-                                                                         passage_question_vectors,
-                                                                         tiled_question_passage_vector])
+        complex_concat_layer = ComplexConcat(combination='1,2,1*2,1*3', name='final_merged_passage')
+        final_merged_passage = complex_concat_layer([encoded_passage,
+                                                     passage_question_vectors,
+                                                     tiled_question_passage_vector])
 
         # PART 3:
         # Having computed a combined representation of the document that includes attended question

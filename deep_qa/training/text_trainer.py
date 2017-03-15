@@ -57,8 +57,8 @@ class TextTrainer(Trainer):
         Upper limit on length of words in the training data. Only applicable for "words and
         characters" text encoding.
     tokenizer: Dict[str, Any], optional (default={})
-        Which tokenizer to use for ``TextInstances``.  See ``deep_qa.data.tokenizers.tokenizer``
-        for more information.
+        Which tokenizer to use for ``TextInstances``.  See
+        :mod:``deep_qa.data.tokenizers.tokenizer`` for more information.
     encoder: Dict[str, Dict[str, Any]], optional (default={'default': {}})
         These parameters specify the kind of encoder used to encode any word sequence input.  An
         encoder takes a sequence of vectors and returns a single vector.
@@ -539,10 +539,11 @@ class TextTrainer(Trainer):
 
     def _get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
         encoder_params = params["encoder_params"]
+        wrapper_params = params["wrapper_params"]
+        wrapper_params["name"] = name
         seq2seq_encoder_type = get_choice_with_default(encoder_params,
                                                        "type",
                                                        list(seq2seq_encoders.keys()))
-        encoder_params["name"] = name
         if "output_dim" not in encoder_params:
             encoder_params["output_dim"] = self.embedding_size
         set_regularization_params(seq2seq_encoder_type, encoder_params)

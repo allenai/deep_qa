@@ -9,6 +9,15 @@ deep_qa.models.multiple_choice_qa.decomposable_attention
     :undoc-members:
     :show-inheritance:
 
+deep_qa.models.multiple_choice_qa.multiple_choice_bidaf
+-------------------------------------------------------
+
+.. automodule:: deep_qa.models.multiple_choice_qa.multiple_choice_bidaf
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network
 --------------------------------------------------------------------
 

@@ -45,7 +45,7 @@ class Linear(SimilarityFunction):
         if K.backend() == 'theano':
             # For some reason theano is having a hard time broadcasting the elementwise addition,
             # so we need to do this repeat.
-            bias = K.repeat_elements(self.bias, K.int_shape(tensor_1)[-2], 0)
+            bias = K.repeat_elements(self.bias, K.int_shape(tensor_2)[-2], 0)
         else:
             bias = self.bias
         return self.activation(dot_product + bias)
