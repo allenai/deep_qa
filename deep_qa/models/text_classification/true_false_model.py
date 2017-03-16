@@ -46,7 +46,7 @@ class TrueFalseModel(TextTrainer):
 
         # Step 3: Find p(true | proposition) by passing the outputs from LSTM through an MLP with
         # ReLU layers.
-        projection_layer = Dense(int(self.embedding_size/2), activation='relu', name='projector')
+        projection_layer = Dense(int(self.embedding_dim['words']/2), activation='relu', name='projector')
         softmax_layer = Dense(2, activation='softmax', name='softmax')
         output_probabilities = softmax_layer(projection_layer(regularized_sentence_encoding))
 

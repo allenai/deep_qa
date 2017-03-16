@@ -7,7 +7,7 @@ class CNNEncoder(Layer):
     '''
     CNNEncoder is a combination of multiple convolution layers and max pooling layers. This is
     defined as a single layer to be consistent with the other encoders in terms of input and output
-    specifications.  The input to this "layer" is of shape (batch_size, num_words, embedding_size)
+    specifications.  The input to this "layer" is of shape (batch_size, num_words, embedding_dim)
     and the output is of size (batch_size, output_dim).
 
     The CNN has one convolution layer per each ngram filter size. Each convolution operation gives

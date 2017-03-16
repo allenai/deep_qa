@@ -8,7 +8,7 @@ from deep_qa.layers.encoders import PositionalEncoder
 class TestPositionalEncoder:
     def test_on_unmasked_input(self):
         sentence_length = 3
-        embedding_size = 3
+        embedding_dim = 3
         vocabulary_size = 5
         # Manual embedding vectors so we can compute exact values for test.
         embedding_weights = np.asarray([[0.0, 0.0, 0.0],
@@ -19,7 +19,7 @@ class TestPositionalEncoder:
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         # Embedding masks zeros
         embedding = Embedding(input_dim=vocabulary_size, weights=[embedding_weights],
-                              output_dim=embedding_size, mask_zero=True)
+                              output_dim=embedding_dim, mask_zero=True)
         encoder = PositionalEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
@@ -34,7 +34,7 @@ class TestPositionalEncoder:
     def test_on_masked_input(self):
 
         sentence_length = 5
-        embedding_size = 3
+        embedding_dim = 3
         vocabulary_size = 5
         # Manual embedding vectors so we can compute exact values for test.
         embedding_weights = np.asarray([[0.0, 0.0, 0.0],
@@ -45,7 +45,7 @@ class TestPositionalEncoder:
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         # Embedding masks zeros
         embedding = Embedding(input_dim=vocabulary_size, weights=[embedding_weights],
-                              output_dim=embedding_size, mask_zero=True)
+                              output_dim=embedding_dim, mask_zero=True)
         encoder = PositionalEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
@@ -60,7 +60,7 @@ class TestPositionalEncoder:
     def test_on_completely_masked_input(self):
 
         sentence_length = 5
-        embedding_size = 3
+        embedding_dim = 3
         vocabulary_size = 5
         embedding_weights = np.asarray([[0.0, 0.0, 0.0],
                                         [1.0, 1.0, 1.0],
@@ -70,7 +70,7 @@ class TestPositionalEncoder:
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         # Embedding masks zeros
         embedding = Embedding(input_dim=vocabulary_size, weights=[embedding_weights],
-                              output_dim=embedding_size, mask_zero=True)
+                              output_dim=embedding_dim, mask_zero=True)
         encoder = PositionalEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)

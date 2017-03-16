@@ -17,7 +17,7 @@ class TestMultipleChoiceBidaf(DeepQaTestCase):
         self.write_span_prediction_files()
         args = {
                 'model_serialization_prefix': self.TEST_DIR + "_bidaf",
-                'embedding_size': 4,
+                'embedding_dim': {"words": 4, "characters": 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
@@ -36,5 +36,5 @@ class TestMultipleChoiceBidaf(DeepQaTestCase):
         # All of the params come from the linear similarity function in the attention layer,
         # because we set `train_bidaf` to `False`.  41 comes from 32 + 8 + 1, where 32 is from the
         # modeled passage (see the equations in the paper for why it's 32), 8 is from the Bi-LSTM
-        # operating on the answer options (embedding_size * 2), and 1 is from the bias.
+        # operating on the answer options (embedding_dim * 2), and 1 is from the bias.
         assert sum([K.count_params(p) for p in model.model.trainable_weights]) == 41

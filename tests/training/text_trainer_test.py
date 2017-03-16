@@ -26,7 +26,7 @@ class TestTextTrainer(DeepQaTestCase):
     def test_padding_works_correctly(self, _output_debug_info):
         self.write_true_false_model_files()
         args = {
-                'embedding_size': 4,
+                'embedding_dim': {'words': 2, 'characters': 2},
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
                 'debug': {
@@ -72,7 +72,7 @@ class TestTextTrainer(DeepQaTestCase):
     def test_words_and_characters_works_with_matrices(self, _output_debug_info):
         self.write_question_answer_memory_network_files()
         args = {
-                'embedding_size': 4,
+                'embedding_dim': {'words': 2, 'characters': 2},
                 'tokenizer': {'type': 'words and characters'},
                 'debug': {
                         'data': 'training',
@@ -117,7 +117,7 @@ class TestTextTrainer(DeepQaTestCase):
     def test_load_model(self):
         # train a model and serialize it.
         args = {
-                'embedding_size': 4,
+                'embedding_dim': {'words': 4, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
@@ -137,7 +137,7 @@ class TestTextTrainer(DeepQaTestCase):
     def test_load_model_and_fit(self):
         # train a model and serialize it.
         args = {
-                'embedding_size': 4,
+                'embedding_dim': {'words': 4, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
@@ -175,7 +175,7 @@ class TestTextTrainer(DeepQaTestCase):
         self.write_true_false_model_files()
         self.write_pretrained_vector_files()
         args = {
-                'embedding_size': 8,
+                'embedding_dim': {'words': 8, 'characters': 8},
                 'pretrained_embeddings_file': self.PRETRAINED_VECTORS_GZIP,
                 'fine_tune_embeddings': False,
                 'project_embeddings': False,

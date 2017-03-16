@@ -72,18 +72,13 @@ class WordAndCharacterTokenizer(Tokenizer):
         (..., sentence_length, embedding_dim * 2).
         """
         # pylint: disable=protected-access
-        # So that we end up with even embeddings across different inputs, we'll use half the
-        # `embedding_size` in the given `TextTrainer`.
-        embedding_size = int(text_trainer.embedding_size / 2)
         # This is happening before any masking is done, so we don't need to worry about the
         # mask_split_axis argument to VectorMatrixSplit.
         words, characters = VectorMatrixSplit(split_axis=-1)(input_layer)
         word_embedding = text_trainer._get_embedded_input(words,
-                                                          embedding_size=embedding_size,
                                                           embedding_name='word_' + embedding_name,
                                                           vocab_name='words')
         character_embedding = text_trainer._get_embedded_input(characters,
-                                                               embedding_size=embedding_size,
                                                                embedding_name='character_' + embedding_name,
                                                                vocab_name='characters')
 

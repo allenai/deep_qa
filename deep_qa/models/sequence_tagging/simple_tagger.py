@@ -38,12 +38,12 @@ class SimpleTagger(TextTrainer):
     def _build_model(self):
         # shape: (batch_size, text_length)
         text_input = Input(shape=self._get_sentence_shape(), dtype='int32', name='text_input')
-        # shape: (batch_size, text_length, embedding_size)
+        # shape: (batch_size, text_length, embedding_dim)
         text_embedding = self._embed_input(text_input)
         for i in range(self.num_stacked_rnns):
             encoder = self._get_seq2seq_encoder(name="encoder_{}".format(i),
                                                 fallback_behavior="use default params")
-            # shape still (batch_size, text_length, embedding_size)
+            # shape still (batch_size, text_length, embedding_dim)
             text_embedding = encoder(text_embedding)
         # The -2 below is because we are ignoring the padding and unknown tokens that the
         # DataIndexer has by default.

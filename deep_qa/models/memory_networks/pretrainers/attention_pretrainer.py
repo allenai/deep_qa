@@ -118,7 +118,7 @@ class AttentionPretrainer(TextPretrainer):
         merged_encoded_rep = merge([encoded_sentence, encoded_sentence, encoded_background],
                                    mode=merge_mode,
                                    output_shape=(self.trainer.max_knowledge_length + 2,
-                                                 self.trainer.embedding_size),
+                                                 self.trainer.embedding_dim['words']),
                                    output_mask=merge_mask,
                                    name='pretraining_concat_sentence_with_background_%d' % 0)
 

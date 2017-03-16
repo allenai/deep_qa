@@ -134,7 +134,7 @@ class SnliAttentionPretrainer(TextPretrainer):
                                              axis=1)
         merged_encoded_rep = merge([hypothesis_encoding, hypothesis_encoding, text_encoding],
                                    mode=merge_mode,
-                                   output_shape=(3, self.trainer.embedding_size),
+                                   output_shape=(3, self.trainer.embedding_dim['words']),
                                    name='concat_hypothesis_with_text')
         knowledge_selector = self.trainer._get_knowledge_selector(0)
         while isinstance(knowledge_selector, TimeDistributed):

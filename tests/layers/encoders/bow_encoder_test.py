@@ -8,11 +8,11 @@ from deep_qa.layers.encoders import BOWEncoder
 class TestBOWEncoder:
     def test_on_unmasked_input(self):
         sentence_length = 5
-        embedding_size = 10
+        embedding_dim = 10
         vocabulary_size = 15
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         # Embedding does not mask zeros
-        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_size)
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim)
         encoder = BOWEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
@@ -28,11 +28,11 @@ class TestBOWEncoder:
 
     def test_on_masked_input(self):
         sentence_length = 5
-        embedding_size = 10
+        embedding_dim = 10
         vocabulary_size = 15
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         # Embedding masks zeros
-        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_size, mask_zero=True)
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim, mask_zero=True)
         encoder = BOWEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
@@ -48,11 +48,11 @@ class TestBOWEncoder:
 
     def test_on_all_zeros(self):
         sentence_length = 5
-        embedding_size = 10
+        embedding_dim = 10
         vocabulary_size = 15
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         # Embedding masks zeros
-        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_size, mask_zero=True)
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim, mask_zero=True)
         encoder = BOWEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
@@ -60,7 +60,7 @@ class TestBOWEncoder:
         model.compile(loss="mse", optimizer="sgd")  # Will not train this model
         test_input = numpy.asarray([[0, 0, 0, 0, 0]], dtype='int32')
         # Omitting the first element (0), because that is supposed to be masked in the model.
-        expected_output = numpy.zeros((1, embedding_size))
+        expected_output = numpy.zeros((1, embedding_dim))
         actual_output = model.predict(test_input)
         # Following comparison is till the sixth decimal.
         numpy.testing.assert_array_almost_equal(expected_output, actual_output)

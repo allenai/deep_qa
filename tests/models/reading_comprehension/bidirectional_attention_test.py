@@ -12,7 +12,7 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
     def test_trains_and_loads_correctly(self):
         self.write_span_prediction_files()
         args = {
-                'embedding_size': 4,
+                'embedding_dim': {'words': 4, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,

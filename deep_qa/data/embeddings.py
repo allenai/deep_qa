@@ -39,7 +39,7 @@ class PretrainedEmbeddings:
         words_to_keep = set(data_indexer.words_in_index())
         vocab_size = data_indexer.get_vocab_size()
         embeddings = {}
-        embedding_size = None
+        embedding_dim = None
 
         # TODO(matt): make this a parameter
         embedding_misses_filename = 'embedding_misses.txt'
@@ -49,11 +49,11 @@ class PretrainedEmbeddings:
         with gzip.open(embeddings_filename, 'rb') as embeddings_file:
             for line in embeddings_file:
                 fields = line.decode('utf-8').strip().split(' ')
-                if embedding_size is None:
-                    embedding_size = len(fields) - 1
-                    assert embedding_size > 1, "Found embedding size of 1; do you have a header?"
+                if embedding_dim is None:
+                    embedding_dim = len(fields) - 1
+                    assert embedding_dim > 1, "Found embedding size of 1; do you have a header?"
                 else:
-                    if len(fields) - 1 != embedding_size:
+                    if len(fields) - 1 != embedding_dim:
                         # Sometimes there are funny unicode parsing problems that lead to different
                         # fields lengths (e.g., a word with a unicode space character that splits
                         # into more than one column).  We skip those lines.  Note that if you have
@@ -74,7 +74,7 @@ class PretrainedEmbeddings:
         if log_misses:
             logger.info("Logging embedding misses to %s", embedding_misses_filename)
             embedding_misses_file = codecs.open(embedding_misses_filename, 'w', 'utf-8')
-        embedding_matrix = PretrainedEmbeddings.initialize_random_matrix((vocab_size, embedding_size))
+        embedding_matrix = PretrainedEmbeddings.initialize_random_matrix((vocab_size, embedding_dim))
 
         # The 2 here is because we know too much about the DataIndexer.  Index 0 is the padding
         # index, and the vector for that dimension is going to be 0.  Index 1 is the OOV token, and
@@ -94,7 +94,7 @@ class PretrainedEmbeddings:
 
         # The weight matrix is initialized, so we construct and return the actual Embedding layer.
         return TimeDistributedEmbedding(input_dim=vocab_size,
-                                        output_dim=embedding_size,
+                                        output_dim=embedding_dim,
                                         mask_zero=True,
                                         weights=[embedding_matrix],
                                         trainable=trainable,

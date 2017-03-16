@@ -12,14 +12,14 @@ class TestTupleAlignment:
         num_options = 4
         tuple_size = 3
         num_tuples = 7
-        embedding_size = 10
+        embedding_dim = 10
         vocabulary_size = 15
         batch_size = 32
         question_input_layer = Input(shape=(question_length,), dtype='int32')
         answer_input_layer = Input(shape=(num_options,), dtype='int32')
         knowledge_input_layer = Input(shape=(num_tuples, tuple_size), dtype='int32')
         # Embedding does not mask zeros
-        embedding = TimeDistributedEmbedding(input_dim=vocabulary_size, output_dim=embedding_size,
+        embedding = TimeDistributedEmbedding(input_dim=vocabulary_size, output_dim=embedding_dim,
                                              mask_zero=True)
         embedded_question = embedding(question_input_layer)
         embedded_answer = embedding(answer_input_layer)

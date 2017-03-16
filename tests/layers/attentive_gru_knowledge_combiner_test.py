@@ -12,13 +12,13 @@ class TestAttentiveGRUKnowledgeCombiner:
     def test_on_unmasked_input(self):
 
         sentence_length = 5
-        embedding_size = 10
+        embedding_dim = 10
         vocabulary_size = 15
         input_layer = Input(shape=(sentence_length,), dtype='int32')
         attention = Input(shape=(sentence_length,), dtype='float32')
         # Embedding does not mask zeros
-        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_size)
-        attentive_gru = AttentiveGRUKnowledgeCombiner(output_dim=embedding_size,
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim)
+        attentive_gru = AttentiveGRUKnowledgeCombiner(output_dim=embedding_dim,
                                                       input_length=sentence_length,
                                                       return_sequences=True,
                                                       name='attentive_gru_test')

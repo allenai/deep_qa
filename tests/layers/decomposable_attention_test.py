@@ -9,12 +9,12 @@ from deep_qa.layers.entailment_models import DecomposableAttentionEntailment
 class TestDecomposableAttention:
     def test_decomposable_attention_does_not_crash(self):
         sentence_length = 5
-        embedding_size = 10
+        embedding_dim = 10
         vocabulary_size = 15
         num_sentences = 7
         premise_input_layer = Input(shape=(sentence_length,), dtype='int32')
         hypothesis_input_layer = Input(shape=(sentence_length,), dtype='int32')
-        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_size, mask_zero=True)
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim, mask_zero=True)
         embedded_premise = embedding(premise_input_layer)
         embedded_hypothesis = embedding(hypothesis_input_layer)
         entailment_layer = DecomposableAttentionEntailment({})

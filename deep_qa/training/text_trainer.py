@@ -43,12 +43,13 @@ class TextTrainer(Trainer):
     project_embeddings: bool, optional (default=False)
         Should we have a projection layer on top of our embedding layer? (mostly useful with
         pre-trained embeddings)
-    embedding_size: int, optional (default=50)
-        Number of dimensions to use for word embeddings.  Also used by default for setting hidden
-        layer sizes in things like LSTMs, if you don't specify an output size in the ``encoder``
-        params.
+    embedding_dim: Dict[str, int], optional (default={'words': 50, 'characters': 8})
+        Number of dimensions to use for embeddings.  This is a dictionary, keyed by vocabulary
+        name.  The two default vocabulary names that are used are "words" and "characters".  The
+        'words' embedding_dim is also used by default for setting hidden layer sizes in things like
+        LSTMs, if you don't specify an output size in the ``encoder`` params.
     embedding_dropout: float, optional (default=0.5)
-        Dropout parameter to apply to the word embedding layer
+        Dropout parameter to apply to the embedding layer
     num_sentence_words: int, optional (default=None)
         Upper limit on length of word sequences in the training data. Ignored during testing (we
         use the value set at training time, either from this parameter or from a loaded model).  If
@@ -88,7 +89,7 @@ class TextTrainer(Trainer):
         self.pretrained_embeddings_file = params.pop('pretrained_embeddings_file', None)
         self.fine_tune_embeddings = params.pop('fine_tune_embeddings', False)
         self.project_embeddings = params.pop('project_embeddings', False)
-        self.embedding_size = params.pop('embedding_size', 50)
+        self.embedding_dim = params.pop('embedding_dim', {'words': 50, 'characters': 8})
         self.embedding_dropout = params.pop('embedding_dropout', 0.5)
         self.num_sentence_words = params.pop('num_sentence_words', None)
         self.num_word_characters = params.pop('num_word_characters', None)
@@ -356,7 +357,6 @@ class TextTrainer(Trainer):
 
     def _get_embedded_input(self,
                             input_layer: Layer,
-                            embedding_size: int=None,
                             embedding_name: str="embedding",
                             vocab_name: str='words'):
         """
@@ -365,11 +365,10 @@ class TextTrainer(Trainer):
         Additionally, we allow for multiple vocabularies, e.g., if you want to embed both
         characters and words with separate embedding matrices.
         """
-        if embedding_size is None:
-            embedding_size = self.embedding_size
+        embedding_dim = self.embedding_dim[vocab_name]
         if embedding_name not in self.embedding_layers:
             self.embedding_layers[embedding_name] = self._get_new_embedding(embedding_name,
-                                                                            embedding_size,
+                                                                            embedding_dim,
                                                                             vocab_name)
 
         embedding_layer, projection_layer = self.embedding_layers[embedding_name]
@@ -383,7 +382,7 @@ class TextTrainer(Trainer):
 
         return embedded_input
 
-    def _get_new_embedding(self, name: str, embedding_size: int, vocab_name: str='words'):
+    def _get_new_embedding(self, name: str, embedding_dim: int, vocab_name: str='words'):
         """
         Creates an Embedding Layer (and possibly also a Dense projection Layer) based on the
         parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
@@ -399,12 +398,12 @@ class TextTrainer(Trainer):
             # TimeDistributedEmbedding works with inputs of any shape.
             embedding_layer = TimeDistributedEmbedding(
                     input_dim=self.data_indexer.get_vocab_size(vocab_name),
-                    output_dim=embedding_size,
+                    output_dim=embedding_dim,
                     mask_zero=True,  # this handles padding correctly
                     name=name)
         projection_layer = None
         if self.project_embeddings:
-            projection_layer = TimeDistributed(Dense(output_dim=embedding_size,),
+            projection_layer = TimeDistributed(Dense(output_dim=embedding_dim,),
                                                name=name + '_projection')
         return embedding_layer, projection_layer
 
@@ -470,8 +469,7 @@ class TextTrainer(Trainer):
     def _get_new_encoder(self, params: Dict[str, Any], name: str):
         encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
         params["name"] = name
-        if "output_dim" not in params:
-            params["output_dim"] = self.embedding_size
+        params.setdefault("output_dim", self.embedding_dim['words'])
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
@@ -544,8 +542,7 @@ class TextTrainer(Trainer):
         seq2seq_encoder_type = get_choice_with_default(encoder_params,
                                                        "type",
                                                        list(seq2seq_encoders.keys()))
-        if "output_dim" not in encoder_params:
-            encoder_params["output_dim"] = self.embedding_size
+        encoder_params.setdefault("output_dim", self.embedding_dim['words'])
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)
 

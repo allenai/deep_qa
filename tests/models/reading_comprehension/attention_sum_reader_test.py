@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-from numpy.testing import assert_allclose
-
 from deep_qa.models.reading_comprehension.attention_sum_reader import AttentionSumReader
 from ...common.test_case import DeepQaTestCase
 
@@ -25,15 +23,6 @@ class TestAttentionSumReader(DeepQaTestCase):
                                 "wrapper_params": {}
                         }
                 },
-                "embedding_size": 5,
+                "embedding_dim": {"words": 5},
         }
-        model = self.get_model(AttentionSumReader, args)
-        model.train()
-
-        # load the model that we serialized
-        loaded_model = self.get_model(AttentionSumReader, args)
-        loaded_model.load_model()
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
+        self.ensure_model_trains_and_loads(AttentionSumReader, args)

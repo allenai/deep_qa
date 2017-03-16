@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-from numpy.testing import assert_allclose
-
 from deep_qa.models.reading_comprehension.gated_attention_reader import GatedAttentionReader
 from ...common.test_case import DeepQaTestCase
 
@@ -55,24 +53,16 @@ class TestGatedAttention(DeepQaTestCase):
                                 }
                         }
                 },
-                "embedding_size": 4,
+                "embedding_dim": {"words": 4, "characters": 4},
         }
-        model = self.get_model(GatedAttentionReader, args)
-        model.train()
+        model, loaded_model = self.ensure_model_trains_and_loads(GatedAttentionReader, args)
         # verify that the gated attention function was set properly
         assert model.gating_function == "+"
         assert model.gating_function == model.model.get_layer("gated_attention_0").gating_function
 
-        # load the model that we serialized
-        loaded_model = self.get_model(GatedAttentionReader, args)
-        loaded_model.load_model()
-        # verify that the gated attention function was set properly
+        # verify that the gated attention function was set properly in the loaded model
         assert loaded_model.gating_function == "+"
         assert loaded_model.gating_function == loaded_model.model.get_layer("gated_attention_0").gating_function
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
 
     def test_non_cloze_train_does_not_crash(self):
         self.write_who_did_what_files()
@@ -118,21 +108,13 @@ class TestGatedAttention(DeepQaTestCase):
                                 "wrapper_params": {}
                         }
                 },
-                "embedding_size": 4,
+                "embedding_dim": {"words": 4, "characters": 4},
         }
-        model = self.get_model(GatedAttentionReader, args)
-        model.train()
+        model, loaded_model = self.ensure_model_trains_and_loads(GatedAttentionReader, args)
         # verify that the gated attention function was set properly
         assert model.gating_function == "+"
         assert model.gating_function == model.model.get_layer("gated_attention_0").gating_function
 
-        # load the model that we serialized
-        loaded_model = self.get_model(GatedAttentionReader, args)
-        loaded_model.load_model()
-        # verify that the gated attention function was set properly
+        # verify that the gated attention function was set properly in the loaded model
         assert loaded_model.gating_function == "+"
         assert loaded_model.gating_function == loaded_model.model.get_layer("gated_attention_0").gating_function
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))

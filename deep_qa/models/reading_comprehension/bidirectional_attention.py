@@ -86,12 +86,12 @@ class BidirectionalAttentionFlow(TextTrainer):
                                dtype='int32', name="question_input")
         passage_input = Input(shape=self._get_sentence_shape(self.num_passage_words),
                               dtype='int32', name="passage_input")
-        # Shape: (batch_size, num_question_words, embedding_size * 2) (embedding_size * 2 because,
+        # Shape: (batch_size, num_question_words, embedding_dim * 2) (embedding_dim * 2 because,
         # by default in this class, self._embed_input concatenates a word embedding with a
         # character-level encoder).
         question_embedding = self._embed_input(question_input)
 
-        # Shape: (batch_size, num_passage_words, embedding_size * 2)
+        # Shape: (batch_size, num_passage_words, embedding_dim * 2)
         passage_embedding = self._embed_input(passage_input)
 
         # Min's model has some highway layers here, with relu activations.  Note that highway
@@ -110,10 +110,10 @@ class BidirectionalAttentionFlow(TextTrainer):
         phrase_layer = self._get_seq2seq_encoder(name="phrase",
                                                  fallback_behavior="use default params")
 
-        # Shape: (batch_size, num_question_words, embedding_size * 2)
+        # Shape: (batch_size, num_question_words, embedding_dim * 2)
         encoded_question = phrase_layer(question_embedding)
 
-        # Shape: (batch_size, num_passage_words, embedding_size * 2)
+        # Shape: (batch_size, num_passage_words, embedding_dim * 2)
         encoded_passage = phrase_layer(passage_embedding)
 
         # PART 2:
@@ -127,7 +127,7 @@ class BidirectionalAttentionFlow(TextTrainer):
         # Shape: (batch_size, num_passage_words, num_question_words), normalized over question
         # words for each passage word.
         passage_question_attention = MaskedSoftmax()(passage_question_similarity)
-        # Shape: (batch_size, num_passage_words, embedding_size * 2)
+        # Shape: (batch_size, num_passage_words, embedding_dim * 2)
         weighted_sum_layer = WeightedSum(name="passage_question_vectors", use_masking=False)
         passage_question_vectors = weighted_sum_layer([encoded_question, passage_question_attention])
 
@@ -137,17 +137,17 @@ class BidirectionalAttentionFlow(TextTrainer):
         question_passage_similarity = Max(axis=-1)(passage_question_similarity)
         # Shape: (batch_size, num_passage_words)
         question_passage_attention = MaskedSoftmax()(question_passage_similarity)
-        # Shape: (batch_size, embedding_size * 2)
+        # Shape: (batch_size, embedding_dim * 2)
         weighted_sum_layer = WeightedSum(name="question_passage_vector", use_masking=False)
         question_passage_vector = weighted_sum_layer([encoded_passage, question_passage_attention])
 
         # Then he repeats this question/passage vector for every word in the passage, and uses it
         # as an additional input to the hidden layers above.
         repeat_layer = Repeat(axis=1, repetitions=self.num_passage_words)
-        # Shape: (batch_size, num_passage_words, embedding_size * 2)
+        # Shape: (batch_size, num_passage_words, embedding_dim * 2)
         tiled_question_passage_vector = repeat_layer(question_passage_vector)
 
-        # Shape: (batch_size, num_passage_words, embedding_size * 8)
+        # Shape: (batch_size, num_passage_words, embedding_dim * 8)
         complex_concat_layer = ComplexConcat(combination='1,2,1*2,1*3', name='final_merged_passage')
         final_merged_passage = complex_concat_layer([encoded_passage,
                                                      passage_question_vectors,
@@ -178,7 +178,7 @@ class BidirectionalAttentionFlow(TextTrainer):
         # did in his _paper_.  The equations in his paper do not mention that he did this last
         # weighted passage representation and concatenation before doing the final biLSTM (though
         # his figure makes it clear this is what he intended; he just wrote the equations wrong).
-        # Shape: (batch_size, num_passage_words, embedding_size * 2)
+        # Shape: (batch_size, num_passage_words, embedding_dim * 2)
         sum_layer = WeightedSum(name="passage_weighted_by_predicted_span", use_masking=False)
         repeat_layer = Repeat(axis=1, repetitions=self.num_passage_words)
         passage_weighted_by_predicted_span = repeat_layer(sum_layer([modeled_passage,

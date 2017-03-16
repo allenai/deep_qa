@@ -8,7 +8,7 @@ from deep_qa.data.data_indexer import DataIndexer
 from ..common.test_case import DeepQaTestCase
 
 class TestPretrainedEmbeddings(DeepQaTestCase):
-    def test_get_embedding_layer_uses_correct_embedding_size(self):
+    def test_get_embedding_layer_uses_correct_embedding_dim(self):
         data_indexer = DataIndexer()
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
@@ -23,7 +23,7 @@ class TestPretrainedEmbeddings(DeepQaTestCase):
         embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, data_indexer)
         assert embedding_layer.output_dim == 4
 
-    def test_get_embedding_layer_crashes_when_embedding_size_is_one(self):
+    def test_get_embedding_layer_crashes_when_embedding_dim_is_one(self):
         data_indexer = DataIndexer()
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:

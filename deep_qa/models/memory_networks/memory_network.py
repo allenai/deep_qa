@@ -60,6 +60,21 @@ class MemoryNetwork(TextTrainer):
     Our thought is that we should treat the last step as an entailment problem - does the
     background knowledge entail the input sentence?  Previous work was solving a different problem,
     so they used simpler models "entailment".
+
+    Notes
+    -----
+    This code is pretty over-engineered.  I (Matt) tried to cram too many variants into a single
+    superclass, to share as much code as possible, and ended up trying to make this class do too
+    much.  The code is pretty convoluted in places because of that.
+
+    Additionally, I also have largely given up on memory networks as reasonable models, after
+    looking more closely at the hacks needed to get them to actually work on bAbI.  You should
+    probably use other models, like the ones in :mod:`~deep_qa.models.reading_comprehension`, for
+    question answering tasks.  The code is cleaner and the models work better.  Because I've pretty
+    much given up on memory networks, I am no longer supporting all ``TextTrainer`` features in
+    memory network code; there's a good chance that a new feature will be incompatible with these
+    models.  For instance, the "words and characters" tokenizer breaks some of these models in
+    some configurations, and it's not worth the effort to fix it.
     '''
 
     # This specifies whether the entailment decision made my this solver (if any) has a sigmoid
@@ -209,7 +224,7 @@ class MemoryNetwork(TextTrainer):
         params = deepcopy(self.knowledge_encoder_params)
         knowledge_encoder_type = get_choice_with_default(params, "type", list(knowledge_encoders.keys()))
         params['name'] = name
-        params['encoding_dim'] = self.embedding_size
+        params['encoding_dim'] = self.embedding_dim['words']
         params['knowledge_length'] = self.max_knowledge_length
         params['question_encoder'] = question_encoder
         params['has_multiple_backgrounds'] = self.has_multiple_backgrounds
@@ -251,7 +266,7 @@ class MemoryNetwork(TextTrainer):
         params = deepcopy(self.knowledge_combiner_params)
         params['name'] = name
         # These are required for the Attentive
-        params['output_dim'] = self.embedding_size
+        params['output_dim'] = self.embedding_dim['words']
         params['input_length'] = self.max_knowledge_length
 
         combiner_type = get_choice_with_default(params, "type", list(knowledge_combiners.keys()))
@@ -274,7 +289,7 @@ class MemoryNetwork(TextTrainer):
         params = deepcopy(self.memory_updater_params)
         updater_type = get_choice_with_default(params, "type", list(updaters.keys()))
         params['name'] = name
-        params['output_dim'] = self.embedding_size
+        params['output_dim'] = self.embedding_dim['words']
         return updaters[updater_type](**params)
 
     def _get_entailment_input_combiner(self):
@@ -291,7 +306,7 @@ class MemoryNetwork(TextTrainer):
         # calls to params.pop()), but it's possible we'll want to call this more than once.  So
         # we'll make a copy and use that instead of self.entailment_combiner_params.
         params = deepcopy(self.entailment_combiner_params)
-        params['encoding_dim'] = self.embedding_size
+        params['encoding_dim'] = self.embedding_dim['words']
         combiner_type = get_choice_with_default(params, "type", list(entailment_input_combiners.keys()))
         return entailment_input_combiners[combiner_type](**params)
 
@@ -320,7 +335,7 @@ class MemoryNetwork(TextTrainer):
         model_type = get_choice_with_default(entailment_params, "type", self.entailment_choices)
         # TODO(matt): Not great to have these two lines here.
         if model_type == 'question_answer_mlp':
-            entailment_params['answer_dim'] = self.embedding_size
+            entailment_params['answer_dim'] = self.embedding_dim['words']
         return entailment_models[model_type](entailment_params)
 
     def _get_memory_network_recurrence(self):
