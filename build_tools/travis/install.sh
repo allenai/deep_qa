@@ -44,3 +44,6 @@ fi
 
 # Install requirements via pip in our conda environment
 pip install -r requirements.txt
+
+# Install punkt tokenizer
+python -m nltk.downloader punkt

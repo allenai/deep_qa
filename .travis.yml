@@ -6,6 +6,7 @@ language: python
 
 cache:
   directories:
+  - /home/travis/nltk_data
   - /home/travis/download
   - /home/travis/miniconda3
   - /home/travis/.cache/pip
