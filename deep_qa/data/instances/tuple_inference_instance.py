@@ -20,13 +20,14 @@ class TextTuple:
         self.location = location
         self.source = source
 
-    def display_string(self):
+    def display_string(self, context_limit=None):
         # NOTE: not currently displaying location, time, and source info.
-        return ("TextTuple( [\n\tsubj: {0} \n\tverb: {1} \n\tobjects: {2} " +
-                "\n\tcontext: {3}\n] )").format(self.subject,
-                                                self.verb,
-                                                ", ".join(self.objects),
-                                                self.context)
+        if context_limit is None:
+            context_limit = len(self.context)
+        return ("(S: {0}, V: {1}, O: {2}, C: {3})").format(self.subject,
+                                                           self.verb,
+                                                           ", ".join(self.objects),
+                                                           self.context[:context_limit])
 
     def to_text_list(self, object_handling: str="collapse", include_context: bool=True):
         '''
@@ -119,6 +120,9 @@ class TupleInferenceInstance(TextInstance):
     background_tuples: List[TextTuple]
         This is a list of background ``TextTuples`` (currently used for all answer candidates).
 
+    question_text: str, default=None
+        The original text of the question, if available.
+
     label: int, default=None
         The class label (i.e. the index of the correct multiple choice answer) -- corresponds to the
         indices in self.answer_tuples.
@@ -130,18 +134,25 @@ class TupleInferenceInstance(TextInstance):
     use_context = True
 
     def __init__(self, answer_tuples: List[List[TextTuple]], background_tuples: List[TextTuple],
-                 label: int=None, index: int=None):
+                 question_text: str=None, label: int=None, index: int=None):
         super(TupleInferenceInstance, self).__init__(label, index)
         self.answer_tuples = answer_tuples
         self.background_tuples = background_tuples
+        self.question_text = question_text
 
     def display_string(self):
-        to_return = 'MultipleTrueFalseTuplesWithBackgroundInstance: \n'
-        to_return += "  Answer Candidates: \n"
+        to_return = 'TupleInferenceInstance: \n'
+        to_return += "Answer Candidates: \n"
         for answer_index in range(len(self.answer_tuples)):
-            string_answer_tuples = [str(a_tuple) for a_tuple in self.answer_tuples[answer_index]]
-            to_return += "\t [{0}] {1}\n".format(answer_index, ", \n".join(string_answer_tuples))
-        to_return += "\n  Background Tuples: \n " + ", \n".join(str(self.background_tuples))
+            string_answer_tuples = [a_tuple.display_string() for a_tuple in self.answer_tuples[answer_index]]
+            if answer_index == self.label:
+                to_return += "**"   # To inidicate correctness in a visually easy to parse way
+            else:
+                to_return += "  "
+                to_return += "Answer Option [{0}]:\n{1}\n".format(answer_index, ",\n".join(string_answer_tuples))
+            to_return += "\nBackground Tuples:\n"
+            for background_tuple in self.background_tuples:
+                to_return += background_tuple.display_string() + ",\n"
         return to_return
 
     @overrides
@@ -198,7 +209,7 @@ class TupleInferenceInstance(TextInstance):
                 [question index][tab][all question+answer tuples][tab][background tuples][tab][label]
             Option 2:
                 same as option 1, but [question text][tab] comes immediately after the question index,
-                following the tab. Currently, the question text is not used.
+                following the tab.
         The question+answer tuples are formatted as:
             [a_1-tuple_1]$$$...$$$[a_1-tuple_n]###...###[a+_m-tuple_1]$$$...$$$[a_m-tuple_p]
         such that ``$$$`` serves as the tuple delimiter and ``###`` serves as the answer candidate
@@ -224,13 +235,15 @@ class TupleInferenceInstance(TextInstance):
         """
         fields = line.split("\t")
         if len(fields) == 5:
-            index, _, answers_string, background_string, label = fields
+            index, question_text, answers_string, background_string, label = fields
             index = int(index)
         elif len(fields) == 4:
             index, answers_string, background_string, label = fields
+            question_text = None
             index = int(index)
         elif len(fields) == 3:
             answers_string, background_string, label = fields
+            question_text = None
             index = None
         else:
             raise RuntimeError("Unrecognized line format (" + str(len(fields)) + " columns): " + line)
@@ -249,7 +262,7 @@ class TupleInferenceInstance(TextInstance):
         if label >= len(answer_tuples):
             raise ConfigurationError("Invalid label, label is >= the number of answers.")
 
-        return cls(answer_tuples, background_tuples, label=label, index=index)
+        return cls(answer_tuples, background_tuples, question_text, label=label, index=index)
 
 
 class IndexedTupleInferenceInstance(IndexedInstance):

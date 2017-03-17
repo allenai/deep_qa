@@ -1,7 +1,9 @@
 from typing import Dict, Any
+import textwrap
 
 from keras.layers import Input, Layer
 from overrides import overrides
+import numpy
 
 from deep_qa.data.instances.tuple_inference_instance import TupleInferenceInstance
 from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
@@ -48,6 +50,13 @@ class TupleInferenceModel(TextTrainer):
     num_options: int, default=4
         The number of answer options/candidates.
 
+    display_text_wrap: int, default=150
+        This is used by the debug output methods to wrap long tuple strings.
+
+    display_num_tuples: int, default=5
+        This is used by the debug output methods.  It determines how many background tuples to display for
+        each of the answer tuples in a given instance when displaying the tuple match scores.
+
     """
     def __init__(self, params: Dict[str, Any]):
         self.noisy_or_param_init = params.pop('noisy_or_param_init', 'uniform')
@@ -56,6 +65,8 @@ class TupleInferenceModel(TextTrainer):
         self.num_tuple_slots = params.pop('num_tuple_slots', 4)
         self.num_slot_words = params.pop('num_sentence_words', 5)
         self.num_options = params.pop('num_answer_options', 4)
+        self.display_text_wrap = params.pop('display_text_wrap', 150)
+        self.display_num_tuples = params.pop('display_num_tuples', 5)
         tuple_matcher_params = params.pop('tuple_matcher', {})
         tuple_matcher_choice = get_choice_with_default(tuple_matcher_params,
                                                        "type",
@@ -72,6 +83,7 @@ class TupleInferenceModel(TextTrainer):
                     TimeDistributedWithMask(TimeDistributedWithMask(match_layer)))
         else:
             self.tuple_matcher = tuple_matcher_class(self, tuple_matcher_params)
+        self.tuple_matcher.name = "match_layer"
         super(TupleInferenceModel, self).__init__(params)
 
         self.name = 'TupleInferenceModel'
@@ -157,21 +169,116 @@ class TupleInferenceModel(TextTrainer):
         tiled_background = Repeat(axis=2, repetitions=self.num_question_tuples)(tiled_background)
 
         # Find the matches between the question and background tuples.
-        # shape: (batch size, num_options, num_question_tuples, num_background_tuples, 1)
+        # shape: (batch size, num_options, num_question_tuples, num_background_tuples)
         matches = self.tuple_matcher([tiled_question, tiled_background])
 
         # Find the probability that any given question tuple is entailed by the given background tuples.
         # shape: (batch size, num_options, num_question_tuples)
-        combine_background_evidence = NoisyOr(axis=-1, param_init=self.noisy_or_param_init, name="noisy_or_1")
+        combine_background_evidence = NoisyOr(axis=-1, param_init=self.noisy_or_param_init)
+        combine_background_evidence.name = "noisy_or_1"
         qi_probabilities = combine_background_evidence(matches)
 
         # Find the probability that any given option is correct, given the entailement scores of each of its
         # question tuples given the set of background tuples.
         # shape: (batch size, num_options)
-        combine_question_evidence = NoisyOr(axis=-1, param_init=self.noisy_or_param_init, name="noisy_or_2")
+        combine_question_evidence = NoisyOr(axis=-1, param_init=self.noisy_or_param_init)
+        combine_question_evidence.name = "noisy_or_2"
         options_probabilities = combine_question_evidence(qi_probabilities)
 
         # Softmax over the options to choose the best one.
-        final_output = MaskedSoftmax()(options_probabilities)
+        final_output = MaskedSoftmax(name="masked_softmax")(options_probabilities)
 
         return DeepQaModel(input=[question_input, background_input], output=[final_output])
+
+
+    @overrides
+    def _instance_debug_output(self, instance: TupleInferenceInstance, outputs: Dict[str, numpy.array]) -> str:
+        num_to_display = 5
+        result = ""
+        result += "\n====================================================================\n"
+        result += "Instance: %s\n" % instance.index
+        result += "Question Text: %s\n" % instance.question_text
+        result += "Label: %s\n" % instance.label
+        result += "Num tuples per answer option: %s\n" % [len(answer) for answer in instance.answer_tuples]
+        result += "(limiting display to top %s at various levels)\n" % num_to_display
+        result += "====================================================================\n"
+
+        answer_scores = []
+        index_of_chosen = None
+        softmax_output = outputs.get("masked_softmax", None)
+        if softmax_output is not None:
+            answer_scores = list(enumerate(softmax_output))
+            sorted_answer_scores = sorted(answer_scores, key=lambda tup: tup[1], reverse=True)
+            # TODO(becky): not handling ties
+            index_of_chosen = sorted_answer_scores[0][0]
+
+        result += "Final scores: %s\n" % answer_scores
+        if index_of_chosen is None:
+            result += "ERROR: no answer chosen\n"
+        elif index_of_chosen == instance.label:
+            result += "  Answered correctly!\n"
+        else:
+            result += "  Answered incorrectly\n"
+        result += "====================================================================\n"
+
+        # Output of the tuple matcher layer:
+        # shape: (num_options, num_question_tuples, num_background_tuples)
+        tuple_matcher_output = outputs.get('match_layer', None)
+        if tuple_matcher_output is not None:
+            # correct answer:
+            # Keep only the first tuples (depending on model setting) because when we padded we set
+            # truncate_from_right to False.
+            correct_tuples = instance.answer_tuples[instance.label][:self.num_question_tuples]
+            background_tuples = instance.background_tuples[:self.num_background_tuples]
+            result += "-----------------------------------\n"
+            result += " GOLD ANSWER: (Final score: {0})\n".format(answer_scores[instance.label][1])
+            result += "-----------------------------------\n"
+            result += self._render_tuple_match_scores(correct_tuples,
+                                                      background_tuples,
+                                                      tuple_matcher_output[instance.label],
+                                                      instance)
+
+            result += "-------------------\n"
+            result += " Incorrect Answers: \n"
+            result += "-------------------\n"
+            # NOTE: that extra padded "options" are added on the right, so this should be fine.
+            for option in range(len(instance.answer_tuples)):
+                chosen_status = ""
+                if option != instance.label:
+                    if option == index_of_chosen:
+                        chosen_status = "(Chosen)"
+                    result += "\nOption {0} {1}: (Final Score: {2})\n".format(option,
+                                                                              chosen_status,
+                                                                              answer_scores[option][1])
+                    result += self._render_tuple_match_scores(instance.answer_tuples[option],
+                                                              background_tuples,
+                                                              tuple_matcher_output[option],
+                                                              instance)
+        result += "\n"
+
+        return result
+
+    def _render_tuple_match_scores(self, answer_tuples, background_tuples, tuple_matcher_output, instance):
+        num_background = min(self.num_background_tuples, len(instance.background_tuples))
+        result = ""
+        for i, answer_tuple in enumerate(answer_tuples):
+            answer_tuple_string = "\n\t".join(textwrap.wrap(answer_tuple.display_string(), self.display_text_wrap))
+            result += "Question (repeated): %s\n" % instance.question_text
+            result += "Answer_tuple_{0} : \n\t{1}\n\n".format(i, answer_tuple_string)
+            result += "Top {0} (out of {1}) highest scoring background tuples:\n\n".format(self.display_num_tuples,
+                                                                                           num_background)
+            tuple_match_scores = []
+            for j, background_tuple in enumerate(background_tuples):
+                tuple_match_score = tuple_matcher_output[i, j]
+                tuple_match_scores.append((tuple_match_score, j, background_tuple))
+            # Sort descending by tuple match score
+            sorted_by_score = sorted(tuple_match_scores, key=lambda tup: tup[0],
+                                     reverse=True)[:self.display_num_tuples]
+            for scored in sorted_by_score:
+                background_tuple_index = scored[1]
+                background_tuple_string = scored[2].display_string()
+                wrapped_tuple = "\n\t".join(textwrap.wrap(background_tuple_string, self.display_text_wrap))
+                result += "  (TupleMatch Score %s) " % scored[0]
+                result += "\tbg_tuple_{0} \n\t{1}\n".format(background_tuple_index, wrapped_tuple)
+            result += "\n"
+        return result
