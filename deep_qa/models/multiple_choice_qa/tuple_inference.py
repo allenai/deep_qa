@@ -245,12 +245,13 @@ class TupleInferenceModel(TextTrainer):
             for option in range(len(instance.answer_tuples)):
                 chosen_status = ""
                 if option != instance.label:
+                    option_tuples = instance.answer_tuples[option][:self.num_question_tuples]
                     if option == index_of_chosen:
                         chosen_status = "(Chosen)"
                     result += "\nOption {0} {1}: (Final Score: {2})\n".format(option,
                                                                               chosen_status,
                                                                               answer_scores[option][1])
-                    result += self._render_tuple_match_scores(instance.answer_tuples[option],
+                    result += self._render_tuple_match_scores(option_tuples,
                                                               background_tuples,
                                                               tuple_matcher_output[option],
                                                               instance)
@@ -259,14 +260,13 @@ class TupleInferenceModel(TextTrainer):
         return result
 
     def _render_tuple_match_scores(self, answer_tuples, background_tuples, tuple_matcher_output, instance):
-        num_background = min(self.num_background_tuples, len(instance.background_tuples))
         result = ""
         for i, answer_tuple in enumerate(answer_tuples):
             answer_tuple_string = "\n\t".join(textwrap.wrap(answer_tuple.display_string(), self.display_text_wrap))
             result += "Question (repeated): %s\n" % instance.question_text
             result += "Answer_tuple_{0} : \n\t{1}\n\n".format(i, answer_tuple_string)
             result += "Top {0} (out of {1}) highest scoring background tuples:\n\n".format(self.display_num_tuples,
-                                                                                           num_background)
+                                                                                           len(background_tuples))
             tuple_match_scores = []
             for j, background_tuple in enumerate(background_tuples):
                 tuple_match_score = tuple_matcher_output[i, j]
