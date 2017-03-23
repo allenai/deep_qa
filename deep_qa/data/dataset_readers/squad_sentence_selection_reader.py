@@ -1,4 +1,5 @@
 import argparse
+from collections import Counter
 import json
 import logging
 import os
@@ -40,8 +41,11 @@ class SquadSentenceSelectionReader():
         for article in tqdm(dataset):
             for paragraph in article['paragraphs']:
                 context_article = paragraph["context"]
-                # Split the context_article into a list of sentences.
-                sentences = nltk.sent_tokenize(context_article)
+                # replace newlines in the context article
+                cleaned_context_article = context_article.replace("\n", "")
+
+                # Split the cleaned_context_article into a list of sentences.
+                sentences = nltk.sent_tokenize(cleaned_context_article)
 
                 # Make a dict from span indices to sentence. The end span is
                 # exclusive, and the start span is inclusive.
@@ -57,8 +61,13 @@ class SquadSentenceSelectionReader():
                 for question_answer in paragraph['qas']:
                     # Shuffle the sentences.
                     random.shuffle(sentences)
-                    question_text = question_answer["question"]
-                    answer_start_index = question_answer["answers"][0]["answer_start"]
+                    question_text = question_answer["question"].strip()
+                    # There may be multiple answer annotations, so pick the one
+                    # that occurs the most.
+                    candidate_answer_start_indices = Counter()
+                    for answer in question_answer["answers"]:
+                        candidate_answer_start_indices[answer["answer_start"]] += 1
+                    answer_start_index, _ = candidate_answer_start_indices.most_common(1)[0]
                     # Get the full sentence corresponding to the answer.
                     answer_sentence = None
                     for span_tuple in span_to_sentence_index:
@@ -91,7 +100,8 @@ class SquadSentenceSelectionReader():
             # and write the file there
             if not os.path.exists(os.path.join(input_directory, "processed")):
                 os.makedirs(os.path.join(input_directory, "processed"))
-            output_filepath = os.path.join(input_directory, "processed", output_filename)
+            output_filepath = os.path.join(input_directory, "processed",
+                                           output_filename)
         with open(output_filepath, 'w') as file_handler:
             for row in processed_rows:
                 file_handler.write("{}\n".format(row))

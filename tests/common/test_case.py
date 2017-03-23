@@ -224,8 +224,8 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             train_background.write('4\tsb11\tsb12\n')
 
     def write_question_answer_memory_network_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tquestion1\tanswer1###answer2\t0\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('1\tquestion1\tanswer1###answer2\t0\n')
         with codecs.open(self.VALIDATION_BACKGROUND, 'w', 'utf-8') as validation_background:
             validation_background.write('1\tvb1\tvb2\n')
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
@@ -240,11 +240,11 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             train_background.write('4\tsb5\tsb6\n')
 
     def write_who_did_what_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tHe went to the store to buy goods, because he wanted to.'
-                             '\tHe bought xxxxx\tgoods###store\t0\n')
-            train_file.write('1\tShe hiking on the weekend with her friend.'
-                             '\tShe went xxxxx\thiking###friend###weekend###her friend\t0\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('1\tHe went to the store to buy goods, because he wanted to.'
+                                  '\tHe bought xxxxx\tgoods###store\t0\n')
+            validation_file.write('1\tShe hiking on the weekend with her friend.'
+                                  '\tShe went xxxxx\thiking###friend###weekend###her friend\t0\n')
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             # document, question, answers
             train_file.write('1\tFred hit the ball with the bat.\tHe hit the ball with the xxxxx\tbat###ball\t0\n')
@@ -254,9 +254,9 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
                              'bone###biscuit\t0\n')
 
     def write_tuple_inference_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tss<>v f d<>oo o<>c$$$s<>v ff<>o i###ss r<>v<>o e<>o ee\t'
-                             'ss ss<>ve gg<>o sd<>ccs\t0\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('1\tss<>v f d<>oo o<>c$$$s<>v ff<>o i###ss r<>v<>o e<>o ee\t'
+                                  'ss ss<>ve gg<>o sd<>ccs\t0\n')
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             # document, question, answers
             train_file.write('1\tss<>v<>oo o<>c$$$s e<>ff<>o ii i###ss r<>rr<>o e<>o ee\t'
@@ -269,8 +269,9 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
                              'ss ss<>ve gg<>o sd<>ccs\t1\n')
 
     def write_span_prediction_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tquestion 1 with extra words\tpassage with answer and a reallylongword\t13,18\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('1\tquestion 1 with extra words\t'
+                                  'passage with answer and a reallylongword\t13,18\n')
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             train_file.write('1\tquestion 1\tpassage1 with answer1\t14,20\n')
             train_file.write('2\tquestion 2\tpassage2 with answer2\t0,8\n')
@@ -278,13 +279,29 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             train_file.write('4\tquestion 4\tpassage4 with answer4\t14,20\n')
 
     def write_additional_span_prediction_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tquestion 2\tpassage with perhaps the answer\t13,18\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('1\tquestion 2\tpassage with perhaps the answer\t13,18\n')
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             train_file.write('1\tquestion 5\tpassage5 with answer5 answer3\t14,20\n')
             train_file.write('2\tquestion 6\tpassage6 with answer6\t0,8\n')
             train_file.write('3\tquestion 7\tpassage7 with answer7\t9,13\n')
             train_file.write('4\tquestion 8\tpassage8 with answer8\t14,20\n')
+
+    def write_sentence_selection_files(self):
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('1\tWhere is Paris?\tParis is the capital of France.###It '
+                                  'is by the Seine.###It is quite old###this is a '
+                                  'very long sentence meant to test that loading '
+                                  'and padding works properly in the model.\t1\n')
+        with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
+            train_file.write('1\tWho won Super Bowl 50?\tSuper Bowl 50 was in Santa '
+                             'Clara.###The Patriots beat the Broncos.\t1\n')
+            train_file.write('2\tWhen is Thanksgiving?\tFolk tales tell '
+                             'of the Pilgrims celebrating the holiday.###Many '
+                             'people eat a lot.###It is in November.\t2\n')
+            train_file.write('3\tWhen were computers invented?\tThe ancient Chinese used '
+                             'abacuses.###Alan Turing cracked Enigma.###It is hard to '
+                             'pinpoint an inventor of the computer.\t2\n')
 
     def write_pretrained_vector_files(self):
         # write the file
