@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 from keras.layers import Dense, Input, merge
 from overrides import overrides
+import requests
 
 from ...data.instances.character_span_instance import CharacterSpanInstance
 from ...layers.attention.matrix_attention import MatrixAttention
@@ -240,10 +241,30 @@ class BidirectionalAttentionFlow(TextTrainer):
     def score_instance(self, instance: CharacterSpanInstance):
         inputs, _ = self._prepare_instance(instance)
         try:
-            span_begin_probs, span_end_probs = self.model.predict(inputs)
-            span_indices = self.get_best_span(span_begin_probs,
-                                              span_end_probs)
-            return span_indices
+            # shorten question text to 80 words, since that seems to be the limit
+            question_text = instance.question_text
+            if len(question_text.split(" ")) > 79:
+                print("shortening this question.")
+                question_text = " ".join(question_text.split(" ")[-79:])
+
+            passage_text = instance.passage_text
+            url = ("http://35.165.153.16:1995/submit?paragraph=" +
+                   passage_text +
+                   "&question=" + question_text)
+            try:
+                json_response = requests.get(url).json()
+            except:
+                json_response = {"result": "Could not decode json."}
+            print("-------------------------------------------------")
+            print("question text: {}".format(question_text))
+            print("passage text: {}".format(passage_text))
+            print("response: {}".format(json_response["result"]))
+            print("-------------------------------------------------")
+            return json_response["result"]
+            # span_begin_probs, span_end_probs = self.model.predict(inputs)
+            # span_indices = self.get_best_span(span_begin_probs,
+            #                                   span_end_probs)
+            # return span_indices
         except:
             print('Inputs were: ' + str(inputs))
             raise
