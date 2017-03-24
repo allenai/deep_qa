@@ -7,6 +7,7 @@ import logging
 import os
 import shutil
 
+from keras import backend as K
 import numpy
 from numpy.testing import assert_allclose
 
@@ -32,6 +33,8 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def tearDown(self):
+        if K.backend() == 'tensorflow':
+            K.clear_session()
         shutil.rmtree(self.TEST_DIR)
 
     def get_model_params(self, model_class, additional_arguments=None):
