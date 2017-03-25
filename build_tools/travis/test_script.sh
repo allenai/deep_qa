@@ -14,7 +14,7 @@ run_tests() {
     if [[ "$KERAS_BACKEND" == "tensorflow" ]]; then
         KERAS_BACKEND=tensorflow py.test -v --cov=deep_qa --durations=20
     else
-        KERAS_BACKEND=theano OMP_NUM_THREADS=4 THEANO_FLAGS='optimizer=fast_compile,openmp=True' py.test -v --cov=deep_qa --durations=20
+        KERAS_BACKEND=theano THEANO_FLAGS='optimizer=fast_compile' py.test -v --cov=deep_qa --durations=20
     fi
 }
 

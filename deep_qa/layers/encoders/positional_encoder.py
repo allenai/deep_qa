@@ -44,6 +44,7 @@ class PositionalEncoder(Layer):
         return (input_shape[0], input_shape[2])  # removing second dimension
 
     def call(self, x, mask=None):
+        # pylint: disable=redefined-variable-type
 
         def my_keras_cumsum(tensor, axis=0):
             """

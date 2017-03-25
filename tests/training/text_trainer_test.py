@@ -117,6 +117,7 @@ class TestTextTrainer(DeepQaTestCase):
     def test_load_model(self):
         # train a model and serialize it.
         args = {
+                'test_files': [self.TEST_FILE],
                 'embedding_dim': {'words': 4, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
@@ -137,6 +138,7 @@ class TestTextTrainer(DeepQaTestCase):
     def test_load_model_and_fit(self):
         # train a model and serialize it.
         args = {
+                'test_files': [self.TEST_FILE],
                 'embedding_dim': {'words': 4, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
@@ -144,6 +146,7 @@ class TestTextTrainer(DeepQaTestCase):
         }
         self.write_true_false_model_files()
         model = self.get_model(TrueFalseModel, args)
+        # train and evaluate on test set.
         model.train()
 
         # load the model that we serialized
@@ -157,10 +160,10 @@ class TestTextTrainer(DeepQaTestCase):
         # now fit both models on some more data, and ensure that we get the same results.
         self.write_additional_true_false_model_files()
         # pylint: disable=unused-variable
-        train_data, val_data = loaded_model.prepare_data(loaded_model.train_files,
-                                                         loaded_model.max_training_instances,
-                                                         loaded_model.validation_files,
-                                                         update_data_indexer=False)
+        train_data, val_data, _ = loaded_model.prepare_data(loaded_model.train_files,
+                                                            loaded_model.max_training_instances,
+                                                            loaded_model.validation_files,
+                                                            update_data_indexer=False)
         _, train_input, train_labels = train_data
         # _, validation_input, _ = val_data
         model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)

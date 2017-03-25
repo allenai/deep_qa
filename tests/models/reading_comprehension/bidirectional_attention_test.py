@@ -39,10 +39,10 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
         # now fit both models on some more data, and ensure that we get the same results.
         self.write_additional_span_prediction_files()
         # pylint: disable=unused-variable
-        train_data, val_data = loaded_model.prepare_data(loaded_model.train_files,
-                                                         loaded_model.max_training_instances,
-                                                         loaded_model.validation_files,
-                                                         update_data_indexer=False)
+        train_data, val_data, _ = loaded_model.prepare_data(loaded_model.train_files,
+                                                            loaded_model.max_training_instances,
+                                                            loaded_model.validation_files,
+                                                            update_data_indexer=False)
         _, train_input, train_labels = train_data
         # _, validation_input, _ = val_data
         model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)

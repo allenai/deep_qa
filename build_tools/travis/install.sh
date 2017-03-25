@@ -43,7 +43,13 @@ else
 fi
 
 # Install requirements via pip in our conda environment
-pip install -r requirements.txt
+pip install -U -r requirements.txt
+
+# List the packages to get their versions for debugging
+pip list
 
 # Install punkt tokenizer
 python -m nltk.downloader punkt
+
+# Install spacy data
+python -m spacy.en.download all

@@ -77,6 +77,10 @@ class Trainer:
         # the `keras_validation_split` parameter to split the training data for validation.
         self.validation_files = params.pop('validation_files', None)
 
+        # The files containing the data that should be used for evaluation.
+        # The default of None means to just not perform test set evaluation.
+        self.test_files = params.pop('test_files', None)
+
         optimizer_params = params.pop('optimizer', 'adam')
         self.optimizer = optimizer_from_params(optimizer_params)
         self.loss = params.pop('loss', 'categorical_crossentropy')
@@ -127,9 +131,15 @@ class Trainer:
         self.training_dataset = None
         self.train_input = None
         self.train_labels = None
+
         self.validation_dataset = None
         self.validation_input = None
         self.validation_labels = None
+
+        self.test_dataset = None
+        self.test_input = None
+        self.test_labels = None
+
         self.debug_dataset = None
         self.debug_input = None
 
@@ -222,8 +232,8 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def prepare_data(self, train_files, max_training_instances=None,
-                     validation_files=None, update_data_indexer=True):
+    def prepare_data(self, train_files, max_training_instances,
+                     validation_files=None, test_files=None, update_data_indexer=True):
         logger.info("Getting training data")
         training_dataset = self._load_dataset_from_files(train_files)
         if max_training_instances is not None:
@@ -239,8 +249,17 @@ class Trainer:
             validation_input, validation_labels = self._prepare_data(validation_dataset,
                                                                      for_train=False,
                                                                      update_data_indexer=update_data_indexer)
+        test_dataset = test_input = test_labels = None
+        if test_files:
+            logger.info("Getting test data")
+            test_dataset = self._load_dataset_from_files(test_files)
+            test_input, test_labels = self._prepare_data(validation_dataset,
+                                                         for_train=False,
+                                                         update_data_indexer=update_data_indexer)
+
         return ((training_dataset, train_input, train_labels),
-                (validation_dataset, validation_input, validation_labels))
+                (validation_dataset, validation_input, validation_labels),
+                (test_dataset, test_input, test_labels))
 
     def train(self):
         '''
@@ -259,10 +278,12 @@ class Trainer:
             self._process_pretraining_data()
 
         # First we need to prepare the data that we'll use for training.
-        train_data, val_data = self.prepare_data(self.train_files, self.max_training_instances,
-                                                 self.validation_files)
+        train_data, val_data, test_data = self.prepare_data(self.train_files, self.max_training_instances,
+                                                            self.validation_files,
+                                                            self.test_files)
         self.training_dataset, self.train_input, self.train_labels = train_data
         self.validation_dataset, self.validation_input, self.validation_labels = val_data
+        self.test_dataset, self.test_input, self.test_labels = test_data
 
         # We need to actually do pretraining _after_ we've loaded the training data, though, as we
         # need to build the models to be consistent between training and pretraining.  The training
@@ -319,6 +340,13 @@ class Trainer:
         if self.save_models:
             self._save_best_model()
             self._save_auxiliary_files()
+
+        # If there are test files, we evaluate on the test data.
+        if self.test_files:
+            logger.info("Evaluting model on the test set.")
+            scores = self.model.evaluate(self.test_input, self.test_labels)
+            for idx, metric in enumerate(self.model.metrics_names):
+                print("{}: {}".format(metric, scores[idx]))
 
     def _get_callbacks(self):
         """

@@ -20,6 +20,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
     TEST_DIR = './TMP_TEST/'
     TRAIN_FILE = TEST_DIR + 'train_file'
     VALIDATION_FILE = TEST_DIR + 'validation_file'
+    TEST_FILE = TEST_DIR + 'test_file'
     TRAIN_BACKGROUND = TEST_DIR + 'train_background'
     VALIDATION_BACKGROUND = TEST_DIR + 'validation_background'
     SNLI_FILE = TEST_DIR + 'snli_file'
@@ -133,6 +134,13 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             train_file.write('4\tsentence4\t1\n')
             train_file.write('5\tsentence5\t0\n')
             train_file.write('6\tsentence6\t0\n')
+        with codecs.open(self.TEST_FILE, 'w', 'utf-8') as test_file:
+            test_file.write('1\ttestsentence1\t0\n')
+            test_file.write('2\ttestsentence2 word2 word3\t1\n')
+            test_file.write('3\ttestsentence3 word2\t0\n')
+            test_file.write('4\ttestsentence4\t1\n')
+            test_file.write('5\ttestsentence5 word4\t0\n')
+            test_file.write('6\ttestsentence6\t0\n')
 
     def write_additional_true_false_model_files(self):
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
