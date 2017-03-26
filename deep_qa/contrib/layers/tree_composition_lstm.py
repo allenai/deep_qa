@@ -2,7 +2,7 @@ import copy
 import warnings
 
 from keras import backend as K
-from keras import activations, initializations, regularizers
+from keras import activations, regularizers
 from keras.engine import InputSpec
 from keras.layers import Recurrent
 import numpy as np
@@ -13,7 +13,7 @@ from ...data.constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 class TreeCompositionLSTM(Recurrent):
     '''
     Conceptual differences from LSTM:
-    1. Tree LSTM does not differentiate between x and h, because
+    1. Tree LSTM does not differentiate between inputs and h, because
         tree composition is not applied at every time step (it is applied when the input symbol is a
         reduce) and when it is applied, there is no "current input".
     2. Input sequences are not the
@@ -26,32 +26,38 @@ class TreeCompositionLSTM(Recurrent):
         are two classes of gates: G_2 (two elements) and G_3 (three elements)
     5. G_2 has two forget
         gates, for each element that can be forgotten and G_3 has three.
+
+    Notes
+    -----
+    This is almost certainly broken.  We haven't really used this since it was written, and the
+    port to Keras 2 probably broke things, and we haven't had any motivation to fix it yet.  You
+    have been warned.
     '''
     # pylint: disable=invalid-name
-    def __init__(self, **kwargs):
-        assert "stack_limit" in kwargs, "Specify stack_limit"
-        assert "buffer_ops_limit" in kwargs, "Specify buffer_ops_limit"
-        assert "output_dim" in kwargs, "Specify output_dim"
-        self.stack_limit = kwargs["stack_limit"]
+    def __init__(self,
+                 units,
+                 stack_limit,
+                 buffer_ops_limit,
+                 initializer='glorot_uniform',
+                 forget_bias_initializer='one',
+                 activation='tanh',
+                 inner_activation='hard_sigmoid',
+                 W_regularizer=None,
+                 U_regularizer=None,
+                 V_regularizer=None,
+                 b_regularizer=None,
+                 **kwargs):
+        self.stack_limit = stack_limit
         # buffer_ops_limit is the max of buffer_limit and num_ops. This needs to be one value since
         # the initial buffer state and the list of operations need to be concatenated before passing
         # them to TreeCompositionLSTM
-        self.buffer_ops_limit = kwargs["buffer_ops_limit"]
-        self.output_dim = kwargs["output_dim"]
-        init = kwargs.get("init", "glorot_uniform")
-        self.init = initializations.get(init)
-        inner_init = kwargs.get("inner_init", "orthogonal")
-        self.inner_init = initializations.get(inner_init)
-        forget_bias_init = kwargs.get("forget_bias_init", "one")
-        self.forget_bias_init = initializations.get(forget_bias_init)
+        self.buffer_ops_limit = buffer_ops_limit
+        self.output_dim = units
+        self.initializer = initializer
+        self.forget_bias_initializer = forget_bias_initializer
         activation = kwargs.get("activation", "tanh")
         self.activation = activations.get(activation)
-        inner_activation = kwargs.get("inner_activation", "hard_sigmoid")
         self.inner_activation = activations.get(inner_activation)
-        W_regularizer = kwargs.get("W_regularizer", None)
-        U_regularizer = kwargs.get("U_regularizer", None)
-        V_regularizer = kwargs.get("V_regularizer", None)
-        b_regularizer = kwargs.get("b_regularizer", None)
         # Make two deep copies each of W, U and b since regularizers.get() method modifes them!
         W2_regularizer = copy.deepcopy(W_regularizer)
         W3_regularizer = copy.deepcopy(W_regularizer)
@@ -74,6 +80,7 @@ class TreeCompositionLSTM(Recurrent):
         self.dropout_V = kwargs["dropout_V"] if "dropout_V" in kwargs else 0.
         if self.dropout_W:
             self.uses_learning_phase = True
+
         # Pass any remaining arguments of the constructor to the super class' constructor
         super(TreeCompositionLSTM, self).__init__(**kwargs)
         if self.stateful:
@@ -85,16 +92,16 @@ class TreeCompositionLSTM(Recurrent):
                     Ignoring return_sequences=True", RuntimeWarning)
             self.return_sequences = False
 
-    def get_initial_states(self, x):
+    def get_initial_states(self, inputs):
         # The initial buffer is sent into the TreeLSTM as a part of the input.
-        # i.e., x is a concatenation of the transitions and the initial buffer.
+        # i.e., inputs is a concatenation of the transitions and the initial buffer.
         # (batch_size, buffer_limit, output_dim+1)
         # We will now separate the buffer and the transitions and initialize the
         # buffer state of the TreeLSTM with the initial buffer value.
         # The rest of the input is the transitions, which we do not need now.
 
         # Take the buffer out.
-        init_h_for_buffer = x[:, :, 1:]  # (batch_size, buffer_limit, output_dim)
+        init_h_for_buffer = inputs[:, :, 1:]  # (batch_size, buffer_limit, output_dim)
         # Initializing all c as zeros.
         init_c_for_buffer = K.zeros_like(init_h_for_buffer)
 
@@ -104,7 +111,7 @@ class TreeCompositionLSTM(Recurrent):
         # We need a symbolic all zero tensor of size (samples, stack_limit, 2*output_dim) for
         # init_stack The problem is the first dim (samples) is a place holder and not an actual
         # value. So we'll use the following trick
-        temp_state = K.zeros_like(x)  # (samples, buffer_ops_limit, input_dim)
+        temp_state = K.zeros_like(inputs)  # (samples, buffer_ops_limit, input_dim)
         temp_state = K.tile(K.sum(temp_state, axis=(1, 2)),
                             (self.stack_limit, 2*self.output_dim, 1))  # (stack_limit, 2*output_dim, samples)
         init_stack = K.permute_dimensions(temp_state, (2, 0, 1))  # (samples, stack_limit, 2*output_dim)
@@ -145,83 +152,147 @@ class TreeCompositionLSTM(Recurrent):
 
         # The first dims in all weight matrices are k * output_dim because of the recursive nature
         # of treeLSTM
-        if self.consume_less == 'gpu':
+        if self.implementation == 1:
             # Input dimensionality for all W2s is output_dim, and there are 5 W2s: i, fp, fa, u, o
-            self.W2 = self.init((self.output_dim, 5 * self.output_dim), name='{}_W2'.format(self.name))
+            self.W2 = self.add_weight((self.output_dim, 5 * self.output_dim),
+                                      name='{}_W2'.format(self.name), initializer=self.initializer)
             # Input dimensionality for all U2s is output_dim, and there are 5 U2s: i, fp, fa, u, o
-            self.U2 = self.init((self.output_dim, 5 * self.output_dim), name='{}_U2'.format(self.name))
+            self.U2 = self.add_weight((self.output_dim, 5 * self.output_dim),
+                                      name='{}_U2'.format(self.name), initializer=self.initializer)
 
             # Input dimensionality for all W3s is output_dim, and there are 6 W2s: i, fp, fa1, fa2, u, o
-            self.W3 = self.init((self.output_dim, 6 * self.output_dim), name='{}_W3'.format(self.name))
+            self.W3 = self.add_weight((self.output_dim, 6 * self.output_dim),
+                                      name='{}_W3'.format(self.name), initializer=self.initializer)
             # Input dimensionality for all U3s is output_dim, and there are 6 U3s: i, fp, fa1, fa2, u, o
-            self.U3 = self.init((self.output_dim, 6 * self.output_dim), name='{}_U3'.format(self.name))
+            self.U3 = self.add_weight((self.output_dim, 6 * self.output_dim),
+                                      name='{}_U3'.format(self.name), initializer=self.initializer)
             # Input dimensionality for all V3s is output_dim, and there are 6 V3s: i, fp, fa1, fa2, u, o
-            self.V3 = self.init((self.output_dim, 6 * self.output_dim), name='{}_V3'.format(self.name))
+            self.V3 = self.add_weight((self.output_dim, 6 * self.output_dim),
+                                      name='{}_V3'.format(self.name), initializer=self.initializer)
 
             self.b2 = K.variable(np.hstack((np.zeros(self.output_dim),
-                                            K.get_value(self.forget_bias_init(self.output_dim)),
-                                            K.get_value(self.forget_bias_init(self.output_dim)),
+                                            K.get_value(self.add_weight(self.output_dim,
+                                                                        initializer=self.forget_bias_initializer)),
+                                            K.get_value(self.add_weight(self.output_dim,
+                                                                        initializer=self.forget_bias_initializer)),
                                             np.zeros(self.output_dim),
                                             np.zeros(self.output_dim))),
                                  name='{}_b2'.format(self.name))
             self.b3 = K.variable(np.hstack((np.zeros(self.output_dim),
-                                            K.get_value(self.forget_bias_init(self.output_dim)),
-                                            K.get_value(self.forget_bias_init(self.output_dim)),
-                                            K.get_value(self.forget_bias_init(self.output_dim)),
+                                            K.get_value(self.add_weight(self.output_dim,
+                                                                        initializer=self.forget_bias_initializer)),
+                                            K.get_value(self.add_weight(self.output_dim,
+                                                                        initializer=self.forget_bias_initializer)),
+                                            K.get_value(self.add_weight(self.output_dim,
+                                                                        initializer=self.forget_bias_initializer)),
                                             np.zeros(self.output_dim),
                                             np.zeros(self.output_dim))),
                                  name='{}_b3'.format(self.name))
             self.trainable_weights = [self.W2, self.U2, self.W3, self.U3, self.V3, self.b2, self.b3]
         else:
-            self.W2_i = self.init((self.output_dim, self.output_dim), name='{}_W2_i'.format(self.name))
-            self.U2_i = self.init((self.output_dim, self.output_dim), name='{}_U2_i'.format(self.name))
-            self.W3_i = self.init((self.output_dim, self.output_dim), name='{}_W3_i'.format(self.name))
-            self.U3_i = self.init((self.output_dim, self.output_dim), name='{}_U3_i'.format(self.name))
-            self.V3_i = self.init((self.output_dim, self.output_dim), name='{}_V3_i'.format(self.name))
+            self.W2_i = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_W2_i'.format(self.name),
+                                        initializer=self.initializer)
+            self.U2_i = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_U2_i'.format(self.name),
+                                        initializer=self.initializer)
+            self.W3_i = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_W3_i'.format(self.name),
+                                        initializer=self.initializer)
+            self.U3_i = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_U3_i'.format(self.name),
+                                        initializer=self.initializer)
+            self.V3_i = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_V3_i'.format(self.name),
+                                        initializer=self.initializer)
             self.b2_i = K.zeros((self.output_dim,), name='{}_b2_i'.format(self.name))
             self.b3_i = K.zeros((self.output_dim,), name='{}_b3_i'.format(self.name))
 
-            self.W2_fp = self.init((self.output_dim, self.output_dim), name='{}_W2_fp'.format(self.name))
-            self.U2_fp = self.init((self.output_dim, self.output_dim), name='{}_U2_fp'.format(self.name))
-            self.W2_fa = self.init((self.output_dim, self.output_dim), name='{}_W2_fa'.format(self.name))
-            self.U2_fa = self.init((self.output_dim, self.output_dim), name='{}_U2_fa'.format(self.name))
-            self.W3_fp = self.init((self.output_dim, self.output_dim), name='{}_W3_fp'.format(self.name))
-            self.U3_fp = self.init((self.output_dim, self.output_dim), name='{}_U3_fp'.format(self.name))
-            self.V3_fp = self.init((self.output_dim, self.output_dim), name='{}_V3_fp'.format(self.name))
-            self.W3_fa1 = self.init((self.output_dim, self.output_dim), name='{}_W3_fa1'.format(self.name))
-            self.U3_fa1 = self.init((self.output_dim, self.output_dim), name='{}_U3_fa1'.format(self.name))
-            self.V3_fa1 = self.init((self.output_dim, self.output_dim), name='{}_V3_fa1'.format(self.name))
-            self.W3_fa2 = self.init((self.output_dim, self.output_dim), name='{}_W3_fa2'.format(self.name))
-            self.U3_fa2 = self.init((self.output_dim, self.output_dim), name='{}_U3_fa2'.format(self.name))
-            self.V3_fa2 = self.init((self.output_dim, self.output_dim), name='{}_V3_fa2'.format(self.name))
-            self.b2_fp = self.forget_bias_init((self.output_dim,), name='{}_b2_fp'.format(self.name))
-            self.b2_fa = self.forget_bias_init((self.output_dim,), name='{}_b2_fa'.format(self.name))
-            self.b3_fp = self.forget_bias_init((self.output_dim,), name='{}_b3_fp'.format(self.name))
-            self.b3_fa1 = self.forget_bias_init((self.output_dim,), name='{}_b3_fa1'.format(self.name))
-            self.b3_fa2 = self.forget_bias_init((self.output_dim,), name='{}_b3_fa2'.format(self.name))
+            self.W2_fp = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_W2_fp'.format(self.name),
+                                         initializer=self.initializer)
+            self.U2_fp = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_U2_fp'.format(self.name),
+                                         initializer=self.initializer)
+            self.W2_fa = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_W2_fa'.format(self.name),
+                                         initializer=self.initializer)
+            self.U2_fa = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_U2_fa'.format(self.name),
+                                         initializer=self.initializer)
+            self.W3_fp = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_W3_fp'.format(self.name),
+                                         initializer=self.initializer)
+            self.U3_fp = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_U3_fp'.format(self.name),
+                                         initializer=self.initializer)
+            self.V3_fp = self.add_weight((self.output_dim, self.output_dim),
+                                         name='{}_V3_fp'.format(self.name),
+                                         initializer=self.initializer)
+            self.W3_fa1 = self.add_weight((self.output_dim, self.output_dim),
+                                          name='{}_W3_fa1'.format(self.name),
+                                          initializer=self.initializer)
+            self.U3_fa1 = self.add_weight((self.output_dim, self.output_dim),
+                                          name='{}_U3_fa1'.format(self.name),
+                                          initializer=self.initializer)
+            self.V3_fa1 = self.add_weight((self.output_dim, self.output_dim),
+                                          name='{}_V3_fa1'.format(self.name),
+                                          initializer=self.initializer)
+            self.W3_fa2 = self.add_weight((self.output_dim, self.output_dim),
+                                          name='{}_W3_fa2'.format(self.name),
+                                          initializer=self.initializer)
+            self.U3_fa2 = self.add_weight((self.output_dim, self.output_dim),
+                                          name='{}_U3_fa2'.format(self.name),
+                                          initializer=self.initializer)
+            self.V3_fa2 = self.add_weight((self.output_dim, self.output_dim),
+                                          name='{}_V3_fa2'.format(self.name),
+                                          initializer=self.initializer)
+            self.b2_fp = self.add_weight((self.output_dim,), name='{}_b2_fp'.format(self.name),
+                                         initializer=self.forget_bias_initializer)
+            self.b2_fa = self.add_weight((self.output_dim,), name='{}_b2_fa'.format(self.name),
+                                         initializer=self.forget_bias_initializer)
+            self.b3_fp = self.add_weight((self.output_dim,), name='{}_b3_fp'.format(self.name),
+                                         initializer=self.forget_bias_initializer)
+            self.b3_fa1 = self.add_weight((self.output_dim,), name='{}_b3_fa1'.format(self.name),
+                                          initializer=self.forget_bias_initializer)
+            self.b3_fa2 = self.add_weight((self.output_dim,), name='{}_b3_fa2'.format(self.name),
+                                          initializer=self.forget_bias_initializer)
 
-            self.W2_u = self.init((self.output_dim, self.output_dim), name='{}_W2_u'.format(self.name))
-            self.U2_u = self.init((self.output_dim, self.output_dim), name='{}_U2_u'.format(self.name))
-            self.W3_u = self.init((self.output_dim, self.output_dim), name='{}_W3_u'.format(self.name))
-            self.U3_u = self.init((self.output_dim, self.output_dim), name='{}_U3_u'.format(self.name))
-            self.V3_u = self.init((self.output_dim, self.output_dim), name='{}_V3_u'.format(self.name))
+            self.W2_u = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_W2_u'.format(self.name),
+                                        initializer=self.initializer)
+            self.U2_u = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_U2_u'.format(self.name),
+                                        initializer=self.initializer)
+            self.W3_u = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_W3_u'.format(self.name),
+                                        initializer=self.initializer)
+            self.U3_u = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_U3_u'.format(self.name),
+                                        initializer=self.initializer)
+            self.V3_u = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_V3_u'.format(self.name),
+                                        initializer=self.initializer)
             self.b2_u = K.zeros((self.output_dim,), name='{}_b2_u'.format(self.name))
             self.b3_u = K.zeros((self.output_dim,), name='{}_b3_u'.format(self.name))
 
-            self.W2_o = self.init((self.output_dim, self.output_dim), name='{}_W2_o'.format(self.name))
-            self.U2_o = self.init((self.output_dim, self.output_dim), name='{}_U2_o'.format(self.name))
-            self.W3_o = self.init((self.output_dim, self.output_dim), name='{}_W3_o'.format(self.name))
-            self.U3_o = self.init((self.output_dim, self.output_dim), name='{}_U3_o'.format(self.name))
-            self.V3_o = self.init((self.output_dim, self.output_dim), name='{}_V3_o'.format(self.name))
+            self.W2_o = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_W2_o'.format(self.name),
+                                        initializer=self.initializer)
+            self.U2_o = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_U2_o'.format(self.name),
+                                        initializer=self.initializer)
+            self.W3_o = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_W3_o'.format(self.name),
+                                        initializer=self.initializer)
+            self.U3_o = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_U3_o'.format(self.name),
+                                        initializer=self.initializer)
+            self.V3_o = self.add_weight((self.output_dim, self.output_dim),
+                                        name='{}_V3_o'.format(self.name),
+                                        initializer=self.initializer)
             self.b2_o = K.zeros((self.output_dim,), name='{}_b2_o'.format(self.name))
             self.b3_o = K.zeros((self.output_dim,), name='{}_b3_o'.format(self.name))
-
-            self.trainable_weights = [self.W2_i, self.U2_i, self.W3_i, self.U3_i, self.V3_i, self.b2_i, self.b3_i,
-                                      self.W2_fp, self.U2_fp, self.W2_fa, self.U2_fa, self.b2_fp, self.b2_fa,
-                                      self.W3_fp, self.U3_fp, self.V3_fp, self.W3_fa1, self.U3_fa1, self.V3_fa1,
-                                      self.W3_fa2, self.U3_fa2, self.V3_fa2, self.b3_fp, self.b3_fa1, self.b3_fa2,
-                                      self.W2_u, self.U2_u, self.W3_u, self.U3_u, self.V3_u, self.b2_u, self.b3_u,
-                                      self.W2_o, self.U2_o, self.W3_o, self.U3_o, self.V3_o, self.b2_o, self.b3_o]
 
             self.W2 = K.concatenate([self.W2_i, self.W2_fp, self.W2_fa, self.W2_u, self.W2_o])
             self.U2 = K.concatenate([self.U2_i, self.U2_fp, self.U2_fa, self.U2_u, self.U2_o])
@@ -248,10 +319,6 @@ class TreeCompositionLSTM(Recurrent):
             self.b_regularizers[1].set_param(self.b3)
             self.regularizers.extend(self.b_regularizers)
 
-        if self.initial_weights is not None:
-            self.set_weights(self.initial_weights)
-            del self.initial_weights
-
         self.built = True
 
     def _one_arg_compose(self, pred_arg):
@@ -262,7 +329,7 @@ class TreeCompositionLSTM(Recurrent):
         pred_c = pred_arg[:, 1, self.output_dim:]
         arg_h = pred_arg[:, 0, :self.output_dim]
         arg_c = pred_arg[:, 0, self.output_dim:]
-        if self.consume_less == 'gpu':
+        if self.implementation == 1:
             # To optimize for GPU, we would want to make fewer
             # matrix multiplications, but with bigger matrices.
             # So we compute outputs of all gates simultaneously
@@ -319,7 +386,7 @@ class TreeCompositionLSTM(Recurrent):
         arg1_c = pred_args[:, 1, self.output_dim:]
         arg2_h = pred_args[:, 0, :self.output_dim]
         arg2_c = pred_args[:, 0, self.output_dim:]
-        if self.consume_less == 'gpu':
+        if self.implementation == 1:
             z_all_gates = K.dot(pred_h, self.W3) + K.dot(arg1_h, self.U3) + \
                     K.dot(arg2_h, self.V3) + self.b3  # (batch_size, 6*output_dim)
 
@@ -356,19 +423,19 @@ class TreeCompositionLSTM(Recurrent):
 
         return K.expand_dims(K.concatenate([h, c]), 1)
 
-    def step(self, x, states):
+    def step(self, inputs, states):
         # This function is called at each timestep. Before calling this, Keras' rnn
         # dimshuffles the input to have time as the leading dimension, and iterates over
         # it So,
-        # x: (samples, input_dim) = (samples, x_op + <current timestep's buffer input>)
+        # inputs: (samples, input_dim) = (samples, x_op + <current timestep's buffer input>)
         #
         # We do not need the current timestep's buffer input here, since the buffer
-        # state is the one that's relevant. We just want the current op from x.
+        # state is the one that's relevant. We just want the current op from inputs.
 
         buff = states[0] # Current state of buffer
         stack = states[1] # Current state of stack
 
-        step_ops = x[:, 0] #(samples, 1), current ops for all samples.
+        step_ops = inputs[:, 0] #(samples, 1), current ops for all samples.
 
         # We need to make tensors from the ops vectors, one to apply to all dimensions
         # of stack, and the other for the buffer.
@@ -403,7 +470,7 @@ class TreeCompositionLSTM(Recurrent):
 
         return stack_top_h, [buff, stack]
 
-    def get_constants(self, x):
+    def get_constants(self, inputs, training=None):
         # TODO(pradeep): The function in the LSTM implementation produces dropout multipliers
         # to apply on the input if dropout is applied on the weights W and U. Ignoring
         # dropout for now.
@@ -418,11 +485,10 @@ class TreeCompositionLSTM(Recurrent):
         config = {'stack_limit': self.stack_limit,
                   'buffer_ops_limit': self.buffer_ops_limit,
                   'output_dim': self.output_dim,
-                  'init': self.init.__name__,
-                  'inner_init': self.inner_init.__name__,
-                  'forget_bias_init': self.forget_bias_init.__name__,
-                  'activation':self.activation.__name__,
-                  'inner_activation': self.inner_activation.__name__,
+                  'initializer': self.initializer,
+                  'forget_bias_initializer': self.forget_bias_initializer,
+                  'activation': self.activation.__name__,  # pylint: disable=no-member
+                  'inner_activation': self.inner_activation.__name__,  # pylint: disable=no-member
                   'W_regularizer': self.W_regularizers[0].get_config() if self.W_regularizers else None,
                   'U_regularizer': self.U_regularizers[0].get_config() if self.U_regularizers else None,
                   'V_regularizer': self.V_regularizer.get_config() if self.V_regularizer else None,

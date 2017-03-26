@@ -1,11 +1,10 @@
 from typing import Any, Dict
 
-from keras.layers import Dense, Input
+from keras.layers import Dense, Input, TimeDistributed
 from overrides import overrides
 
 from ...common.params import get_choice
 from ...data.instances.sequence_tagging import concrete_instances
-from ...layers.wrappers.time_distributed import TimeDistributed
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 

@@ -8,7 +8,7 @@ class TimeDistributedEmbedding(Embedding):
     the assumption that the input is 2D.
     '''
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if not self.input_length:
             input_length = input_shape[-1]
         else:

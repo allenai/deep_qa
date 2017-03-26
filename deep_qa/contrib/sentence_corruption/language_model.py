@@ -71,14 +71,14 @@ class WordReplacer:
             # i.e. if layer takes a n-dimensional input, TimeDistributed(layer) takes a
             # n+1 dimensional input, where the second dimension is time (or words in the
             # sentence). We need this now because RNN above returns one output per timestep
-            factor_output = TimeDistributed(Dense(output_dim=factor_base,
+            factor_output = TimeDistributed(Dense(units=factor_base,
                                                   activation='softmax',
                                                   name='factor_output_%d' % i))
             model_outputs.append(factor_output(regularized_rnn_out))  # (batch_size, num_words, factor_base)
 
         # We have num_factors number of outputs in the model. So, the effective output shape is
         # [(batch_size, num_words, factor_base)] * num_factors
-        model = Model(input=model_input, output=model_outputs)
+        model = Model(inputs=model_input, outputs=model_outputs)
         model.compile(loss='categorical_crossentropy', optimizer='adam')
         model.summary()
         early_stopping = EarlyStopping()

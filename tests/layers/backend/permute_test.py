@@ -12,8 +12,8 @@ class TestPermuteLayer:
         input_length_1 = 2
         input_length_2 = 1
         input_layer = Input(shape=(input_length_1, input_length_2), dtype='float32')
-        permute_output = Permute(pattern=[0, 2, 1])([input_layer])
-        model = Model(input=[input_layer], output=[permute_output])
+        permute_output = Permute(pattern=[0, 2, 1])(input_layer)
+        model = Model(inputs=[input_layer], outputs=[permute_output])
         input_tensor = numpy.asarray([[[2], [5]], [[-1], [-4]]])
         permute_tensor = model.predict([input_tensor])
         assert permute_tensor.shape == (batch_size, input_length_2, input_length_1)

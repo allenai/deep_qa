@@ -14,7 +14,7 @@ def switch(cond, then_tensor, else_tensor):
     Keras' implementation of K.switch currently uses tensorflow's switch function, which only
     accepts scalar value conditions, rather than boolean tensors which are treated in an
     elementwise function.  This doesn't match with Theano's implementation of switch, but using
-    tensorflow's select, we can exactly retrieve this functionality.
+    tensorflow's where, we can exactly retrieve this functionality.
     """
 
     if K.backend() == 'tensorflow':
@@ -26,7 +26,7 @@ def switch(cond, then_tensor, else_tensor):
             # mask the values along that dimension. Theano broadcasts the value passed along this dimension,
             # but TF does not. Using K.dot() since cond can be a tensor.
             cond = K.dot(tf.cast(cond, tf.float32), tf.ones((1, input_shape[-1])))
-        return tf.select(tf.cast(cond, dtype=tf.bool), then_tensor, else_tensor)
+        return tf.where(tf.cast(cond, dtype=tf.bool), then_tensor, else_tensor)
     else:
         import theano.tensor as T
         return T.switch(cond, then_tensor, else_tensor)
@@ -129,16 +129,16 @@ def hardmax(unnormalized_attention, knowledge_length):
     TODO(matt): we really should have this take an optional mask...
     """
     # (batch_size, knowledge_length)
-    tiled_max_values = K.tile(K.expand_dims(K.max(unnormalized_attention, axis=1)), (1, knowledge_length))
+    max_values = K.max(unnormalized_attention, axis=1, keepdims=True)
+    tiled_max_values = K.tile(max_values, (1, knowledge_length))
     # We now have a matrix where every column in each row has the max knowledge score value from
     # the corresponding row in the unnormalized attention matrix.  Next, we will compare that
     # all-max matrix with the original input, resulting in ones where the column equals max and
     # zero everywhere else.
     # Shape: (batch_size, knowledge_length)
-    bool_max_attention = K.equal(unnormalized_attention, tiled_max_values)
+    max_attention = K.equal(unnormalized_attention, tiled_max_values)
     # Needs to be cast to be compatible with TensorFlow
-    max_attention = K.cast(bool_max_attention, 'float32')
-    return max_attention
+    return K.cast(max_attention, 'float32')
 
 
 def apply_feed_forward(input_tensor, weights, activation):

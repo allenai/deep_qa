@@ -51,7 +51,7 @@ class TestGatedAttentionLayer:
                                              [0.8, 0.1, 0.6, 0.4]]]))
         gated_attention = GatedAttention(gating_function="*")
         result = K.eval(gated_attention([document, question, attention],
-                                        [document_mask]))
+                                        mask=[document_mask]))
         assert_almost_equal(result, numpy.array([[[0.111, 0.068],
                                                   [0.252, 0.256],
                                                   [0.0, 0.0]]]))
@@ -98,7 +98,7 @@ class TestGatedAttentionLayer:
                                              [0.8, 0.1, 0.6, 0.4]]]))
         gated_attention = GatedAttention(gating_function="+")
         result = K.eval(gated_attention([document, question, attention],
-                                        [document_mask]))
+                                        mask=[document_mask]))
         assert_almost_equal(result, numpy.array([[[0.67, 0.78],
                                                   [1.03, 1.48],
                                                   [0.0, 0.0]]]))
@@ -146,7 +146,7 @@ class TestGatedAttentionLayer:
                                              [0.8, 0.1, 0.6, 0.4]]]))
         gated_attention = GatedAttention(gating_function="||")
         result = K.eval(gated_attention([document, question, attention],
-                                        [document_mask]))
+                                        mask=[document_mask]))
         assert_almost_equal(result, numpy.array([[[0.37, 0.68, 0.3, 0.1],
                                                   [0.63, 1.28, 0.4, 0.2],
                                                   [0.0, 0.0, 0.0, 0.0]]]))

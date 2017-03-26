@@ -2,7 +2,6 @@
 from unittest import mock
 
 import numpy
-from numpy.testing import assert_allclose
 
 from deep_qa.common.params import get_choice_with_default
 from deep_qa.layers.encoders import encoders
@@ -114,48 +113,17 @@ class TestTextTrainer(DeepQaTestCase):
         _output_debug_info.side_effect = new_debug
         model.train()
 
-    def test_load_model(self):
-        # train a model and serialize it.
-        args = {
-                'test_files': [self.TEST_FILE],
-                'embedding_dim': {'words': 4, 'characters': 4},
-                'save_models': True,
-                'tokenizer': {'type': 'words and characters'},
-                'show_summary_with_masking_info': True,
-        }
-        self.write_true_false_model_files()
-        model = self.get_model(TrueFalseModel, args)
-        model.train()
-
-        # load the model that we serialized
-        loaded_model = self.get_model(TrueFalseModel, args)
-        loaded_model.load_model()
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
-
     def test_load_model_and_fit(self):
         # train a model and serialize it.
         args = {
                 'test_files': [self.TEST_FILE],
-                'embedding_dim': {'words': 4, 'characters': 4},
+                'embedding_dim': {'words': 4, 'characters': 2},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
         }
         self.write_true_false_model_files()
-        model = self.get_model(TrueFalseModel, args)
-        # train and evaluate on test set.
-        model.train()
-
-        # load the model that we serialized
-        loaded_model = self.get_model(TrueFalseModel, args)
-        loaded_model.load_model()
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
+        model, loaded_model = self.ensure_model_trains_and_loads(TrueFalseModel, args)
 
         # now fit both models on some more data, and ensure that we get the same results.
         self.write_additional_true_false_model_files()

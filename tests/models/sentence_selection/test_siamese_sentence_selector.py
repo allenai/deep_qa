@@ -11,7 +11,7 @@ class TestSiameseSentenceSelector(DeepQaTestCase):
                 "encoder": {
                         "default": {
                                 "type": "gru",
-                                "output_dim": 7
+                                "units": 7
                         }
                 },
                 "embedding_dim": {"words": 5},

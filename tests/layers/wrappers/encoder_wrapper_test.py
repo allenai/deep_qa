@@ -17,10 +17,10 @@ class TestEncoderWrapper(DeepQaTestCase):
         background_input = Input(shape=(3, 3), dtype='int32')
         embedding = TimeDistributedEmbedding(input_dim=3, output_dim=2, mask_zero=True)
         embedded_background = embedding(background_input)
-        encoded_background = EncoderWrapper(BOWEncoder(output_dim=2))(embedded_background)
+        encoded_background = EncoderWrapper(BOWEncoder(units=2))(embedded_background)
 
         mask_output = OutputMask()(encoded_background)
-        model = DeepQaModel(input=[background_input], output=mask_output)
+        model = DeepQaModel(inputs=[background_input], outputs=mask_output)
 
         test_background = numpy.asarray([
                 [

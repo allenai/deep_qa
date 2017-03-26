@@ -1,6 +1,6 @@
 from typing import Any, Dict
 from overrides import overrides
-from keras.layers import Input, Dropout, merge
+from keras.layers import Input, Dropout, Concatenate
 from keras.callbacks import LearningRateScheduler
 
 from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
@@ -157,7 +157,7 @@ class GatedAttentionReader(TextTrainer):
             # (batch size, document length, question length)
             qd_attention = BatchDot()([encoded_document, encoded_question])
             # (batch size, document length, question length)
-            normalized_qd_attention = MaskedSoftmax()([qd_attention])
+            normalized_qd_attention = MaskedSoftmax()(qd_attention)
 
             gated_attention_layer = GatedAttention(self.gating_function,
                                                    name="gated_attention_{}".format(i))
@@ -167,7 +167,7 @@ class GatedAttentionReader(TextTrainer):
                                                         normalized_qd_attention])
             gated_attention_dropout = Dropout(self.gated_attention_dropout)
             # shape: (batch size, document_length, 2*seq2seq hidden size)
-            document_embedding = gated_attention_dropout([document_embedding])
+            document_embedding = gated_attention_dropout(document_embedding)
 
         # Last Layer
         if self.use_qd_common_feature:
@@ -177,8 +177,7 @@ class GatedAttentionReader(TextTrainer):
                                            question_indices])
             # We concatenate qd_common_feature with the document embeddings.
             # shape: (batch size, document_length, (2*seq2seq hidden size) + 2)
-            document_embedding = merge([document_embedding, qd_common_feature],
-                                       mode='concat')
+            document_embedding = Concatenate()([document_embedding, qd_common_feature])
         # We encode the document embeddings with a final seq2seq encoder.
         document_encoder = self._get_seq2seq_encoder(name="document_final")
         # shape: (batch size, document_length, 2*seq2seq hidden size)

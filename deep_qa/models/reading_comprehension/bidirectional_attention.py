@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from keras.layers import Dense, Input, merge
+from keras.layers import Dense, Input, Concatenate, TimeDistributed
 from overrides import overrides
 
 from ...data.instances.character_span_instance import CharacterSpanInstance
@@ -11,7 +11,6 @@ from ...layers.backend.max import Max
 from ...layers.backend.repeat import Repeat
 from ...layers.complex_concat import ComplexConcat
 from ...layers.highway import Highway
-from ...layers.wrappers.time_distributed import TimeDistributed
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 
@@ -167,8 +166,8 @@ class BidirectionalAttentionFlow(TextTrainer):
         # To predict the span word, we pass the merged representation through a Dense layer without
         # output size 1 (basically a dot product of a vector of weights and the passage vectors),
         # then do a softmax to get a position.
-        span_begin_input = merge([final_merged_passage, modeled_passage], mode='concat')
-        span_begin_weights = TimeDistributed(Dense(output_dim=1))(span_begin_input)
+        span_begin_input = Concatenate()([final_merged_passage, modeled_passage])
+        span_begin_weights = TimeDistributed(Dense(units=1))(span_begin_input)
         # Shape: (batch_size, num_passage_words)
         span_begin_probabilities = MaskedSoftmax(name="span_begin_softmax")(span_begin_weights)
 
@@ -189,12 +188,12 @@ class BidirectionalAttentionFlow(TextTrainer):
         final_seq2seq = self._get_seq2seq_encoder(name="final_seq2seq",
                                                   fallback_behavior="use default params")
         span_end_representation = final_seq2seq(span_end_representation)
-        span_end_input = merge([final_merged_passage, span_end_representation], mode='concat')
-        span_end_weights = TimeDistributed(Dense(output_dim=1))(span_end_input)
+        span_end_input = Concatenate()([final_merged_passage, span_end_representation])
+        span_end_weights = TimeDistributed(Dense(units=1))(span_end_input)
         span_end_probabilities = MaskedSoftmax(name="span_end_softmax")(span_end_weights)
 
-        return DeepQaModel(input=[question_input, passage_input],
-                           output=[span_begin_probabilities, span_end_probabilities])
+        return DeepQaModel(inputs=[question_input, passage_input],
+                           outputs=[span_begin_probabilities, span_end_probabilities])
 
     def _instance_type(self):  # pylint: disable=no-self-use
         return CharacterSpanInstance

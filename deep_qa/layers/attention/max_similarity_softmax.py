@@ -1,10 +1,11 @@
 from keras import backend as K
-from keras.engine import Layer
+from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 from ...tensors.masked_operations import masked_batch_dot, masked_softmax
 
 
-class MaxSimilaritySoftmax(Layer):
+class MaxSimilaritySoftmax(MaskedLayer):
     '''
     This layer takes encoded questions and knowledge in a multiple choice setting and computes the
     similarity between each of the question embeddings and the background knowledge, and returns a
@@ -24,14 +25,17 @@ class MaxSimilaritySoftmax(Layer):
         self.max_knowledge_length = max_knowledge_length
         super(MaxSimilaritySoftmax, self).__init__(**kwargs)
 
+    @overrides
     def compute_mask(self, inputs, mask=None):
         # pylint: disable=unused-argument
         return None
 
-    def get_output_shape_for(self, input_shapes):
+    @overrides
+    def compute_output_shape(self, input_shapes):
         # (batch_size, num_options)
         return (input_shapes[0][0], input_shapes[0][1])
 
+    @overrides
     def call(self, inputs, mask=None):
         questions, knowledge = inputs
         question_mask, knowledge_mask = mask

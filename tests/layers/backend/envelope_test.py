@@ -13,7 +13,7 @@ class TestEnvelopeLayer:
         span_begin_input = Input(shape=(sequence_length,), dtype='float32')
         span_end_input = Input(shape=(sequence_length,), dtype='float32')
         envelope = Envelope()([span_begin_input, span_end_input])
-        model = Model(input=[span_begin_input, span_end_input], output=[envelope])
+        model = Model(inputs=[span_begin_input, span_end_input], outputs=[envelope])
         span_begin_tensor = numpy.asarray([[0.01, 0.1, 0.8, 0.05, 0.04]])
         span_end_tensor = numpy.asarray([[0.01, 0.04, 0.05, 0.2, 0.7]])
         envelope_tensor = model.predict([span_begin_tensor, span_end_tensor])

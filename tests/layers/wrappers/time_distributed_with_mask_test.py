@@ -73,7 +73,7 @@ class TestTimeDistributedWithMask(DeepQaTestCase):
 
         time_distributed_output = time_distributed([tuple_input, tuple_input_2])
         mask_output = OutputMask()(time_distributed_output)
-        model = DeepQaModel(input=[tuple_input, tuple_input_2], output=mask_output)
+        model = DeepQaModel(inputs=[tuple_input, tuple_input_2], outputs=mask_output)
         zeros = [0, 0, 0, 0, 0]
         non_zeros = [1, 1, 1, 1, 1]
         # shape: (batch size, num_options, num_tuples, num_slots, num_words), or (1, 2, 3, 4, 5)

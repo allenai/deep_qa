@@ -16,7 +16,7 @@ class TestBOWEncoder:
         encoder = BOWEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
-        model = Model(input=input_layer, output=encoded_input)
+        model = Model(inputs=input_layer, outputs=encoded_input)
         model.compile(loss="mse", optimizer="sgd")  # Will not train this model
         test_input = numpy.asarray([[0, 3, 1, 7, 10]], dtype='int32')
         embedding_weights = embedding.get_weights()[0]  # get_weights returns a list with one element.
@@ -36,7 +36,7 @@ class TestBOWEncoder:
         encoder = BOWEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
-        model = Model(input=input_layer, output=encoded_input)
+        model = Model(inputs=input_layer, outputs=encoded_input)
         model.compile(loss="mse", optimizer="sgd")  # Will not train this model
         test_input = numpy.asarray([[0, 3, 1, 7, 10]], dtype='int32')
         embedding_weights = embedding.get_weights()[0]  # get_weights returns a list with one element.
@@ -56,7 +56,7 @@ class TestBOWEncoder:
         encoder = BOWEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
-        model = Model(input=input_layer, output=encoded_input)
+        model = Model(inputs=input_layer, outputs=encoded_input)
         model.compile(loss="mse", optimizer="sgd")  # Will not train this model
         test_input = numpy.asarray([[0, 0, 0, 0, 0]], dtype='int32')
         # Omitting the first element (0), because that is supposed to be masked in the model.

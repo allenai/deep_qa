@@ -2,15 +2,15 @@ from copy import deepcopy
 from typing import Any, Dict
 
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 from ...common.params import get_choice_with_default
 from ...tensors.masked_operations import masked_softmax
 from ...tensors.similarity_functions import similarity_functions
 
 
-class Attention(Layer):
+class Attention(MaskedLayer):
     '''
     This Layer takes two inputs: a vector and a matrix.  We compute the similarity between the
     vector and each row in the matrix, and then perform a softmax over rows using those computed
@@ -33,7 +33,6 @@ class Attention(Layer):
         default similarity function with no parameters is a simple dot product.
     '''
     def __init__(self, similarity_function: Dict[str, Any]=None, **kwargs):
-        self.supports_masking = True
         super(Attention, self).__init__(**kwargs)
         self.similarity_function_params = deepcopy(similarity_function)
         if similarity_function is None:
@@ -58,15 +57,18 @@ class Attention(Layer):
         return None
 
     @overrides
-    def get_output_shape_for(self, input_shapes):
+    def compute_output_shape(self, input_shapes):
         return (input_shapes[1][0], input_shapes[1][1])
 
     @overrides
     def call(self, inputs, mask=None):
         vector, matrix = inputs
-        matrix_mask = mask[1]
+        if mask is None:
+            matrix_mask = None
+        else:
+            matrix_mask = mask[1]
         num_rows = K.int_shape(matrix)[1]
-        tiled_vector = K.repeat_elements(K.expand_dims(vector, dim=1), num_rows, axis=1)
+        tiled_vector = K.repeat_elements(K.expand_dims(vector, axis=1), num_rows, axis=1)
         similarities = self.similarity_function.compute_similarity(tiled_vector, matrix)
         return masked_softmax(similarities, matrix_mask)
 

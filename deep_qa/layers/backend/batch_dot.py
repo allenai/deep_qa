@@ -1,9 +1,10 @@
 import keras.backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 
-class BatchDot(Layer):
+
+class BatchDot(MaskedLayer):
     """
     This ``Layer`` calls ``K.batch_dot()`` on two inputs ``tensor_a`` and ``tensor_b``.
     This function will work for tensors of arbitrary size as long as
@@ -64,7 +65,7 @@ class BatchDot(Layer):
     >>> import keras.backend as K
     >>> tensor_a = K.ones(shape=(2, 4, 2))
     >>> tensor_b = K.ones(shape=(2, 4, 3, 2))
-    >>> tensor_a_expanded = K.expand_dims(tensor_a, dim=-1)
+    >>> tensor_a_expanded = K.expand_dims(tensor_a, axis=-1)
     >>> unsqueezed_bd = K.batch_dot(tensor_a_expanded, tensor_b, axes=(2,3))
     >>> final_bd = K.squeeze(unsqueezed_bd, axis=K.ndim(tensor_a)-1)
     >>> K.eval(final_bd).shape
@@ -85,7 +86,7 @@ class BatchDot(Layer):
     >>> import keras.backend as K
     >>> tensor_a = K.ones(shape=(2, 3, 4, 2))
     >>> tensor_b = K.ones(shape=(2, 3, 2))
-    >>> tensor_b_expanded = K.expand_dims(tensor_b, dim=-1)
+    >>> tensor_b_expanded = K.expand_dims(tensor_b, axis=-1)
     >>> unsqueezed_bd = K.batch_dot(tensor_a, tensor_b_expanded, axes=(3, 2))
     >>> final_bd = K.squeeze(unsqueezed_bd, axis=K.ndim(tensor_a)-1)
     >>> K.eval(final_bd).shape
@@ -93,7 +94,6 @@ class BatchDot(Layer):
 
     """
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(BatchDot, self).__init__(**kwargs)
 
     @overrides
@@ -115,8 +115,8 @@ class BatchDot(Layer):
         float_mask_b = K.cast(mask_b, "float32")
         if b_dot_axis == a_dot_axis:
             # tensor_a and tensor_b have the same length.
-            float_mask_a = K.expand_dims(float_mask_a, dim=-1)
-            float_mask_b = K.expand_dims(float_mask_b, dim=-1)
+            float_mask_a = K.expand_dims(float_mask_a, axis=-1)
+            float_mask_b = K.expand_dims(float_mask_b, axis=-1)
             final_mask = K.batch_dot(float_mask_a, float_mask_b,
                                      axes=(a_dot_axis, b_dot_axis))
         elif a_dot_axis < b_dot_axis:
@@ -124,19 +124,19 @@ class BatchDot(Layer):
             # We would tile tensor_a to have the same shape as tensor_b,
             # but we can just expand tensor_a and have Theano/TF broadcast
             # over the last dimension
-            float_mask_a = K.expand_dims(float_mask_a, dim=-1)
+            float_mask_a = K.expand_dims(float_mask_a, axis=-1)
             final_mask = float_mask_a * float_mask_b
         else:
             # tensor_a has more dimensions than tensor_b.
             # We would tile tensor_b to have the same shape as tensor_a,
             # but we can just expand tensor_b and have Theano/TF broadcast
             # over the last dimension
-            float_mask_b = K.expand_dims(float_mask_b, dim=-1)
+            float_mask_b = K.expand_dims(float_mask_b, axis=-1)
             final_mask = float_mask_a * float_mask_b
         return final_mask
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         tensor_a_shape, tensor_b_shape = input_shape
         a_dot_axis = len(tensor_a_shape) - 1
         b_dot_axis = len(tensor_b_shape) - 1
@@ -161,8 +161,8 @@ class BatchDot(Layer):
         return tuple(final_out_shape)
 
     @overrides
-    def call(self, x, mask=None):
-        tensor_a, tensor_b = x
+    def call(self, inputs, mask=None):
+        tensor_a, tensor_b = inputs
         if (K.ndim(tensor_a) > 3 or K.ndim(tensor_b) > 3) and K.backend() == 'theano':
             raise RuntimeError("K.batch_dot() in theano is broken for tensors with more than"
                                " three dimensions.  Use tensorflow instead.")
@@ -170,9 +170,9 @@ class BatchDot(Layer):
         a_dot_axis = K.ndim(tensor_a) - 1
         b_dot_axis = K.ndim(tensor_b) - 1
         if a_dot_axis > b_dot_axis:
-            tensor_b = K.expand_dims(tensor_b, dim=-1)
+            tensor_b = K.expand_dims(tensor_b, axis=-1)
         if a_dot_axis < b_dot_axis:
-            tensor_a = K.expand_dims(tensor_a, dim=-1)
+            tensor_a = K.expand_dims(tensor_a, axis=-1)
         a_dot_b = K.batch_dot(tensor_a, tensor_b, axes=(a_dot_axis, b_dot_axis))
         if a_dot_axis != b_dot_axis:
             a_dot_b = K.squeeze(a_dot_b, axis=a_dot_axis)

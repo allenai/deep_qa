@@ -1,10 +1,11 @@
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
+
+from .masked_layer import MaskedLayer
 from ..tensors.backend import l1_normalize
 
 
-class L1Normalize(Layer):
+class L1Normalize(MaskedLayer):
     """
     This Layer normalizes a tensor by its L1 norm. This could just be a
     ``Lambda`` layer that calls our ``tensors.l1_normalize`` function,
@@ -23,7 +24,6 @@ class L1Normalize(Layer):
     """
 
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(L1Normalize, self).__init__(**kwargs)
 
     @overrides
@@ -33,14 +33,14 @@ class L1Normalize(Layer):
         return None
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return (input_shape[0], input_shape[1])
 
     @overrides
-    def call(self, tensor_to_normalize, mask=None):
-        if K.ndim(tensor_to_normalize) == 3:
-            tensor_to_normalize = K.squeeze(tensor_to_normalize, axis=2)
-        if K.ndim(tensor_to_normalize) != 2:
+    def call(self, inputs, mask=None):
+        if K.ndim(inputs) == 3:
+            inputs = K.squeeze(inputs, axis=2)
+        if K.ndim(inputs) != 2:
             raise ValueError("L1Normalize layer only supports inputs of shape "
                              "(batch_size, x) or (batch_size, x, 1)")
-        return l1_normalize(tensor_to_normalize, mask)
+        return l1_normalize(inputs, mask)

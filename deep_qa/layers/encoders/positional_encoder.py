@@ -1,12 +1,14 @@
 from keras import backend as K
 from keras.engine import InputSpec
-from keras.layers import Layer
+from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 from ...tensors.backend import switch
 
-class PositionalEncoder(Layer):
+
+class PositionalEncoder(MaskedLayer):
     '''
-    A Positional Encoder is very similar to a kind of weighted bag of words encoder,
+    A ``PositionalEncoder`` is very similar to a kind of weighted bag of words encoder,
     where the weighting is done by an index-dependent vector, not a scalar. If you think
     this is an odd thing to do, it is. The original authors provide no real reasoning behind
     the exact method other than it takes into account word order. This is here mainly to reproduce
@@ -36,14 +38,16 @@ class PositionalEncoder(Layer):
         self.input_spec = [InputSpec(ndim=3)]
         # For consistency of handling sentence encoders, we will often get passed this parameter.
         # We don't use it, but Layer will complain if it's there, so we get rid of it here.
-        kwargs.pop('output_dim', None)
+        kwargs.pop('units', None)
 
         super(PositionalEncoder, self).__init__(**kwargs)
 
-    def get_output_shape_for(self, input_shape):
+    @overrides
+    def compute_output_shape(self, input_shape):
         return (input_shape[0], input_shape[2])  # removing second dimension
 
-    def call(self, x, mask=None):
+    @overrides
+    def call(self, inputs, mask=None):
         # pylint: disable=redefined-variable-type
 
         def my_keras_cumsum(tensor, axis=0):
@@ -61,15 +65,16 @@ class PositionalEncoder(Layer):
                 return T.cumsum(tensor, axis=axis)
 
         # This section implements the positional encoder on all the vectors at once.
-        # The general idea is to use ones matrices in the shape of x to create indexes per word.
+        # The general idea is to use ones matrices in the shape of `inputs` to create indexes per
+        # word.
 
         if mask is None:
-            ones_like_x = K.ones_like(x)
+            ones_like_x = K.ones_like(inputs)
         else:
             float_mask = K.cast(mask, 'float32')
-            ones_like_x = K.ones_like(x) * K.expand_dims(float_mask, 2)
+            ones_like_x = K.ones_like(inputs) * K.expand_dims(float_mask, 2)
 
-        # This is an odd way to get the number of words(ie the first dimension of x).
+        # This is an odd way to get the number of words(ie the first dimension of inputs).
         # However, if the input is masked, using the dimension directly does not
         # equate to the correct number of words. We fix this by adding up a relevant
         # row of ones which has been masked if required.
@@ -83,15 +88,16 @@ class PositionalEncoder(Layer):
 
             j_index = my_keras_cumsum(ones_like_x, 1) * K.expand_dims(float_mask, 2)
 
-        k_over_d = my_keras_cumsum(ones_like_x, 2) * 1.0/K.cast(K.shape(x)[2], 'float32')
+        k_over_d = my_keras_cumsum(ones_like_x, 2) * 1.0/K.cast(K.shape(inputs)[2], 'float32')
 
         l_weighting_vectors = (ones_like_x - (j_index * one_over_m)) - \
                               (k_over_d * (ones_like_x - 2 * j_index * one_over_m))
 
-        return K.sum(l_weighting_vectors * x, 1)
+        return K.sum(l_weighting_vectors * inputs, 1)
 
-    def compute_mask(self, input, input_mask=None):  # pylint: disable=redefined-builtin
-        # We need to override this method because Layer passes the input mask unchanged since this layer
-        # supports masking. We don't want that. After the input is merged we can stop propagating
-        # the mask.
+    @overrides
+    def compute_mask(self, inputs, mask=None):
+        # We need to override this method because Layer passes the input mask unchanged since this
+        # layer supports masking. We don't want that. After the input is merged we can stop
+        # propagating the mask.
         return None

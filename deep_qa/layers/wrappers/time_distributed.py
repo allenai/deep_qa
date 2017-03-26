@@ -13,7 +13,7 @@ class TimeDistributed(KerasTimeDistributed):
     -----
     If the output shape for TimeDistributed has a final dimension of 1, we essentially sqeeze it,
     reshaping to have one fewer dimension.  That change takes place in the actual ``call`` method as well as
-    the ``get_output_shape_for`` method.
+    the ``compute_output_shape`` method.
     """
     def __init__(self, layer, keep_dims=False, **kwargs):
         self.keep_dims = keep_dims
@@ -41,14 +41,14 @@ class TimeDistributed(KerasTimeDistributed):
         super(KerasTimeDistributed, self).build(input_shape)  # pylint: disable=bad-super-call
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if not isinstance(input_shape, list):
             input_shape = [input_shape]
         child_input_shape = [(shape[0],) + shape[2:] for shape in input_shape]
         timesteps = input_shape[0][1]
         if len(input_shape) == 1:
             child_input_shape = child_input_shape[0]
-        child_output_shape = self.layer.get_output_shape_for(child_input_shape)
+        child_output_shape = self.layer.compute_output_shape(child_input_shape)
         reshaped_shape = (child_output_shape[0], timesteps) + child_output_shape[1:]
         if reshaped_shape[-1] == 1 and not self.keep_dims:
             reshaped_shape = reshaped_shape[:-1]
@@ -90,31 +90,35 @@ class TimeDistributed(KerasTimeDistributed):
         return reshaped_xs, reshaped_masks
 
     @overrides
-    def call(self, x, mask=None):
+    def call(self, inputs, mask=None):
         # Much of this is copied from the Keras 1.0(ish) version of TimeDistributed, though we've
         # modified it quite a bit, to fix the problems mentioned in the docstring and to use better
         # names.
-        if not isinstance(x, list):
-            x = [x]
+        if not isinstance(inputs, list):
+            inputs = [inputs]
             mask = [mask]
-        timesteps = K.int_shape(x[0])[1]
-        input_shape = [K.int_shape(x_i) for x_i in x]
-        if len(x) == 1:
+        else:
+            if mask is None:
+                mask = [None] * len(inputs)
+        timesteps = K.int_shape(inputs[0])[1]
+        input_shape = [K.int_shape(x_i) for x_i in inputs]
+        if len(inputs) == 1:
             input_shape = input_shape[0]
-        first_input_shape = self.input_spec[0].shape
-        if len(x) == 1 and first_input_shape[0]:
+        if len(inputs) == 1 and input_shape[0]:
             # The batch size is passed when defining the layer in some cases (for example if it is
             # stateful).  We respect the input shape in that case and don't reshape the input. This
             # is slower.  K.rnn also expects only a single tensor, so we can't do this if we have
             # multiple inputs.
-            def step(x_i, states):  # pylint: disable=unused-argument
+            inputs = inputs[0]
+            mask = mask[0]
+            def step(x_i, _):
                 output = self.layer.call(x_i)
                 return output, []
-            _, outputs, _ = K.rnn(step, x, mask=mask, input_states=[])
+            _, outputs, _ = K.rnn(step, inputs, mask=mask, initial_states=[])
         else:
-            reshaped_xs, reshaped_masks = self.reshape_inputs_and_masks(x, mask)
+            reshaped_xs, reshaped_masks = self.reshape_inputs_and_masks(inputs, mask)
             outputs = self.layer.call(reshaped_xs, mask=reshaped_masks)
-            output_shape = self.get_output_shape_for(input_shape)
+            output_shape = self.compute_output_shape(input_shape)
             reshaped_shape = (-1, timesteps) + output_shape[2:]
             if reshaped_shape[-1] == 1 and not self.keep_dims:
                 reshaped_shape = reshaped_shape[:-1]
@@ -122,14 +126,14 @@ class TimeDistributed(KerasTimeDistributed):
         return outputs
 
     @overrides
-    def compute_mask(self, input, input_mask=None):  # pylint: disable=redefined-builtin
-        if isinstance(input_mask, list):
-            if not any(input_mask):
+    def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
+        if isinstance(mask, list):
+            if not any(mask):
                 return None
             else:
                 raise RuntimeError("This version of TimeDistributed doesn't handle multiple masked "
                                    "inputs!  Use a subclass of TimeDistributed instead.")
-        return input_mask
+        return mask
 
     @overrides
     def get_config(self):

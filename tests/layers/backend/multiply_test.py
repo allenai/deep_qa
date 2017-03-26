@@ -19,7 +19,7 @@ class TestMultiply:
         masked_input_2 = masking_layer(input_2_layer)
         multiply_output = Multiply()([masked_input_1, masked_input_2])
         multiply_mask = OutputMask()(multiply_output)
-        model = Model(input=[input_1_layer, input_2_layer], output=[multiply_output, multiply_mask])
+        model = Model(inputs=[input_1_layer, input_2_layer], outputs=[multiply_output, multiply_mask])
         input_1_tensor = numpy.asarray([[2, 5, 0, 1, -4],
                                         [-1, 0, -2, -10, -4]])
         input_2_tensor = numpy.asarray([[3, 2, 1, 0, -2],
@@ -42,7 +42,7 @@ class TestMultiply:
         masked_input_2 = masking_layer(input_2_layer)
         multiply_output = Multiply()([masked_input_1, masked_input_2])
         multiply_mask = OutputMask()(multiply_output)
-        model = Model(input=[input_1_layer, input_2_layer], output=[multiply_output, multiply_mask])
+        model = Model(inputs=[input_1_layer, input_2_layer], outputs=[multiply_output, multiply_mask])
         input_1_tensor = numpy.asarray([[[2, 5, 0, 1, -4],
                                          [-1, 0, -2, -10, -4]]])
         input_2_tensor = numpy.asarray([[2, 1]])

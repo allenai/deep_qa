@@ -33,9 +33,8 @@ class Linear(SimilarityFunction):
     @overrides
     def initialize_weights(self, tensor_1_dim: int, tensor_2_dim: int) -> List['K.variable']:
         combined_dim = self._get_combined_dim(tensor_1_dim, tensor_2_dim)
-        self.weight_vector = self.init((combined_dim, 1),
-                                       name='{}_dense'.format(self.name))
-        self.bias = self.init((1,), name='{}_bias'.format(self.name))
+        self.weight_vector = K.variable(self.init((combined_dim, 1)), name=self.name + "_weights")
+        self.bias = K.variable(self.init((1,)), name=self.name + "_bias")
         return [self.weight_vector, self.bias]
 
     @overrides

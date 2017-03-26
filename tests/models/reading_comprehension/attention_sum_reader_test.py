@@ -11,14 +11,14 @@ class TestAttentionSumReader(DeepQaTestCase):
                 "encoder": {
                         "default": {
                                 "type": "bi_gru",
-                                "output_dim": 7
+                                "units": 7
                         }
                 },
                 "seq2seq_encoder": {
                         "default": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 7
+                                        "units": 7
                                 },
                                 "wrapper_params": {}
                         }

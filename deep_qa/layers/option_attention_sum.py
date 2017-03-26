@@ -1,10 +1,12 @@
 from keras import backend as K
-from keras.layers import Layer
+from overrides import overrides
+
+from .masked_layer import MaskedLayer
 from ..common.checks import ConfigurationError
 from ..tensors.backend import switch
 
 
-class OptionAttentionSum(Layer):
+class OptionAttentionSum(MaskedLayer):
     """
     This Layer takes three inputs: a tensor of document indices, a tensor of
     document probabilities, and a tensor of answer options. In addition, it takes a
@@ -40,17 +42,19 @@ class OptionAttentionSum(Layer):
             raise ConfigurationError("multiword_option_mode must be 'mean' or "
                                      "'sum', got {}.".format(multiword_option_mode))
         self.multiword_option_mode = multiword_option_mode
-        self.supports_masking = True
         super(OptionAttentionSum, self).__init__(**kwargs)
 
-    def get_output_shape_for(self, input_shapes):
+    @overrides
+    def compute_output_shape(self, input_shapes):
         return (input_shapes[2][0], input_shapes[2][1])
 
-    def compute_mask(self, inputs, input_mask=None):  # pylint: disable=unused-argument
+    @overrides
+    def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
         options = inputs[2]
         padding_mask = K.not_equal(options, K.zeros_like(options))
         return K.cast(K.any(padding_mask, axis=2), "float32")
 
+    @overrides
     def call(self, inputs, mask=None):
         """
         Calculate the probability of each answer option.
@@ -136,6 +140,7 @@ class OptionAttentionSum(Layer):
         option_probabilities = sum_option_words_probabilities / divisor
         return option_probabilities
 
+    @overrides
     def get_config(self):
         config = {'multiword_option_mode': self.multiword_option_mode}
         base_config = super(OptionAttentionSum, self).get_config()

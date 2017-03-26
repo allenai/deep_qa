@@ -61,11 +61,11 @@ class QuestionAnswerSimilarity(TextTrainer):
         # Then we pass the question through some hidden (dense) layers.
         hidden_input = regularized_encoded_question
         for i in range(self.num_hidden_layers):
-            hidden_layer = Dense(output_dim=self.hidden_layer_width,
+            hidden_layer = Dense(units=self.hidden_layer_width,
                                  activation=self.hidden_layer_activation,
                                  name='question_hidden_layer_%d' % i)
             hidden_input = hidden_layer(hidden_input)
-        projection_layer = Dense(output_dim=K.int_shape(encoded_answers)[-1],
+        projection_layer = Dense(units=K.int_shape(encoded_answers)[-1],
                                  activation='linear',
                                  name='question_projection')
         projected_input = projection_layer(hidden_input)

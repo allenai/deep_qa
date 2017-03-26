@@ -1,13 +1,13 @@
 from typing import List, Tuple
 
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from .masked_layer import MaskedLayer
 from ..common.checks import ConfigurationError
 
 
-class ComplexConcat(Layer):
+class ComplexConcat(MaskedLayer):
     """
     This ``Layer`` does ``K.concatenate()`` on a collection of tensors, but
     allows for more complex operations than ``Merge(mode='concat')``.
@@ -43,7 +43,6 @@ class ComplexConcat(Layer):
         and ``"1,2,1*2"``.
     """
     def __init__(self, combination: str, axis: int=-1, **kwargs):
-        self.supports_masking = True
         self.axis = axis
         self.combination = combination
         self.combinations = self.combination.split(",")
@@ -56,7 +55,7 @@ class ComplexConcat(Layer):
         return mask[0]
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if not isinstance(input_shape, list):
             raise ConfigurationError("ComplexConcat input must be a list")
         output_shape = list(input_shape[0])
@@ -108,6 +107,7 @@ class ComplexConcat(Layer):
                 raise ConfigurationError("Cannot combine two tensors with different shapes!")
             return first_length
 
+    @overrides
     def get_config(self):
         config = {"combination": self.combination,
                   "axis": self.axis,

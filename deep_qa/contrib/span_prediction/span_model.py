@@ -312,14 +312,14 @@ def main():
     # extra neural layer.
     if args.neural:
         n_latent = 5
-        model.add(Dense(output_dim=n_latent, input_dim=n_features, activation='tanh',
+        model.add(Dense(units=n_latent, input_dim=n_features, activation='tanh',
                         W_regularizer=WeightRegularizer(l1=regul)))
-        model.add(Dense(output_dim=1, input_dim=n_latent, activation='sigmoid',
+        model.add(Dense(units=1, input_dim=n_latent, activation='sigmoid',
                         W_regularizer=WeightRegularizer(l1=regul)))
 
     # sigmoid model
     if not args.neural:
-        model.add(Dense(output_dim=1, input_dim=n_features, activation='sigmoid',
+        model.add(Dense(units=1, input_dim=n_features, activation='sigmoid',
                         W_regularizer=WeightRegularizer(l2=regul)))
 
 

@@ -112,7 +112,7 @@ class SoftmaxMemoryNetwork(MemoryNetwork):
             memory_updater = self._get_memory_updater(i)
             current_memory = memory_updater(updater_input)
 
-        final_softmax = Dense(output_dim=self.num_options, activation='softmax', name='final_softmax')
+        final_softmax = Dense(units=self.num_options, activation='softmax', name='final_softmax')
         output = final_softmax(current_memory)
 
         input_layers = [question_input, knowledge_input]

@@ -5,7 +5,7 @@ from keras.layers import Input, Dense, Dropout, merge
 from keras.regularizers import l2
 
 from ...data.instances.logical_form_instance import LogicalFormInstance
-from ...layers.encoders.tree_composition_lstm import TreeCompositionLSTM
+from ..layers.tree_composition_lstm import TreeCompositionLSTM
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 
@@ -52,7 +52,7 @@ class TreeLSTMModel(TextTrainer):
 
         # Step 4: Pass the sequences of word vectors through TreeLSTM.
         lstm_layer = TreeCompositionLSTM(stack_limit=stack_limit, buffer_ops_limit=buffer_ops_limit,
-                                         output_dim=self.embedding_dim['words'],
+                                         units=self.embedding_dim['words'],
                                          W_regularizer=l2(0.01), U_regularizer=l2(0.01),
                                          V_regularizer=l2(0.01), b_regularizer=l2(0.01),
                                          name='treelstm')

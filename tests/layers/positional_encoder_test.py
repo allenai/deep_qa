@@ -23,7 +23,7 @@ class TestPositionalEncoder:
         encoder = PositionalEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
-        model = Model(input=input_layer, output=encoded_input)
+        model = Model(inputs=input_layer, outputs=encoded_input)
         model.compile(loss="mse", optimizer="sgd")
 
         test_input = np.asarray([[1, 2, 3]])
@@ -49,7 +49,7 @@ class TestPositionalEncoder:
         encoder = PositionalEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
-        model = Model(input=input_layer, output=encoded_input)
+        model = Model(inputs=input_layer, outputs=encoded_input)
         model.compile(loss="mse", optimizer="sgd")
 
         test_input = np.asarray([[0, 1, 2, 3, 0]])
@@ -74,7 +74,7 @@ class TestPositionalEncoder:
         encoder = PositionalEncoder()
         embedded_input = embedding(input_layer)
         encoded_input = encoder(embedded_input)
-        model = Model(input=input_layer, output=encoded_input)
+        model = Model(inputs=input_layer, outputs=encoded_input)
         model.compile(loss="mse", optimizer="sgd")
 
         test_input = np.asarray([[0, 0, 0, 0, 0]])

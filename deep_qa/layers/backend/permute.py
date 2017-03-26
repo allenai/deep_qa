@@ -1,15 +1,16 @@
 from typing import Tuple
 
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 
-class Permute(Layer):
+
+class Permute(MaskedLayer):
     """
-    This `Layer` calls `K.permute_dimensions` on both the input and the mask.
+    This ``Layer`` calls ``K.permute_dimensions`` on both the input and the mask.
 
-    If the mask is not `None`, it must have the same shape as the input.
+    If the mask is not ``None``, it must have the same shape as the input.
 
     Input:
         - A tensor of arbitrary shape.
@@ -18,7 +19,6 @@ class Permute(Layer):
         - A tensor with permuted dimensions.
     """
     def __init__(self, pattern: Tuple[int], **kwargs):
-        self.supports_masking = True
         self.pattern = pattern
         super(Permute, self).__init__(**kwargs)
 
@@ -30,9 +30,9 @@ class Permute(Layer):
         return K.permute_dimensions(mask, self.pattern)
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return tuple([input_shape[i] for i in self.pattern])
 
     @overrides
-    def call(self, x, mask=None):
-        return K.permute_dimensions(x, pattern=self.pattern)
+    def call(self, inputs, mask=None):
+        return K.permute_dimensions(inputs, pattern=self.pattern)

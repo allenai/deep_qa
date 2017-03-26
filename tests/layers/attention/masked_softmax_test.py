@@ -13,7 +13,7 @@ class TestMaskedSoftmaxLayer:
         num_options = 4
         options_input = Input(shape=(num_options,), dtype='float32')
         softmax_result = MaskedSoftmax()(options_input)
-        model = Model(input=[options_input], output=[softmax_result])
+        model = Model(inputs=[options_input], outputs=[softmax_result])
         options_tensor = numpy.asarray([[2, 4, 0, 1]])
         softmax_tensor = model.predict([options_tensor])
         assert softmax_tensor.shape == (batch_size, num_options)
@@ -28,7 +28,7 @@ class TestMaskedSoftmaxLayer:
         num_options = 4
         options_input = Input(shape=(length_1, length_2, num_options,), dtype='float32')
         softmax_result = MaskedSoftmax()(options_input)
-        model = Model(input=[options_input], output=[softmax_result])
+        model = Model(inputs=[options_input], outputs=[softmax_result])
         options_tensor = numpy.zeros((batch_size, length_1, length_2, num_options))
         for i in range(length_1):
             for j in range(length_2):

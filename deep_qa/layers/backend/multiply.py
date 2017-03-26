@@ -1,9 +1,10 @@
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 
-class Multiply(Layer):
+
+class Multiply(MaskedLayer):
     """
     This ``Layer`` performs elementwise multiplication between two tensors, supporting masking.  We
     literally just call ``tensor_1 * tensor_2``; the only reason this is a ``Layer`` is so that we
@@ -22,7 +23,6 @@ class Multiply(Layer):
         - ``tensor_1 * tensor_2``.
     """
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(Multiply, self).__init__(**kwargs)
 
     @overrides
@@ -38,12 +38,12 @@ class Multiply(Layer):
         return K.cast(tensor_1_mask, 'uint8') * K.cast(tensor_2_mask, 'uint8')
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return input_shape[0]
 
     @overrides
-    def call(self, x, mask=None):
-        tensor_1, tensor_2 = x
+    def call(self, inputs, mask=None):
+        tensor_1, tensor_2 = inputs
         tensor_1, tensor_2 = self.expand_dims_if_necessary(tensor_1, tensor_2)
         return tensor_1 * tensor_2
 

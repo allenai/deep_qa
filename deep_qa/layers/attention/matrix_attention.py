@@ -2,14 +2,14 @@ from copy import deepcopy
 from typing import Any, Dict
 
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 from ...common.params import get_choice_with_default
 from ...tensors.similarity_functions import similarity_functions
 
 
-class MatrixAttention(Layer):
+class MatrixAttention(MaskedLayer):
     '''
     This ``Layer`` takes two matrices as input and returns a matrix of attentions.
 
@@ -42,7 +42,6 @@ class MatrixAttention(Layer):
         default similarity function with no parameters is a simple dot product.
     '''
     def __init__(self, similarity_function: Dict[str, Any]=None, **kwargs):
-        self.supports_masking = True
         super(MatrixAttention, self).__init__(**kwargs)
         self.similarity_function_params = deepcopy(similarity_function)
         if similarity_function is None:
@@ -71,12 +70,12 @@ class MatrixAttention(Layer):
         if mask_2 is None:
             mask_2 = K.ones_like(K.sum(inputs[1], axis=-1))
         # Theano can't do batch_dot on ints, so we need to cast to float and then back.
-        mask_1 = K.cast(K.expand_dims(mask_1, dim=2), 'float32')
-        mask_2 = K.cast(K.expand_dims(mask_2, dim=1), 'float32')
+        mask_1 = K.cast(K.expand_dims(mask_1, axis=2), 'float32')
+        mask_2 = K.cast(K.expand_dims(mask_2, axis=1), 'float32')
         return K.cast(K.batch_dot(mask_1, mask_2), 'uint8')
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return (input_shape[0][0], input_shape[0][1], input_shape[1][1])
 
     @overrides
@@ -90,8 +89,8 @@ class MatrixAttention(Layer):
         matrix_2_shape = K.int_shape(matrix_2)
         num_rows_1 = matrix_1_shape[1]
         num_rows_2 = matrix_2_shape[1]
-        tiled_matrix_1 = K.repeat_elements(K.expand_dims(matrix_1, dim=2), num_rows_2, axis=2)
-        tiled_matrix_2 = K.repeat_elements(K.expand_dims(matrix_2, dim=1), num_rows_1, axis=1)
+        tiled_matrix_1 = K.repeat_elements(K.expand_dims(matrix_1, axis=2), num_rows_2, axis=2)
+        tiled_matrix_2 = K.repeat_elements(K.expand_dims(matrix_2, axis=1), num_rows_1, axis=1)
 
         # We need to be able to access K.int_shape() in compute_similarity() below, but in theano,
         # calling a backend function makes it so you can't use K.int_shape() anymore.  Setting

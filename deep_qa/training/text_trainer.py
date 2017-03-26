@@ -4,7 +4,7 @@ import logging
 import dill as pickle
 
 from keras import backend as K
-from keras.layers import Dense, Dropout, Input, Layer
+from keras.layers import Dense, Dropout, Input, Layer, TimeDistributed
 from overrides import overrides
 import numpy
 
@@ -18,7 +18,6 @@ from ..data.tokenizers import tokenizers
 from ..data.data_indexer import DataIndexer
 from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
 from ..layers.time_distributed_embedding import TimeDistributedEmbedding
-from ..layers.wrappers.time_distributed import TimeDistributed
 from .models import DeepQaModel
 from .trainer import Trainer
 
@@ -403,7 +402,7 @@ class TextTrainer(Trainer):
                     name=name)
         projection_layer = None
         if self.project_embeddings:
-            projection_layer = TimeDistributed(Dense(output_dim=embedding_dim,),
+            projection_layer = TimeDistributed(Dense(units=embedding_dim,),
                                                name=name + '_projection')
         return embedding_layer, projection_layer
 
@@ -469,7 +468,7 @@ class TextTrainer(Trainer):
     def _get_new_encoder(self, params: Dict[str, Any], name: str):
         encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
         params["name"] = name
-        params.setdefault("output_dim", self.embedding_dim['words'])
+        params.setdefault("units", self.embedding_dim['words'])
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
@@ -542,7 +541,7 @@ class TextTrainer(Trainer):
         seq2seq_encoder_type = get_choice_with_default(encoder_params,
                                                        "type",
                                                        list(seq2seq_encoders.keys()))
-        encoder_params.setdefault("output_dim", self.embedding_dim['words'])
+        encoder_params.setdefault("units", self.embedding_dim['words'])
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)
 
@@ -600,15 +599,10 @@ class TextTrainer(Trainer):
     @classmethod
     def _get_custom_objects(cls):
         custom_objects = super(TextTrainer, cls)._get_custom_objects()
+        custom_objects["TimeDistributedEmbedding"] = TimeDistributedEmbedding
         for value in encoders.values():
             if value.__name__ not in ['LSTM']:
                 custom_objects[value.__name__] = value
-        custom_objects["TimeDistributedEmbedding"] = TimeDistributedEmbedding
-
-        # These are used in the words_and_characters tokenizer.
-        # TODO(nelson/matt): We might consider making the Tokenizer API
-        # return custom objects.
-        custom_objects["TimeDistributed"] = TimeDistributed
-        from ..layers.vector_matrix_split import VectorMatrixSplit
-        custom_objects["VectorMatrixSplit"] = VectorMatrixSplit
+        for name, layer in TextInstance.tokenizer.get_custom_objects().items():
+            custom_objects[name] = layer
         return custom_objects

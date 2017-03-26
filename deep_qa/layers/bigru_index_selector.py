@@ -1,9 +1,11 @@
 from keras import backend as K
-from keras.layers import Layer
+from overrides import overrides
+
+from .masked_layer import MaskedLayer
 from ..tensors.backend import switch
 
 
-class BiGRUIndexSelector(Layer):
+class BiGRUIndexSelector(MaskedLayer):
     """
     This Layer takes 3 inputs: a tensor of document indices, the seq2seq GRU output
     over the document feeding it in forward, the seq2seq GRU output over the document
@@ -24,16 +26,18 @@ class BiGRUIndexSelector(Layer):
         The word index to extract the forward and backward GRU output from.
     """
     def __init__(self, target_index, **kwargs):
-        self.supports_masking = True
         self.target_index = target_index
         super(BiGRUIndexSelector, self).__init__(**kwargs)
 
-    def get_output_shape_for(self, input_shapes):
+    @overrides
+    def compute_output_shape(self, input_shapes):
         return (input_shapes[1][0], input_shapes[1][2]*2)
 
-    def compute_mask(self, inputs, input_mask=None):  # pylint: disable=unused-argument
+    @overrides
+    def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
         return None
 
+    @overrides
     def call(self, inputs, mask=None):
         """
         Extract the GRU output for the target document index for the forward
@@ -48,7 +52,7 @@ class BiGRUIndexSelector(Layer):
         # TODO(nelson): deal with case where cloze token appears multiple times
         # in a question.
         word_indices, gru_f, gru_b = inputs
-        index_mask = K.cast(K.equal((K.ones_like(word_indices)*self.target_index),
+        index_mask = K.cast(K.equal((K.ones_like(word_indices) * self.target_index),
                                     word_indices), "float32")
         gru_mask = K.repeat_elements(K.expand_dims(index_mask, -1), K.int_shape(gru_f)[-1], K.ndim(gru_f) - 1)
         masked_gru_f = switch(gru_mask, gru_f, K.zeros_like(gru_f))
@@ -58,6 +62,7 @@ class BiGRUIndexSelector(Layer):
         selected_bigru = K.concatenate([selected_gru_f, selected_gru_b], axis=-1)
         return selected_bigru
 
+    @overrides
     def get_config(self):
         config = {'target_index': self.target_index}
         base_config = super(BiGRUIndexSelector, self).get_config()

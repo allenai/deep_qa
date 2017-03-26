@@ -26,8 +26,8 @@ class TestTupleAlignment:
         embedded_knowledge = embedding(knowledge_input_layer)
         entailment_layer = MultipleChoiceTupleEntailment({})
         entailment_scores = entailment_layer([embedded_knowledge, embedded_question, embedded_answer])
-        model = Model(input=[knowledge_input_layer, question_input_layer, answer_input_layer],
-                      output=entailment_scores)
+        model = Model(inputs=[knowledge_input_layer, question_input_layer, answer_input_layer],
+                      outputs=entailment_scores)
         model.compile(loss="mse", optimizer="sgd")  # Will not train this model
         knowledge_input = numpy.random.randint(0, vocabulary_size, (batch_size, num_tuples, tuple_size))
         question_input = numpy.random.randint(0, vocabulary_size, (batch_size, question_length))

@@ -128,9 +128,9 @@ class SnliAttentionPretrainer(TextPretrainer):
         text_encoding = sentence_encoder(embedded_text)
         hypothesis_encoding = sentence_encoder(embedded_hypothesis)
 
-        merge_mode = lambda x: K.concatenate([K.expand_dims(x[0], dim=1),
-                                              K.expand_dims(x[1], dim=1),
-                                              K.expand_dims(x[2], dim=1)],
+        merge_mode = lambda x: K.concatenate([K.expand_dims(x[0], axis=1),
+                                              K.expand_dims(x[1], axis=1),
+                                              K.expand_dims(x[2], axis=1)],
                                              axis=1)
         merged_encoded_rep = merge([hypothesis_encoding, hypothesis_encoding, text_encoding],
                                    mode=merge_mode,

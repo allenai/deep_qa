@@ -1,15 +1,16 @@
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 
-class AddMask(Layer):
+
+class AddMask(MaskedLayer):
     """
     This ``Layer`` adds a mask to a tensor.  It is intended solely for testing, though if you have
     a use case for this outside of testing, feel free to use it.  The ``call()`` method just
-    returns the inputs, and the ``compute_mask`` method calls ``K.not_equal(x, mask_value)``, and
-    that's it.  This is different from Keras' ``Masking`` layer, which assumes higher-order input
-    and does a ``K.any()`` call in ``compute_mask``.
+    returns the inputs, and the ``compute_mask`` method calls ``K.not_equal(inputs, mask_value)``,
+    and that's it.  This is different from Keras' ``Masking`` layer, which assumes higher-order
+    input and does a ``K.any()`` call in ``compute_mask``.
 
     Input:
         - tensor: a tensor of arbitrary shape
@@ -32,15 +33,15 @@ class AddMask(Layer):
         return K.cast(K.not_equal(inputs, self.mask_value), 'uint8')
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return input_shape
 
     @overrides
-    def call(self, x, mask=None):
-        # It turns out that Keras doesn't like it if you just return x, so we need to return a
+    def call(self, inputs, mask=None):
+        # It turns out that Keras doesn't like it if you just return inputs, so we need to return a
         # different tensor object.  Just doing a cast apparently doesn't work, either, so we'll
         # add 0.
-        return x + 0.0
+        return inputs + 0.0
 
     @overrides
     def get_config(self):

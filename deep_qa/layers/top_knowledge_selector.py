@@ -1,17 +1,19 @@
-from keras.engine import Layer
+from overrides import overrides
+
+from .masked_layer import MaskedLayer
 
 
-class TopKnowledgeSelector(Layer):
+class TopKnowledgeSelector(MaskedLayer):
     '''
     Takes the embedding of (masked) knowledge, and returns the embedding of just the first sentence
     in knowledge.  We need this because DecomposableAttentionEntailment works with only one premise
     for now. We also assume here that the sentences in knowledge are sorted by their relevance.
     '''
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(TopKnowledgeSelector, self).__init__(**kwargs)
 
-    def compute_mask(self, x, mask=None):
+    @overrides
+    def compute_mask(self, inputs, mask=None):
         # pylint: disable=unused-argument
         if mask is None:
             return None
@@ -32,9 +34,11 @@ class TopKnowledgeSelector(Layer):
         mask_shape = (input_shape[0], input_shape[2])
         return mask_shape
 
-    def get_output_shape_for(self, input_shape):
+    @overrides
+    def compute_output_shape(self, input_shape):
         # input_shape is (batch_size, knowledge_length, sentence_length, embed_dim)
         return (input_shape[0], input_shape[2], input_shape[3])
 
-    def call(self, x, mask=None):
-        return x[:, 0, :, :]  # (batch_size, sentence_length, embed_dim)
+    @overrides
+    def call(self, inputs, mask=None):
+        return inputs[:, 0, :, :]  # (batch_size, sentence_length, embed_dim)

@@ -104,13 +104,13 @@ class AttentionPretrainer(TextPretrainer):
         encoded_sentence = sentence_encoder(sentence_embedding)  # (samples, word_dim)
         encoded_background = background_encoder(background_embedding)  # (samples, background_len, word_dim)
 
-        merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], dim=1),
-                                                       K.expand_dims(layer_outs[1], dim=1),
+        merge_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], axis=1),
+                                                       K.expand_dims(layer_outs[1], axis=1),
                                                        layer_outs[2]],
                                                       axis=1)
         def merge_mask(mask_outs):
-            return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), dim=1),
-                                  K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), dim=1),
+            return K.concatenate([K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), axis=1),
+                                  K.expand_dims(K.zeros_like(mask_outs[2][:, 0]), axis=1),
                                   mask_outs[2]],
                                  axis=1)
 

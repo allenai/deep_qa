@@ -16,7 +16,7 @@ class TestVectorMatrixSplit:
         sentence_input = Input(shape=(sentence_length, word_length), dtype='int32')
         split_layer = VectorMatrixSplit(split_axis=2)
         words, characters = split_layer(sentence_input)
-        model = Model(input=[sentence_input], output=[words, characters])
+        model = Model(inputs=[sentence_input], outputs=[words, characters])
         sentence_tensor = numpy.random.randint(0, vocabulary_size, (num_sentences, sentence_length, word_length))
         word_tensor, character_tensor = model.predict([sentence_tensor])
         assert numpy.array_equal(word_tensor, sentence_tensor[:, :, 0])
@@ -30,7 +30,7 @@ class TestVectorMatrixSplit:
         sentence_input = Input(shape=(sentence_length, word_length), dtype='int32')
         split_layer = VectorMatrixSplit(split_axis=-1)
         words, characters = split_layer(sentence_input)
-        model = Model(input=[sentence_input], output=[words, characters])
+        model = Model(inputs=[sentence_input], outputs=[words, characters])
         sentence_tensor = numpy.random.randint(0, vocabulary_size, (num_sentences, sentence_length, word_length))
         word_tensor, character_tensor = model.predict([sentence_tensor])
         assert numpy.array_equal(word_tensor, sentence_tensor[:, :, 0])
@@ -53,7 +53,7 @@ class TestVectorMatrixSplit:
         word_mask = OutputMask()(words)
         character_mask = OutputMask()(characters)
         outputs = [embedded_sentence, words, characters, sentence_mask, word_mask, character_mask]
-        model = Model(input=[sentence_input], output=outputs)
+        model = Model(inputs=[sentence_input], outputs=outputs)
         sentence_tensor = numpy.random.randint(0, vocabulary_size, (num_sentences, sentence_length, word_length))
         actual_outputs = model.predict([sentence_tensor])
         sentence_tensor, word_tensor, character_tensor, sentence_mask, word_mask, character_mask = actual_outputs

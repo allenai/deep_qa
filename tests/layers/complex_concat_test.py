@@ -16,7 +16,7 @@ class TestComplexConcatLayer:
         input_4 = Input(shape=input_shape[1:], dtype='float32')
         inputs = [input_1, input_2, input_3, input_4]
         concatenated = ComplexConcat(combination='1,2,3,4')(inputs)
-        model = Model(input=inputs, output=[concatenated])
+        model = Model(inputs=inputs, outputs=[concatenated])
         input_1_tensor = numpy.random.rand(*input_shape)
         input_2_tensor = numpy.random.rand(*input_shape)
         input_3_tensor = numpy.random.rand(*input_shape)
@@ -35,7 +35,7 @@ class TestComplexConcatLayer:
         input_4 = Input(shape=input_shape[1:], dtype='float32')
         inputs = [input_1, input_2, input_3, input_4]
         concatenated = ComplexConcat(combination='1-2,2*4,3/1,4+3,3', axis=1)(inputs)
-        model = Model(input=inputs, output=[concatenated])
+        model = Model(inputs=inputs, outputs=[concatenated])
         input_1_tensor = numpy.random.rand(*input_shape)
         input_2_tensor = numpy.random.rand(*input_shape)
         input_3_tensor = numpy.random.rand(*input_shape)

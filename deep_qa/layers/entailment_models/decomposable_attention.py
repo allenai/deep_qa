@@ -1,7 +1,8 @@
 from typing import Any, Dict
 
 from keras import backend as K
-from keras import initializations, activations
+from keras import activations
+from overrides import overrides
 
 from .word_alignment import WordAlignmentEntailment
 from ...tensors.backend import switch, apply_feed_forward
@@ -36,7 +37,7 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
         self.final_activation = params.pop('final_activation', 'softmax')
         self.output_dim = 2 if self.final_activation == 'softmax' else 1
-        self.init = initializations.get(params.pop('init', 'uniform'))
+        self.initializer = params.pop('initializer', 'uniform')
         self.premise_length = None
         self.hypothesis_length = None
         # Making the name end with 'softmax' to let debug handle this layer's output correctly.
@@ -48,6 +49,7 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         self.scorer = None
         super(DecomposableAttentionEntailment, self).__init__(params)
 
+    @overrides
     def build(self, input_shape):
         '''
         This model has three feed forward NNs (F, G and H in the paper). We assume that all three
@@ -72,41 +74,49 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         compare_input_dim = 2 * self.input_dim
         aggregate_input_dim = self.hidden_layer_width * 2
         for i in range(self.num_hidden_layers):
-            self.attend_weights.append(self.init((attend_input_dim, self.hidden_layer_width),
-                                                 name='%s_attend_%d' % (self.name, i)))
-            self.compare_weights.append(self.init((compare_input_dim, self.hidden_layer_width),
-                                                  name='%s_compare_%d' % (self.name, i)))
-            self.aggregate_weights.append(self.init((aggregate_input_dim, self.hidden_layer_width),
-                                                    name='%s_aggregate_%d' % (self.name, i)))
+            self.attend_weights.append(self.add_weight((attend_input_dim, self.hidden_layer_width),
+                                                       name='%s_attend_%d' % (self.name, i),
+                                                       initializer=self.initializer))
+            self.compare_weights.append(self.add_weight((compare_input_dim, self.hidden_layer_width),
+                                                        name='%s_compare_%d' % (self.name, i),
+                                                        initializer=self.initializer))
+            self.aggregate_weights.append(self.add_weight((aggregate_input_dim, self.hidden_layer_width),
+                                                          name='%s_aggregate_%d' % (self.name, i),
+                                                          initializer=self.initializer))
             attend_input_dim = self.hidden_layer_width
             compare_input_dim = self.hidden_layer_width
             aggregate_input_dim = self.hidden_layer_width
         self.trainable_weights = self.attend_weights + self.compare_weights + self.aggregate_weights
-        self.scorer = self.init((self.hidden_layer_width, self.output_dim), name='%s_score' % self.name)
+        self.scorer = self.add_weight((self.hidden_layer_width, self.output_dim),
+                                      initializer=self.initializer,
+                                      name='%s_score' % self.name)
         self.trainable_weights.append(self.scorer)
 
-    def get_output_shape_for(self, input_shape):
+    @overrides
+    def compute_output_shape(self, input_shape):
         # (batch_size, 2)
         if isinstance(input_shape, list):
             return (input_shape[0][0], self.output_dim)
         else:
             return (input_shape[0], self.output_dim)
 
-    def compute_mask(self, x, mask=None):
+    @overrides
+    def compute_mask(self, inputs, mask=None):
         # pylint: disable=unused-argument
         return None
 
-    def call(self, x, mask=None):
+    @overrides
+    def call(self, inputs, mask=None):
         # premise_length = hypothesis_length in the following lines, but the names are kept separate to keep
         # track of the axes being normalized.
         # The inputs can be a two different tensors, or a concatenation. Hence, the conditional below.
-        if isinstance(x, list) or isinstance(x, tuple):
-            premise_embedding, hypothesis_embedding = x
+        if isinstance(inputs, list) or isinstance(inputs, tuple):
+            premise_embedding, hypothesis_embedding = inputs
             # (batch_size, premise_length), (batch_size, hypothesis_length)
             premise_mask, hypothesis_mask = mask
         else:
-            premise_embedding = x[:, :self.premise_length, :]
-            hypothesis_embedding = x[:, self.premise_length:, :]
+            premise_embedding = inputs[:, :self.premise_length, :]
+            hypothesis_embedding = inputs[:, self.premise_length:, :]
             # (batch_size, premise_length), (batch_size, hypothesis_length)
             premise_mask = None if mask is None else mask[:, :self.premise_length]
             hypothesis_mask = None if mask is None else mask[:, self.premise_length:]

@@ -19,6 +19,13 @@ class Tokenizer:
         if len(params.keys()) != 0:
             raise ConfigurationError("You passed unrecognized parameters: " + str(params))
 
+    def get_custom_objects(self) -> Dict[str, 'Layer']:  # pylint: disable=no-self-use
+        """
+        If you use any custom ``Layers`` in your ``embed_input`` method, you need to return them
+        here, so that the ``TextTrainer`` can correctly load models.
+        """
+        return {}
+
     def tokenize(self, text: str) -> List[str]:
         """
         Actually splits the string into a sequence of tokens.  Note that this will only give you

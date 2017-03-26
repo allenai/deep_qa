@@ -1,27 +1,40 @@
-from keras import initializations
-from keras.layers import Layer
+from overrides import overrides
 
-class Additive(Layer):
+from .masked_layer import MaskedLayer
+
+class Additive(MaskedLayer):
     """
-    This Layer _adds_ a parameter value to each cell in the input tensor, similar to a bias vector
-    in a Dense layer, but this _only_ adds, one value per cell.  The value to add is learned.
+    This ``Layer`` `adds` a parameter value to each cell in the input tensor, similar to a bias
+    vector in a ``Dense`` layer, but this `only` adds, one value per cell.  The value to add is
+    learned.
+
+    Parameters
+    ----------
+    initializer: str, optional (default='glorot_uniform')
+        Keras initializer for the additive weight.
     """
-    def __init__(self, **kwargs):
-        self.supports_masking = True
+    def __init__(self, initializer='glorot_uniform', **kwargs):
         super(Additive, self).__init__(**kwargs)
 
-        initialization = kwargs.pop('initialization', 'glorot_uniform')
-        self.init = initializations.get(initialization)
-        self.initial_weights = kwargs.pop('weights', None)
-        self._additive_weights = None
+        self.initializer = initializer
+        self._additive_weight = None
 
+    @overrides
     def build(self, input_shape):
         super(Additive, self).build(input_shape)
-        self._additive_weights = self.init(input_shape[1:], name='%s_additive' % self.name)
-        self.trainable_weights = [self._additive_weights]
-        if self.initial_weights is not None:
-            self.set_weights(self.initial_weights)
-            del self.initial_weights
+        self._additive_weight = self.add_weight(input_shape[1:],
+                                                name='%s_additive' % self.name,
+                                                initializer=self.initializer)
 
+    @overrides
     def call(self, inputs, mask=None):
-        return inputs + self._additive_weights
+        return inputs + self._additive_weight
+
+    @overrides
+    def get_config(self):
+        base_config = super(Additive, self).get_config()
+        config = {
+                'initializer': self.initializer,
+                }
+        config.update(base_config)
+        return config

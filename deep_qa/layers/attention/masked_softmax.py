@@ -1,11 +1,11 @@
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 from ...tensors.backend import last_dim_flatten
 from ...tensors.masked_operations import masked_softmax
 
-class MaskedSoftmax(Layer):
+class MaskedSoftmax(MaskedLayer):
     '''
     This Layer performs a masked softmax.  This could just be a `Lambda` layer that calls our
     `tensors.masked_softmax` function, except that `Lambda` layers do not properly handle masked
@@ -26,7 +26,6 @@ class MaskedSoftmax(Layer):
     for whatever reason, it would be pretty easy to change it to optionally do so - submit a PR.
     '''
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(MaskedSoftmax, self).__init__(**kwargs)
 
     @overrides
@@ -36,24 +35,24 @@ class MaskedSoftmax(Layer):
         return None
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if input_shape[-1] == 1:
             return input_shape[:-1]
         else:
             return input_shape
 
     @overrides
-    def call(self, x, mask=None):
-        input_shape = K.int_shape(x)
+    def call(self, inputs, mask=None):
+        input_shape = K.int_shape(inputs)
         if input_shape[-1] == 1:
-            x = K.squeeze(x, axis=-1)
+            inputs = K.squeeze(inputs, axis=-1)
             input_shape = input_shape[:-1]
         if len(input_shape) > 2:
-            x = last_dim_flatten(x)
+            inputs = last_dim_flatten(inputs)
             if mask is not None:
                 mask = last_dim_flatten(mask)
-        # Now we have both x and mask with shape (?, num_options), and can do a softmax.
-        softmax_result = masked_softmax(x, mask)
+        # Now we have both inputs and mask with shape (?, num_options), and can do a softmax.
+        softmax_result = masked_softmax(inputs, mask)
         if len(input_shape) > 2:
             input_shape = (-1,) + input_shape[1:]
             softmax_result = K.reshape(softmax_result, input_shape)

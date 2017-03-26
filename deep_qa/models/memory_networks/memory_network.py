@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from overrides import overrides
 
 import numpy
-from keras.layers import Dropout, Input, Layer, merge
+from keras.layers import Dropout, Input, Layer, Concatenate
 
 from ...common.params import get_choice_with_default
 from ...data.dataset import TextDataset
@@ -381,10 +381,8 @@ class MemoryNetwork(TextTrainer):
 
         # Step 5: Finally, run the sentence encoding, the current memory, and the attended
         # background knowledge through an entailment model to get a final true/false score.
-        entailment_input = merge([encoded_question, current_memory, attended_knowledge],
-                                 mode='concat',
-                                 concat_axis=self._get_knowledge_axis(),
-                                 name='concat_entailment_inputs')
+        concat_layer = Concatenate(axis=self._get_knowledge_axis(), name='concat_entailment_inputs')
+        entailment_input = concat_layer([encoded_question, current_memory, attended_knowledge])
         combined_input = self._get_entailment_input_combiner()(entailment_input)
         extra_entailment_inputs, entailment_output = self._get_entailment_output(combined_input)
 
@@ -425,10 +423,9 @@ class MemoryNetwork(TextTrainer):
         # of just passing a list.
         # We going from two inputs of (batch_size, encoding_dim) to one input of (batch_size,
         # encoding_dim * 2).
-        updater_input = merge([encoded_question, current_memory, attended_knowledge],
-                              mode='concat',
-                              concat_axis=knowledge_axis,
-                              name='concat_current_memory_with_background_%d' % self.iteration)
+        concat_layer = Concatenate(axis=knowledge_axis,
+                                   name='concat_current_memory_with_background_%d' % self.iteration)
+        updater_input = concat_layer([encoded_question, current_memory, attended_knowledge])
         memory_updater = self._get_memory_updater(self.iteration)
         current_memory = memory_updater(updater_input)
         self.iteration += 1

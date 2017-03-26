@@ -31,7 +31,7 @@ def masked_batch_dot(tensor_a, tensor_b, mask_a, mask_b):
     a_dot_axis = K.ndim(tensor_a) - 1
     b_dot_axis = K.ndim(tensor_b) - 1
     if b_dot_axis < a_dot_axis:
-        tensor_b = K.expand_dims(tensor_b, dim=-1)
+        tensor_b = K.expand_dims(tensor_b, axis=-1)
 
     # (batch_size, a_length, b_length)
     a_dot_b = K.batch_dot(tensor_a, tensor_b, axes=(a_dot_axis, b_dot_axis))
@@ -54,10 +54,10 @@ def masked_batch_dot(tensor_a, tensor_b, mask_a, mask_b):
     float_mask_b = K.cast(mask_b, 'float32')
 
     if b_dot_axis < a_dot_axis:
-        float_mask_b = K.expand_dims(float_mask_b, dim=-1)
+        float_mask_b = K.expand_dims(float_mask_b, axis=-1)
     else:
-        float_mask_a = K.expand_dims(float_mask_a, dim=-1)
-        float_mask_b = K.expand_dims(float_mask_b, dim=-2)
+        float_mask_a = K.expand_dims(float_mask_a, axis=-1)
+        float_mask_b = K.expand_dims(float_mask_b, axis=-2)
     # (batch_size, a_length, b_length)
     a2b_mask = float_mask_a * float_mask_b
 

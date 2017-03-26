@@ -39,7 +39,7 @@ class MultipleChoiceTupleEntailment(WordAlignmentEntailment):
         self.num_options = answer_shape[1]
         self.input_dim = knowledge_shape[-1]
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return (input_shape[0][0], self.num_options)
 
     def compute_mask(self, x, mask=None):

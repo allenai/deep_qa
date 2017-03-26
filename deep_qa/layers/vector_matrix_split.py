@@ -1,8 +1,10 @@
 from keras import backend as K
-from keras.layers import Layer
+from overrides import overrides
+
+from .masked_layer import MaskedLayer
 
 
-class VectorMatrixSplit(Layer):
+class VectorMatrixSplit(MaskedLayer):
     """
     This Layer takes a tensor with K modes and splits it into a tensor with K - 1 modes and a
     tensor with K modes, but one less row in one of the dimensions.  We call this a vector-matrix
@@ -24,22 +26,24 @@ class VectorMatrixSplit(Layer):
                  mask_split_axis: int=None,
                  propagate_mask: bool=True,
                  **kwargs):
-        self.supports_masking = True
         self.split_axis = split_axis
         self.mask_split_axis = mask_split_axis if mask_split_axis is not None else split_axis
         self.propagate_mask = propagate_mask
         super(VectorMatrixSplit, self).__init__(**kwargs)
 
+    @overrides
     def call(self, inputs, mask=None):
         return self._split_tensor(inputs, self.split_axis)
 
-    def get_output_shape_for(self, input_shape):
+    @overrides
+    def compute_output_shape(self, input_shape):
         vector_shape = list(input_shape)
         del vector_shape[self.split_axis]
         matrix_shape = list(input_shape)
         matrix_shape[self.split_axis] -= 1
         return [tuple(vector_shape), tuple(matrix_shape)]
 
+    @overrides
     def compute_mask(self, inputs, input_mask=None):  # pylint: disable=unused-argument
         if input_mask is None or not self.propagate_mask:
             return [None, None]
@@ -61,6 +65,7 @@ class VectorMatrixSplit(Layer):
                 matrix_slice.append(slice(None, None, None))
         return [tensor[vector_slice], tensor[matrix_slice]]
 
+    @overrides
     def get_config(self):
         base_config = super(VectorMatrixSplit, self).get_config()
         config = {

@@ -15,12 +15,12 @@ Attention and MatrixAttention layers do this.
 """
 from typing import List
 
-from keras import activations, initializations
+from keras import activations, initializers
 
 class SimilarityFunction:
     def __init__(self, name: str, initialization: str='glorot_uniform', activation: str='linear'):
         self.name = name
-        self.init = initializations.get(initialization)
+        self.init = initializers.get(initialization)
         self.activation = activations.get(activation)
 
     def initialize_weights(self, tensor_1_dim: int, tensor_2_dim: int) -> List['K.variable']:

@@ -43,10 +43,10 @@ class TrueFalseEntailmentModel:
     def _init_layers(self):
         self.hidden_layers = []
         for i in range(self.num_hidden_layers):
-            self.hidden_layers.append(Dense(output_dim=self.hidden_layer_width,
+            self.hidden_layers.append(Dense(units=self.hidden_layer_width,
                                             activation=self.hidden_layer_activation,
                                             name='entailment_hidden_layer_%d' % i))
-        self.score_layer = Dense(output_dim=2, activation='softmax', name='entailment_softmax')
+        self.score_layer = Dense(units=2, activation='softmax', name='entailment_softmax')
 
     def classify(self, combined_input):
         """
@@ -85,10 +85,10 @@ class QuestionAnswerEntailmentModel:
     def _init_layers(self):
         self.hidden_layers = []
         for i in range(self.num_hidden_layers):
-            self.hidden_layers.append(Dense(output_dim=self.hidden_layer_width,
+            self.hidden_layers.append(Dense(units=self.hidden_layer_width,
                                             activation=self.hidden_layer_activation,
                                             name='entailment_hidden_layer_%d' % i))
-        self.projection_layer = Dense(output_dim=self.answer_dim,
+        self.projection_layer = Dense(units=self.answer_dim,
                                       activation='linear',
                                       name='entailment_projection')
 
@@ -131,10 +131,10 @@ class MultipleChoiceEntailmentModel:
     def _init_layers(self):
         self.hidden_layers = []
         for i in range(self.num_hidden_layers):
-            self.hidden_layers.append(Dense(output_dim=self.hidden_layer_width,
+            self.hidden_layers.append(Dense(units=self.hidden_layer_width,
                                             activation=self.hidden_layer_activation,
                                             name='entailment_hidden_layer_%d' % i))
-        self.score_layer = Dense(output_dim=1, activation='sigmoid')
+        self.score_layer = Dense(units=1, activation='sigmoid')
 
     def classify(self, combined_input):
         """
@@ -157,10 +157,10 @@ class MultipleChoiceEntailmentModel:
         return softmax_output
 
 
-def split_combiner_inputs(x, encoding_dim: int):  # pylint: disable=invalid-name
-    sentence_encoding = x[:, :encoding_dim]
-    current_memory = x[:, encoding_dim:2*encoding_dim]
-    attended_knowledge = x[:, 2*encoding_dim:]
+def split_combiner_inputs(inputs, encoding_dim: int):  # pylint: disable=invalid-name
+    sentence_encoding = inputs[:, :encoding_dim]
+    current_memory = inputs[:, encoding_dim:2*encoding_dim]
+    attended_knowledge = inputs[:, 2*encoding_dim:]
     return sentence_encoding, current_memory, attended_knowledge
 
 
@@ -172,11 +172,11 @@ class MemoryOnlyCombiner(Layer):
         super(MemoryOnlyCombiner, self).__init__(name=name, **kwargs)
         self.encoding_dim = encoding_dim
 
-    def call(self, x, mask=None):
-        _, current_memory, _ = split_combiner_inputs(x, self.encoding_dim)
+    def call(self, inputs):
+        _, current_memory, _ = split_combiner_inputs(inputs, self.encoding_dim)
         return current_memory
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return (input_shape[0], self.encoding_dim)
 
     def get_config(self):
@@ -195,8 +195,8 @@ class HeuristicMatchingCombiner(Layer):
         super(HeuristicMatchingCombiner, self).__init__(name=name, **kwargs)
         self.encoding_dim = encoding_dim
 
-    def call(self, x, mask=None):
-        sentence_encoding, current_memory, _ = split_combiner_inputs(x, self.encoding_dim)
+    def call(self, inputs):
+        sentence_encoding, current_memory, _ = split_combiner_inputs(inputs, self.encoding_dim)
         sentence_memory_product = sentence_encoding * current_memory
         sentence_memory_diff = sentence_encoding - current_memory
         return K.concatenate([sentence_encoding,
@@ -204,7 +204,7 @@ class HeuristicMatchingCombiner(Layer):
                               sentence_memory_product,
                               sentence_memory_diff])
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         # There are four components we've concatenated above: (1) the sentence encoding, (2) the
         # current memory, (3) the elementwise product of these two, and (4) their difference.  Each
         # of these has dimension `self.encoding_dim`.

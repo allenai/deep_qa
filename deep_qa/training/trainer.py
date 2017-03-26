@@ -320,7 +320,7 @@ class Trainer:
 
         # Now we actually train the model using various Keras callbacks to control training.
         callbacks = self._get_callbacks()
-        kwargs = {'nb_epoch': self.num_epochs, 'callbacks': [callbacks], 'batch_size': self.batch_size}
+        kwargs = {'epochs': self.num_epochs, 'callbacks': [callbacks], 'batch_size': self.batch_size}
         # We'll check for explicit validation data first; if you provided this, you definitely
         # wanted to use it for validation.  self.keras_validation_split is non-zero by default,
         # so you may have left it above zero on accident.

@@ -19,9 +19,9 @@ class Bilinear(SimilarityFunction):
 
     @overrides
     def initialize_weights(self, tensor_1_dim: int, tensor_2_dim: int) -> List['K.variable']:
-        self.weight_matrix = self.init((tensor_1_dim, tensor_2_dim),
-                                       name='{}_dense'.format(self.name))
-        self.bias = self.init((1,), name='{}_bias'.format(self.name))
+        self.weight_matrix = K.variable(self.init((tensor_1_dim, tensor_2_dim)),
+                                        name=self.name + "_weights")
+        self.bias = K.variable(self.init((1,)), name=self.name + "_bias")
         return [self.weight_matrix, self.bias]
 
     @overrides

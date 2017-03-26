@@ -10,11 +10,11 @@ from collections import OrderedDict
 
 from keras.engine import InputSpec
 from keras import backend as K
-from keras import activations, initializations
-from keras.layers import Layer
+from keras import activations
 
 from ..tensors.backend import tile_vector, hardmax
 from ..tensors.masked_operations import masked_softmax
+from .masked_layer import MaskedLayer
 
 
 def split_selector_inputs(inputs):
@@ -39,7 +39,7 @@ def split_selector_masks(inputs):
     knowledge_mask = inputs[:, 2:]
     return question_mask, memory_mask, knowledge_mask
 
-class DotProductKnowledgeSelector(Layer):
+class DotProductKnowledgeSelector(MaskedLayer):
     """
     Input Shape: num_samples, (knowledge_length + 2), input_dim
 
@@ -56,8 +56,8 @@ class DotProductKnowledgeSelector(Layer):
         self.hard_selection = hard_selection
         super(DotProductKnowledgeSelector, self).__init__(**kwargs)
 
-    def call(self, x, mask=None):
-        _, memory_encoding, knowledge_encoding = split_selector_inputs(x)
+    def call(self, inputs, mask=None):
+        _, memory_encoding, knowledge_encoding = split_selector_inputs(inputs)
 
         # (num_samples, knowledge_length, input_dim)
         tiled_memory_encoding = tile_vector(memory_encoding, knowledge_encoding)
@@ -77,12 +77,12 @@ class DotProductKnowledgeSelector(Layer):
             knowledge_attention = masked_softmax(unnormalized_attention, mask)
         return knowledge_attention
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         # For each sample, the output is a vector of size knowledge_length, indicating the weights
         # over background information.
         return (input_shape[0], input_shape[1] - 2)  # (num_samples, knowledge_length)
 
-    def compute_mask(self, x, input_mask=None):  # pylint: disable=unused-argument
+    def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
         # At this point, the attention already implicitly contains our mask. The other
         # inputs to the Knowledge Combiners will still have access to their respective masks,
         # so we don't need to pass on the dimensions which were masked here as well, as they
@@ -90,7 +90,7 @@ class DotProductKnowledgeSelector(Layer):
         return None
 
 
-class ParameterizedKnowledgeSelector(Layer):
+class ParameterizedKnowledgeSelector(MaskedLayer):
     """
     Here we are reimplementing the attention part of the memory layer described in
     "Teaching Machines to Read and Comprehend", Hermann et al., 2015.
@@ -128,7 +128,7 @@ class ParameterizedKnowledgeSelector(Layer):
                  weights=None,
                  **kwargs):
         self.activation = activations.get(activation)
-        self.init = initializations.get(initialization)
+        self.init = initialization
         self.hard_selection = hard_selection
         self.input_spec = [InputSpec(ndim=3)]
         self.initial_weights = weights
@@ -139,8 +139,12 @@ class ParameterizedKnowledgeSelector(Layer):
     def build(self, input_shape):
         self.input_spec = [InputSpec(shape=input_shape)]
         input_dim = input_shape[2]
-        self.dense_weights = self.init((input_dim * 2, input_dim), name='{}_dense'.format(self.name))
-        self.dot_bias = self.init((input_dim, 1), name='{}_dot_bias'.format(self.name))
+        self.dense_weights = self.add_weight((input_dim * 2, input_dim),
+                                             initializer=self.init,
+                                             name='{}_dense'.format(self.name))
+        self.dot_bias = self.add_weight((input_dim, 1),
+                                        initializer=self.init,
+                                        name='{}_dot_bias'.format(self.name))
         self.trainable_weights = [self.dense_weights, self.dot_bias]
 
         # Now that trainable_weights is complete, we set weights if needed.
@@ -149,7 +153,7 @@ class ParameterizedKnowledgeSelector(Layer):
             del self.initial_weights
         super(ParameterizedKnowledgeSelector, self).build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, inputs, mask=None):
         '''
         Inputs:
             - A sentence encoding :math:`u`, with shape ``(batch_size, encoding_dim)``
@@ -173,7 +177,7 @@ class ParameterizedKnowledgeSelector(Layer):
         than these equations because we have to unpack the input, then use tiling instead of loops
         to make this more efficient.
         '''
-        _, memory_encoding, knowledge_encoding = split_selector_inputs(x)
+        _, memory_encoding, knowledge_encoding = split_selector_inputs(inputs)
 
         # (num_samples, knowledge_length, input_dim)
         tiled_memory_encoding = tile_vector(memory_encoding, knowledge_encoding)
@@ -207,12 +211,12 @@ class ParameterizedKnowledgeSelector(Layer):
             knowledge_attention = masked_softmax(unnormalized_attention, mask)
         return knowledge_attention
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         # For each sample, the output is a vector of size knowledge_length, indicating the weights
         # over background information.
         return (input_shape[0], input_shape[1] - 2)  # (num_samples, knowledge_length)
 
-    def compute_mask(self, x, input_mask=None):  # pylint: disable=unused-argument
+    def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
         # At this point, the attention already implicitly contains our mask. The other
         # inputs to the Knowledge Combiners will still have access to their respective masks,
         # so we don't need to pass on the dimensions which were masked here as well, as they
@@ -220,7 +224,7 @@ class ParameterizedKnowledgeSelector(Layer):
         return None
 
 
-class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
+class ParameterizedHeuristicMatchingKnowledgeSelector(MaskedLayer):
     '''
     A ParameterizedHeuristicMatchingKnowledgeSelector implements a very similar mechanism as the
     ParameterizedKnowledge Selector for attending over background knowledge. The only differences
@@ -242,7 +246,7 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
                  weights=None,
                  **kwargs):
         self.activation = activations.get(activation)
-        self.init = initializations.get(initialization)
+        self.init = initialization
         self.hard_selection = hard_selection
         self.input_spec = [InputSpec(ndim=3)]
         self.initial_weights = weights
@@ -255,10 +259,18 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
     def build(self, input_shape):
         self.input_spec = [InputSpec(shape=input_shape)]
         input_dim = input_shape[2]
-        self.dense_weights = self.init((input_dim * 4, input_dim), name='{}_dense'.format(self.name))
-        self.dot_bias = self.init((input_dim, 1), name='{}_dot_bias'.format(self.name))
-        self.bias1 = self.init((input_dim,), name='{}_dense_bias1'.format(self.name))
-        self.bias2 = self.init((1,), name='{}_dense_bias2'.format(self.name))
+        self.dense_weights = self.add_weight((input_dim * 4, input_dim),
+                                             initializer=self.init,
+                                             name='{}_dense'.format(self.name))
+        self.dot_bias = self.add_weight((input_dim, 1),
+                                        initializer=self.init,
+                                        name='{}_dot_bias'.format(self.name))
+        self.bias1 = self.add_weight((input_dim,),
+                                     initializer=self.init,
+                                     name='{}_dense_bias1'.format(self.name))
+        self.bias2 = self.add_weight((1,),
+                                     initializer=self.init,
+                                     name='{}_dense_bias2'.format(self.name))
         self.trainable_weights = [self.dense_weights, self.dot_bias, self.bias1, self.bias2]
 
         # Now that trainable_weights is complete, we set weights if needed.
@@ -267,7 +279,7 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
             del self.initial_weights
         super(ParameterizedHeuristicMatchingKnowledgeSelector, self).build(input_shape)
 
-    def call(self, x, mask=None):
+    def call(self, inputs, mask=None):
         '''
         Equations repeated from above.
 
@@ -295,7 +307,7 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
         than these equations because we have to unpack the input, then use tiling instead of loops
         to make this more efficient.
         '''
-        original_question_encoding, memory_encoding, knowledge_encoding = split_selector_inputs(x)
+        original_question_encoding, memory_encoding, knowledge_encoding = split_selector_inputs(inputs)
 
         # (num_samples, knowledge_length, input_dim)
         tiled_memory_encoding = tile_vector(memory_encoding, knowledge_encoding)
@@ -337,12 +349,12 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(Layer):
             knowledge_attention = masked_softmax(unnormalized_attention, mask)
         return knowledge_attention
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         # For each sample, the output is a vector of size knowledge_length, indicating the weights
         # over background information.
         return (input_shape[0], input_shape[1] - 2)  # (num_samples, knowledge_length)
 
-    def compute_mask(self, x, input_mask=None):  # pylint: disable=unused-argument
+    def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
         # At this point, the attention already implicitly contains our mask. The other
         # inputs to the Knowledge Combiners will still have access to their respective masks,
         # so we don't need to pass on the dimensions which were masked here as well, as they

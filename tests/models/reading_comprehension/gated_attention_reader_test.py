@@ -18,35 +18,35 @@ class TestGatedAttention(DeepQaTestCase):
                 "encoder": {
                         "word": {
                                 "type": "bi_gru",
-                                "output_dim": 2,
+                                "units": 2,
                         }
                 },
                 "seq2seq_encoder": {
                         "question_0": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {}
                         },
                         "document_0": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {}
                         },
                         "document_final": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {}
                         },
                         "question_final": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {
                                         "merge_mode": None
@@ -77,11 +77,11 @@ class TestGatedAttention(DeepQaTestCase):
                 "encoder": {
                         "word": {
                                 "type": "bi_gru",
-                                "output_dim": 2,
+                                "units": 2,
                         },
                         "question_final": {
                                 "type": "bi_gru",
-                                "output_dim": 3
+                                "units": 3
                         }
 
                 },
@@ -89,21 +89,21 @@ class TestGatedAttention(DeepQaTestCase):
                         "question_0": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {}
                         },
                         "document_0": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {}
                         },
                         "document_final": {
                                 "type": "bi_gru",
                                 "encoder_params": {
-                                        "output_dim": 3
+                                        "units": 3
                                 },
                                 "wrapper_params": {}
                         }

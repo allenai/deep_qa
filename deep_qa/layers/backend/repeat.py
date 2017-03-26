@@ -1,9 +1,10 @@
 from keras import backend as K
-from keras.layers import Layer
 from overrides import overrides
 
+from ..masked_layer import MaskedLayer
 
-class Repeat(Layer):
+
+class Repeat(MaskedLayer):
     """
     This `Layer` calls `K.repeat_elements` on both the input and the mask, after calling
     `K.expand_dims`.
@@ -18,7 +19,6 @@ class Repeat(Layer):
         - The input tensor repeated along one of the dimensions.
     """
     def __init__(self, axis: int, repetitions: int, **kwargs):
-        self.supports_masking = True
         self.axis = axis
         self.repetitions = repetitions
         super(Repeat, self).__init__(**kwargs)
@@ -31,12 +31,12 @@ class Repeat(Layer):
         return K.repeat_elements(K.expand_dims(mask, self.axis), self.repetitions, self.axis)
 
     @overrides
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return input_shape[:self.axis] + (self.repetitions,) + input_shape[self.axis:]
 
     @overrides
-    def call(self, x, mask=None):
-        return K.repeat_elements(K.expand_dims(x, self.axis), self.repetitions, self.axis)
+    def call(self, inputs, mask=None):
+        return K.repeat_elements(K.expand_dims(inputs, self.axis), self.repetitions, self.axis)
 
     def get_config(self):
         base_config = super(Repeat, self).get_config()
