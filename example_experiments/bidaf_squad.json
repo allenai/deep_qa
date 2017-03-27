@@ -12,7 +12,7 @@
         "default": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 100
+                "units": 100
             },
             "wrapper_params": {}
         }
@@ -21,7 +21,7 @@
     "embedding_dropout": 0.2,
     "batch_size": 10,
     "patience": 3,
-    "embedding_size": 100,
+    "embedding_dim": {"words": 100, "characters": 8},
     "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",

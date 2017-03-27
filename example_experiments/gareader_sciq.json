@@ -1,5 +1,5 @@
 {
-    "embedding_size": 200,
+    "embedding_dim": {"words": 200, "characters": 16},
     "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
     "fine_tune_embeddings": False,
     "project_embeddings": False,
@@ -14,46 +14,46 @@
     "encoder": {
         "word": {
             "type": "bi_gru",
-            "output_dim": 25,
+            "units": 25
         },
         "question_final":{
             "type": "bi_gru",
-            "output_dim": 128
+            "units": 128
         }
     },
     "seq2seq_encoder": {
         "question_0": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 128
+                "units": 128
             },
             "wrapper_params": {}
         },
         "document_0": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 128
+                "units": 128
             },
             "wrapper_params": {}
         },
         "question_1": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 128
+                "units": 128
             },
             "wrapper_params": {}
         },
         "document_1": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 128
+                "units": 128
             },
             "wrapper_params": {}
         },
         "document_final": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 128
+                "units": 128
             },
             "wrapper_params": {}
         }

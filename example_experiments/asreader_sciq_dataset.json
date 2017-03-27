@@ -5,14 +5,14 @@
     "encoder": {
         "default": {
             "type": "bi_gru",
-            "output_dim": 384
+            "units": 384
         }
     },
     "seq2seq_encoder": {
         "default": {
             "type": "bi_gru",
             "encoder_params": {
-                "output_dim": 384
+                "units": 384
             },
             "wrapper_params": {}
         }
@@ -22,7 +22,7 @@
                  },
     "embedding_dropout": 0.0,
     "patience": 1,
-    "embedding_size": 256,
+    "embedding_dim": {"words": 256},
     "num_epochs": 5,
     "validation_files": ["/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
     "train_files": ["/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]

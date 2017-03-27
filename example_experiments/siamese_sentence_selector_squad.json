@@ -4,13 +4,13 @@
     "encoder": {
         "default": {
             "type": "bi_gru",
-            "output_dim": 128
+            "units": 128
         }
     },
     "batch_size": 32,
     "patience": 2,
     "embedding_dim": {
-        "words": 100,
+        "words": 100
     },
     "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
     "fine_tune_embeddings": False,
