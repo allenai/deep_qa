@@ -7,18 +7,23 @@ from ...tensors.masked_operations import masked_batch_dot, masked_softmax
 
 class MaxSimilaritySoftmax(MaskedLayer):
     '''
-    This layer takes encoded questions and knowledge in a multiple choice setting and computes the
-    similarity between each of the question embeddings and the background knowledge, and returns a
-    softmax over the options.
+    This layer takes encoded questions and knowledge in a multiple choice
+    setting and computes the similarity between each of the question embeddings
+    and the background knowledge, and returns a softmax over the options.
 
     Inputs:
-        encoded_questions (batch_size, num_options, encoding_dim)
-        encoded_knowledge (batch_size, num_options, knowledge_length, encoding_dim)
-    Output: option_probabilities (batch_size, num_options)
 
-    This is a pretty niche layer that does a very specific computation.  We only made it its own
-    class instead of a `Lambda` layer so that we could handle masking correctly, which `Lambda`
-    does not.
+    - encoded_questions (batch_size, num_options, encoding_dim)
+    - encoded_knowledge (batch_size, num_options, knowledge_length, encoding_dim)
+
+    Output:
+
+    - option_probabilities (batch_size, num_options)
+
+    This is a pretty niche layer that does a very specific computation. We only
+    made it its own class instead of a ``Lambda`` layer so that we could handle
+    masking correctly, which ``Lambda`` does not.
+
     '''
     def __init__(self, knowledge_axis, max_knowledge_length, **kwargs):
         self.knowledge_axis = knowledge_axis

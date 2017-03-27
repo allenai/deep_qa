@@ -30,25 +30,28 @@ class TextTuple:
                                                            self.context[:context_limit])
 
     def to_text_list(self, object_handling: str="collapse", include_context: bool=True):
-        '''
-        This method converts a TextTuple into a list of strings, where each string is a tuple slot or phrase.
+        """
+        This method converts a TextTuple into a list of strings, where each
+        string is a tuple slot or phrase.
 
         Parameters
         ----------
-        object_handling: str, default='collapse'
-            Since we can have a variable number of objects, there are several ways to handle them.
-            Currently, two options are inplemented:
-                - "collapse": collapse all the objects strings into one long string.
-                - "first": ignore all but the first object.
+        object_handling: str, optional, (default='collapse')
+            Since we can have a variable number of objects, there are several
+            ways to handle them.
+            Currently, two options are implemented:
 
-        include_context: bool, default=True
+            - "collapse": collapse all the objects strings into one long string.
+            - "first": ignore all but the first object.
+
+        include_context: bool, (default=True)
             Determines whether or not to include a tuple slot for context information.
 
         Returns
         -------
         text_list: List[str]
             The list of strings representing the slots in the TextTuple.
-        '''
+        """
         # Subject and verb
         text_list = [self.subject, self.verb]
         # Object(s):
@@ -72,13 +75,17 @@ class TextTuple:
     def from_string(cls, input_string: str):
         """
         Converts a string representation of the tuple into a TextTuple.
+
         Parameters
         ----------
         input_string: str
+            The input string representation of a tuple.
 
         Returns
         -------
-        TextTuple
+        text_tuple: TextTuple
+            A TextTuple object that corresponds with the input
+            string representation.
         """
         tuple_fields = input_string.lower().split("<>")
         num_fields = len(tuple_fields)
@@ -181,12 +188,14 @@ class TupleInferenceInstance(TextInstance):
     def index_tuples(self, tuples_in: List[TextTuple], data_indexer: DataIndexer):
         """
         This is a helper method for to_indexed_instance which indexes a list of ``TextTuple``.
+
         Parameters
         ----------
         tuples_in: List[TextTuple]
             A list of ``TextTuple`` to be indexed.
 
         data_indexer: DataIndexer
+            The ``DataIndexer`` to get word indices from.
 
         Returns
         -------
@@ -204,34 +213,40 @@ class TupleInferenceInstance(TextInstance):
     @classmethod
     def read_from_line(cls, line: str, default_label: int=None):
         """
-        Reads a TupleInferenceInstance from a line.  The format has two options (currently):
-            Option 1:
-                [question index][tab][all question+answer tuples][tab][background tuples][tab][label]
-            Option 2:
-                same as option 1, but [question text][tab] comes immediately after the question index,
-                following the tab.
-        The question+answer tuples are formatted as:
-            [a_1-tuple_1]$$$...$$$[a_1-tuple_n]###...###[a+_m-tuple_1]$$$...$$$[a_m-tuple_p]
+        Reads a TupleInstances from a line.  The format has two options:
+
+        (1) [question index][tab][all question+answer tuples][tab][background tuples][tab][label]
+        (2) same as option 1, but [question text][tab] comes immediately after the question index,
+            following the tab.
+
+        The question and answer tuples are formatted as:
+
+        - [a_1-tuple_1]$$$...$$$[a_1-tuple_n]###...###[a+_m-tuple_1]$$$...$$$[a_m-tuple_p]
+
         such that ``$$$`` serves as the tuple delimiter and ``###`` serves as the answer candidate
         delimiter.
         Each of the tuples is formatted as:
-            [s words]<>[v words]<>[o_1 words]<>...<>[o_j words]<>[context: context words]
-        such that ``<>`` serves as the tuple-slot delimiter.  Note that some slots may contain prefixes
-        indicating the type of information they contain (e.g., "context:", see below for more).
 
-        Objects are optional, and can vary in number. This makes the acceptable number of slots per
-        tuple 2 or more.
+        - [s words]<>[v words]<>[o_1 words]<>...<>[o_j words]<>[context: context words]
+
+        such that ``<>`` serves as the tuple-slot delimiter.  Note that some
+        slots may contain prefixes indicating the type of information they
+        contain (e.g., "context:", see below for more).
+
+        Objects are optional, and can vary in number. This makes the
+        acceptable number of slots per tuple 2 or more.
 
         If a tuple slot is reserved for context, it contains "context:" at the start.
 
-        Some tuples contain coreference resolution info (from one of the table sources).  We do not
-        currently handle this, but plan to eventually replace the referring expression with its resolved
-        value.
-            Example: it[sky]<>is<>blue --> would become --> sky<>is<>blue
+        Some tuples contain coreference resolution info (from one of the table
+        sources).  We do not currently handle this, but plan to eventually replace
+        the referring expression with its resolved value. For example:
 
-        Some tuples additionally contain prefixed information about some of the "objects" such as "L:" for
-        locations and T: for time.  At present this information is simply filtered out, but can be used
-        later.
+        - it[sky]<>is<>blue --> would become --> sky<>is<>blue
+
+        Some tuples additionally contain prefixed information about some of
+        the "objects" such as "L:" for locations and T: for time.  At present
+        this information is simply filtered out, but can be used later.
         """
         fields = line.split("\t")
         if len(fields) == 5:
@@ -313,8 +328,9 @@ class IndexedTupleInferenceInstance(IndexedInstance):
     @staticmethod
     def get_lengths_from_indexed_tuples(indexed_tuples: List[List[List[int]]]):
         '''
-        Helper method for self.get_lengths().  This gets the max lengths (max number of slots and max
-        number of words per slot) for a list of indexed tuples.
+        Helper method for ``self.get_lengths()``. This gets the max lengths (max
+        number of slots and max number of words per slot) for a list of indexed
+        tuples.
 
         Parameters
         ----------
@@ -330,7 +346,8 @@ class IndexedTupleInferenceInstance(IndexedInstance):
             The max number of words found in any of the slots.
 
         num_word_characters: int
-            The length of the longest word, with a return value of 0 if the model isn't using character padding.
+            The length of the longest word, with a return value of 0 if the model isn't using
+            character padding.
         '''
         max_num_slots = 0
         max_slot_words = 0
@@ -349,13 +366,16 @@ class IndexedTupleInferenceInstance(IndexedInstance):
     @overrides
     def pad(self, max_lengths: Dict[str, int]):
         """
-        Pads (or truncates) each indexed tuple in answers_indexed and background_indexed to specified lengths,
-        using the superclass methods ``pad_sequence_to_length`` (for padding number of options, number of tuples,
-        and number of slots per tuple) and ''pad_word_sequence`` (for padding the words in each slot), with the
-        following exception:
-            When padding the number of answer options, if there are more answers provided, here we don't
-            remove options, we raise an exception because we don't want to risk removing the correct answer in
-            a multiple choice setting.
+        Pads (or truncates) each indexed tuple in answers_indexed and
+        background_indexed to specified lengths, using the superclass methods
+        ``pad_sequence_to_length`` (for padding number of options, number of
+        tuples, and number of slots per tuple) and ``pad_word_sequence`` (for
+        padding the words in each slot).
+
+        When padding the number of answer options, if there are more answers
+        provided, we don't remove options and we raise an exception because
+        we don't want to risk removing the correct answer in a multiple choice
+        setting.
         """
         desired_num_options = max_lengths['num_options']
         desired_num_question_tuples = max_lengths['num_question_tuples']
@@ -393,30 +413,35 @@ class IndexedTupleInferenceInstance(IndexedInstance):
                                    for background_tuple in self.background_indexed]
 
     def pad_tuple(self, tuple_in: List[List[int]], max_lengths: Dict):
-        '''
-        Helper method to pad an individual tuple both to the desired number of slots as well as the
-        desired slot length, both of which are done through the superclass method ``pad_word_sequence``.
+        """
+        Helper method to pad an individual tuple both to the desired number of slots
+        as well as the desired slot length, both of which are done through the
+        superclass method ``pad_word_sequence``.
 
         Parameters
         ----------
         tuple_in: List[List[int]]
-            (num_tuple_slots, num_slot_words)
-            The indexed tuple to be padded.
+            The indexed tuple to be padded. This has the shape
+            ``(num_tuple_slots, num_slot_words)``.
 
         max_lengths: Dict of {str: int}
             The lengths to pad to.  Must include the keys:
-                - 'num_slots': the number of slots desired
-                - 'num_sentence_words': the number of words in a given slot
+
+            - 'num_slots': the number of slots desired
+            - 'num_sentence_words': the number of words in a given slot
+
             May also include:
-                - 'num_word_characters': the length of each word,
-                relevant when using a ``WordAndCharacterTokenizer``.
+
+            - 'num_word_characters': the length of each word, relevant when using a
+              ``WordAndCharacterTokenizer``.
+
 
         Returns
         -------
         tuple_in: List[List[int]]
-            In the returned (modified) list, the length matches the desired_num_slots and each of the slots
-            has a length equal to the value set by 'num_sentence_words' in max_lengths.
-        '''
+            In the returned (modified) list, the length matches the desired_num_slots and each of
+            the slots has a length equal to the value set by ``num_sentence_words`` in max_lengths.
+        """
         desired_num_slots = max_lengths['num_slots']
         tuple_in = self.pad_sequence_to_length(tuple_in, desired_num_slots,
                                                default_value=lambda: [], truncate_from_right=False)
@@ -440,5 +465,4 @@ class IndexedTupleInferenceInstance(IndexedInstance):
         else:
             label = np.zeros((len(self.answers_indexed)))
             label[self.label] = 1
-
         return (question_options_matrix, background_matrix), label

@@ -13,12 +13,14 @@ class WordProcessor:
 
     Parameters
     ----------
-    word_spitter: str, default="simple"
+    word_splitter: str, default="simple"
         The string name of the ``WordSplitter`` of choice (see the options at the bottom of
         ``word_splitter.py``).
+
     word_filter: str, default="pass_through"
         The name of the ``WordFilter`` to use (see the options at the bottom of
         ``word_filter.py``).
+
     word_stemmer: str, default="pass_through"
         The name of the ``WordStemmer`` to use (see the options at the bottom of
         ``word_stemmer.py``).

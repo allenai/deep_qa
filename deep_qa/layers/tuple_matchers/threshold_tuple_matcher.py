@@ -14,24 +14,31 @@ from ..masked_layer import MaskedLayer
 
 class ThresholdTupleMatcher(MaskedLayer):
     r"""
-    This layer takes as input two tensors corresponding to two tuples, an answer tuple and a background tuple,
-    and calculates the degree to which the background tuple `entails` the answer tuple.  Entailment is
-    determined by generating a set of entailment features from the tuples (the number of
-    entailment_features = number of tuple slots), and then passing these features into a shallow NN to get an
-    entailment score.
-    Each entailment feature is currently made by comparing the corresponding slots in the two tuples and
-    determining the degree of lexical overlap based on a similarity threshold, :math:`\tau` which is learned
-    by the model.
-        Let :math:`T(B_s, A_s) = \{b_s^i \in B_s : sim(b_s^i, a_s^j) > \tau` for some :math:`a_s^j \in A_s \}`,
-        where where :math:`s` is the index of the slot, :math:`A_s` is answer tuple slot :math:`s` and :math:`B_s`
-        is background tuple slot :math:`s`, and :math:`\tau` is the current similarity threshold.
+    This layer takes as input two tensors corresponding to two tuples, an answer tuple and a
+    background tuple, and calculates the degree to which the background tuple `entails` the answer
+    tuple.
 
-    That is, $T(B_s, A_s)$ is the set of words in the background slot which are similar enough to words in
-    the answer slot to "count" as overlapping.
+    Entailment is determined by generating a set of entailment features from the tuples (the number
+    of entailment_features = number of tuple slots), and then passing these features into a shallow
+    NN to get an entailment score.
+
+    Each entailment feature is currently made by comparing the corresponding slots in the two
+    tuples and determining the degree of lexical overlap based on a similarity threshold,
+    :math:`\tau` which is learned by the model.
+
+    Let :math:`T(B_s, A_s) = \{b_s^i \in B_s : sim(b_s^i, a_s^j) > \tau` for some :math:`a_s^j \in
+    A_s \}`, where where :math:`s` is the index of the slot, :math:`A_s` is answer tuple slot
+    :math:`s` and :math:`B_s` is background tuple slot :math:`s`, and :math:`\tau` is the current
+    similarity threshold.
+
+    That is, $T(B_s, A_s)$ is the set of words in the background slot which are similar enough to
+    words in the answer slot to "count" as overlapping.
     Then,
-        :math:`normalized\_overlap_s = \dfrac{|T(B_s, A_s)|}{|A_s|}`
+
+    - :math:`normalized\_overlap_s = \dfrac{|T(B_s, A_s)|}{|A_s|}`
 
     Inputs:
+
         - tuple_1_input (the answer tuple), shape ``(batch size, num_slots, num_slot_words_t1, embedding_dim)``,
           and a corresponding mask of shape (``(batch size, num_slots, num_slot_words_t1)``.
           Here num_slot_words_t1 is the maximum number of words in each of the slots in tuple_1.
@@ -41,28 +48,29 @@ class ThresholdTupleMatcher(MaskedLayer):
           maximum number of words in each of the slots in tuple_2. This need not match tuple 1.
 
     Output:
+
         - entailment score, shape ``(batch, 1)``
 
     Parameters
     ----------
-    - similarity_function_params: Dict[str, Any], default={}
+    similarity_function_params: Dict[str, Any], default={}
         These parameters get passed to a similarity function (see
         :mod:`deep_qa.tensors.similarity_functions` for more info on what's acceptable).  The default
         similarity function with no parameters is a simple dot product.
 
-    - num_hidden_layers : int, default=1
+    num_hidden_layers : int, default=1
         Number of hidden layers in the shallow NN.
 
-    - hidden_layer_width : int, default=4
+    hidden_layer_width : int, default=4
         The number of nodes in each of the NN hidden layers.
 
-    - initialization : string, default='glorot_uniform'
+    initialization : string, default='glorot_uniform'
         The initialization of the NN weights
 
-    - hidden_layer_activation : string, default='relu'
+    hidden_layer_activation : string, default='relu'
         The activation of the NN hidden layers
 
-    - final_activation : string, default='sigmoid'
+    final_activation : string, default='sigmoid'
         The activation of the NN output layer
 
     """

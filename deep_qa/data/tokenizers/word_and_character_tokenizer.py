@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
 from keras import backend as K
-from keras.layers import Concatenate
+from keras.layers import Concatenate, Layer
 
 from .tokenizer import Tokenizer
 from .word_processor import WordProcessor
@@ -54,8 +54,8 @@ class WordAndCharacterTokenizer(Tokenizer):
 
     @overrides
     def embed_input(self,
-                    input_layer: 'keras.layers.Layer',
-                    text_trainer: 'TextTrainer',
+                    input_layer: Layer,
+                    text_trainer,
                     embedding_name: str="embedding"):
         """
         A combined word-and-characters representation requires some fancy footwork to do the

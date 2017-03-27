@@ -10,7 +10,7 @@ deep_qa.tensors.similarity_functions.bilinear
     :show-inheritance:
 
 deep_qa.tensors.similarity_functions.cosine_similarity
----------------------------------------------
+------------------------------------------------------
 
 .. automodule:: deep_qa.tensors.similarity_functions.cosine_similarity
     :members:

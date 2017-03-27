@@ -7,30 +7,42 @@ from overrides import overrides
 from .word_alignment import WordAlignmentEntailment
 from ...tensors.backend import switch, apply_feed_forward
 
+
 class DecomposableAttentionEntailment(WordAlignmentEntailment):
-    '''
-    This layer is a reimplementation of the entailment algorithm described in the following paper:
-    "A Decomposable Attention Model for Natural Language Inference", Parikh et al., 2016.
-    The algorithm has three main steps:
+    """
+    This layer is a reimplementation of the entailment algorithm described in
+    "A Decomposable Attention Model for Natural Language Inference", Parikh et
+    al., 2016. The algorithm has three main steps:
 
-    1) Attend: Compute dot products between all pairs of projections of words in the
-      hypothesis and the premise, normalize those dot products to use them to align each word
-      in premise to a phrase in the hypothesis and vice-versa. These alignments are then used to
-      summarize the aligned phrase in the other sentence as a weighted sum. The initial word
-      projections are computed using a feed forward NN, F.
-    2) Compare: Pass a concatenation of each word in the premise and the summary of its aligned
-      phrase in the hypothesis through a feed forward NN, G, to get a projected comparison. Do the
-      same with the hypothesis and the aligned phrase from the premise.
-    3) Aggregate: Sum over the comparisons to get a single vector each for premise-hypothesis
-      comparison, and hypothesis-premise comparison. Pass them through a third feed forward NN (H),
-      to get the entailment decision.
+    (1) Attend: Compute dot products between all pairs of projections of words
+        in the hypothesis and the premise, normalize those dot products to use
+        them to align each word in premise to a phrase in the hypothesis and
+        vice-versa. These alignments are then used to summarize the aligned
+        phrase in the other sentence as a weighted sum. The initial word
+        projections are computed using a feed forward NN, F.
 
-    This layer can take either a tuple (premise, hypothesis) or a concatenation of them as input.
-    Expected shapes:
-        tuple input: (batch_size, sentence_length, embed_dim), (batch_size, sentence_length, embed_dim)
-        single input: (batch_size, sentence_length*2, embed_dim)
-    NOTE: premise_length = hypothesis_length = sentence_length below.
-    '''
+    (2) Compare: Pass a concatenation of each word in the premise and the
+        summary of its aligned phrase in the hypothesis through a feed forward
+        NN, G, to get a projected comparison. Do the same with the hypothesis
+        and the aligned phrase from the premise.
+
+    (3) Aggregate: Sum over the comparisons to get a single vector each for
+        premise-hypothesis comparison, and hypothesis-premise comparison. Pass
+        them through a third feed forward NN (H), to get the entailment
+        decision.
+
+    This layer can take either a tuple (premise, hypothesis) or a concatenation
+    of them as input.
+
+    Input:
+
+    - tuple input: shape ``(batch_size, sentence_length, embed_dim)``, ``(batch_size, sentence_length, embed_dim)``
+    - single input: shape ``(batch_size, sentence_length*2, embed_dim)``
+
+    Notes
+    -----
+    premise_length = hypothesis_length = sentence_length below.
+    """
     def __init__(self, params: Dict[str, Any]):
         self.num_hidden_layers = params.pop('num_hidden_layers', 1)
         self.hidden_layer_width = params.pop('hidden_layer_width', 50)

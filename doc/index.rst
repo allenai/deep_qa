@@ -45,7 +45,7 @@ This library has several main components:
    self
 
 .. toctree::
-   :caption: Models
+   :caption: Training
    :hidden:
 
    training/about_trainers
@@ -62,6 +62,7 @@ This library has several main components:
    layers/backend
    layers/encoders
    layers/entailment_models
+   layers/tuple_matchers
    layers/wrappers
 
 .. toctree::

@@ -4,18 +4,20 @@ from overrides import overrides
 from ..masked_layer import MaskedLayer
 
 class WeightedSum(MaskedLayer):
-    '''
+    """
     This ``Layer`` takes a matrix of vectors and a vector of row weights, and returns a weighted
     sum of the vectors.  You might use this to get some aggregate sentence representation after
     computing an attention over the sentence, for example.
 
     Inputs:
-        - matrix: ``(batch_size, num_rows, embedding_dim)``, with mask ``(batch_size, num_rows)``
-        - vector: ``(batch_size, num_rows)``, mask is ignored
 
-    Output:
-        - A weighted sum of the rows in the matrix, with shape ``(batch_size, embedding_dim)``,
-          with mask=``None``.
+    - matrix: ``(batch_size, num_rows, embedding_dim)``, with mask ``(batch_size, num_rows)``
+    - vector: ``(batch_size, num_rows)``, mask is ignored
+
+    Outputs:
+
+    - A weighted sum of the rows in the matrix, with shape ``(batch_size, embedding_dim)``, with
+      mask=``None``.
 
     Parameters
     ----------
@@ -46,10 +48,10 @@ class WeightedSum(MaskedLayer):
     (batch_size, num_documents, num_queries, num_words).  Both of these cases are fine.  In the
     first case, the returned tensor will have shape (batch_size, num_queries, embedding_dim), and
     in the second case, it will have shape (batch_size, num_documents, num_queries, embedding_dim).
-    But you _can't_ have an attention "vector" that does not include all of the queries, so shape
+    But you `can't` have an attention "vector" that does not include all of the queries, so shape
     (batch_size, num_words) is not allowed - you haven't specified how to handle that dimension in
     the "matrix", so we can't do anything with this input.
-    '''
+    """
     def __init__(self, use_masking: bool=True, **kwargs):
         self.use_masking = use_masking
         super(WeightedSum, self).__init__(**kwargs)

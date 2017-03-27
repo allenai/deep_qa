@@ -8,48 +8,57 @@ from ..masked_layer import MaskedLayer
 
 class WordOverlapTupleMatcher(MaskedLayer):
     r"""
-    This layer takes as input two tensors corresponding to two tuples, an answer tuple and a background tuple,
-    and calculates the degree to which the background tuple `entails` the answer tuple.  Entailment is
-    determined by generating a set of entailment features from the tuples (the number of
-    entailment_features = number of tuple slots), and then passing these features into a shallow NN to get an
-    entailment score.
-    Each entailment feature is currently made by comparing the corresponding slots in the two tuples and
-    determining the degree of lexical overlap using the formula:
-        :math:`normalized overlap_s = \dfrac{|A_s \cap B_s|}{|A_s|}`
-    where :math:`s` is the index of the slot, :math:`A_s` is answer tuple slot :math:`s` and :math:`B_s` is
-    background tuple slot :math:`s`.
+    This layer takes as input two tensors corresponding to two tuples, an answer tuple and a
+    background tuple, and calculates the degree to which the background tuple `entails` the answer
+    tuple.
+
+    Entailment is determined by generating a set of entailment features from the tuples (the number
+    of entailment_features = number of tuple slots), and then passing these features into a shallow
+    NN to get an entailment score.
+
+    Each entailment feature is currently made by comparing the corresponding slots in the two
+    tuples and determining the degree of lexical overlap using the formula:
+
+    - :math:`normalized overlap_s = \dfrac{|A_s \cap B_s|}{|A_s|}`
+
+    where :math:`s` is the index of the slot, :math:`A_s` is answer tuple slot :math:`s` and
+    :math:`B_s` is background tuple slot :math:`s`.
 
     Inputs:
-        - tuple_1_input (the answer tuple), shape ``(batch size, num_slots, num_slot_words_t1)``,
-          any mask is ignored.  Here num_slot_words_t1 is the maximum number of words in each of the
-          slots in tuple_1.
-        - tuple_2_input (the background_tuple), shape ``(batch size, num_slots, num_slot_words_t2)``,
-          and again, any corresponding mask is ignored. As above, num_slot_words_t2 is the
-          maximum number of words in each of the slots in tuple_2. This need not match tuple 1.
+
+    - tuple_1_input (the answer tuple), shape ``(batch size, num_slots, num_slot_words_t1)``
+      Any mask is ignored. Here num_slot_words_t1 is the maximum number of
+      words in each of the slots in tuple_1.
+
+    - tuple_2_input (the background_tuple), shape ``(batch size, num_slots, num_slot_words_t2)``
+      Any corresponding mask is ignored. As above, num_slot_words_t2 is the
+      maximum number of words in each of the slots in tuple_2. This need not
+      match tuple 1.
 
     Output:
-        - entailment score, shape ``(batch, 1)``
+
+    - entailment score, shape ``(batch, 1)``
 
     Parameters
     ----------
-    - num_hidden_layers : int, default=1
+    num_hidden_layers : int, default=1
         Number of hidden layers in the shallow NN.
 
-    - hidden_layer_width : int, default=4
+    hidden_layer_width : int, default=4
         The number of nodes in each of the NN hidden layers.
 
-    - initialization : string, default='glorot_uniform'
+    initialization : string, default='glorot_uniform'
         The initialization of the NN weights
 
-    - hidden_layer_activation : string, default='relu'
+    hidden_layer_activation : string, default='relu'
         The activation of the NN hidden layers
 
-    - final_activation : string, default='sigmoid'
+    final_activation : string, default='sigmoid'
         The activation of the NN output layer
 
     Notes
-    -----
-    This layer is incompatible with the WordsAndCharacters tokenizer.
+    _____
+    This layer is incompatible with the ``WordsAndCharacters`` tokenizer.
     """
 
     def __init__(self, num_hidden_layers: int=1, hidden_layer_width: int=4,

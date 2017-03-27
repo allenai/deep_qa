@@ -57,20 +57,29 @@ class Tokenizer:
         raise NotImplementedError
 
     def embed_input(self,
-                    input_layer: 'keras.layers.Layer',
-                    text_trainer: 'TextTrainer',
+                    input_layer,
+                    text_trainer,
                     embedding_name: str="embedding"):
         """
-        Applies embedding layers to the input_layer.  See TextTrainer._embed_input for a more
+        Applies embedding layers to the input_layer.  See ``TextTrainer._embed_input`` for a more
         detailed comment on what this method does.
 
-        - `input_layer` should be a Keras Input() layer.
-        - `text_trainer` is a TextTrainer instance, so we can access methods on it like
-          `text_trainer._get_embedded_input`, which actually applies an embedding layer, projection
-          layers, and dropout to the input layer.  Simple TextEncoders will basically just call
-          this function and be done.  More complicated TextEncoders might need additional logic on
-          top of just calling `text_trainer._get_embedded_input`.
-        - `embedding_name` allows for different embedding matrices.
+        Parameters
+        ----------
+        input_layer: Keras ``Input()`` layer
+            The layer to embed.
+
+        text_trainer: TextTrainer
+            A TextTrainer instance so we can access methods on it like
+            ``text_trainer._get_embedded_input``, which actually applies an
+            embedding layer, projection layers, and dropout to the input layer.
+            Simple TextEncoders will basically just call this function and be done.
+            More complicated TextEncoders might need additional logic on
+            top of just calling ``text_trainer._get_embedded_input``.
+
+        embedding_name: str, optional (default="embedding")
+            The name to assign the embedding layer, which allows for
+            different embedding matrices.
         """
         raise NotImplementedError
 

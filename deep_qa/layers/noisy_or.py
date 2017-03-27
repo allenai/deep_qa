@@ -24,29 +24,38 @@ class BetweenZeroAndOne(Constraint):
 
 class NoisyOr(MaskedLayer):
     r"""
-    This layer takes as input a tensor of probabilities and calculates the noisy-or probability
-    across a given axis based on the noisy-or equation:
-        :math:`p(x) = 1 - \prod_{i=1:N}(1 - q * p(x|y_n))`
-    where q is the noise parameter.
+    This layer takes as input a tensor of probabilities and calculates the
+    noisy-or probability across a given axis based on the noisy-or equation:
+
+    - :math:`p(x) = 1 - \prod_{i=1:N}(1 - q * p(x|y_n))`
+
+    where :math`q` is the noise parameter.
 
     Inputs:
-        - probabilities, shape ``(batch, ..., N, ...)``,
-          with an optional mask of the same shape,
+        - probabilities: shape ``(batch, ..., N, ...)``
+          Optionally takes a mask of the same shape,
           where N is the number of y's in the above equation
           (i.e. the number of probabilities being combined in the product),
           in the dimension corresponding to the specified axis.
+
     Output:
-        - X, shape ``(batch, ..., ...)``, one less than input dims,
-          with an optional mask of the same shape.  The lost dimension corresponds to the specified axis.
-          The output mask is the result of `K.any()` on the input mask, along the specified axis.
+        - X: shape ``(batch, ..., ...)``
+          The output has one less dimension than the input, and has an
+          optional mask of the same shape.  The lost dimension corresponds
+          to the specified axis. The output mask is the result of ``K.any()``
+          on the input mask, along the specified axis.
+
     Parameters
     ----------
     axis : int, default=-1
         The axis over which to combine probabilities.
+
     name : string, default='noisy_or'
         Name of the layer, ued to debug both the layer and its parameter.
+
     param_init : string, default='uniform'
         The initialization of the noise parameter.
+
     noise_param_constraint : Keras Constraint, default=None
         Optional, a constraint which would be applied to the noise parameter.
     """

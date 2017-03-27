@@ -24,7 +24,7 @@ class VectorMatrixMerge(MaskedLayer):
     submit a PR.
 
     This ``Layer`` is essentially the opposite of a
-    :ref:`~deep_qa.layers.vector_matrix_split.VectorMatrixSplit`.
+    :class:`~deep_qa.layers.vector_matrix_split.VectorMatrixSplit`.
 
     Parameters
     ----------

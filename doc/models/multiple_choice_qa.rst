@@ -21,15 +21,6 @@ DecomposableAttention
     :undoc-members:
     :show-inheritance:
 
-MultipleChoiceBidaf
--------------------
-
-.. automodule:: deep_qa.models.multiple_choice_qa.multiple_choice_bidaf
-    :members:
-    :noindex:
-    :undoc-members:
-    :show-inheritance:
-
 MultipleTrueFalseMemoryNetwork
 ------------------------------
 

@@ -2,6 +2,7 @@ machine:
   environment:
     MINICONDA_PATH: $HOME/miniconda
     CONDA_ENV_NAME: testenv
+    PATH: $MINICONDA_PATH/bin:$PATH
 
 dependencies:
   cache_directories:
@@ -9,8 +10,8 @@ dependencies:
   # Check whether the doc build is required, install build dependencies and
   # run sphinx to build the doc.
   override:
-    - bash build_tools/circle/build_doc.sh:
-        timeout: 3600 # max seconds to build the doc
+    - bash build_tools/circle/install_doc_requirements.sh
+    - bash build_tools/circle/build_doc.sh
 
 test:
   override:

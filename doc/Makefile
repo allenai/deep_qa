@@ -239,3 +239,13 @@ dummy:
 	$(SPHINXBUILD) -b dummy $(ALLSPHINXOPTS) $(BUILDDIR)/dummy
 	@echo
 	@echo "Build finished. Dummy builder generates no files."
+
+check:
+	rm -rf _build
+	$(SPHINXBUILD) -W -T -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+
+html-strict:
+  # Build documentation in strict mode, where warnings are errors.
+	make check
+	@echo
+	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

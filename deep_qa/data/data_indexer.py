@@ -33,15 +33,24 @@ class DataIndexer:
         logger.info("Finalizing data indexer")
         self._finalized = True
 
-    def fit_word_dictionary(self, dataset: 'TextDataset', min_count: int=1):
+    def fit_word_dictionary(self, dataset, min_count: int=1):
         """
-        Given a Dataset, this method decides which words are given an index, and which ones are
+        Given a ``Dataset``, this method decides which words are given an index, and which ones are
         mapped to an OOV token (in this case "UNK").  This method must be called before any dataset
-        is indexed with this DataIndexer.  If you don't first fit the word dictionary, you'll
+        is indexed with this ``DataIndexer``.  If you don't first fit the word dictionary, you'll
         basically map every token onto "UNK".
 
-        We call instance.words() for each instance in the dataset, and then keep all words that
-        appear at least min_count times.
+        We call ``instance.words()`` for each instance in the dataset, and then keep all words that
+        appear at least ``min_count`` times.
+
+        Parameters
+        ----------
+        dataset: ``TextDataset``
+            The dataset to index.
+
+        min_count: int, optional (default=1)
+            The minimum number of occurences a word must have in the dataset
+            in order to be assigned an index.
         """
         logger.info("Fitting word dictionary with min count of %d, finalized is %s",
                     min_count, self._finalized)

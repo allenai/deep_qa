@@ -5,17 +5,23 @@ from keras import backend as K
 from .word_alignment import WordAlignmentEntailment
 from ...tensors.backend import switch
 
+
 class MultipleChoiceTupleEntailment(WordAlignmentEntailment):
-    '''
-    A kind of decomposable attention where the premise (or background) is in the form of SVO triples,
-    and entailment is computed by finding the answer in a multiple coice setting that aligns best
-    with the tuples that align with the question. This happens in two steps:
-    1) We use the _align function from WordAlignmentEntailment to find the premise tuples whose SV,
-        or VO pairs align best with the question.
-    2) We then use the _align function again to find the answer that aligns best with the
-        unaligned part of the tuples, weighed by how much they partially align with the question
-        in step 1.
-    TODO(pradeep): Also match S with question, VO with answer, O with question and SV with answer.
+    '''A kind of decomposable attention where the premise (or background) is in
+    the form of SVO triples, and entailment is computed by finding the answer
+    in a multiple choice setting that aligns best with the tuples that align
+    with the question. This happens in two steps:
+
+    (1) We use the _align function from WordAlignmentEntailment to find the
+        premise tuples whose SV, or VO pairs align best with the question.
+
+    (2) We then use the _align function again to find the answer that aligns
+        best with the unaligned part of the tuples, weighed by how much they
+        partially align with the question in step 1.
+
+    TODO(pradeep): Also match S with question, VO with answer, O with question
+    and SV with answer.
+
     '''
     def __init__(self, params: Dict[str, Any]):
         self.tuple_size = None

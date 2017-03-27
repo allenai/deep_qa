@@ -13,19 +13,25 @@ from ...data.constants import SHIFT_OP, REDUCE2_OP, REDUCE3_OP
 class TreeCompositionLSTM(Recurrent):
     '''
     Conceptual differences from LSTM:
-    1. Tree LSTM does not differentiate between inputs and h, because
-        tree composition is not applied at every time step (it is applied when the input symbol is a
-        reduce) and when it is applied, there is no "current input".
-    2. Input sequences are not the
-        ones being composed, they are operations on the buffer containing elements corresponding to
-        tokens. There isn't one token per timestep like LSTMs.
-    3. Single vectors h and c are replaced
-        by a stack and buffer of h and c corresponding to the structure processed so far.
-    4. Gates are
-        applied on two or three elements at a time depending on the type of reduce. Accordingly there
-        are two classes of gates: G_2 (two elements) and G_3 (three elements)
-    5. G_2 has two forget
-        gates, for each element that can be forgotten and G_3 has three.
+
+    (1) Tree LSTM does not differentiate between x and h, because
+        tree composition is not applied at every time step (it is applied
+        when the input symbol is a reduce) and when it is applied, there is no
+        "current input".
+
+    (2) Input sequences are not the ones being composed, they are operations on
+        the buffer containing elements corresponding to tokens. There isn't one
+        token per timestep like LSTMs.
+
+    (3) Single vectors h and c are replaced by a stack and buffer of h and c
+        corresponding to the structure processed so far.
+
+    (4) Gates are applied on two or three elements at a time depending on the
+        type of reduce. Accordingly there are two classes of gates: G_2 (two
+        elements) and G_3 (three elements)
+
+    (5) G_2 has two forget gates, for each element that can be forgotten and
+        G_3 has three.
 
     Notes
     -----

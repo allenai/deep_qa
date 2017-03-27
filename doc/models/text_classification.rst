@@ -9,15 +9,6 @@ Input: Text sequence
 Output: Class label
 
 
-TreeLSTMModel
--------------
-
-.. automodule:: deep_qa.models.text_classification.tree_lstm_model
-    :members:
-    :noindex:
-    :undoc-members:
-    :show-inheritance:
-
 TrueFalseModel
 --------------
 

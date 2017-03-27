@@ -11,27 +11,33 @@ from ...tensors.similarity_functions import similarity_functions
 
 
 class Attention(MaskedLayer):
-    '''
-    This Layer takes two inputs: a vector and a matrix.  We compute the similarity between the
-    vector and each row in the matrix, and then perform a softmax over rows using those computed
-    similarities.  We handle masking properly for masked rows in the matrix, though we ignore any
-    masking on the vector.
+    """
+    This Layer takes two inputs: a vector and a matrix.  We compute the
+    similarity between the vector and each row in the matrix, and then perform
+    a softmax over rows using those computed similarities.  We handle masking
+    properly for masked rows in the matrix, though we ignore any masking on
+    the vector.
 
-    By default similarity is computed with a dot product, but you can alternatively use a
-    parameterized similarity function if you wish.
+    By default similarity is computed with a dot product, but you can
+    alternatively use a parameterized similarity function if you wish.
 
-    Input shapes:
-        vector: (batch_size, embedding_dim), mask is ignored if provided
-        matrix: (batch_size, num_rows, embedding_dim), with mask (batch_size, num_rows)
-    Output shape: (batch_size, num_rows), no mask (masked input rows have value 0 in the output)
+    Inputs:
+
+    - vector: shape ``(batch_size, embedding_dim)``, mask is ignored if provided
+    - matrix: shape ``(batch_size, num_rows, embedding_dim)``, with mask ``(batch_size, num_rows)``
+
+    Output:
+
+    - attention: shape ``(batch_size, num_rows)``, no mask (masked input rows have value 0 in the
+      output)
 
     Parameters
     ----------
-    similarity_function_params: Dict[str, Any], default={}
+    similarity_function_params: Dict[str, Any], optional (default={})
         These parameters get passed to a similarity function (see
         :mod:`deep_qa.tensors.similarity_functions` for more info on what's acceptable).  The
         default similarity function with no parameters is a simple dot product.
-    '''
+    """
     def __init__(self, similarity_function: Dict[str, Any]=None, **kwargs):
         super(Attention, self).__init__(**kwargs)
         self.similarity_function_params = deepcopy(similarity_function)
