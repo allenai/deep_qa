@@ -1,0 +1,39 @@
+{
+    "model_class": "SimpleTagger",
+    "model_serialization_prefix": "/tmp/models/simple_tagger",
+    "encoder": {
+        "word": {
+          "type": "cnn",
+          "ngram_filter_sizes": [2, 3, 4, 5],
+          "num_filters": 100
+        }
+    },
+    "seq2seq_encoder": {
+        "default": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "units": 100
+            },
+            "wrapper_params": {}
+        }
+    },
+    "num_stacked_rnns": 2,
+    "instance_type": "PreTokenizedTaggingInstance",
+    "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+    "project_embeddings": false,
+    "fine_tune_embeddings": false,
+    "tokenizer": {
+      "type": "words and characters",
+      "processor": {"word_splitter": "no_op"}
+    },
+    "embedding_dropout": 0.2,
+    "patience": 3,
+    "embedding_dim": {"words": 100, "characters": 8},
+    "num_epochs": 20,
+    "optimizer": {
+      "type": "adadelta",
+      "lr": 0.5
+    },
+    //"validation_files": ["/efs/data/dlfa/squad/processed/tagging_dev.tsv"],
+    "train_files": ["/efs/data/dlfa/squad/processed/tagging_train.tsv"]
+}

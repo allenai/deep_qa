@@ -21,6 +21,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from deep_qa.common.checks import ensure_pythonhashseed_set, log_keras_version_info
 from deep_qa.common.params import get_choice
 from deep_qa.models import concrete_models
+from keras import backend as K
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -44,6 +45,8 @@ def main():
         logger.info("Not enough training inputs.  Assuming you wanted to load a model instead.")
         # TODO(matt): figure out a way to specify which epoch you want to load a model from.
         model.load_model()
+    if K.backend() == "tensorflow":
+        K.clear_session()
 
 
 def replace_none(dictionary):

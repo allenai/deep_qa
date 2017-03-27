@@ -39,7 +39,7 @@ class PreTokenizedTaggingInstance(TaggingInstance):
         tokens = []
         tags = []
         for field in fields:
-            token, tag = field.split("###")
+            token, tag = field.rsplit("###", 1)
             tokens.append(token)
             tags.append(tag)
         return cls(tokens, tags, index)

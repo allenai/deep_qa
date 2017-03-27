@@ -51,6 +51,16 @@ class TestPreTokenizedTaggingInstance(DeepQaTestCase):
         assert instance.label == tags
         assert instance.index == index
 
+    def test_read_from_line_handles_hashes_in_words(self):
+        tokens = ["######", "#", "###", "#"]
+        tags = ["A", "B", "C", "D"]
+        index = None
+        line = self.instance_to_line(tokens, tags, index)
+        instance = PreTokenizedTaggingInstance.read_from_line(line)
+        assert instance.text == tokens
+        assert instance.label == tags
+        assert instance.index == index
+
     def test_to_indexed_instance_converts_correctly(self):
         data_indexer = DataIndexer()
         cats_index = data_indexer.add_word_to_index("cats")
@@ -61,12 +71,16 @@ class TestPreTokenizedTaggingInstance(DeepQaTestCase):
         v_tag_index = data_indexer.add_word_to_index("V", namespace="tags")
         period_tag_index = data_indexer.add_word_to_index(".", namespace="tags")
         indexed_instance = self.instance.to_indexed_instance(data_indexer)
-        assert indexed_instance.text_indices == [cats_index, are_index, animals_index, period_index]
+        expected_indices = [cats_index, are_index, animals_index, period_index]
+        assert indexed_instance.text_indices == expected_indices
         expected_label = [self.one_hot(n_tag_index - 2, 3),
                           self.one_hot(v_tag_index - 2, 3),
                           self.one_hot(n_tag_index - 2, 3),
                           self.one_hot(period_tag_index - 2, 3)]
         assert_array_almost_equal(indexed_instance.label, expected_label)
+        train_inputs, train_labels = indexed_instance.as_training_data()
+        assert_array_almost_equal(train_labels, expected_label)
+        assert_array_almost_equal(train_inputs, expected_indices)
 
     def test_words_returns_correct_dictionary(self):
         assert self.instance.words() == {'words': ['cats', 'are', 'animals', '.'],

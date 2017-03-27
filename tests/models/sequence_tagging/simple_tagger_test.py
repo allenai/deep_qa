@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from numpy.testing import assert_allclose
+import numpy
 
 from deep_qa.models.sequence_tagging.simple_tagger import SimpleTagger
 from ...common.test_case import DeepQaTestCase
@@ -14,13 +14,30 @@ class TestSimpleTagger(DeepQaTestCase):
                 'instance_type': 'PreTokenizedTaggingInstance',
                 'tokenizer': {'processor': {'word_splitter': 'no_op'}},
                 }
+        self.ensure_model_trains_and_loads(SimpleTagger, args)
+
+    def test_loss_function_uses_mask(self):
+        # We're going to make sure that the loss and accuracy computations are the same for any
+        # permutation of labels on padded tokens.  If not, the loss/accuracy function is paying
+        # attention to the labels when it shouldn't be.  We're not going to test for any particular
+        # accuracy value, just that all of them are the same - I ran this a few times by hand to be
+        # sure that we're getting different accuracy values, depending on the initialization.
+        self.write_sequence_tagging_files()
+        args = {
+                'show_summary_with_masking_info': True,
+                'instance_type': 'PreTokenizedTaggingInstance',
+                'tokenizer': {'processor': {'word_splitter': 'no_op'}},
+                }
         model = self.get_model(SimpleTagger, args)
         model.train()
 
-        # load the model that we serialized
-        loaded_model = self.get_model(SimpleTagger, args)
-        loaded_model.load_model()
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
+        input_indices = [3, 2, 0, 0]
+        labels = [[[0, 1], [1, 0], [1, 0], [1, 0]],
+                  [[0, 1], [1, 0], [1, 0], [0, 1]],
+                  [[0, 1], [1, 0], [0, 1], [1, 0]],
+                  [[0, 1], [1, 0], [0, 1], [0, 1]]]
+        results = [model.model.evaluate(numpy.asarray([input_indices]), numpy.asarray([label]))
+                   for label in labels]
+        loss, accuracy = zip(*results)
+        assert len(set(loss)) == 1
+        assert len(set(accuracy)) == 1

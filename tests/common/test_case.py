@@ -34,9 +34,9 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def tearDown(self):
-        if K.backend() == 'tensorflow':
-            K.clear_session()
         shutil.rmtree(self.TEST_DIR)
+        if K.backend() == "tensorflow":
+            K.clear_session()
 
     def get_model_params(self, model_class, additional_arguments=None):
         params = {}
@@ -103,15 +103,15 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
     def write_sequence_tagging_files(self):
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('cats###N\tare###V\tanimals###N\t.###.\n')
-            train_file.write('dogs###N\tare###V\tanimals###N\t.###.\n')
-            train_file.write('snakes###N\tare###V\tanimals###N\t.###.\n')
-            train_file.write('birds###N\tare###V\tanimals###N\t.###.\n')
+            train_file.write('cats###N\tare###V\tanimals###N\t.###N\n')
+            train_file.write('dogs###N\tare###V\tanimals###N\t.###N\n')
+            train_file.write('snakes###N\tare###V\tanimals###N\t.###N\n')
+            train_file.write('birds###N\tare###V\tanimals###N\t.###N\n')
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
-            validation_file.write('horses###N\tare###V\tanimals###N\t.###.\n')
-            validation_file.write('cows###N\tare###V\tanimals###N\t.###.\n')
-            validation_file.write('monkeys###N\tare###V\tanimals###N\t.###.\n')
-            validation_file.write('caterpillars###N\tare###V\tanimals###N\t.###.\n')
+            validation_file.write('horses###N\tare###V\tanimals###N\t.###N\n')
+            validation_file.write('blue###N\tcows###N\tare###V\tanimals###N\t.###N\n')
+            validation_file.write('monkeys###N\tare###V\tanimals###N\t.###N\n')
+            validation_file.write('caterpillars###N\tare###V\tanimals###N\t.###N\n')
 
     def write_true_false_model_files(self):
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:

@@ -387,7 +387,7 @@ class TextTrainer(Trainer):
         parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
         could include a projection or not, and so on.
         """
-        if self.pretrained_embeddings_file:
+        if vocab_name == 'words' and self.pretrained_embeddings_file:
             embedding_layer = PretrainedEmbeddings.get_embedding_layer(
                     self.pretrained_embeddings_file,
                     self.data_indexer,
