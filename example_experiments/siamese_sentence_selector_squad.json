@@ -1,10 +1,21 @@
 {
     "model_class": "SiameseSentenceSelector",
     "model_serialization_prefix": "models/sentence_selection/siamese_stacked",
+    "share_hidden_seq2seq_layers": true,
+    "num_sentence_words": 40,
     "encoder": {
         "default": {
             "type": "bi_gru",
             "units": 128
+        }
+    },
+    "seq2seq_encoder": {
+        "default": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "units": 100
+            },
+            "wrapper_params": {}
         }
     },
     "batch_size": 32,
@@ -13,8 +24,8 @@
         "words": 100
     },
     "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
-    "fine_tune_embeddings": False,
-    "project_embeddings": False,
+    "fine_tune_embeddings": false,
+    "project_embeddings": false,
     "optimizer": {
         "type": "adam"
     },

@@ -14,6 +14,15 @@ class TestSiameseSentenceSelector(DeepQaTestCase):
                                 "units": 7
                         }
                 },
+                "seq2seq_encoder": {
+                        "default": {
+                                "type": "gru",
+                                "encoder_params": {
+                                        "units": 7
+                                },
+                                "wrapper_params": {}
+                        }
+                },
                 "embedding_dim": {"words": 5},
         }
         self.ensure_model_trains_and_loads(SiameseSentenceSelector, args)

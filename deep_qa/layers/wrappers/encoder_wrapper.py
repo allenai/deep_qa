@@ -12,6 +12,12 @@ class EncoderWrapper(TimeDistributed):
     masked (because we padded the number of sentences, for instance).  In this case, we just want
     to mask the entire sequence.  EncoderWrapper returns a mask with the same dimension as the
     input sequences, where sequences are masked if _all_ of their words were masked.
+
+    Notes
+    -----
+    For seq2seq encoders, one should use either ``TimeDistributed`` or
+    ``TimeDistributedWithMask`` since ``EncoderWrapper`` reduces the dimensionality
+    of the input mask.
     '''
     def compute_mask(self, x, input_mask=None):
         # pylint: disable=unused-argument
