@@ -1,12 +1,15 @@
 '''
 The retrieval method encodes both the background and the query sentences by averaging their word representations,
-and does retrieval using a Locality Sensitive Hash (LSH). We use ScikitLearn's LSH.
+optionally weighted by their IDF values and does retrieval using a Locality Sensitive Hash (LSH).
+We use ScikitLearn's LSH.
 '''
 import sys
 import os
 import argparse
 import gzip
 import pickle
+from collections import defaultdict
+from typing import List
 import numpy
 
 import spacy
@@ -14,7 +17,7 @@ from sklearn.neighbors import LSHForest
 
 
 class BowLsh:
-    def __init__(self, serialization_prefix='lsh'):
+    def __init__(self, serialization_prefix='lsh', use_idf=True):
         self.embeddings = {}
         self.lsh = None
         self.embedding_dim = None
@@ -24,7 +27,10 @@ class BowLsh:
         self.vector_max = -float("inf")
         self.vector_min = float("inf")
         self.en_nlp = spacy.load('en')
-        self.indexed_background = {}  # index -> background sentence
+        self.indexed_background = {}  # index -> tokenized background sentence
+        self.use_idf = use_idf
+        if self.use_idf:
+            self.idf_values = {}  # word -> idf_value
 
     def read_embeddings_file(self, embeddings_file: str):
         with gzip.open(embeddings_file, 'rb') as embeddings_file:
@@ -42,10 +48,11 @@ class BowLsh:
                 self.embeddings[word] = vector
 
     def load_model(self):
-        pickled_embeddings_file = "%s/embeddings.pkl" % self.serialization_prefix
-        pickled_lsh_file = "%s/lsh.pkl" % self.serialization_prefix
-        self.embeddings = pickle.load(open(pickled_embeddings_file, 'rb'))
-        indexed_background_file = open("%s/background.tsv" % self.serialization_prefix, "r")
+        pickled_embeddings_file = open("%s/embeddings.pkl" % self.serialization_prefix, 'rb')
+        pickled_lsh_file = open("%s/lsh.pkl" % self.serialization_prefix, 'rb')
+        indexed_background_file = open("%s/background.pkl" % self.serialization_prefix, "rb")
+        idf_file = open("%s/idf.pkl" % self.serialization_prefix, "rb")
+        self.embeddings = pickle.load(pickled_embeddings_file)
         for vector in self.embeddings.values():
             if self.embedding_dim is None:
                 self.embedding_dim = len(vector)
@@ -55,10 +62,10 @@ class BowLsh:
                     self.vector_min = vector_min
                 if vector_max > self.vector_max:
                     self.vector_max = vector_max
-        self.lsh = pickle.load(open(pickled_lsh_file, 'rb'))
-        for line in indexed_background_file:
-            parts = line.strip().split('\t')
-            self.indexed_background[int(parts[0])] = parts[1]
+        self.lsh = pickle.load(pickled_lsh_file)
+        self.indexed_background = pickle.load(indexed_background_file)
+        if self.use_idf:
+            self.idf_values = pickle.load(idf_file)
 
     def save_model(self):
         '''
@@ -70,25 +77,29 @@ class BowLsh:
             os.makedirs(self.serialization_prefix)
         pickled_embeddings_file = open("%s/embeddings.pkl" % self.serialization_prefix, "wb")
         pickled_lsh_file = open("%s/lsh.pkl" % self.serialization_prefix, "wb")
-        indexed_background_file = open("%s/background.tsv" % self.serialization_prefix, "w")
+        indexed_background_file = open("%s/background.pkl" % self.serialization_prefix, "wb")
         print("\tDumping embeddings", file=sys.stderr)
         pickle.dump(self.embeddings, pickled_embeddings_file)
         print("\tDumping sentences", file=sys.stderr)
-        for index, sentence in self.indexed_background.items():
-            sentence = sentence.replace('\t', ' ')  # Sanitizing sentences before making a tsv.
-            print("%d\t%s" % (index, sentence), file=indexed_background_file)
+        pickle.dump(self.indexed_background, indexed_background_file)
         pickled_embeddings_file.close()
         indexed_background_file.close()
         # Serializing the LSH is memory intensive. Deleting the other members first.
         del self.embeddings
         del self.indexed_background
+        if self.use_idf:
+            idf_file = open("%s/idf.pkl" % self.serialization_prefix, "wb")
+            print("\tDumping IDF", file=sys.stderr)
+            pickle.dump(self.idf_values, idf_file)
+            idf_file.close()
+            del self.idf_values
         print("\tDumping LSH", file=sys.stderr)
         pickle.dump(self.lsh, pickled_lsh_file)
         pickled_lsh_file.close()
 
     def get_word_vector(self, word, random_for_unk=False):
         if word in self.embeddings:
-            return self.embeddings[word]
+            vector = self.embeddings[word]
         else:
             # If this is for the background data, we'd want to make new vectors (uniformly sampling
             # from the range (vector_min, vector_max)). If this is for the queries, we'll return a zero vector
@@ -99,20 +110,35 @@ class BowLsh:
                 self.embeddings[word] = vector
             else:
                 vector = numpy.zeros((self.embedding_dim,))
-            return vector
 
-    def encode_sentence(self, sentence: str, for_background=False):
-        words = [str(w.lower_) for w in self.en_nlp.tokenizer(sentence)]
+        if self.use_idf:
+            idf_value = self.idf_values[word] if word in self.idf_values else self.idf_values['@UNK@']
+            vector = vector * idf_value
+
+        return vector
+
+    def encode_sentence(self, words: List[str], for_background=False):
         return numpy.mean(numpy.asarray([self.get_word_vector(word, for_background) for word in words]), axis=0)
 
     def read_background(self, background_file):
-        # Read background file and add to indexed_background.
+        # Read background file, tokenize it and add to indexed_background.
+        # Additionally, also compute IDF values of all words in the vocabulary if needed.
         index = 0
+        word_doc_frequencies = defaultdict(lambda: 0)
         for sentence in gzip.open(background_file, mode="r"):
             sentence = sentence.decode('utf-8').strip()
             if sentence != '':
-                self.indexed_background[index] = sentence
+                words = [str(w.lower_) for w in self.en_nlp.tokenizer(sentence)]
+                if self.use_idf:
+                    for word in set(words):
+                        word_doc_frequencies[word] += 1
+                self.indexed_background[index] = words
                 index += 1
+        print("Computing IDF values", file=sys.stderr)
+        num_docs = len(self.indexed_background)
+        for word in word_doc_frequencies:
+            self.idf_values[word] = numpy.log(num_docs/word_doc_frequencies[word])
+        self.idf_values['@UNK@'] = numpy.log(num_docs)  # Assuming OOV occurred in exactly 1 sentence
 
     def fit_lsh(self):
         self.lsh = LSHForest(random_state=12345)
@@ -127,23 +153,26 @@ class BowLsh:
             parts = line.strip().split('\t')
             indices.append(parts[0])
             sentences.append(parts[1:])
+        test_data = []
         if sentence_queries:
             # Each tuple in sentences is (sentence, label)
-            test_data = [self.encode_sentence(sentence_parts[0]) for sentence_parts in sentences]
+            for sentence_parts in sentences:
+                words = [str(w.lower_) for w in self.en_nlp.tokenizer(sentence_parts[0])]
+                test_data.append(self.encode_sentence(words))
             _, all_neighbor_indices = self.lsh.kneighbors(test_data, n_neighbors=num_neighbors)
         else:
-            test_data = []
             # Each tuple in sentences is (sentence, options, label)
             for sentence, options_string, _ in sentences:
                 options = options_string.split("###")
                 if len(options) < num_options:
                     options = options + [''] * (num_options - len(options))
                 options = options[:num_options]
-                test_data.append(self.encode_sentence(sentence))
+                words = [str(w.lower_) for w in self.en_nlp.tokenizer(sentence)]
+                test_data.append(self.encode_sentence(words))
                 for option in options:
-                    test_data.append(self.encode_sentence("%s %s" % (sentence, option)))
+                    option_tokens = [str(w.lower_) for w in self.en_nlp.tokenizer(option)]
+                    test_data.append(self.encode_sentence(words + option_tokens))
             num_queries_per_question = 1 + num_options
-            #num_neighbors_per_query = num_neighbors // num_queries_per_question
             similarity_scores, query_neighbor_indices = self.lsh.kneighbors(test_data,
                                                                             n_neighbors=num_neighbors)
             # We need to do some post-processing here to sort the results from all the queries.
@@ -172,8 +201,8 @@ class BowLsh:
                 all_neighbor_indices.append(filtered_neighbor_indices)
         with open(outfile, "w") as outfile:
             for i, sentence_neighbor_indices in zip(indices, all_neighbor_indices):
-                print("%s\t%s" % (i, "\t".join([self.indexed_background[j] for j in sentence_neighbor_indices])),
-                      file=outfile)
+                print("%s\t%s" % (i, "\t".join([" ".join(self.indexed_background[j])
+                                                for j in sentence_neighbor_indices])), file=outfile)
             outfile.close()
 
 
@@ -192,13 +221,16 @@ def main():
                            as sentences. If not, they will be treated as question-answer pairs, and the\
                            LSH will get one query per question, and one each per answer option.",
                            action='store_true')
+    argparser.add_argument("--no_idf", help="Do not use IDF to weight words while encoding sentences",
+                           action='store_true')
     argparser.add_argument("--num_neighbors", type=int, help="Number of background sentences to retrieve",
                            default=50)
     argparser.add_argument("--num_options", type=int, help="Number of options for multiple choice questions",
                            default=4)
     args = argparser.parse_args()
-    bow_lsh = BowLsh(args.serialization_prefix)
     also_train = False
+    use_idf = not args.no_idf
+    bow_lsh = BowLsh(args.serialization_prefix, use_idf)
     if args.embeddings_file is not None and args.background_corpus is not None:
         print("Attempting to fit LSH", file=sys.stderr)
         also_train = True
