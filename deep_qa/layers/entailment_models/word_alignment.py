@@ -10,8 +10,6 @@ representations.
 TODO(pradeep): Make this work with the memory network eventually.
 '''
 
-from typing import Any, Dict
-
 from keras import backend as K
 
 from ..masked_layer import MaskedLayer
@@ -22,9 +20,9 @@ class WordAlignmentEntailment(MaskedLayer):  # pylint: disable=abstract-method
     '''
     This is an abstract class for word alignment entailment. It defines an _align function.
     '''
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, **kwargs):
         self.input_dim = None
-        super(WordAlignmentEntailment, self).__init__(**params)
+        super(WordAlignmentEntailment, self).__init__(**kwargs)
 
     @staticmethod
     def _align(source_embedding, target_embedding, source_mask, target_mask, normalize_alignment=True):

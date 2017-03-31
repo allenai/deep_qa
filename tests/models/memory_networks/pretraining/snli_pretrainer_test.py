@@ -13,7 +13,7 @@ class TestSnliPretrainers(DeepQaTestCase):
 
     def setUp(self):
         super(TestSnliPretrainers, self).setUp()
-        self.write_snli_file()
+        self.write_snli_pretraining_file()
         self.write_memory_network_files()
         self.pretrainer_params = {"train_files": [self.SNLI_FILE]}
 

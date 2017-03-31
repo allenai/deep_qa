@@ -1,0 +1,27 @@
+{
+    "model_class": "DecomposableAttention",
+    "model_serialization_prefix": "/tmp/models/decomposable_attention",
+    "seq2seq_encoder": {
+        "default": {
+            "type": "bi_gru",
+            "encoder_params": {
+                "units": 100
+            },
+            "wrapper_params": {}
+        }
+    },
+    "num_seq2seq_layers": 1,
+    "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+    "project_embeddings": false,
+    "fine_tune_embeddings": false,
+    "embedding_dropout": 0.2,
+    "patience": 3,
+    "embedding_dim": {"words": 100},
+    "num_epochs": 20,
+    "optimizer": {
+      "type": "adadelta",
+      "lr": 0.5
+    },
+    //"validation_files": ["/efs/data/dlfa/snli/dev.tsv"],
+    "train_files": ["/efs/data/dlfa/snli/train.tsv"]
+}

@@ -3,38 +3,84 @@ from overrides import overrides
 
 from keras.layers import Input
 
-from ..memory_networks.memory_network import MemoryNetwork
-from ...layers.top_knowledge_selector import TopKnowledgeSelector
+from ...data.instances.snli_instance import SnliInstance
+from ...training.text_trainer import TextTrainer
+from ...layers.entailment_models.decomposable_attention import DecomposableAttentionEntailment
 from ...training.models import DeepQaModel
 
 
-#TODO(matt): Remove the dependency on MemoryNetwork here - we're only using
-# self._get_entailment_model(), and we could just instantiate the model we want easily enough, and
-# that would make it so we don't need the TopKnowledgeSelector, anyway, and can just take a pair of
-# sentences as input.  i.e., we should make this an actual entailment model, that can run as-is on
-# SNLI.
-class DecomposableAttention(MemoryNetwork):
+class DecomposableAttention(TextTrainer):
     '''
-    This is a solver that embeds the question-option pair and the background and applies the
-    decomposable attention entailment model (Parikh et al., EMNLP 2016). This currently only works
-    with backgrounds of length=1 for now.
+    This ``TextTrainer`` implements the Decomposable Attention model described in "A Decomposable
+    Attention Model for Natural Language Inference", by Parikh et al., 2016, with some optional
+    enhancements before the decomposable attention actually happens.  Specifically, Parikh's
+    original model took plain word embeddings as input to the decomposable attention; we allow
+    other operations the transform these word embeddings, such as running a biLSTM on them, before
+    running the decomposable attention layer.
 
-    While this class inherits MemoryNetwork for now, it is only the data preparation and
-    embedding steps from that class that are reused here.
+    Inputs
+    ------
+
+    - A "text" sentence, with shape (batch_size, sentence_length)
+    - A "hypothesis" sentence, with shape (batch_size, sentence_length)
+
+    Outputs
+    -------
+
+    - An entailment decision per input text/hypothesis pair, in {entails, contradicts, neutral}.
+
+    Parameters
+    ----------
+    num_seq2seq_layers : int, optional (default=0)
+        After getting a word embedding, how many stacked seq2seq encoders should we use before
+        doing the decomposable attention?  The default of 0 recreates the original decomposable
+        attention model.
+    share_encoders : bool, optional (default=True)
+        Should we use the same seq2seq encoder for the text and hypothesis, or different ones?
+    decomposable_attention_params : Dict[str, Any], optional (default={})
+        These parameters get passed to the
+        :class:`~deep_qa.layers.entailment_models.decomposable_attention.DecomposableAttentionEntailment`
+        layer object, and control things like the number of output labels, number of hidden layers
+        in the entailment MLPs, etc.  See that class for a complete description of options here.
     '''
     def __init__(self, params: Dict[str, Any]):
+        self.num_seq2seq_layers = params.pop('num_seq2seq_layers', 0)
+        self.share_encoders = params.pop('share_encoders', True)
+        self.decomposable_attention_params = params.pop('decomposable_attention_params', {})
         super(DecomposableAttention, self).__init__(params)
-        # This solver works only with decomposable_attention. Overwriting entailment_choices
-        self.entailment_choices = ['decomposable_attention']
+
+    @overrides
+    def _instance_type(self):
+        return SnliInstance
 
     @overrides
     def _build_model(self):
-        question_input = Input(shape=self._get_question_shape(), dtype='int32', name="sentence_input")
-        knowledge_input = Input(shape=self._get_background_shape(), dtype='int32', name="background_input")
-        question_embedding = self._embed_input(question_input)
-        knowledge_embedding = self._embed_input(knowledge_input)
-        knowledge_embedding = TopKnowledgeSelector()(knowledge_embedding)
+        text_input = Input(shape=self._get_sentence_shape(), dtype='int32', name="text_input")
+        hypothesis_input = Input(shape=self._get_sentence_shape(), dtype='int32', name="hypothesis_input")
+        text_embedding = self._embed_input(text_input)
+        hypothesis_embedding = self._embed_input(hypothesis_input)
 
-        entailment_layer = self._get_entailment_model()
-        true_false_probabilities = entailment_layer([knowledge_embedding, question_embedding])
-        return DeepQaModel(input=[question_input, knowledge_input], output=true_false_probabilities)
+        for i in range(self.num_seq2seq_layers):
+            text_encoder_name = "hidden_{}".format(i) if self.share_encoders else "text_{}".format(i)
+            text_encoder = self._get_seq2seq_encoder(name=text_encoder_name,
+                                                     fallback_behavior="use default params")
+            text_embedding = text_encoder(text_embedding)
+            hypothesis_encoder_name = "hidden_{}".format(i) if self.share_encoders else "hypothesis_{}".format(i)
+            hypothesis_encoder = self._get_seq2seq_encoder(name=hypothesis_encoder_name,
+                                                           fallback_behavior="use default params")
+            hypothesis_embedding = hypothesis_encoder(hypothesis_embedding)
+
+        entailment_layer = DecomposableAttentionEntailment(**self.decomposable_attention_params)
+        entailment_probabilities = entailment_layer([text_embedding, hypothesis_embedding])
+        return DeepQaModel(inputs=[text_input, hypothesis_input], outputs=entailment_probabilities)
+
+    @overrides
+    def _set_max_lengths_from_model(self):
+        print("Model input shape:", self.model.get_input_shape_at(0))
+        self.set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[0][1:])
+
+    @classmethod
+    def _get_custom_objects(cls):
+        custom_objects = super(DecomposableAttention, cls)._get_custom_objects()
+        custom_objects["DecomposableAttentionEntailment"] = DecomposableAttentionEntailment
+        return custom_objects

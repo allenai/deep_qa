@@ -24,7 +24,7 @@ class TestTupleAlignment:
         embedded_question = embedding(question_input_layer)
         embedded_answer = embedding(answer_input_layer)
         embedded_knowledge = embedding(knowledge_input_layer)
-        entailment_layer = MultipleChoiceTupleEntailment({})
+        entailment_layer = MultipleChoiceTupleEntailment()
         entailment_scores = entailment_layer([embedded_knowledge, embedded_question, embedded_answer])
         model = Model(inputs=[knowledge_input_layer, question_input_layer, answer_input_layer],
                       outputs=entailment_scores)

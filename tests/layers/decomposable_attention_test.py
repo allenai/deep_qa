@@ -17,7 +17,7 @@ class TestDecomposableAttention:
         embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim, mask_zero=True)
         embedded_premise = embedding(premise_input_layer)
         embedded_hypothesis = embedding(hypothesis_input_layer)
-        entailment_layer = DecomposableAttentionEntailment({})
+        entailment_layer = DecomposableAttentionEntailment()
         entailment_scores = entailment_layer([embedded_premise, embedded_hypothesis])
         model = Model(inputs=[premise_input_layer, hypothesis_input_layer], outputs=entailment_scores)
         premise_input = numpy.random.randint(0, vocabulary_size, (num_sentences, sentence_length))

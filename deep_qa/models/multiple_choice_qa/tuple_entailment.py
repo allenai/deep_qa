@@ -93,7 +93,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
         encoded_answers = answer_encoder(answer_embedding)
         encoded_knowledge = knowledge_encoder(knowledge_embedding)
 
-        entailment_layer = MultipleChoiceTupleEntailment(self.entailment_model_params)
+        entailment_layer = MultipleChoiceTupleEntailment(**self.entailment_model_params)
         entailment_output = entailment_layer([encoded_knowledge, question_embedding, encoded_answers])
 
         return DeepQaModel(input=[question_input, knowledge_input, answer_input], output=entailment_output)

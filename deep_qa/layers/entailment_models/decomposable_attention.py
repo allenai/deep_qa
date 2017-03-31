@@ -1,5 +1,3 @@
-from typing import Any, Dict
-
 from keras import backend as K
 from keras import activations
 from overrides import overrides
@@ -36,30 +34,60 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
 
     Input:
 
-    - tuple input: shape ``(batch_size, sentence_length, embed_dim)``, ``(batch_size, sentence_length, embed_dim)``
-    - single input: shape ``(batch_size, sentence_length*2, embed_dim)``
+    - Tuple input: a premise sentence and a hypothesis sentence, both with shape ``(batch_size,
+      sentence_length, embed_dim)`` and masks of shape ``(batch_size, sentence_length)``
+    - Single input: a single tensor of shape ``(batch_size, sentence_length * 2, embed_dim)``, with
+      a mask of shape ``(batch_size, sentence_length * 2)``, which we will split in half to get the
+      premise and hypothesis sentences.
+
+    Output:
+
+    - Entailment decisions with the given ``output_dim``.
+
+    Parameters
+    ----------
+    num_hidden_layers: int, optional (default=1)
+        Number of hidden layers in each of the feed forward neural nets described above.
+    hidden_layer_width: int, optional (default=50)
+        Width of each hidden layer in each of the feed forward neural nets described above.
+    hidden_layer_activation: str, optional (default='relu')
+        Activation for each hidden layer in each of the feed forward neural nets described above.
+    final_activation: str, optional (default='softmax')
+        Activation to use for the final output.  Should almost certainly be 'softmax'.
+    output_dim: int, optional (default=3)
+        Dimensionality of the final output.  If this is the last layer in your model, this needs to
+        be the same as the number of labels you have.
+    initializer: str, optional (default='uniform')
+        Will be passed to ``self.add_weight()`` for each of the weight matrices in the feed forward
+        neural nets described above.
 
     Notes
     -----
     premise_length = hypothesis_length = sentence_length below.
     """
-    def __init__(self, params: Dict[str, Any]):
-        self.num_hidden_layers = params.pop('num_hidden_layers', 1)
-        self.hidden_layer_width = params.pop('hidden_layer_width', 50)
-        self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
-        self.final_activation = params.pop('final_activation', 'softmax')
-        self.output_dim = 2 if self.final_activation == 'softmax' else 1
-        self.initializer = params.pop('initializer', 'uniform')
+    def __init__(self,
+                 num_hidden_layers: int=1,
+                 hidden_layer_width: int=50,
+                 hidden_layer_activation: str='relu',
+                 final_activation: str='softmax',
+                 output_dim: int=3,
+                 initializer: str='uniform',
+                 **kwargs):
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_layer_width = hidden_layer_width
+        self.hidden_layer_activation = hidden_layer_activation
+        self.final_activation = final_activation
+        self.output_dim = output_dim
+        self.initializer = initializer
+
+        # Weights will be initialized in the build method.
         self.premise_length = None
         self.hypothesis_length = None
-        # Making the name end with 'softmax' to let debug handle this layer's output correctly.
-        params['name'] = 'decomposable_attention_softmax'
-        # Weights will be initialized in the build method.
         self.attend_weights = []  # weights related to F
         self.compare_weights = []  # weights related to G
         self.aggregate_weights = []  # weights related to H
         self.scorer = None
-        super(DecomposableAttentionEntailment, self).__init__(params)
+        super(DecomposableAttentionEntailment, self).__init__(**kwargs)
 
     @overrides
     def build(self, input_shape):
@@ -98,11 +126,9 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
             attend_input_dim = self.hidden_layer_width
             compare_input_dim = self.hidden_layer_width
             aggregate_input_dim = self.hidden_layer_width
-        self.trainable_weights = self.attend_weights + self.compare_weights + self.aggregate_weights
         self.scorer = self.add_weight((self.hidden_layer_width, self.output_dim),
                                       initializer=self.initializer,
                                       name='%s_score' % self.name)
-        self.trainable_weights.append(self.scorer)
 
     @overrides
     def compute_output_shape(self, input_shape):
@@ -203,3 +229,17 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         # Equation 3 in the paper.
         compared_representation = apply_feed_forward(comparison_input, self.compare_weights, activation)
         return compared_representation
+
+    @overrides
+    def get_config(self):
+        config = {
+                'num_hidden_layers': self.num_hidden_layers,
+                'hidden_layer_width': self.hidden_layer_width,
+                'hidden_layer_activation': self.hidden_layer_activation,
+                'final_activation': self.final_activation,
+                'output_dim': self.output_dim,
+                'initializer': self.initializer,
+                }
+        base_config = super(DecomposableAttentionEntailment, self).get_config()
+        config.update(base_config)
+        return config

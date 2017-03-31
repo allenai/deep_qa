@@ -1,5 +1,3 @@
-from typing import Any, Dict
-
 from keras import backend as K
 
 from .word_alignment import WordAlignmentEntailment
@@ -23,12 +21,12 @@ class MultipleChoiceTupleEntailment(WordAlignmentEntailment):
     and SV with answer.
 
     '''
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, **kwargs):
         self.tuple_size = None
         self.num_tuples = None
         self.num_options = None
         self.question_length = None
-        super(MultipleChoiceTupleEntailment, self).__init__(params)
+        super(MultipleChoiceTupleEntailment, self).__init__(**kwargs)
 
     def build(self, input_shape):
         #NOTE: This layer currently has no trainable parameters.
