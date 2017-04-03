@@ -1,6 +1,6 @@
 {
     "model_class": "DecomposableAttention",
-    "model_serialization_prefix": "/tmp/models/decomposable_attention",
+    "model_serialization_prefix": "models/decomposable_attention/",
     "seq2seq_encoder": {
         "default": {
             "type": "bi_gru",
@@ -10,18 +10,24 @@
             "wrapper_params": {}
         }
     },
-    "num_seq2seq_layers": 1,
-    "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
-    "project_embeddings": false,
+    "num_seq2seq_layers": 0,
+    "decomposable_attention_params": {
+      "num_hidden_layers": 2,
+      "hidden_layer_width": 200,
+      "hidden_layer_activation": "relu",
+      "initializer": "random_normal"
+    },
+    "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.840B.300d.txt.gz",
+    "project_embeddings": true,
     "fine_tune_embeddings": false,
     "embedding_dropout": 0.2,
     "patience": 3,
-    "embedding_dim": {"words": 100},
+    "embedding_dim": {"words": 200},
     "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",
       "lr": 0.5
     },
-    //"validation_files": ["/efs/data/dlfa/snli/dev.tsv"],
-    "train_files": ["/efs/data/dlfa/snli/train.tsv"]
+    "validation_files": ["/net/efs/aristo/dlfa/snli/processed/dev.tsv"],
+    "train_files": ["/net/efs/aristo/dlfa/snli/processed/train.tsv"]
 }
