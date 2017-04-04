@@ -1,6 +1,6 @@
 {
     "model_class": "DecomposableAttention",
-    "model_serialization_prefix": "models/decomposable_attention/",
+    "model_serialization_prefix": "/net/efs/aristo/dlfa/models/decomposable_attention/",
     "seq2seq_encoder": {
         "default": {
             "type": "bi_gru",

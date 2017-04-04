@@ -1,6 +1,6 @@
 {
     "model_class": "SimpleTagger",
-    "model_serialization_prefix": "/tmp/models/simple_tagger",
+    "model_serialization_prefix": "/net/efs/aristo/dlfa/models/simple_tagger_test/",
     "encoder": {
         "word": {
           "type": "cnn",
@@ -34,6 +34,6 @@
       "type": "adadelta",
       "lr": 0.5
     },
-    //"validation_files": ["/efs/data/dlfa/squad/processed/tagging_dev.tsv"],
-    "train_files": ["/efs/data/dlfa/squad/processed/tagging_train.tsv"]
+    //"validation_files": ["/net/efs/aristo/dlfa/squad/processed/tagging_dev.tsv"],
+    "train_files": ["/net/efs/aristo/dlfa/squad/processed/tagging_train.tsv"]
 }

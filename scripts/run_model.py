@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import sys
+from typing import Any, Dict
 
 # These have to be before we do any import from keras.  It would be nice to be able to pass in a
 # value for this, but that makes argument passing a whole lot more complicated.  If/when we change
@@ -60,7 +61,7 @@ def main():
         K.clear_session()
 
 
-def replace_none(dictionary):
+def replace_none(dictionary: Dict[str, Any]):
     for key in dictionary.keys():
         if dictionary[key] == "None":
             dictionary[key] = None
