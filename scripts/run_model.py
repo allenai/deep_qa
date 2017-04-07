@@ -2,7 +2,6 @@ import logging
 import os
 import shutil
 import sys
-from typing import Any, Dict
 
 # These have to be before we do any import from keras.  It would be nice to be able to pass in a
 # value for this, but that makes argument passing a whole lot more complicated.  If/when we change
@@ -10,7 +9,7 @@ from typing import Any, Dict
 import random
 import numpy
 random.seed(13370)
-numpy.random.seed(1337)  # pylint: disable=no-member
+numpy.random.seed(1337)
 
 # pylint: disable=wrong-import-position
 
@@ -21,7 +20,7 @@ import pyhocon
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from deep_qa.common.checks import ensure_pythonhashseed_set, log_keras_version_info
-from deep_qa.common.params import get_choice
+from deep_qa.common.params import get_choice, replace_none
 from deep_qa.common.tee_logger import TeeLogger
 from deep_qa.models import concrete_models
 from keras import backend as K
@@ -60,14 +59,6 @@ def main():
     if K.backend() == "tensorflow":
         K.clear_session()
 
-
-def replace_none(dictionary: Dict[str, Any]):
-    for key in dictionary.keys():
-        if dictionary[key] == "None":
-            dictionary[key] = None
-        elif isinstance(dictionary[key], pyhocon.config_tree.ConfigTree):
-            dictionary[key] = replace_none(dictionary[key])
-    return dictionary
 
 if __name__ == "__main__":
     ensure_pythonhashseed_set()

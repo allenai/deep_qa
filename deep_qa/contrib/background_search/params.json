@@ -1,0 +1,18 @@
+{
+  "retrieval": {
+    "serialization_prefix": "models/retrieval/",
+    "encoder": {
+      "type": "bow",
+      "embeddings_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz"
+    },
+    "nearest_neighbors": {
+      "type": "lsh"
+    }
+  },
+  "corpus": "/net/efs/aristo/dlfa/busc/small_sample.txt.gz",
+  "questions": {
+    "file": "/net/efs/aristo/dlfa/questions/intermediate/processed/intermediate_4_train/multiple_tf/append_answer/sentences.tsv",
+    "format": "sentence"
+  },
+  "num_neighbors": 50
+}
