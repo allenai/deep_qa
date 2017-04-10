@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
+from keras.layers import Layer
 from ..data_indexer import DataIndexer
 from ...common.params import ConfigurationError
 
@@ -57,29 +58,33 @@ class Tokenizer:
         raise NotImplementedError
 
     def embed_input(self,
-                    input_layer,
+                    input_layer: Layer,
+                    embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
                     embedding_name: str="embedding"):
         """
-        Applies embedding layers to the input_layer.  See ``TextTrainer._embed_input`` for a more
-        detailed comment on what this method does.
+        Applies embedding layers to the input_layer.  See :func:`TextTrainer._embed_input
+        <deep_qa.training.text_trainer.TextTrainer._embed_input>` for a more detailed comment on
+        what this method does.
 
         Parameters
         ----------
         input_layer: Keras ``Input()`` layer
             The layer to embed.
 
+        embed_function: Callable[['Layer', str, str], 'Tensor']
+            This should be the __get_embedded_input method from your instantiated ``TextTrainer``.
+            This function actually applies an ``Embedding`` layer (and maybe also a projection and
+            dropout) to the input layer.
+
         text_trainer: TextTrainer
-            A TextTrainer instance so we can access methods on it like
-            ``text_trainer._get_embedded_input``, which actually applies an
-            embedding layer, projection layers, and dropout to the input layer.
-            Simple TextEncoders will basically just call this function and be done.
-            More complicated TextEncoders might need additional logic on
-            top of just calling ``text_trainer._get_embedded_input``.
+            Simple ``Tokenizers`` will just need to use the ``embed_function`` that gets passed as
+            a parameter here, but complex ``Tokenizers`` might need more than just an embedding
+            function.  So that you can get an encoder or other things from the ``TextTrainer`` here
+            if you need them, we take this object as a parameter.
 
         embedding_name: str, optional (default="embedding")
-            The name to assign the embedding layer, which allows for
-            different embedding matrices.
+            The name to assign the embedding layer, which allows for different embedding matrices.
         """
         raise NotImplementedError
 

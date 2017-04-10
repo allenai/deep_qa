@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 from keras.layers import Layer
 from overrides import overrides
 
@@ -30,12 +30,12 @@ class CharacterTokenizer(Tokenizer):
     @overrides
     def embed_input(self,
                     input_layer: Layer,
+                    embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
                     embedding_name: str="embedding"):
-        # pylint: disable=protected-access
-        return text_trainer._get_embedded_input(input_layer,
-                                                embedding_name='character_' + embedding_name,
-                                                vocab_name='characters')
+        return embed_function(input_layer,
+                              embedding_name='character_' + embedding_name,
+                              vocab_name='characters')
 
     @overrides
     def get_sentence_shape(self, sentence_length: int, word_length: int) -> Tuple[int]:

@@ -16,11 +16,6 @@ from .reading_comprehension.gated_attention_reader import GatedAttentionReader
 from .reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
 from .text_classification.true_false_model import TrueFalseModel
 
-from ..training import concrete_pretrainers
-from .memory_networks.pretrainers.attention_pretrainer import AttentionPretrainer
-from .memory_networks.pretrainers.snli_pretrainer import SnliAttentionPretrainer, SnliEntailmentPretrainer
-from .text_pretrainers.encoder_pretrainer import EncoderPretrainer
-
 concrete_models = {  # pylint: disable=invalid-name
         'AttentionSumReader': AttentionSumReader,
         'BidirectionalAttentionFlow': BidirectionalAttentionFlow,
@@ -40,8 +35,3 @@ concrete_models = {  # pylint: disable=invalid-name
         'TrueFalseModel': TrueFalseModel,
         'TupleInferenceModel': TupleInferenceModel
 }
-
-concrete_pretrainers['AttentionPretrainer'] = AttentionPretrainer
-concrete_pretrainers['SnliAttentionPretrainer'] = SnliAttentionPretrainer
-concrete_pretrainers['SnliEntailmentPretrainer'] = SnliEntailmentPretrainer
-concrete_pretrainers['EncoderPretrainer'] = EncoderPretrainer

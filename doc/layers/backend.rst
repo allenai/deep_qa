@@ -9,7 +9,6 @@ BatchDot
 
 .. automodule:: deep_qa.layers.backend.batch_dot
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -18,7 +17,6 @@ Envelope
 
 .. automodule:: deep_qa.layers.backend.envelope
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -27,7 +25,6 @@ Max
 
 .. automodule:: deep_qa.layers.backend.max
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -36,7 +33,6 @@ Permute
 
 .. automodule:: deep_qa.layers.backend.permute
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -45,6 +41,5 @@ Repeat
 
 .. automodule:: deep_qa.layers.backend.repeat
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:

@@ -88,6 +88,16 @@ todo_include_todos = False
 
 numpydoc_show_class_members = False
 
+autodoc_default_flags = ['private-members']
+
+def maybe_skip_member(app, what, name, obj, skip, options):
+    if '__' in name:
+        return True
+    return skip
+
+def setup(app):
+    app.connect('autodoc-skip-member', maybe_skip_member)
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

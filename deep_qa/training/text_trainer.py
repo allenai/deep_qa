@@ -4,7 +4,7 @@ import logging
 import dill as pickle
 
 from keras import backend as K
-from keras.layers import Dense, Dropout, Input, Layer, TimeDistributed
+from keras.layers import Dense, Dropout, Layer, TimeDistributed
 from overrides import overrides
 import numpy
 
@@ -12,13 +12,11 @@ from ..common.checks import ConfigurationError
 from ..common.params import get_choice_with_default
 from ..data.dataset import TextDataset
 from ..data.instances.instance import Instance, TextInstance
-from ..data.instances.true_false_instance import TrueFalseInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizers import tokenizers
 from ..data.data_indexer import DataIndexer
 from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
 from ..layers.time_distributed_embedding import TimeDistributedEmbedding
-from .models import DeepQaModel
 from .trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -31,6 +29,21 @@ class TextTrainer(Trainer):
     or TextInstance subtype is fine).  That means we have to deal with padding, with converting
     words (or characters) to indices, and encoding word sequences.  This class adds methods on top
     of Trainer to deal with all of that stuff.
+
+    This class has five kinds of methods:
+
+    (1) protected methods that are overriden from :class:`~deep_qa.training.trainer.Trainer`, and
+        which you shouldn't need to worry about
+    (2) utility methods for building models, intended for use by subclasses
+    (3) abstract methods that determine a few key points of behavior in concrete subclasses (e.g.,
+        what your input data type is)
+    (4) model-specific methods that you `might` have to override, depending on what your model
+        looks like - similar to (3), but simple models don't need to override these
+    (5) private methods that you shouldn't need to worry about
+
+    There are two main ways you're intended to interact with this class, then: by calling the
+    utility methods when building your model, and by customizing the behavior of your concrete
+    model by using the parameters to this class.
 
     Parameters
     ----------
@@ -120,6 +133,11 @@ class TextTrainer(Trainer):
         self.seq2seq_encoder_layers = {}
         self._sentence_encoder_model = None
 
+    ###########################
+    # Overriden Trainer methods - you shouldn't have to worry about these, though for some
+    # advanced uses you might override some of them, especially _get_custom_objects.
+    ###########################
+
     @overrides
     def _prepare_data(self, dataset: TextDataset, for_train: bool,
                       update_data_indexer=True):
@@ -162,98 +180,6 @@ class TextTrainer(Trainer):
         return inputs, label
 
     @overrides
-    def _process_pretraining_data(self):
-        """
-        Adds words to the vocabulary based on the data used by the pretrainers.  We want this to
-        happen before loading the training data so that we can use pretraining to expand our
-        applicable vocabulary.
-        """
-        logger.info("Fitting the data indexer using the pretraining data")
-        for pretrainer in self.pretrainers:
-            pretrainer.fit_data_indexer()
-
-    def _load_layers(self):
-        """
-        We have some variables that store individual layers used by the model, so that they can be
-        re-used in several places if desired.  When we load a model, we have to set those layers,
-        or things might break in really odd ways.  This method is in charge of finding those
-        layers and initializing their variables.
-
-        Note that this specifically looks for the layers defined by _get_embedded_sentence_input
-        and _get_encoder.  If you change any of that in a subclass, or add other layers
-        that are re-used, you must override this method, or loading models will break.  Similarly,
-        if you change code in those two methods (e.g., making the sentence encoder into two
-        layers), this method must be changed accordingly.
-
-        Note that we don't need to store any TimeDistributed() layers directly, because they don't
-        have any parameters themselves.
-        """
-        logger.info("Loading individual layers from model for re-use")
-        for layer in self.model.layers:
-            if 'embedding' in layer.name:
-                # Because we store two layers in self.embedding_layers (an embedding and an
-                # optional projection), this logic is a little complicated.  We need to check
-                # whether this layer is the embedding layer or the projection layer, and handle
-                # updating self.embedding_layers accordingly.
-                #
-                # TODO(matt): I don't think this logic will work with distributed projections, but
-                # we'll worry about that later.
-                embedding_name = layer.name.replace("_projection", "")
-                if embedding_name in self.embedding_layers:
-                    current_embedding, current_projection = self.embedding_layers[embedding_name]
-                    if '_projection' in layer.name:
-                        self.embedding_layers[embedding_name] = (current_embedding, layer)
-                    else:
-                        self.embedding_layers[embedding_name] = (layer, current_projection)
-                else:
-                    if '_projection' in layer.name:
-                        self.embedding_layers[embedding_name] = (None, layer)
-                    else:
-                        self.embedding_layers[embedding_name] = (layer, None)
-            if '_seq2seq_encoder' in layer.name:
-                seq2seq_encoder_type = layer.name.replace("_seq2seq_encoder", "")
-                self.seq2seq_encoder_layers[seq2seq_encoder_type] = layer
-            elif 'encoder' in layer.name:
-                sentence_encoder_type = layer.name.replace("_sentence_encoder", "")
-                self.encoder_layers[sentence_encoder_type] = layer
-
-    def get_sentence_vector(self, sentence: str):
-        """
-        Given a sentence (just a string), use the model's sentence encoder to convert it into a
-        vector.  This is mostly just useful for debugging.
-        """
-        if self._sentence_encoder_model is None:
-            self._build_sentence_encoder_model()
-        instance = TrueFalseInstance(sentence, True)
-        indexed_instance = instance.to_indexed_instance(self.data_indexer)
-        indexed_instance.pad({'num_sentence_words': self.num_sentence_words})
-        instance_input, _ = indexed_instance.as_training_data()
-        encoded_instance = self._sentence_encoder_model.predict(numpy.asarray([instance_input]))
-        return encoded_instance[0]
-
-    def _get_max_lengths(self) -> Dict[str, int]:
-        """
-        This is about padding.  Any solver will have some number of things that need padding in
-        order to make a compilable model, like the length of a sentence.  This method returns a
-        dictionary of all of those things, mapping a length key to an int.
-
-        Here we return the lengths that are applicable to encoding words and sentences.  If you
-        have additional padding dimensions, call super()._get_max_lengths() and then update the
-        dictionary.
-        """
-        return self.tokenizer.get_max_lengths(self.num_sentence_words, self.num_word_characters)
-
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        """
-        This is about padding.  Any solver will have some number of things that need padding in
-        order to make a compilable model, like the length of a sentence.  This method sets those
-        variables given a dictionary of lengths, perhaps computed from training data or loaded from
-        a saved model.
-        """
-        self.num_sentence_words = max_lengths['num_sentence_words']
-        self.num_word_characters = max_lengths.get('num_word_characters', None)
-
-    @overrides
     def _set_params_from_model(self):
         self._set_max_lengths_from_model()
 
@@ -271,42 +197,7 @@ class TextTrainer(Trainer):
         self.data_indexer = pickle.load(data_indexer_file)
         data_indexer_file.close()
 
-    def _set_max_lengths_from_model(self):
-        """
-        Given a loaded model, set the max_lengths needed for padding.  This is necessary so that we
-        can pad the test data if we just loaded a saved model.
-        """
-        raise NotImplementedError
-
-    def set_text_lengths_from_model_input(self, input_slice):
-        """
-        Given an input slice (a tuple) from a model representing the max
-        length of the sentences and the max length of each words, set the
-        padding max lengths.
-
-        Parameters
-        ----------
-        input_slice : tuple
-            A slice from a concrete model class that represents an input
-            word sequence. The tuple must be of length one or two, and the
-            first dimension should correspond to the length of the sentences
-            while the second dimension (if provided) should correspond to the
-            max length of the words in each sentence.
-        """
-        if len(input_slice) > 2:
-            raise ValueError("Length of input tuple must be "
-                             "2 or 1, got input tuple of "
-                             "length {}".format(len(input_slice)))
-        self.num_sentence_words = input_slice[0]
-        if len(input_slice) == 2:
-            self.num_word_characters = input_slice[1]
-
-    def _instance_type(self) -> Instance:
-        """
-        When reading datasets, what instance type should we create?
-        """
-        raise NotImplementedError
-
+    @overrides
     def _load_dataset_from_files(self, files: List[str]):
         """
         This method assumes you have a TextDataset that can be read from a single file.  If you
@@ -316,11 +207,46 @@ class TextTrainer(Trainer):
         """
         return TextDataset.read_from_file(files[0], self._instance_type())
 
+    @overrides
+    def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str:
+        """
+        We'll do something different here: if "embedding" is in output_dict, we'll output the
+        embedding matrix at the top of the debug file.  Note that this could be _huge_ - you should
+        only do this for debugging on very simple datasets.
+        """
+        result = super(TextTrainer, self)._overall_debug_output(output_dict)
+        if any('embedding' in layer_name for layer_name in output_dict.keys()):
+            embedding_layers = set([n for n in output_dict.keys() if 'embedding' in n])
+            for embedding_layer in embedding_layers:
+                if '_projection' in embedding_layer:
+                    continue
+                if embedding_layer.startswith('combined_'):
+                    continue
+                result += self.__render_embedding_matrix(embedding_layer)
+        return result
+
+    @classmethod
+    def _get_custom_objects(cls):
+        custom_objects = super(TextTrainer, cls)._get_custom_objects()
+        custom_objects["TimeDistributedEmbedding"] = TimeDistributedEmbedding
+        for value in encoders.values():
+            if value.__name__ not in ['LSTM']:
+                custom_objects[value.__name__] = value
+        for name, layer in TextInstance.tokenizer.get_custom_objects().items():
+            custom_objects[name] = layer
+        return custom_objects
+
+    #################
+    # Utility methods - meant to be called by subclasses, not overriden
+    #################
+
     def _get_sentence_shape(self, sentence_length: int=None) -> Tuple[int]:
         """
         Returns a tuple specifying the shape of a tensor representing a sentence.  This is not
         necessarily just (self.num_sentence_words,), because different text_encodings lead to
-        different tensor shapes.
+        different tensor shapes.  If you have an input that is a sequence of words, you need to
+        call this to get the shape to pass to an ``Input`` layer.  If you don't, your model won't
+        work correctly for all tokenizers.
         """
         if sentence_length is None:
             # This can't be the default value for the function argument, because
@@ -330,7 +256,15 @@ class TextTrainer(Trainer):
 
     def _embed_input(self, input_layer: Layer, embedding_name: str="embedding"):
         """
-        This function embeds a word sequence input, using an embedding defined by `embedding_name`.
+        This function embeds a word sequence input, using an embedding defined by
+        ``embedding_name``.  You should call this function in your ``_build_model`` method any time
+        you want to convert word indices into word embeddings.  Note that if this is used in
+        conjunction with ``_get_sentence_shape``, we will do the correct thing for whatever
+        :class:`~deep_qa.data.tokenizers.tokenizer.Tokenizer` you use.  The actual input to this
+        might be words and characters, and we might actually do a concatenation of a word embedding
+        and a character-level encoder.  All of this is handled transparently to your concrete model
+        subclass, if you use the API correctly, calling ``_get_sentence_shape()`` to get the shape
+        for your ``Input`` layer, and passing that input layer into this ``_embed_input()`` method.
 
         We need to take the input Layer here, instead of just returning a Layer that you can use as
         you wish, because we might have to apply several layers to the input, depending on the
@@ -352,62 +286,16 @@ class TextTrainer(Trainer):
         uses both words and characters, we need to run the character encoder and concatenate the
         result with a word embedding).
         """
-        return self.tokenizer.embed_input(input_layer, self, embedding_name)
-
-    def _get_embedded_input(self,
-                            input_layer: Layer,
-                            embedding_name: str="embedding",
-                            vocab_name: str='words'):
-        """
-        This function does most of the work for self._embed_input.
-
-        Additionally, we allow for multiple vocabularies, e.g., if you want to embed both
-        characters and words with separate embedding matrices.
-        """
-        embedding_dim = self.embedding_dim[vocab_name]
-        if embedding_name not in self.embedding_layers:
-            self.embedding_layers[embedding_name] = self._get_new_embedding(embedding_name,
-                                                                            embedding_dim,
-                                                                            vocab_name)
-
-        embedding_layer, projection_layer = self.embedding_layers[embedding_name]
-        embedded_input = embedding_layer(input_layer)
-        if projection_layer is not None:
-            for _ in range(2, K.ndim(input_layer)):  # 2 here to account for batch_size.
-                projection_layer = TimeDistributed(projection_layer, name="timedist_" + projection_layer.name)
-            embedded_input = projection_layer(embedded_input)
-        if self.embedding_dropout > 0.0:
-            embedded_input = Dropout(self.embedding_dropout)(embedded_input)
-
-        return embedded_input
-
-    def _get_new_embedding(self, name: str, embedding_dim: int, vocab_name: str='words'):
-        """
-        Creates an Embedding Layer (and possibly also a Dense projection Layer) based on the
-        parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
-        could include a projection or not, and so on.
-        """
-        if vocab_name == 'words' and self.pretrained_embeddings_file:
-            embedding_layer = PretrainedEmbeddings.get_embedding_layer(
-                    self.pretrained_embeddings_file,
-                    self.data_indexer,
-                    self.fine_tune_embeddings,
-                    name=name)
-        else:
-            # TimeDistributedEmbedding works with inputs of any shape.
-            embedding_layer = TimeDistributedEmbedding(
-                    input_dim=self.data_indexer.get_vocab_size(vocab_name),
-                    output_dim=embedding_dim,
-                    mask_zero=True,  # this handles padding correctly
-                    name=name)
-        projection_layer = None
-        if self.project_embeddings:
-            projection_layer = TimeDistributed(Dense(units=embedding_dim,),
-                                               name=name + '_projection')
-        return embedding_layer, projection_layer
+        return self.tokenizer.embed_input(input_layer, self.__get_embedded_input, self, embedding_name)
 
     def _get_encoder(self, name="default", fallback_behavior: str=None):
         """
+        This method is intended to be used in your ``_build_model`` implementation, any time you
+        want to convert a sequence of vectors into a single vector.  The encoder ``name``
+        corresponds to entries in the ``encoder`` parameter passed to the constructor of this
+        object, allowing you to customize the kind and behavior of the encoder just through
+        parameters.
+
         A sentence encoder takes as input a sequence of word embeddings, and returns as output a
         single vector encoding the sentence.  This is typically either a simple RNN or an LSTM, but
         could be more complex, if the "sentence" is actually a logical form.
@@ -461,19 +349,18 @@ class TextTrainer(Trainer):
             # We need to check if we've already created this again, because in some cases we change
             # the name in the logic above.
             encoder_layer_name = name + "_encoder"
-            new_encoder = self._get_new_encoder(params, encoder_layer_name)
+            new_encoder = self.__get_new_encoder(params, encoder_layer_name)
             self.encoder_layers[name] = new_encoder
         return self.encoder_layers[name]
 
-    def _get_new_encoder(self, params: Dict[str, Any], name: str):
-        encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
-        params["name"] = name
-        params.setdefault("units", self.embedding_dim['words'])
-        set_regularization_params(encoder_type, params)
-        return encoders[encoder_type](**params)
-
     def _get_seq2seq_encoder(self, name="default", fallback_behavior: str=None):
         """
+        This method is intended to be used in your ``_build_model`` implementation, any time you
+        want to convert a sequence of vectors into another sequence of vector.  The encoder
+        ``name`` corresponds to entries in the ``encoder`` parameter passed to the constructor of
+        this object, allowing you to customize the kind and behavior of the encoder just through
+        parameters.
+
         A seq2seq encoder takes as input a sequence of vectors, and returns as output a sequence of
         vectors.  This method is essentially identical to ``_get_encoder``, except that it gives an
         encoder that returns a sequence of vectors instead of a single vector.
@@ -530,11 +417,147 @@ class TextTrainer(Trainer):
             # We need to check if we've already created this again, because in some cases we change
             # the name in the logic above.
             encoder_layer_name = name + "_encoder"
-            new_encoder = self._get_new_seq2seq_encoder(params, encoder_layer_name)
+            new_encoder = self.__get_new_seq2seq_encoder(params, encoder_layer_name)
             self.seq2seq_encoder_layers[name] = new_encoder
         return self.seq2seq_encoder_layers[name]
 
-    def _get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
+    def _set_text_lengths_from_model_input(self, input_slice):
+        """
+        Given an input slice (a tuple) from a model representing the max length of the sentences
+        and the max length of each words, set the padding max lengths.  This gets called when
+        loading a model, and is necessary to get padding correct when using loaded models.
+        Subclasses need to call this in their ``_set_max_lengths_from_model`` method.
+
+        Parameters
+        ----------
+        input_slice : tuple
+            A slice from a concrete model class that represents an input word sequence. The tuple
+            must be of length one or two, and the first dimension should correspond to the length
+            of the sentences while the second dimension (if provided) should correspond to the
+            max length of the words in each sentence.
+        """
+        if len(input_slice) > 2:
+            raise ValueError("Length of input tuple must be "
+                             "2 or 1, got input tuple of "
+                             "length {}".format(len(input_slice)))
+        self.num_sentence_words = input_slice[0]
+        if len(input_slice) == 2:
+            self.num_word_characters = input_slice[1]
+
+    ##################
+    # Abstract methods - you MUST override these
+    ##################
+
+    def _instance_type(self) -> Instance:
+        """
+        When reading datasets, what :class:`~deep_qa.data.instances.instance.Instance` type should
+        we create?  The ``Instance`` class contains code that creates actual numpy arrays, so this
+        instance type determines the inputs that you will get to your model, and the outputs that
+        are used for training.
+        """
+        raise NotImplementedError
+
+    def _set_max_lengths_from_model(self):
+        """
+        This gets called when loading a saved model.  It is analogous to ``_set_max_lengths``, but
+        needs to set all of the values set in that method just by inspecting the loaded model.  If
+        we didn't have this, we would not be able to correctly pad data after loading a model.
+        """
+        raise NotImplementedError
+
+    ########################
+    # Model-specific methods - if you do anything complicated, you probably need to override these,
+    # but simple models might be able to get by with just the default implementation
+    ########################
+
+    def _get_max_lengths(self) -> Dict[str, int]:
+        """
+        This is about padding.  Any solver will have some number of things that need padding in
+        order to make a compilable model, like the length of a sentence.  This method returns a
+        dictionary of all of those things, mapping a length key to an int.
+
+        Here we return the lengths that are applicable to encoding words and sentences.  If you
+        have additional padding dimensions, call super()._get_max_lengths() and then update the
+        dictionary.
+        """
+        return self.tokenizer.get_max_lengths(self.num_sentence_words, self.num_word_characters)
+
+    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+        """
+        This is about padding.  Any solver will have some number of things that need padding in
+        order to make a compilable model, like the length of a sentence.  This method sets those
+        variables given a dictionary of lengths, perhaps computed from training data or loaded from
+        a saved model.
+        """
+        self.num_sentence_words = max_lengths['num_sentence_words']
+        self.num_word_characters = max_lengths.get('num_word_characters', None)
+
+    #################
+    # Private methods - you can't to override these.  If you find yourself needing to, we can
+    # consider making them protected instead.
+    #################
+
+    def __get_embedded_input(self,
+                             input_layer: Layer,
+                             embedding_name: str="embedding",
+                             vocab_name: str='words'):
+        """
+        This function does most of the work for self._embed_input.  We pass this method to the
+        tokenizer, so it can get whatever embedding layers it needs.
+
+        We allow for multiple vocabularies, e.g., if you want to embed both characters and words
+        with separate embedding matrices.
+        """
+        embedding_dim = self.embedding_dim[vocab_name]
+        if embedding_name not in self.embedding_layers:
+            self.embedding_layers[embedding_name] = self.__get_new_embedding(embedding_name,
+                                                                             embedding_dim,
+                                                                             vocab_name)
+
+        embedding_layer, projection_layer = self.embedding_layers[embedding_name]
+        embedded_input = embedding_layer(input_layer)
+        if projection_layer is not None:
+            for _ in range(2, K.ndim(input_layer)):  # 2 here to account for batch_size.
+                projection_layer = TimeDistributed(projection_layer, name="timedist_" + projection_layer.name)
+            embedded_input = projection_layer(embedded_input)
+        if self.embedding_dropout > 0.0:
+            embedded_input = Dropout(self.embedding_dropout)(embedded_input)
+
+        return embedded_input
+
+    def __get_new_embedding(self, name: str, embedding_dim: int, vocab_name: str='words'):
+        """
+        Creates an Embedding Layer (and possibly also a Dense projection Layer) based on the
+        parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
+        could include a projection or not, and so on.
+        """
+        if vocab_name == 'words' and self.pretrained_embeddings_file:
+            embedding_layer = PretrainedEmbeddings.get_embedding_layer(
+                    self.pretrained_embeddings_file,
+                    self.data_indexer,
+                    self.fine_tune_embeddings,
+                    name=name)
+        else:
+            # TimeDistributedEmbedding works with inputs of any shape.
+            embedding_layer = TimeDistributedEmbedding(
+                    input_dim=self.data_indexer.get_vocab_size(vocab_name),
+                    output_dim=embedding_dim,
+                    mask_zero=True,  # this handles padding correctly
+                    name=name)
+        projection_layer = None
+        if self.project_embeddings:
+            projection_layer = TimeDistributed(Dense(units=embedding_dim,),
+                                               name=name + '_projection')
+        return embedding_layer, projection_layer
+
+    def __get_new_encoder(self, params: Dict[str, Any], name: str):
+        encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
+        params["name"] = name
+        params.setdefault("units", self.embedding_dim['words'])
+        set_regularization_params(encoder_type, params)
+        return encoders[encoder_type](**params)
+
+    def __get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
         encoder_params = params["encoder_params"]
         wrapper_params = params["wrapper_params"]
         wrapper_params["name"] = name
@@ -545,48 +568,7 @@ class TextTrainer(Trainer):
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)
 
-    def _build_sentence_encoder_model(self):
-        """
-        Here we pull out just a couple of layers from self.model and use them to define a
-        stand-alone encoder model.
-
-        Specifically, we need the part of the model that gets us from word index sequences to word
-        embedding sequences, and the part of the model that gets us from word embedding sequences
-        to sentence vectors.
-
-        This must be called after self.num_sentence_words has been set, which happens when
-        self._get_training_data() is called.
-        """
-        sentence_input = Input(shape=(self.num_sentence_words,), dtype='int32', name="sentence_input")
-        embedded_input = self._embed_input(sentence_input)
-        encoder_layer = self._get_encoder()
-        encoded_input = encoder_layer(embedded_input)
-        self._sentence_encoder_model = DeepQaModel(input=sentence_input, output=encoded_input)
-
-        # Loss and optimizer do not matter here since we're not going to train this model. But it
-        # needs to be compiled to use it for prediction.
-        self._sentence_encoder_model.compile(loss="mse", optimizer="adam")
-        self._sentence_encoder_model.summary()
-
-    @overrides
-    def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str:
-        """
-        We'll do something different here: if "embedding" is in output_dict, we'll output the
-        embedding matrix at the top of the debug file.  Note that this could be _huge_ - you should
-        only do this for debugging on very simple datasets.
-        """
-        result = super(TextTrainer, self)._overall_debug_output(output_dict)
-        if any('embedding' in layer_name for layer_name in output_dict.keys()):
-            embedding_layers = set([n for n in output_dict.keys() if 'embedding' in n])
-            for embedding_layer in embedding_layers:
-                if '_projection' in embedding_layer:
-                    continue
-                if embedding_layer.startswith('combined_'):
-                    continue
-                result += self._render_embedding_matrix(embedding_layer)
-        return result
-
-    def _render_embedding_matrix(self, embedding_name: str) -> str:
+    def __render_embedding_matrix(self, embedding_name: str) -> str:
         result = 'Embedding matrix for %s:\n' % embedding_name
         embedding_weights = self.embedding_layers[embedding_name][0].get_weights()[0]
         for i in range(self.data_indexer.get_vocab_size()):
@@ -595,14 +577,3 @@ class TextTrainer(Trainer):
             result += '%s\t%s\n' % (word, word_vector)
         result += '\n'
         return result
-
-    @classmethod
-    def _get_custom_objects(cls):
-        custom_objects = super(TextTrainer, cls)._get_custom_objects()
-        custom_objects["TimeDistributedEmbedding"] = TimeDistributedEmbedding
-        for value in encoders.values():
-            if value.__name__ not in ['LSTM']:
-                custom_objects[value.__name__] = value
-        for name, layer in TextInstance.tokenizer.get_custom_objects().items():
-            custom_objects[name] = layer
-        return custom_objects

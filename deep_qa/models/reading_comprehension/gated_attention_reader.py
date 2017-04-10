@@ -261,7 +261,7 @@ class GatedAttentionReader(TextTrainer):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][1:])
+        self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][1:])
         self.max_question_length = self.model.get_input_shape_at(0)[0][1]
         self.max_passage_length = self.model.get_input_shape_at(0)[1][1]
         self.num_options = self.model.get_input_shape_at(0)[2][1]

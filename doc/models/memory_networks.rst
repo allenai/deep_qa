@@ -43,7 +43,6 @@ DifferentiableSearch
 
 .. automodule:: deep_qa.models.memory_networks.differentiable_search
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -52,7 +51,6 @@ MemoryNetwork
 
 .. automodule:: deep_qa.models.memory_networks.memory_network
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -61,6 +59,5 @@ SoftmaxMemoryNetwork
 
 .. automodule:: deep_qa.models.memory_networks.softmax_memory_network
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:

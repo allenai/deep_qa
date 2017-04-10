@@ -17,7 +17,6 @@ DecomposableAttention
 
 .. automodule:: deep_qa.models.multiple_choice_qa.decomposable_attention
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -26,7 +25,6 @@ MultipleTrueFalseMemoryNetwork
 
 .. automodule:: deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -35,7 +33,6 @@ MultipleTrueFalseSimilarity
 
 .. automodule:: deep_qa.models.multiple_choice_qa.multiple_true_false_similarity
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -44,7 +41,6 @@ QuestionAnswerMemoryNetwork
 
 .. automodule:: deep_qa.models.multiple_choice_qa.question_answer_memory_network
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -53,7 +49,6 @@ QuestionAnswerSimilarity
 
 .. automodule:: deep_qa.models.multiple_choice_qa.question_answer_similarity
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
@@ -62,15 +57,13 @@ TupleEntailment
 
 .. automodule:: deep_qa.models.multiple_choice_qa.tuple_entailment
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:
 
 TupleInference
-------------------------------
+--------------
 
 .. automodule:: deep_qa.models.multiple_choice_qa.tuple_inference
     :members:
-    :noindex:
     :undoc-members:
     :show-inheritance:

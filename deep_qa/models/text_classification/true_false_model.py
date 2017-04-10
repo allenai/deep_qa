@@ -58,7 +58,7 @@ class TrueFalseModel(TextTrainer):
 
     @overrides
     def _set_max_lengths_from_model(self):
-        self.set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1:])
+        self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1:])
 
     @classmethod
     def _get_custom_objects(cls):

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 from overrides import overrides
 from keras import backend as K
@@ -55,6 +55,7 @@ class WordAndCharacterTokenizer(Tokenizer):
     @overrides
     def embed_input(self,
                     input_layer: Layer,
+                    embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
                     embedding_name: str="embedding"):
         """
@@ -75,12 +76,12 @@ class WordAndCharacterTokenizer(Tokenizer):
         # This is happening before any masking is done, so we don't need to worry about the
         # mask_split_axis argument to VectorMatrixSplit.
         words, characters = VectorMatrixSplit(split_axis=-1)(input_layer)
-        word_embedding = text_trainer._get_embedded_input(words,
-                                                          embedding_name='word_' + embedding_name,
-                                                          vocab_name='words')
-        character_embedding = text_trainer._get_embedded_input(characters,
-                                                               embedding_name='character_' + embedding_name,
-                                                               vocab_name='characters')
+        word_embedding = embed_function(words,
+                                        embedding_name='word_' + embedding_name,
+                                        vocab_name='words')
+        character_embedding = embed_function(characters,
+                                             embedding_name='character_' + embedding_name,
+                                             vocab_name='characters')
 
         # A note about masking here: we care about the character masks when encoding a character
         # sequence, so we need the mask to be passed to the character encoder correctly.  However,

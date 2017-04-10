@@ -18,14 +18,12 @@ class DecomposableAttention(TextTrainer):
     other operations the transform these word embeddings, such as running a biLSTM on them, before
     running the decomposable attention layer.
 
-    Inputs
-    ------
+    Inputs:
 
     - A "text" sentence, with shape (batch_size, sentence_length)
     - A "hypothesis" sentence, with shape (batch_size, sentence_length)
 
-    Outputs
-    -------
+    Outputs:
 
     - An entailment decision per input text/hypothesis pair, in {entails, contradicts, neutral}.
 
@@ -77,7 +75,7 @@ class DecomposableAttention(TextTrainer):
     @overrides
     def _set_max_lengths_from_model(self):
         print("Model input shape:", self.model.get_input_shape_at(0))
-        self.set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[0][1:])
+        self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[0][1:])
 
     @classmethod
     def _get_custom_objects(cls):

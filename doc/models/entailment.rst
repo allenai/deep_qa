@@ -15,7 +15,6 @@ DecomposableAttention
 ---------------------
 
 .. automodule:: deep_qa.models.entailment.decomposable_attention
-    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

@@ -137,13 +137,18 @@ class TupleInferenceModel(TextTrainer):
         background tuples, :math:`k_j` is compared to each of the answer tuples, :math:`a_i^c`, to create a
         support/entailment score, :math:`s_{ij}^c`.  This score is determined using the selected ``TupleMatch``
         layer.
+
         Then, for each answer tuple, :math:`a_i^c \in A^c` we combine
         the scores for each :math:`k_j \in K` using noisy-or to get the entailment score for the given answer
-        choice tuple:
+        choice tuple::
+
             :math:`s_i^c = 1 - \prod_{j=1:J}(1 - q_1 * s_{ij}^c)`
+
         where q_1 is the noise parameter for this first noisy-or.  Next, we combine these scores for each answer
-        choice again using the noisy-or to get the entailment score for the answer candidate:
+        choice again using the noisy-or to get the entailment score for the answer candidate::
+
             :math:`s^c = 1 - \prod_{i=1:N}(1 - q_2 * s_{i}^c)`
+
         where q_2 is the noise parameter for this second noisy-or.  At this point, we have a score for each of
         the answer candidates, and so we perform a softmax to determine which is the best answer.
         """
@@ -189,7 +194,6 @@ class TupleInferenceModel(TextTrainer):
         final_output = MaskedSoftmax(name="masked_softmax")(options_probabilities)
 
         return DeepQaModel(input=[question_input, background_input], output=[final_output])
-
 
     @overrides
     def _instance_debug_output(self, instance: TupleInferenceInstance, outputs: Dict[str, numpy.array]) -> str:

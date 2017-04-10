@@ -7,9 +7,7 @@ import keras.backend as K
 from keras.models import model_from_json
 from keras.callbacks import LambdaCallback, TensorBoard, EarlyStopping, CallbackList, ModelCheckpoint
 
-from . import concrete_pretrainers
 from ..common.checks import ConfigurationError
-from ..common.params import get_choice
 from ..data.dataset import Dataset
 from ..data.instances.instance import Instance
 from ..layers.wrappers.output_mask import OutputMask
@@ -28,6 +26,15 @@ class Trainer:
     The main benefits of this class are having a common place for setting parameters related to
     training, actually running the training with those parameters, and code for saving and loading
     models.
+
+    The intended use of this class is that you construct a subclass that defines a model,
+    overriding the abstract methods and (optionally) some of the protected methods in this class.
+    Thus there are four kinds of methods in this class: (1) public methods, that are typically only
+    used by ``scripts/run_model.py`` (or some other driver that you create), (2) abstract methods
+    (beginning with ``_``), which `must` be overridden by any concrete subclass, (3) protected
+    methods (beginning with ``_``) that you are meant to override in concrete subclasses, and (4)
+    private methods (beginning with ``__``) that you should not need to mess with.  We only include
+    the first three in the public docs.
     """
     def __init__(self, params: Dict[str, Any]):
         self.name = "Trainer"
@@ -46,8 +53,8 @@ class Trainer:
         # train but we also warn the user.
         self.preferred_backend = params.pop('preferred_backend', None)
         if self.preferred_backend and self.preferred_backend.lower() != K.backend():
-            warning_message = self._make_backend_warning(self.preferred_backend.lower(),
-                                                         K.backend())
+            warning_message = self.__make_backend_warning(self.preferred_backend.lower(),
+                                                          K.backend())
             logger.warning(warning_message)
 
         self.batch_size = params.pop('batch_size', 32)
@@ -107,13 +114,6 @@ class Trainer:
         #     the mask at each layer given here.
         self.debug_params = params.pop('debug', {})
 
-        pretrainer_params = params.pop('pretrainers', [])
-        self.pretrainers = []
-        for pretrainer_param in pretrainer_params:
-            pretrainer_type = get_choice(pretrainer_param, "type", concrete_pretrainers.keys())
-            pretrainer = concrete_pretrainers[pretrainer_type](self, pretrainer_param)
-            self.pretrainers.append(pretrainer)
-
         # We've now processed all of the parameters, and we're the base class, so there should not
         # be anything left.
         if len(params.keys()) != 0:
@@ -143,94 +143,12 @@ class Trainer:
         self.debug_dataset = None
         self.debug_input = None
 
+    ################
+    # Public methods
+    ################
+
     def can_train(self):
         return self.train_files is not None
-
-    def _load_dataset_from_files(self, files: List[str]) -> Dataset:
-        """
-        Given a list of file inputs, load a raw dataset from the files.  This is a list because
-        some datasets are specified in more than one file (e.g., a file containing the instances,
-        and a file containing background information about those instances).
-        """
-        raise NotImplementedError
-
-    def _prepare_data(self, dataset: Dataset, for_train: bool, update_data_indexer=True):
-        """
-        Takes a raw dataset and converts it into training inputs and labels that can be used to
-        either train a model or make predictions.
-
-        Input: a Dataset of the same format as read by the read_dataset_from_files() method, and an
-        indicator for whether this is being done for the training data (so that, e.g., you can set
-        model parameters based on characteristics of the training data).
-
-        Output: a tuple of (inputs, labels), which can be fed directly to Keras' model.fit()
-        and model.predict() methods.  `labels` is allowed to be None in the second case.
-        """
-        raise NotImplementedError
-
-    def _prepare_instance(self, instance: Instance, make_batch: bool=True):
-        """
-        Like self._prepare_data(), but for a single Instance.  Used most often for making
-        predictions one at a time on test data (though you should avoid that if possible, as larger
-        batches would be more efficient).
-
-        The make_batch argument determines whether we make the return value into a batch or not by
-        calling numpy.expand_dims.  Keras' model.predict() method requires a batch, so we need an
-        extra dimension.  If you're going to do the batch conversion yourself, or don't need it,
-        you can pass False for that parameter.
-        """
-        raise NotImplementedError
-
-    def _pretrain(self):
-        """
-        Runs whatever pre-training has been specified in the constructor.
-        """
-        logger.info("Running pre-training")
-        for pretrainer in self.pretrainers:
-            pretrainer.train()
-        self._pretraining_finished_hook()
-
-    def _process_pretraining_data(self):
-        """
-        Processes the pre-training data in whatever way you want, typically for setting model
-        parameters like vocabulary.  This happens _before_ the training data itself is processed.
-        We don't know what processing this might entail, or whether you are even doing any
-        pre-training, so we just pass here by default.
-        """
-        pass
-
-    def _pretraining_finished_hook(self):
-        """
-        This is called when pre-training finishes (if there were any pre-trainers specified).  You
-        can do whatever you want in here, like changing model parameters based on what happened
-        during pre-training, or saving a pre-trained model, or whatever.
-
-        Default implementation is to call pretrainer._on_finished() for each pre-trainer, which by
-        default is a `pass`.
-        """
-        for pretrainer in self.pretrainers:
-            pretrainer.on_finished()
-
-    def _compile_kwargs(self):
-        """
-        Because we call model.compile() in a few different places in the code, and we have a few
-        member variables that we use to set arguments for model.compile(), we group those arguments
-        together here, to only specify them once.
-        """
-        return {
-                'loss': self.loss,
-                'optimizer': self.optimizer,
-                'metrics': self.metrics,
-                }
-
-    def _build_model(self) -> DeepQaModel:
-        """Constructs and returns a DeepQaModel (which is a wrapper around a Keras Model) that will
-        take the output of self._get_training_data as input, and produce as output a true/false
-        decision for each input.
-
-        The returned model will be used to call model.fit(train_input, train_labels).
-        """
-        raise NotImplementedError
 
     def prepare_data(self, train_files, max_training_instances,
                      validation_files=None, test_files=None, update_data_indexer=True):
@@ -270,13 +188,6 @@ class Trainer:
         '''
         logger.info("Running training (%s)", self.name)
 
-        # Before actually doing any training, we'll run whatever pre-training has been specified.
-        # Note that this can have funny interactions with model parameters that get fit to the
-        # training data.  We don't really know here what you want to do with the data you have for
-        # pre-training, if any, so we provide a hook that you can override to do whatever you want.
-        if self.pretrainers:
-            self._process_pretraining_data()
-
         # First we need to prepare the data that we'll use for training.
         train_data, val_data, test_data = self.prepare_data(self.train_files, self.max_training_instances,
                                                             self.validation_files,
@@ -285,17 +196,11 @@ class Trainer:
         self.validation_dataset, self.validation_input, self.validation_labels = val_data
         self.test_dataset, self.test_input, self.test_labels = test_data
 
-        # We need to actually do pretraining _after_ we've loaded the training data, though, as we
-        # need to build the models to be consistent between training and pretraining.  The training
-        # data tells us a max sentence length, which we need for the pretrainer.
-        if self.pretrainers:
-            self._pretrain()
-
         # Then we build the model and compile it.
         logger.info("Building the model")
         self.model = self._build_model()
         self.model.summary(show_masks=self.show_summary_with_masking)
-        self.model.compile(**self._compile_kwargs())
+        self.model.compile(**self.__compile_kwargs())
 
         if self.debug_params:
             # Get the list of layers whose outputs will be visualized as per the
@@ -316,7 +221,7 @@ class Trainer:
                 # file names.
                 self.debug_dataset = self._load_dataset_from_files(debug_data)
                 self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
-            self.debug_model = self._build_debug_model(debug_layer_names, debug_masks)
+            self.debug_model = self.__build_debug_model(debug_layer_names, debug_masks)
 
         # Now we actually train the model using various Keras callbacks to control training.
         callbacks = self._get_callbacks()
@@ -338,7 +243,7 @@ class Trainer:
 
         self.best_epoch = int(numpy.argmax(history.history[self.validation_metric]))
         if self.save_models:
-            self._save_best_model()
+            self.__save_best_model()
             self._save_auxiliary_files()
 
         # If there are test files, we evaluate on the test data.
@@ -347,148 +252,6 @@ class Trainer:
             scores = self.model.evaluate(self.test_input, self.test_labels)
             for idx, metric in enumerate(self.model.metrics_names):
                 print("{}: {}".format(metric, scores[idx]))
-
-    def _get_callbacks(self):
-        """
-         Returns a set of Callbacks which are used to perform various functions within Keras' .fit method.
-         Here, we use an early stopping callback to add patience with respect to the validation metric and
-         a Lambda callback which performs the model specific callbacks which you might want to build into
-         a model, such as re-encoding some background knowledge.
-
-         Additionally, there is also functionality to create Tensorboard log files. These can be visualised
-         using 'tensorboard --logdir /path/to/log/files' after training.
-        """
-        early_stop = EarlyStopping(monitor=self.validation_metric, patience=self.patience)
-        model_callbacks = LambdaCallback(on_epoch_begin=lambda epoch, logs: self._pre_epoch_hook(epoch),
-                                         on_epoch_end=lambda epoch, logs: self._post_epoch_hook(epoch))
-        callbacks = [early_stop, model_callbacks]
-
-        if self.tensorboard_log is not None:
-            if K.backend() == 'theano':
-                raise ConfigurationError("Tensorboard logging is only compatibile with Tensorflow. "
-                                         "Change the backend using the KERAS_BACKEND environment variable.")
-            tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log,
-                                                    histogram_freq=self.tensorboard_histogram_freq)
-            callbacks.append(tensorboard_visualisation)
-
-        if self.debug_params:
-            debug_callback = LambdaCallback(on_epoch_end=lambda epoch, logs:
-                                            self._debug(self.debug_params["layer_names"],
-                                                        self.debug_params.get("masks", []), epoch))
-            callbacks.append(debug_callback)
-            return CallbackList(callbacks)
-
-        # Some witchcraft is happening here - we don't specify the epoch replacement variable
-        # checkpointing string, because Keras does that within the callback if we specify it here.
-        if self.save_models:
-            checkpointing = ModelCheckpoint(self.model_prefix + "_weights_epoch={epoch:d}.h5",
-                                            save_best_only=True, save_weights_only=True,
-                                            monitor=self.validation_metric)
-            callbacks.append(checkpointing)
-
-        return CallbackList(callbacks)
-
-    def _debug(self, debug_layer_names: List[str], debug_masks: List[str], epoch: int):
-        """
-        Runs the debug model and saves the results to a file.
-        """
-        logger.info("Running debug model")
-        # Shows intermediate outputs of the model on validation data
-        outputs = self.debug_model.predict(self.debug_input)
-        output_dict = {}
-        if len(debug_layer_names) == 1:
-            output_dict[debug_layer_names[0]] = outputs
-        else:
-            for layer_name, output in zip(debug_layer_names, outputs[:len(debug_layer_names)]):
-                output_dict[layer_name] = output
-        for layer_name, output in zip(debug_masks, outputs[len(debug_layer_names):]):
-            if 'masks' not in output_dict:
-                output_dict['masks'] = {}
-            output_dict['masks'][layer_name] = output
-        self._output_debug_info(output_dict, epoch)
-
-    def _output_debug_info(self, output_dict: Dict[str, numpy.array], epoch: int):
-        logger.info("Outputting debug results")
-        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
-        overall_debug_info = self._overall_debug_output(output_dict)
-        debug_output_file.write(overall_debug_info)
-        for instance_index, instance in enumerate(self.debug_dataset.instances):
-            instance_output_dict = {}
-            for layer_name, output in output_dict.items():
-                if layer_name == 'masks':
-                    instance_output_dict['masks'] = {}
-                    for mask_name, mask_output in output.items():
-                        instance_output_dict['masks'][mask_name] = mask_output[instance_index]
-                else:
-                    instance_output_dict[layer_name] = output[instance_index]
-            instance_info = self._instance_debug_output(instance, instance_output_dict)
-            debug_output_file.write(instance_info + '\n')
-        debug_output_file.close()
-
-    def _pre_epoch_hook(self, epoch: int):
-        """
-        This method gets called before each epoch of training.  If you want to do any kind of
-        processing in between epochs (e.g., updating the training data for whatever reason), here
-        is your chance to do so.
-        """
-        pass
-
-    def _post_epoch_hook(self, epoch: int):
-        """
-        This method gets called directly after model.fit(), before making any early stopping
-        decisions.  If you want to modify anything after each iteration (e.g., computing a
-        different kind of validation loss to use for early stopping, or just computing and printing
-        accuracy on some other held out data), you can do that here. If you require extra parameters,
-        use calls to local methods rather than passing new parameters, as this hook is run via a
-        Keras Callback, which is fairly strict in it's interface.
-        """
-        pass
-
-    def _build_debug_model(self, debug_layer_names: List[str], debug_masks: List[str]):
-        """
-        Here we build a very simple kind of debug model: one that takes the same inputs as
-        self.model, and runs the model up to some particular layers, and outputs the values at
-        those layers.
-
-        In addition, you can optionally specify some number of layers for which you want to output
-        the mask computed by that layer.
-
-        If you want something more complicated, override this method.
-        """
-        debug_inputs = self.model.get_input_at(0)  # list of all input_layers
-        debug_output_dict = {}
-        layer_names = set(debug_layer_names)
-        mask_names = set(debug_masks)
-        for layer in self.model.layers:
-            if layer.name in layer_names:
-                debug_output_dict[layer.name] = layer.get_output_at(0)
-                layer_names.remove(layer.name)
-            if layer.name in mask_names:
-                mask = OutputMask()(layer.get_output_at(0))
-                debug_output_dict['mask_for_' + layer.name] = mask
-                mask_names.remove(layer.name)
-        if len(layer_names) != 0 or len(mask_names):
-            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names | mask_names))
-        # The outputs need to be in the same order as `debug_layer_names`, or downstream code will
-        # have issues.
-        debug_outputs = [debug_output_dict[name] for name in debug_layer_names]
-        debug_outputs.extend([debug_output_dict['mask_for_' + name] for name in debug_masks])
-        return DeepQaModel(input=debug_inputs, output=debug_outputs)
-
-    def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str: # pylint: disable=unused-argument
-        return "Number of instances: %d\n" % len(self.debug_dataset.instances)
-
-    def _instance_debug_output(self, instance: Instance, outputs: Dict[str, numpy.array]) -> str:
-        """
-        This method takes an Instance and all of the debug outputs for that Instance, puts them
-        into some human-readable format, and returns that as a string.  `outputs` will have one key
-        corresponding to each item in the `debug.layer_names` parameter given to the constructor of
-        this object.
-
-        The default here is `pass` instead of `raise NotImplementedError`, because you're not
-        required to implement debugging for your model.
-        """
-        pass
 
     def score_dataset(self, dataset: Dataset):
         inputs, _ = self._prepare_data(dataset, False)
@@ -524,18 +287,160 @@ class Trainer:
         logger.info("Loading weights from file %s", model_file)
         self.model.load_weights(model_file)
         self.model.summary(show_masks=self.show_summary_with_masking)
-        self._load_layers()
         self._load_auxiliary_files()
         self._set_params_from_model()
-        self.model.compile(**self._compile_kwargs())
+        self.model.compile(**self.__compile_kwargs())
 
-    def _load_layers(self):
+    ##################
+    # Abstract methods - you MUST override these
+    ##################
+
+    def _load_dataset_from_files(self, files: List[str]) -> Dataset:
         """
-        If you want to use member variables that contain Layers after the model is loaded, you need
-        to set them from the model.  For instance, say you have an embedding layer for word
-        sequences, and you want to take a loaded model, build a sub-model out of it that contains
-        the embedding layer, and use that model somehow.  In that case, the member variable for the
-        embedding layer needs to be set from the loaded model.  You can do that here.
+        Given a list of file inputs, load a raw dataset from the files.  This is a list because
+        some datasets are specified in more than one file (e.g., a file containing the instances,
+        and a file containing background information about those instances).
+        """
+        raise NotImplementedError
+
+    def _prepare_data(self, dataset: Dataset, for_train: bool, update_data_indexer=True):
+        """
+        Takes a raw dataset and converts it into training inputs and labels that can be used to
+        either train a model or make predictions.
+
+        Input: a Dataset of the same format as read by the read_dataset_from_files() method, and an
+        indicator for whether this is being done for the training data (so that, e.g., you can set
+        model parameters based on characteristics of the training data).
+
+        Output: a tuple of (inputs, labels), which can be fed directly to Keras' model.fit()
+        and model.predict() methods.  `labels` is allowed to be None in the second case.
+        """
+        raise NotImplementedError
+
+    def _prepare_instance(self, instance: Instance, make_batch: bool=True):
+        """
+        Like self._prepare_data(), but for a single Instance.  Used most often for making
+        predictions one at a time on test data (though you should avoid that if possible, as larger
+        batches would be more efficient).
+
+        The make_batch argument determines whether we make the return value into a batch or not by
+        calling numpy.expand_dims.  Keras' model.predict() method requires a batch, so we need an
+        extra dimension.  If you're going to do the batch conversion yourself, or don't need it,
+        you can pass False for that parameter.
+        """
+        raise NotImplementedError
+
+    def _build_model(self) -> DeepQaModel:
+        """Constructs and returns a DeepQaModel (which is a wrapper around a Keras Model) that will
+        take the output of self._get_training_data as input, and produce as output a true/false
+        decision for each input.
+
+        The returned model will be used to call model.fit(train_input, train_labels).
+        """
+        raise NotImplementedError
+
+    def _set_params_from_model(self):
+        """
+        Called after a model is loaded, this lets you update member variables that contain model
+        parameters, like max sentence length, that are not stored as weights in the model object.
+        This is necessary if you want to process a new data instance to be compatible with the
+        model for prediction, for instance.
+        """
+        raise NotImplementedError
+
+    ###################
+    # Protected methods - you CAN override these, if you want
+    ###################
+
+    def _get_callbacks(self):
+        """
+         Returns a set of Callbacks which are used to perform various functions within Keras' .fit method.
+         Here, we use an early stopping callback to add patience with respect to the validation metric and
+         a Lambda callback which performs the model specific callbacks which you might want to build into
+         a model, such as re-encoding some background knowledge.
+
+         Additionally, there is also functionality to create Tensorboard log files. These can be visualised
+         using 'tensorboard --logdir /path/to/log/files' after training.
+        """
+        early_stop = EarlyStopping(monitor=self.validation_metric, patience=self.patience)
+        model_callbacks = LambdaCallback(on_epoch_begin=lambda epoch, logs: self._pre_epoch_hook(epoch),
+                                         on_epoch_end=lambda epoch, logs: self._post_epoch_hook(epoch))
+        callbacks = [early_stop, model_callbacks]
+
+        if self.tensorboard_log is not None:
+            if K.backend() == 'theano':
+                raise ConfigurationError("Tensorboard logging is only compatibile with Tensorflow. "
+                                         "Change the backend using the KERAS_BACKEND environment variable.")
+            tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log,
+                                                    histogram_freq=self.tensorboard_histogram_freq)
+            callbacks.append(tensorboard_visualisation)
+
+        if self.debug_params:
+            debug_callback = LambdaCallback(on_epoch_end=lambda epoch, logs:
+                                            self.__debug(self.debug_params["layer_names"],
+                                                         self.debug_params.get("masks", []), epoch))
+            callbacks.append(debug_callback)
+            return CallbackList(callbacks)
+
+        # Some witchcraft is happening here - we don't specify the epoch replacement variable
+        # checkpointing string, because Keras does that within the callback if we specify it here.
+        if self.save_models:
+            checkpointing = ModelCheckpoint(self.model_prefix + "_weights_epoch={epoch:d}.h5",
+                                            save_best_only=True, save_weights_only=True,
+                                            monitor=self.validation_metric)
+            callbacks.append(checkpointing)
+
+        return CallbackList(callbacks)
+
+    def _pre_epoch_hook(self, epoch: int):
+        """
+        This method gets called before each epoch of training.  If you want to do any kind of
+        processing in between epochs (e.g., updating the training data for whatever reason), here
+        is your chance to do so.
+        """
+        pass
+
+    def _post_epoch_hook(self, epoch: int):
+        """
+        This method gets called directly after model.fit(), before making any early stopping
+        decisions.  If you want to modify anything after each iteration (e.g., computing a
+        different kind of validation loss to use for early stopping, or just computing and printing
+        accuracy on some other held out data), you can do that here. If you require extra parameters,
+        use calls to local methods rather than passing new parameters, as this hook is run via a
+        Keras Callback, which is fairly strict in it's interface.
+        """
+        pass
+
+    def _output_debug_info(self, output_dict: Dict[str, numpy.array], epoch: int):
+        logger.info("Outputting debug results")
+        debug_output_file = open("%s_debug_%d.txt" % (self.model_prefix, epoch), "w")
+        overall_debug_info = self._overall_debug_output(output_dict)
+        debug_output_file.write(overall_debug_info)
+        for instance_index, instance in enumerate(self.debug_dataset.instances):
+            instance_output_dict = {}
+            for layer_name, output in output_dict.items():
+                if layer_name == 'masks':
+                    instance_output_dict['masks'] = {}
+                    for mask_name, mask_output in output.items():
+                        instance_output_dict['masks'][mask_name] = mask_output[instance_index]
+                else:
+                    instance_output_dict[layer_name] = output[instance_index]
+            instance_info = self._instance_debug_output(instance, instance_output_dict)
+            debug_output_file.write(instance_info + '\n')
+        debug_output_file.close()
+
+    def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str: # pylint: disable=unused-argument
+        return "Number of instances: %d\n" % len(self.debug_dataset.instances)
+
+    def _instance_debug_output(self, instance: Instance, outputs: Dict[str, numpy.array]) -> str:
+        """
+        This method takes an Instance and all of the debug outputs for that Instance, puts them
+        into some human-readable format, and returns that as a string.  `outputs` will have one key
+        corresponding to each item in the `debug.layer_names` parameter given to the constructor of
+        this object.
+
+        The default here is `pass` instead of `raise NotImplementedError`, because you're not
+        required to implement debugging for your model.
         """
         pass
 
@@ -546,16 +451,32 @@ class Trainer:
         """
         pass
 
-    def _set_params_from_model(self):
+    def _save_auxiliary_files(self):
         """
-        Called after a model is loaded, this lets you update member variables that contain model
-        parameters, like max sentence length, that are not stored as weights in the model object.
-        This is necessary if you want to process a new data instance to be compatible with the
-        model for prediction, for instance.
+        Called after training. If you have some auxiliary object, such as an object storing
+        the vocabulary of your model, you can save it here. The model config is saved by default.
         """
-        pass
+        model_config = self.model.to_json()
+        model_config_file = open("%s_config.json" % (self.model_prefix), "w")
+        print(model_config, file=model_config_file)
+        model_config_file.close()
 
-    def _save_best_model(self):
+    @classmethod
+    def _get_custom_objects(cls):
+        """
+        If you've used any Layers that Keras doesn't know about, you need to specify them in this
+        dictionary, so we can load them correctly.
+        """
+        return {
+                "DeepQaModel": DeepQaModel
+        }
+
+    #################
+    # Private methods - you can't to override these.  If you find yourself needing to, we can
+    # consider making them protected instead.
+    #################
+
+    def __save_best_model(self):
         """
         Copies the weights from the best epoch to a final weight file.
 
@@ -570,18 +491,8 @@ class Trainer:
         copyfile(epoch_weight_file, final_weight_file)
         logger.info("Saved the best model to %s", final_weight_file)
 
-    def _save_auxiliary_files(self):
-        """
-        Called after training. If you have some auxiliary object, such as an object storing
-        the vocabulary of your model, you can save it here. The model config is saved by default.
-        """
-        model_config = self.model.to_json()
-        model_config_file = open("%s_config.json" % (self.model_prefix), "w")
-        print(model_config, file=model_config_file)
-        model_config_file.close()
-
     @staticmethod
-    def _make_backend_warning(preferred_backend, actual_backend):
+    def __make_backend_warning(preferred_backend, actual_backend):
         warning_info = ("@ Preferred backend is %s, but "
                         "current backend is %s. @" % (preferred_backend,
                                                       actual_backend))
@@ -599,12 +510,64 @@ class Trainer:
                            "\n" + end_row)
         return warning_message
 
-    @classmethod
-    def _get_custom_objects(cls):
+    def __build_debug_model(self, debug_layer_names: List[str], debug_masks: List[str]):
         """
-        If you've used any Layers that Keras doesn't know about, you need to specify them in this
-        dictionary, so we can load them correctly.
+        Here we build a very simple kind of debug model: one that takes the same inputs as
+        self.model, and runs the model up to some particular layers, and outputs the values at
+        those layers.
+
+        In addition, you can optionally specify some number of layers for which you want to output
+        the mask computed by that layer.
+
+        If you want something more complicated, override this method.
+        """
+        debug_inputs = self.model.get_input_at(0)  # list of all input_layers
+        debug_output_dict = {}
+        layer_names = set(debug_layer_names)
+        mask_names = set(debug_masks)
+        for layer in self.model.layers:
+            if layer.name in layer_names:
+                debug_output_dict[layer.name] = layer.get_output_at(0)
+                layer_names.remove(layer.name)
+            if layer.name in mask_names:
+                mask = OutputMask()(layer.get_output_at(0))
+                debug_output_dict['mask_for_' + layer.name] = mask
+                mask_names.remove(layer.name)
+        if len(layer_names) != 0 or len(mask_names):
+            raise ConfigurationError("Unmatched debug layer names: " + str(layer_names | mask_names))
+        # The outputs need to be in the same order as `debug_layer_names`, or downstream code will
+        # have issues.
+        debug_outputs = [debug_output_dict[name] for name in debug_layer_names]
+        debug_outputs.extend([debug_output_dict['mask_for_' + name] for name in debug_masks])
+        return DeepQaModel(input=debug_inputs, output=debug_outputs)
+
+    def __debug(self, debug_layer_names: List[str], debug_masks: List[str], epoch: int):
+        """
+        Runs the debug model and saves the results to a file.
+        """
+        logger.info("Running debug model")
+        # Shows intermediate outputs of the model on validation data
+        outputs = self.debug_model.predict(self.debug_input)
+        output_dict = {}
+        if len(debug_layer_names) == 1:
+            output_dict[debug_layer_names[0]] = outputs
+        else:
+            for layer_name, output in zip(debug_layer_names, outputs[:len(debug_layer_names)]):
+                output_dict[layer_name] = output
+        for layer_name, output in zip(debug_masks, outputs[len(debug_layer_names):]):
+            if 'masks' not in output_dict:
+                output_dict['masks'] = {}
+            output_dict['masks'][layer_name] = output
+        self._output_debug_info(output_dict, epoch)
+
+    def __compile_kwargs(self):
+        """
+        Because we call model.compile() in a few different places in the code, and we have a few
+        member variables that we use to set arguments for model.compile(), we group those arguments
+        together here, to only specify them once.
         """
         return {
-                "DeepQaModel": DeepQaModel
-        }
+                'loss': self.loss,
+                'optimizer': self.optimizer,
+                'metrics': self.metrics,
+                }

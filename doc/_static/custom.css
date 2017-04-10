@@ -10,3 +10,8 @@
 .toggle .header.open:after {
     content: " ▲";
 }
+
+.wy-nav-content a.internal code span.pre {
+  color: blue;
+  text-decoration: underline;
+}
