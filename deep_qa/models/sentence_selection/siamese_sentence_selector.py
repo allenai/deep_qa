@@ -97,15 +97,15 @@ class SiameseSentenceSelector(TextTrainer):
             modeled_sentence = hidden_layer(modeled_sentence)
 
         # We encode the modeled question with some encoder.
-        question_encoder = self._get_encoder(name="question_encoder",
+        question_encoder = self._get_encoder(name="question",
                                              fallback_behavior="use default encoder")
         # shape: (batch size, encoder_output_dimension)
         encoded_question = question_encoder(modeled_question)
 
         # We encode the modeled document with some encoder.
-        sentences_encoder = EncoderWrapper(self._get_encoder(name="sentence_encoder",
+        sentences_encoder = EncoderWrapper(self._get_encoder(name="sentence",
                                                              fallback_behavior="use default encoder"),
-                                           name="TimeDistributed_sentences_encoder")
+                                           name="sentences_encoder")
         # shape: (batch size, num_sentences, encoder_output_dimension)
         encoded_sentences = sentences_encoder(modeled_sentence)
 

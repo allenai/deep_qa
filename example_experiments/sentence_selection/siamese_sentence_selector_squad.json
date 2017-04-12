@@ -1,10 +1,15 @@
 {
     "model_class": "SiameseSentenceSelector",
-    "model_serialization_prefix": "models/sentence_selection/siamese_stacked",
+    "model_serialization_prefix": "/net/efs/aristo/dlfa/models/sentence_selection/siamese_1_hidden_layer_hard/",
     "share_hidden_seq2seq_layers": true,
+    "num_hidden_seq2seq_layers": 1,
     "num_sentence_words": 40,
     "encoder": {
-        "default": {
+        "question": {
+            "type": "bi_gru",
+            "units": 128
+        },
+        "sentence": {
             "type": "bi_gru",
             "units": 128
         }
@@ -23,13 +28,13 @@
     "embedding_dim": {
         "words": 100
     },
-    "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+    "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
     "fine_tune_embeddings": false,
     "project_embeddings": false,
     "optimizer": {
         "type": "adam"
     },
-    "num_epochs": 5,
-    "validation_files": ["/efs/data/dlfa/squad_sentence_selection/processed/processed_dev-v1.1.json.tsv"],
-    "train_files": ["/efs/data/dlfa/squad_sentence_selection/processed/processed_train-v1.1.json.tsv"]
+    "num_epochs": 20,
+    "validation_files": ["/net/efs/aristo/dlfa/squad_sentence_selection/processed/sentence_selection_dev-v1.1.json.tsv"],
+    "train_files": ["/net/efs/aristo/dlfa/squad_sentence_selection/processed/sentence_selection_train-v1.1.json.tsv"]
 }

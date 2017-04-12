@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use
+from flaky import flaky
 import numpy
 from numpy.testing import assert_array_almost_equal
 from keras import backend as K
@@ -41,6 +42,7 @@ class TestThresholdTupleMatcher(DeepQaTestCase):
         # This should result in 1 matched word in slot 1, and two in slot 2
         # So the normalized overlaps should be (0, 1/5,  2/5)
 
+    @flaky
     def test_general_case(self):
         match_layer = ThresholdTupleMatcher({"type": "cosine_similarity"},
                                             self.num_hidden_layers,

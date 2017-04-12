@@ -1,10 +1,11 @@
 from copy import deepcopy
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from keras import backend as K
 from keras.layers import Input
 from overrides import overrides
 
+from ...common.models import get_submodel
 from ...models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
 from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
 from ...layers.attention.attention import Attention
@@ -136,17 +137,21 @@ class MultipleChoiceBidaf(TextTrainer):
 
         # First we compute a span envelope over the passage, then multiply that by the passage
         # representation.
-        bidaf_passage_model = self._get_model_from_bidaf(['question_input', 'passage_input'],
-                                                         ['final_merged_passage',
-                                                          'span_begin_softmax',
-                                                          'span_end_softmax'])
+        bidaf_passage_model = get_submodel(self._bidaf_model.model,
+                                           ['question_input', 'passage_input'],
+                                           ['final_merged_passage', 'span_begin_softmax', 'span_end_softmax'],
+                                           train_model=self.train_bidaf,
+                                           name="passage_model")
         modeled_passage, span_begin, span_end = bidaf_passage_model([question_input, passage_input])
         envelope = Envelope()([span_begin, span_end])
         weighted_passage = Multiply()([modeled_passage, envelope])
 
         # Then we encode the answer options the same way we encoded the question.
-        bidaf_question_model = self._get_model_from_bidaf(['question_input'], ['phrase_encoder'],
-                                                          name="phrase_encoder_model")
+        bidaf_question_model = get_submodel(self._bidaf_model.model,
+                                            ['question_input'],
+                                            ['phrase_encoder'],
+                                            train_model=self.train_bidaf,
+                                            name="phrase_encoder_model")
         # Total hack to make this compatible with TimeDistributedWithMask.  Ok, ok, python's duck
         # typing is kind of nice sometimes...  At least I can get this to work, even though it's
         # not supported in Keras.
@@ -171,29 +176,6 @@ class MultipleChoiceBidaf(TextTrainer):
     @staticmethod
     def bidaf_question_model_mask_shape(input_shape):
         return input_shape[:-1]
-
-    def _get_model_from_bidaf(self,
-                              input_layer_names: List[str],
-                              output_layer_names: List[str],
-                              name=None):
-        """
-        Returns a new model constructed from ``self._bidaf_model``.  This model will be a subset of
-        BiDAF, with the inputs specified by ``input_layer_names`` and the outputs specified by
-        ``output_layer_names``.  For example, you can use this to get a model that outputs the
-        passage embedding, just before the span prediction layers, by calling
-        ``self._get_model_from_bidaf(['question_input', 'passage_input'], ['final_merged_passage'])``.
-        """
-        layer_input_dict = {}
-        layer_output_dict = {}
-        for layer in self._bidaf_model.model.layers:
-            layer_input_dict[layer.name] = layer.get_input_at(0)
-            layer_output_dict[layer.name] = layer.get_output_at(0)
-        input_layers = [layer_input_dict[name] for name in input_layer_names]
-        output_layers = [layer_output_dict[name] for name in output_layer_names]
-        model = DeepQaModel(inputs=input_layers, outputs=output_layers, name=name)
-        if not self.train_bidaf:
-            model.trainable = False
-        return model
 
     @overrides
     def _instance_type(self):  # pylint: disable=no-self-use

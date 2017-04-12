@@ -17,6 +17,7 @@ import pyhocon
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 from deep_qa.common.checks import ensure_pythonhashseed_set
 from deep_qa.common.params import replace_none
+from deep_qa.common import util
 from deep_qa.contrib.background_search.vector_based_retrieval import VectorBasedRetrieval
 
 
@@ -58,8 +59,8 @@ def get_background_for_questions(retrieval: VectorBasedRetrieval,
         # We flatten the nearest neighbors list, then re-group so we have something of shape
         # (num_questions, num_results_per_question).
         flattened_nearest_neighbors = list(itertools.chain.from_iterable(nearest_neighbors))
-        results_by_question = zip(*[flattened_nearest_neighbors[i::actual_num_neighbors]
-                                    for i in range(actual_num_neighbors)])
+        results_by_question = util.group_by_count(flattened_nearest_neighbors,
+                                                  actual_num_neighbors, (-1, -1))
         nearest_neighbors = []
         for question_results in results_by_question:
             # Sorting by similarity scores

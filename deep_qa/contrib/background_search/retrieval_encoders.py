@@ -5,8 +5,15 @@ from typing import Any, Dict, List
 
 import numpy
 from overrides import overrides
+import pyhocon
 import spacy
 import tqdm
+
+from ...common.models import get_submodel
+from ...common.params import get_choice, replace_none
+from ...common import util
+from ...data.instances.sentence_selection_instance import SentenceSelectionInstance
+from ...models import concrete_models
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -54,6 +61,8 @@ class BagOfWordsRetrievalEncoder(RetrievalEncoder):
     embeddings.
 
     We use spacy to tokenize the sentence.
+
+    The ``type`` of this model to use in a parameter file is ``"bow"``.
 
     Parameters
     ----------
@@ -119,5 +128,96 @@ class BagOfWordsRetrievalEncoder(RetrievalEncoder):
             return vector
 
 
+class SentenceSelectionRetrievalEncoder(RetrievalEncoder):
+    """
+    This class takes a trained sentence selection model and uses it to encode passages and queries.
+
+    We make a few assumptions here:
+
+    (1) The sentence selection model must have as its final layer a simple dot product, so that we
+        can actually fit the model into this vector-based retrieval paradigm.
+    (2) The sentence selection model needs to have its last encoder layers named
+        ``question_encoder`` and ``sentences_encoder``.  That is, we'll pull out submodels from the
+        sentence selection model using those names, so they need to be present, and should be the
+        last thing before doing the similarity computation.  Similarly, the corresponding ``Input``
+        layers must have names ``question_input`` and ``sentences_input``, where
+        ``sentences_input`` has shape ``(batch_size, num_sentences, sentence_shape)``, and
+        ``question_input`` has shape ``(batch_size, sentence_shape)``.
+
+    The ``type`` of this model to use in a parameter file is ``"sentence selection"``.
+
+    Parameters
+    ----------
+    model_param_file: str
+        This is the parameter file used to train the sentence selection model with ``run_model.py``.
+    """
+    def __init__(self, params: Dict[str, Any]):
+        model_param_file = params.pop('model_param_file')
+        model_params = pyhocon.ConfigFactory.parse_file(model_param_file)
+        model_params = replace_none(model_params)
+        model_type = get_choice(model_params, 'model_class', concrete_models.keys())
+        model_class = concrete_models[model_type]
+        self.model = model_class(model_params)
+        self.model.load_model()
+        # Ok, this is pretty hacky, but calling `self._get_encoder(name)` on a TextTrainer with
+        # "use default encoder" as the fallback behavior could give you an encoder that doesn't
+        # have the name you expect.
+        # pylint: disable=protected-access
+        question_encoder_name = self.model._get_encoder(name="question",
+                                                        fallback_behavior="use default encoder").name
+        self.query_encoder_model = get_submodel(self.model.model,
+                                                ['question_input'],
+                                                [question_encoder_name],
+                                                train_model=False,
+                                                name='query_encoder_model')
+        self.passage_encoder_model = get_submodel(self.model.model,
+                                                  ['sentences_input'],
+                                                  ['sentences_encoder'],
+                                                  train_model=False,
+                                                  name='passage_encoder_model')
+
+    @overrides
+    def encode_query(self, query: str) -> numpy.array:
+        raise RuntimeError("You shouldn't use this method; use the batched version instead")
+
+    @overrides
+    def encode_passage(self, passage: str) -> numpy.array:
+        raise RuntimeError("You shouldn't use this method; use the batched version instead")
+
+    @overrides
+    def encode_queries(self, queries: List[str]) -> List[numpy.array]:
+        query_instances = [SentenceSelectionInstance(query, [], None) for query in queries]
+        logger.info("Indexing queries")
+        indexed_instances = [instance.to_indexed_instance(self.model.data_indexer)
+                             for instance in tqdm.tqdm(query_instances)]
+        logger.info("Padding queries")
+        for instance in tqdm.tqdm(indexed_instances):
+            instance.pad(self.model._get_max_lengths())  # pylint: disable=protected-access
+        query_arrays = numpy.asarray([instance.as_training_data()[0][0] for instance in indexed_instances])
+        logger.info("Getting query vectors")
+        return self.query_encoder_model.predict(query_arrays)
+
+    @overrides
+    def encode_passages(self, passages: List[str]) -> List[numpy.array]:
+        grouped_passages = util.group_by_count(passages, self.model.num_sentences, '')
+        passage_instances = [SentenceSelectionInstance('', passage_group, None)
+                             for passage_group in grouped_passages]
+        logger.info("Indexing passages")
+        indexed_instances = [instance.to_indexed_instance(self.model.data_indexer)
+                             for instance in tqdm.tqdm(passage_instances)]
+        logger.info("Padding passages")
+        for instance in tqdm.tqdm(indexed_instances):
+            instance.pad(self.model._get_max_lengths())  # pylint: disable=protected-access
+        grouped_passage_arrays = numpy.asarray([instance.as_training_data()[0][1]
+                                                for instance in indexed_instances])
+        logger.info("Getting passage vectors")
+        grouped_passage_vectors = self.passage_encoder_model.predict(grouped_passage_arrays)
+        shape = grouped_passage_vectors.shape
+        new_shape = (shape[0] * shape[1], shape[2])
+        passage_vectors = grouped_passage_vectors.reshape(new_shape)
+        return passage_vectors[:len(passages)]
+
+
 retrieval_encoders = OrderedDict()  # pylint:  disable=invalid-name
 retrieval_encoders['bow'] = BagOfWordsRetrievalEncoder
+retrieval_encoders['sentence selection'] = SentenceSelectionRetrievalEncoder
