@@ -58,5 +58,5 @@ class WordTokenizer(Tokenizer):
         return (sentence_length,)
 
     @overrides
-    def get_max_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
+    def get_padding_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
         return {'num_sentence_words': sentence_length}

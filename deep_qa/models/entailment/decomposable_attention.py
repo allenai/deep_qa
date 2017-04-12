@@ -73,7 +73,7 @@ class DecomposableAttention(TextTrainer):
         return DeepQaModel(inputs=[text_input, hypothesis_input], outputs=entailment_probabilities)
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         print("Model input shape:", self.model.get_input_shape_at(0))
         self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[0][1:])
 

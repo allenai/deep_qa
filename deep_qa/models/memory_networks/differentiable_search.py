@@ -117,11 +117,11 @@ class DifferentiableSearchMemoryNetwork(MemoryNetwork):
             # background information, taken from a nearest neighbor search over the corpus.
             logger.info("Updating the training data background")
             self.training_dataset = self._update_background_dataset(self.training_dataset)
-            self.train_input, self.train_labels = self._prepare_data(self.training_dataset, for_train=False)
+            self.train_input, self.train_labels = self.create_data_arrays(self.training_dataset, for_train=False)
             if self.validation_dataset:
                 logger.info("Updating the validation data background")
                 self.validation_dataset = self._update_background_dataset(self.validation_dataset)
-                self.validation_input, self.validation_labels = self._prepare_data(
+                self.validation_input, self.validation_labels = self.create_data_arrays(
                         self.validation_dataset, for_train=False)
 
     @overrides
@@ -170,8 +170,7 @@ class DifferentiableSearchMemoryNetwork(MemoryNetwork):
             for instance in instances:
                 self.instance_index[len(self.instance_index)] = instance
 
-            encoder_input = [self._prepare_instance(instance, False)[0] for instance in instances]
-            encoder_input = numpy.asarray(encoder_input, dtype='int32')
+            encoder_input, _ = self.create_data_arrays(TextDataset(instances), update_model_state=False)
             current_batch_encoded_sentences = self._sentence_encoder_model.predict(encoder_input)
             for encoded_sentence in current_batch_encoded_sentences:
                 encoded_sentences.append(encoded_sentence)

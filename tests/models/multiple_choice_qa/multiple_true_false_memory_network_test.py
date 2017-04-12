@@ -1,46 +1,19 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import mock
 
-from numpy.testing.utils import assert_allclose
-
 from deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
 from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 
 
 class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
-    # pylint: disable=protected-access
 
     def setUp(self):
         super(TestMultipleTrueFalseMemoryNetwork, self).setUp()
         self.write_multiple_true_false_memory_network_files()
 
     def test_model_trains_and_loads_correctly(self):
-        model = self.get_model(MultipleTrueFalseMemoryNetwork, {'save_models': True})
-        model.train()
-
-        loaded_model = self.get_model(MultipleTrueFalseMemoryNetwork)
-        loaded_model.load_model()
-
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
-
-        # now fit both models on some more data, and ensure that we get the same results.
-        self.write_additional_multiple_true_false_memory_network_files()
-        # pylint: disable=unused-variable
-        train_data, val_data, _ = loaded_model.prepare_data(loaded_model.train_files,
-                                                            loaded_model.max_training_instances,
-                                                            loaded_model.validation_files,
-                                                            update_data_indexer=False)
-        _, train_input, train_labels = train_data
-        # _, validation_input, _ = val_data
-        model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
-        loaded_model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
-
-        # verify that original model and the loaded model predict the same outputs
-        # TODO(matt): fix the randomness that occurs here.
-        # assert_allclose(model.model.predict(validation_input),
-        #                 loaded_model.model.predict(validation_input))
+        self.ensure_model_trains_and_loads(MultipleTrueFalseMemoryNetwork, {})
 
     @mock.patch.object(MultipleTrueFalseMemoryNetwork, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):

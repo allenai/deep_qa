@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from numpy.testing import assert_allclose
 from flaky import flaky
 
 from deep_qa.models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
@@ -17,41 +16,7 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
                 }
-        model = self.get_model(BidirectionalAttentionFlow, args)
-        model.train()
-
-        # load the model that we serialized
-        loaded_model = self.get_model(BidirectionalAttentionFlow, args)
-        loaded_model.load_model()
-
-        # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(model.__dict__["validation_input"]))
-
-        # We should get the same result if we index the data from the
-        # original model and the loaded model.
-        indexed_validation_input, _ = loaded_model._prepare_data( # pylint: disable=protected-access
-                model.__dict__["validation_dataset"],
-                for_train=False)
-        assert_allclose(model.model.predict(model.__dict__["validation_input"]),
-                        loaded_model.model.predict(indexed_validation_input))
-
-        # now fit both models on some more data, and ensure that we get the same results.
-        self.write_additional_span_prediction_files()
-        # pylint: disable=unused-variable
-        train_data, val_data, _ = loaded_model.prepare_data(loaded_model.train_files,
-                                                            loaded_model.max_training_instances,
-                                                            loaded_model.validation_files,
-                                                            update_data_indexer=False)
-        _, train_input, train_labels = train_data
-        # _, validation_input, _ = val_data
-        model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
-        loaded_model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
-
-        # verify that original model and the loaded model predict the same outputs
-        # TODO(matt): fix the randomness that occurs here.
-        # assert_allclose(model.model.predict(validation_input),
-        #                 loaded_model.model.predict(validation_input))
+        self.ensure_model_trains_and_loads(BidirectionalAttentionFlow, args)
 
     def test_get_best_span(self):
         # Note that the best span cannot be (1, 0) since even though 0.3 * 0.5 is the greatest

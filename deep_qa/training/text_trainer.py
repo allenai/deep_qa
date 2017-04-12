@@ -139,23 +139,17 @@ class TextTrainer(Trainer):
     ###########################
 
     @overrides
-    def _prepare_data(self, dataset: TextDataset, for_train: bool,
-                      update_data_indexer=True):
-        """
-        Takes dataset, which could be a complex tuple for some classes, and produces as output a
-        tuple of (inputs, labels), which can be used directly with Keras to either train or
-        evaluate self.model.
-        """
-        if for_train and update_data_indexer:
+    def create_data_arrays(self, dataset: TextDataset, update_model_state: bool=False):
+        if update_model_state:
             logger.info("Fitting data indexer word dictionary.")
             self.data_indexer.fit_word_dictionary(dataset)
         logger.info("Indexing dataset")
         indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
-        max_lengths = self._get_max_lengths()
-        logger.info("Padding dataset to lengths %s", str(max_lengths))
-        indexed_dataset.pad_instances(max_lengths)
-        if for_train:
-            self._set_max_lengths(indexed_dataset.max_lengths())
+        padding_lengths = self._get_padding_lengths()
+        logger.info("Padding dataset to lengths %s", str(padding_lengths))
+        indexed_dataset.pad_instances(padding_lengths)
+        if update_model_state:
+            self._set_padding_lengths(indexed_dataset.padding_lengths())
         inputs, labels = indexed_dataset.as_training_data()
         if isinstance(inputs[0], tuple):
             inputs = [numpy.asarray(x) for x in zip(*inputs)]
@@ -168,20 +162,8 @@ class TextTrainer(Trainer):
         return inputs, labels
 
     @overrides
-    def _prepare_instance(self, instance: TextInstance, make_batch: bool=True):
-        indexed_instance = instance.to_indexed_instance(self.data_indexer)
-        indexed_instance.pad(self._get_max_lengths())
-        inputs, label = indexed_instance.as_training_data()
-        if make_batch:
-            if isinstance(inputs, tuple):
-                inputs = [numpy.expand_dims(x, axis=0) for x in inputs]
-            else:
-                inputs = numpy.expand_dims(inputs, axis=0)
-        return inputs, label
-
-    @overrides
     def _set_params_from_model(self):
-        self._set_max_lengths_from_model()
+        self._set_padding_lengths_from_model()
 
     @overrides
     def _save_auxiliary_files(self):
@@ -198,7 +180,7 @@ class TextTrainer(Trainer):
         data_indexer_file.close()
 
     @overrides
-    def _load_dataset_from_files(self, files: List[str]):
+    def load_dataset_from_files(self, files: List[str]):
         """
         This method assumes you have a TextDataset that can be read from a single file.  If you
         have something more complicated, you'll need to override this method (though, a solver that
@@ -426,7 +408,7 @@ class TextTrainer(Trainer):
         Given an input slice (a tuple) from a model representing the max length of the sentences
         and the max length of each words, set the padding max lengths.  This gets called when
         loading a model, and is necessary to get padding correct when using loaded models.
-        Subclasses need to call this in their ``_set_max_lengths_from_model`` method.
+        Subclasses need to call this in their ``_set_padding_lengths_from_model`` method.
 
         Parameters
         ----------
@@ -457,11 +439,11 @@ class TextTrainer(Trainer):
         """
         raise NotImplementedError
 
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         """
-        This gets called when loading a saved model.  It is analogous to ``_set_max_lengths``, but
-        needs to set all of the values set in that method just by inspecting the loaded model.  If
-        we didn't have this, we would not be able to correctly pad data after loading a model.
+        This gets called when loading a saved model.  It is analogous to ``_set_padding_lengths``,
+        but needs to set all of the values set in that method just by inspecting the loaded model.
+        If we didn't have this, we would not be able to correctly pad data after loading a model.
         """
         raise NotImplementedError
 
@@ -470,27 +452,27 @@ class TextTrainer(Trainer):
     # but simple models might be able to get by with just the default implementation
     ########################
 
-    def _get_max_lengths(self) -> Dict[str, int]:
+    def _get_padding_lengths(self) -> Dict[str, int]:
         """
         This is about padding.  Any solver will have some number of things that need padding in
         order to make a compilable model, like the length of a sentence.  This method returns a
         dictionary of all of those things, mapping a length key to an int.
 
         Here we return the lengths that are applicable to encoding words and sentences.  If you
-        have additional padding dimensions, call super()._get_max_lengths() and then update the
+        have additional padding dimensions, call super()._get_padding_lengths() and then update the
         dictionary.
         """
-        return self.tokenizer.get_max_lengths(self.num_sentence_words, self.num_word_characters)
+        return self.tokenizer.get_padding_lengths(self.num_sentence_words, self.num_word_characters)
 
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         """
         This is about padding.  Any solver will have some number of things that need padding in
         order to make a compilable model, like the length of a sentence.  This method sets those
         variables given a dictionary of lengths, perhaps computed from training data or loaded from
         a saved model.
         """
-        self.num_sentence_words = max_lengths['num_sentence_words']
-        self.num_word_characters = max_lengths.get('num_word_characters', None)
+        self.num_sentence_words = padding_lengths['num_sentence_words']
+        self.num_word_characters = padding_lengths.get('num_word_characters', None)
 
     #################
     # Private methods - you can't to override these.  If you find yourself needing to, we can

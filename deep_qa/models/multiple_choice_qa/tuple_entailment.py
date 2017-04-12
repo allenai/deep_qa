@@ -40,8 +40,8 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
         return TupleInstance
 
     @overrides
-    def _load_dataset_from_files(self, files: List[str]):
-        dataset = super(MultipleChoiceTupleEntailmentModel, self)._load_dataset_from_files(files)
+    def load_dataset_from_files(self, files: List[str]):
+        dataset = super(MultipleChoiceTupleEntailmentModel, self).load_dataset_from_files(files)
         return TextDataset.read_background_from_file(dataset, files[1], self._background_instance_type())
 
     @classmethod
@@ -52,7 +52,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
         return custom_objects
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
+    def _get_padding_lengths(self) -> Dict[str, int]:
         return {
                 'num_sentence_words': self.num_sentence_words,
                 'answer_length': self.max_answer_length,
@@ -62,15 +62,15 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
                 }
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self.num_sentence_words = max_lengths['num_sentence_words']
-        self.max_answer_length = max_lengths['answer_length']
-        self.max_knowledge_length = max_lengths['background_sentences']
-        self.num_options = max_lengths['num_options']
-        self.num_slots = max_lengths['num_slots']
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+        self.num_sentence_words = padding_lengths['num_sentence_words']
+        self.max_answer_length = padding_lengths['answer_length']
+        self.max_knowledge_length = padding_lengths['background_sentences']
+        self.num_options = padding_lengths['num_options']
+        self.num_slots = padding_lengths['num_slots']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         # TODO(matt): actually implement this (it's required for loading a saved model)
         pass
 

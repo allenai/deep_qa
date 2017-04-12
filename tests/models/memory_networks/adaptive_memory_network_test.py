@@ -34,8 +34,8 @@ class TestAdaptiveMemoryNetwork(DeepQaTestCase):
                 'knowledge_selector': {'type': 'parameterized'}
         }
         solver = self.get_model(MemoryNetwork, args)
-        solver.training_dataset = solver._load_dataset_from_files(solver.train_files)
-        solver.train_input, solver.train_labels = solver._prepare_data(solver.training_dataset, for_train=True)
+        solver.training_dataset, solver.train_input, solver.train_labels = \
+                solver.load_data_arrays(solver.train_files, update_model_state=True)
         model = solver._build_model()
         tf_trainable_variables = tf.trainable_variables()
         keras_trainable_variables = model.trainable_weights

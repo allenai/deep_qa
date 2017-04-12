@@ -129,26 +129,26 @@ class SiameseSentenceSelector(TextTrainer):
         return SentenceSelectionInstance
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
+    def _get_padding_lengths(self) -> Dict[str, int]:
         """
         Return a dictionary with the appropriate padding lengths.
         """
-        max_lengths = super(SiameseSentenceSelector, self)._get_max_lengths()
-        max_lengths['num_question_words'] = self.num_question_words
-        max_lengths['num_sentences'] = self.num_sentences
-        return max_lengths
+        padding_lengths = super(SiameseSentenceSelector, self)._get_padding_lengths()
+        padding_lengths['num_question_words'] = self.num_question_words
+        padding_lengths['num_sentences'] = self.num_sentences
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         """
         Set the padding lengths of the model.
         """
-        super(SiameseSentenceSelector, self)._set_max_lengths(max_lengths)
-        self.num_question_words = max_lengths['num_question_words']
-        self.num_sentences = max_lengths['num_sentences']
+        super(SiameseSentenceSelector, self)._set_padding_lengths(padding_lengths)
+        self.num_question_words = padding_lengths['num_question_words']
+        self.num_sentences = padding_lengths['num_sentences']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][2:])
         self.num_question_words = self.model.get_input_shape_at(0)[0][1]
         self.num_sentences = self.model.get_input_shape_at(0)[1][1]

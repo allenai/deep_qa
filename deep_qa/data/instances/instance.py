@@ -198,7 +198,7 @@ class IndexedInstance(Instance):
         """
         raise NotImplementedError
 
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         Add zero-padding to make each data example of equal length for use
         in the neural network.
@@ -207,7 +207,7 @@ class IndexedInstance(Instance):
 
         Parameters
         ----------
-        max_lengths: Dictionary of {str:int}
+        padding_lengths: Dictionary of {str:int}
             In this dictionary, each ``str`` refers to a type of token
             (e.g. ``max_words_question``), and the corresponding ``int`` is
             the value. This dictionary must have the same dimension as was

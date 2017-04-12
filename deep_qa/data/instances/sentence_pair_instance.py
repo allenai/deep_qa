@@ -70,13 +70,13 @@ class IndexedSentencePairInstance(IndexedInstance):
         return lengths
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
-        Pads (or truncates) self.word_indices to be of length max_lengths[0].  See comment on
-        self.get_lengths() for why max_lengths is a list instead of an int.
+        Pads (or truncates) self.word_indices to be of length padding_lengths[0].  See comment on
+        self.get_lengths() for why padding_lengths is a list instead of an int.
         """
-        self.first_sentence_indices = self.pad_word_sequence(self.first_sentence_indices, max_lengths)
-        self.second_sentence_indices = self.pad_word_sequence(self.second_sentence_indices, max_lengths)
+        self.first_sentence_indices = self.pad_word_sequence(self.first_sentence_indices, padding_lengths)
+        self.second_sentence_indices = self.pad_word_sequence(self.second_sentence_indices, padding_lengths)
 
     @overrides
     def as_training_data(self):

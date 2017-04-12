@@ -233,34 +233,34 @@ class GatedAttentionReader(TextTrainer):
         return McQuestionAnswerInstance
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
+    def _get_padding_lengths(self) -> Dict[str, int]:
         """
         Return a dictionary with the appropriate padding lengths.
         """
-        max_lengths = super(GatedAttentionReader, self)._get_max_lengths()
-        max_lengths['num_question_words'] = self.max_question_length
-        max_lengths['num_passage_words'] = self.max_passage_length
-        max_lengths['num_option_words'] = self.max_option_length
-        max_lengths['num_options'] = self.num_options
-        return max_lengths
+        padding_lengths = super(GatedAttentionReader, self)._get_padding_lengths()
+        padding_lengths['num_question_words'] = self.max_question_length
+        padding_lengths['num_passage_words'] = self.max_passage_length
+        padding_lengths['num_option_words'] = self.max_option_length
+        padding_lengths['num_options'] = self.num_options
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         """
         Set the padding lengths of the model.
         """
         # TODO(nelson): superclass complains that there is no
         # num_sentence_words key, so we set it to None here.
         # We should probably patch up / organize the API.
-        max_lengths["num_sentence_words"] = None
-        super(GatedAttentionReader, self)._set_max_lengths(max_lengths)
-        self.max_question_length = max_lengths['num_question_words']
-        self.max_passage_length = max_lengths['num_passage_words']
-        self.max_option_length = max_lengths['num_option_words']
-        self.num_options = max_lengths['num_options']
+        padding_lengths["num_sentence_words"] = None
+        super(GatedAttentionReader, self)._set_padding_lengths(padding_lengths)
+        self.max_question_length = padding_lengths['num_question_words']
+        self.max_passage_length = padding_lengths['num_passage_words']
+        self.max_option_length = padding_lengths['num_option_words']
+        self.num_options = padding_lengths['num_options']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][1:])
         self.max_question_length = self.model.get_input_shape_at(0)[0][1]
         self.max_passage_length = self.model.get_input_shape_at(0)[1][1]

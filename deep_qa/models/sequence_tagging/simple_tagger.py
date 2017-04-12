@@ -51,5 +51,5 @@ class SimpleTagger(TextTrainer):
         return DeepQaModel(input=text_input, output=predicted_tags)
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1:])

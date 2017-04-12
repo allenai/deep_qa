@@ -200,21 +200,21 @@ class MultipleChoiceBidaf(TextTrainer):
         return McQuestionAnswerInstance
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        max_lengths = self._bidaf_model._get_max_lengths()
-        max_lengths['num_options'] = self.num_options
-        max_lengths['num_option_words'] = self.num_option_words
-        return max_lengths
+    def _get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = self._bidaf_model._get_padding_lengths()
+        padding_lengths['num_options'] = self.num_options
+        padding_lengths['num_option_words'] = self.num_option_words
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        self._bidaf_model._set_max_lengths(max_lengths)
-        self.num_options = max_lengths['num_options']
-        self.num_option_words = max_lengths['num_option_words']
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+        self._bidaf_model._set_padding_lengths(padding_lengths)
+        self.num_options = padding_lengths['num_options']
+        self.num_option_words = padding_lengths['num_option_words']
 
     @overrides
-    def _set_max_lengths_from_model(self):
-        self._bidaf_model._set_max_lengths_from_model()
+    def _set_padding_lengths_from_model(self):
+        self._bidaf_model._set_padding_lengths_from_model()
         options_input_shape = self.model.get_input_shape_at(0)[2]
         self.num_options = options_input_shape[1]
         self.num_option_words = options_input_shape[2]

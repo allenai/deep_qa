@@ -68,11 +68,11 @@ class IndexedTaggingInstance(IndexedInstance):
         return self._get_word_sequence_lengths(self.text_indices)
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
-        self.text_indices = self.pad_word_sequence(self.text_indices, max_lengths,
+    def pad(self, padding_lengths: Dict[str, int]):
+        self.text_indices = self.pad_word_sequence(self.text_indices, padding_lengths,
                                                    truncate_from_right=False)
         self.label = self.pad_sequence_to_length(self.label,
-                                                 desired_length=max_lengths['num_sentence_words'],
+                                                 desired_length=padding_lengths['num_sentence_words'],
                                                  default_value=lambda: self.label[0],
                                                  truncate_from_right=False)
 

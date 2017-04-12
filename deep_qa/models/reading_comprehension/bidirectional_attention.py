@@ -199,23 +199,23 @@ class BidirectionalAttentionFlow(TextTrainer):
         return CharacterSpanInstance
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        max_lengths = super(BidirectionalAttentionFlow, self)._get_max_lengths()
-        max_lengths['num_passage_words'] = self.num_passage_words
-        max_lengths['num_question_words'] = self.num_question_words
-        return max_lengths
+    def _get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(BidirectionalAttentionFlow, self)._get_padding_lengths()
+        padding_lengths['num_passage_words'] = self.num_passage_words
+        padding_lengths['num_question_words'] = self.num_question_words
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         # Adding this because we're bypassing num_sentence_words in our model, but TextTrainer
         # expects it.
-        max_lengths['num_sentence_words'] = None
-        super(BidirectionalAttentionFlow, self)._set_max_lengths(max_lengths)
-        self.num_passage_words = max_lengths['num_passage_words']
-        self.num_question_words = max_lengths['num_question_words']
+        padding_lengths['num_sentence_words'] = None
+        super(BidirectionalAttentionFlow, self)._set_padding_lengths(padding_lengths)
+        self.num_passage_words = padding_lengths['num_passage_words']
+        self.num_question_words = padding_lengths['num_question_words']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         self.num_question_words = self.model.get_input_shape_at(0)[0][1]
         self.num_passage_words = self.model.get_input_shape_at(0)[1][1]
         # We need to pass this slice of the passage input shape to the superclass
@@ -235,18 +235,6 @@ class BidirectionalAttentionFlow(TextTrainer):
         custom_objects["Repeat"] = Repeat
         custom_objects["WeightedSum"] = WeightedSum
         return custom_objects
-
-    @overrides
-    def score_instance(self, instance: CharacterSpanInstance):
-        inputs, _ = self._prepare_instance(instance)
-        try:
-            span_begin_probs, span_end_probs = self.model.predict(inputs)
-            span_indices = self.get_best_span(span_begin_probs,
-                                              span_end_probs)
-            return span_indices
-        except:
-            print('Inputs were: ' + str(inputs))
-            raise
 
     @staticmethod
     def get_best_span(span_begin_probs, span_end_probs):

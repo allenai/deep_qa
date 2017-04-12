@@ -126,15 +126,15 @@ class IndexedSentenceSelectionInstance(IndexedInstance):
         return lengths
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         In this function, we pad the questions and sentences (in terms of number
         of words in each), the number of sentences,
         as well as the individual words in the questions and sentences themselves.
         """
-        max_lengths_tmp = max_lengths.copy()
+        padding_lengths_tmp = padding_lengths.copy()
         # Pad the number of sentences.
-        num_sentences = max_lengths['num_sentences']
+        num_sentences = padding_lengths['num_sentences']
         self.sentences_indices = self.pad_sequence_to_length(self.sentences_indices,
                                                              num_sentences,
                                                              lambda: [],
@@ -145,11 +145,11 @@ class IndexedSentenceSelectionInstance(IndexedInstance):
         # to ['num_sentence_words'] (the key defined in the TextTrainer)
         # by default, we don't have to modify it.
         self.sentences_indices = [self.pad_word_sequence(sentence_indices,
-                                                         max_lengths_tmp)
+                                                         padding_lengths_tmp)
                                   for sentence_indices in self.sentences_indices]
         # Pad the number of words in a question.
-        max_lengths_tmp['num_sentence_words'] = max_lengths_tmp['num_question_words']
-        self.question_indices = self.pad_word_sequence(self.question_indices, max_lengths_tmp)
+        padding_lengths_tmp['num_sentence_words'] = padding_lengths_tmp['num_question_words']
+        self.question_indices = self.pad_word_sequence(self.question_indices, padding_lengths_tmp)
 
     @overrides
     def as_training_data(self):

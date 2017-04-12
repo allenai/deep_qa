@@ -68,21 +68,21 @@ class IndexedMultipleTrueFalseInstance(IndexedInstance):
         """
         Here we return the max of get_lengths on all of the Instances in self.options.
         """
-        max_lengths = {}
-        max_lengths['num_options'] = len(self.options)
+        padding_lengths = {}
+        padding_lengths['num_options'] = len(self.options)
         lengths = [instance.get_lengths() for instance in self.options]
         if not lengths:
-            return max_lengths
+            return padding_lengths
         for key in lengths[0]:
-            max_lengths[key] = max(x[key] for x in lengths)
-        return max_lengths
+            padding_lengths[key] = max(x[key] for x in lengths)
+        return padding_lengths
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         This method pads all of the underlying Instances in self.options.
         """
-        num_options = max_lengths['num_options']
+        num_options = padding_lengths['num_options']
 
         # First we pad the number of options.
         while len(self.options) < num_options:
@@ -91,7 +91,7 @@ class IndexedMultipleTrueFalseInstance(IndexedInstance):
 
         # Then we pad each option.
         for instance in self.options:  # type: IndexedInstance
-            instance.pad(max_lengths)
+            instance.pad(padding_lengths)
 
     @overrides
     def as_training_data(self):

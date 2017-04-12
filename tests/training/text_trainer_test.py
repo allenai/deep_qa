@@ -127,16 +127,13 @@ class TestTextTrainer(DeepQaTestCase):
 
         # now fit both models on some more data, and ensure that we get the same results.
         self.write_additional_true_false_model_files()
-        # pylint: disable=unused-variable
-        train_data, val_data, _ = loaded_model.prepare_data(loaded_model.train_files,
-                                                            loaded_model.max_training_instances,
-                                                            loaded_model.validation_files,
-                                                            update_data_indexer=False)
-        _, train_input, train_labels = train_data
-        # _, validation_input, _ = val_data
+        _, train_input, train_labels = loaded_model.load_data_arrays(loaded_model.train_files,
+                                                                     update_model_state=False)
         model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
         loaded_model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
 
+        # _, validation_input, _ = loaded_model.load_data_arrays(loaded_model.validation_files,
+        #                                                        update_model_state=False)
         # verify that original model and the loaded model predict the same outputs
         # TODO(matt): fix the randomness that occurs here.
         # assert_allclose(model.model.predict(validation_input),

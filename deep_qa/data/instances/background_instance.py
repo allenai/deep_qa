@@ -105,7 +105,7 @@ class IndexedBackgroundInstance(IndexedInstance):
         return lengths
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         We let self.indexed_instance pad itself, and in this method we mostly worry about padding
         background_indices.  We need to pad it in two ways: (1) we need len(background_indices) to
@@ -113,8 +113,8 @@ class IndexedBackgroundInstance(IndexedInstance):
         for all i, for all instances.  We'll use the word_indices length from the super class for
         (2).
         """
-        self.indexed_instance.pad(max_lengths)
-        background_length = max_lengths['background_sentences']
+        self.indexed_instance.pad(padding_lengths)
+        background_length = padding_lengths['background_sentences']
 
         # Padding (1): making sure we have the right number of background instances.  We also need
         # to truncate, if necessary.
@@ -126,7 +126,7 @@ class IndexedBackgroundInstance(IndexedInstance):
 
         # Padding (2): making sure all background instances are padded to the right length.
         for background_instance in self.background_instances:
-            background_instance.pad(max_lengths)
+            background_instance.pad(padding_lengths)
 
     @overrides
     def as_training_data(self):

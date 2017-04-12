@@ -364,7 +364,7 @@ class IndexedTupleInferenceInstance(IndexedInstance):
         return max_num_slots, max_slot_words, num_word_characters
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         Pads (or truncates) each indexed tuple in answers_indexed and
         background_indexed to specified lengths, using the superclass methods
@@ -377,9 +377,9 @@ class IndexedTupleInferenceInstance(IndexedInstance):
         we don't want to risk removing the correct answer in a multiple choice
         setting.
         """
-        desired_num_options = max_lengths['num_options']
-        desired_num_question_tuples = max_lengths['num_question_tuples']
-        desired_num_background_tuples = max_lengths['num_background_tuples']
+        desired_num_options = padding_lengths['num_options']
+        desired_num_question_tuples = padding_lengths['num_question_tuples']
+        desired_num_background_tuples = padding_lengths['num_background_tuples']
 
         # Pad the number of answers. Note that while we use the superclass method when we need to add empty
         # answer_options, we don't want to remove answer options.
@@ -401,7 +401,7 @@ class IndexedTupleInferenceInstance(IndexedInstance):
                                                                              truncate_from_right=False)
         # Pad each of the tuples for slot length and words per slot
         for answer_index in range(len(self.answers_indexed)):
-            self.answers_indexed[answer_index] = [self.pad_tuple(answer_tuple, max_lengths)
+            self.answers_indexed[answer_index] = [self.pad_tuple(answer_tuple, padding_lengths)
                                                   for answer_tuple in self.answers_indexed[answer_index]]
         # Pad the number of background tuples
         self.background_indexed = self.pad_sequence_to_length(self.background_indexed,
@@ -409,10 +409,10 @@ class IndexedTupleInferenceInstance(IndexedInstance):
                                                               lambda: [],
                                                               truncate_from_right=False)
         # Pad each of the background tuples for number of slots and slot length
-        self.background_indexed = [self.pad_tuple(background_tuple, max_lengths)
+        self.background_indexed = [self.pad_tuple(background_tuple, padding_lengths)
                                    for background_tuple in self.background_indexed]
 
-    def pad_tuple(self, tuple_in: List[List[int]], max_lengths: Dict):
+    def pad_tuple(self, tuple_in: List[List[int]], padding_lengths: Dict):
         """
         Helper method to pad an individual tuple both to the desired number of slots
         as well as the desired slot length, both of which are done through the
@@ -424,7 +424,7 @@ class IndexedTupleInferenceInstance(IndexedInstance):
             The indexed tuple to be padded. This has the shape
             ``(num_tuple_slots, num_slot_words)``.
 
-        max_lengths: Dict of {str: int}
+        padding_lengths: Dict of {str: int}
             The lengths to pad to.  Must include the keys:
 
             - 'num_slots': the number of slots desired
@@ -440,13 +440,13 @@ class IndexedTupleInferenceInstance(IndexedInstance):
         -------
         tuple_in: List[List[int]]
             In the returned (modified) list, the length matches the desired_num_slots and each of
-            the slots has a length equal to the value set by ``num_sentence_words`` in max_lengths.
+            the slots has a length equal to the value set by ``num_sentence_words`` in padding_lengths.
         """
-        desired_num_slots = max_lengths['num_slots']
+        desired_num_slots = padding_lengths['num_slots']
         tuple_in = self.pad_sequence_to_length(tuple_in, desired_num_slots,
                                                default_value=lambda: [], truncate_from_right=False)
         # Pad the slots to the desired length.
-        tuple_in = [self.pad_word_sequence(indices, max_lengths) for indices in tuple_in]
+        tuple_in = [self.pad_word_sequence(indices, padding_lengths) for indices in tuple_in]
         return tuple_in
 
     @overrides

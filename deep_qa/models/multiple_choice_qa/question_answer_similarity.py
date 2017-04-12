@@ -80,19 +80,19 @@ class QuestionAnswerSimilarity(TextTrainer):
         return QuestionAnswerInstance
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        max_lengths = super(QuestionAnswerSimilarity, self)._get_max_lengths()
-        max_lengths['num_options'] = self.num_options
-        max_lengths['answer_length'] = self.max_answer_length
-        return max_lengths
+    def _get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(QuestionAnswerSimilarity, self)._get_padding_lengths()
+        padding_lengths['num_options'] = self.num_options
+        padding_lengths['answer_length'] = self.max_answer_length
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        super(QuestionAnswerSimilarity, self)._set_max_lengths(max_lengths)
-        self.max_answer_length = max_lengths['answer_length']
-        self.num_options = max_lengths['num_options']
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+        super(QuestionAnswerSimilarity, self)._set_padding_lengths(padding_lengths)
+        self.max_answer_length = padding_lengths['answer_length']
+        self.num_options = padding_lengths['num_options']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         self.num_sentence_words = self.model.get_input_shape_at(0)[1]
         # TODO(matt): implement this correctly

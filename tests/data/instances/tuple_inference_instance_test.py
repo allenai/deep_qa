@@ -99,12 +99,12 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         num_slots = 3
         slot_length = 6
         num_options = 4
-        max_lengths = {'num_question_tuples': num_question_tuples,
-                       'num_background_tuples': num_background_tuples,
-                       'num_slots': num_slots,
-                       'num_sentence_words': slot_length,
-                       'num_options': num_options}
-        indexed.pad(max_lengths)
+        padding_lengths = {'num_question_tuples': num_question_tuples,
+                           'num_background_tuples': num_background_tuples,
+                           'num_slots': num_slots,
+                           'num_sentence_words': slot_length,
+                           'num_options': num_options}
+        indexed.pad(padding_lengths)
         assert len(indexed.answers_indexed) == num_options
         for answer_option_tuples in indexed.answers_indexed:
             assert len(answer_option_tuples) == num_question_tuples
@@ -119,12 +119,12 @@ class TestTupleInferenceInstance(DeepQaTestCase):
                 assert len(slot) == slot_length
 
     def test_as_training_data_produces_correct_numpy_arrays(self):
-        max_lengths = {'num_question_tuples': 2,
-                       'num_background_tuples': 3,
-                       'num_slots': 2,
-                       'num_sentence_words': 2,
-                       'num_options': 3}
-        self.indexed_instance.pad(max_lengths)
+        padding_lengths = {'num_question_tuples': 2,
+                           'num_background_tuples': 3,
+                           'num_slots': 2,
+                           'num_sentence_words': 2,
+                           'num_options': 3}
+        self.indexed_instance.pad(padding_lengths)
 
         inputs, label = self.indexed_instance.as_training_data()
         assert numpy.all(label == numpy.asarray([0, 0, 1]))
@@ -158,13 +158,13 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         new_instance = TupleInferenceInstance.read_from_line(line_simple)
         indexed = new_instance.to_indexed_instance(data_indexer)
 
-        max_lengths = {'num_question_tuples': 1,
-                       'num_background_tuples': 1,
-                       'num_slots': 2,
-                       'num_sentence_words': 2,
-                       'num_options': 1,
-                       'num_word_characters': 3}
-        indexed.pad(max_lengths)
+        padding_lengths = {'num_question_tuples': 1,
+                           'num_background_tuples': 1,
+                           'num_slots': 2,
+                           'num_sentence_words': 2,
+                           'num_options': 1,
+                           'num_word_characters': 3}
+        indexed.pad(padding_lengths)
         expected_indexed_tuple = [[[0, 0, 0], [a_word_index, a_index, 0]],
                                   [[a_word_index, a_index, 0], [sentence_index, s_index, e_index]]]
         expected_answers_indexed = numpy.asarray([expected_indexed_tuple])

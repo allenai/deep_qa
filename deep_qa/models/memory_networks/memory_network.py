@@ -138,8 +138,8 @@ class MemoryNetwork(TextTrainer):
         self.entailment_model = None
 
     @overrides
-    def _load_dataset_from_files(self, files: List[str]):
-        dataset = super(MemoryNetwork, self)._load_dataset_from_files(files)
+    def load_dataset_from_files(self, files: List[str]):
+        dataset = super(MemoryNetwork, self).load_dataset_from_files(files)
         return TextDataset.read_background_from_file(dataset, files[1], self._background_instance_type())
 
     @overrides
@@ -161,18 +161,18 @@ class MemoryNetwork(TextTrainer):
         return custom_objects
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        max_lengths = super(MemoryNetwork, self)._get_max_lengths()
-        max_lengths['background_sentences'] = self.max_knowledge_length
-        return max_lengths
+    def _get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(MemoryNetwork, self)._get_padding_lengths()
+        padding_lengths['background_sentences'] = self.max_knowledge_length
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        super(MemoryNetwork, self)._set_max_lengths(max_lengths)
-        self.max_knowledge_length = max_lengths['background_sentences']
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+        super(MemoryNetwork, self)._set_padding_lengths(padding_lengths)
+        self.max_knowledge_length = padding_lengths['background_sentences']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         self.num_sentence_words = self.model.get_input_shape_at(0)[0][1]
         self.max_knowledge_length = self.model.get_input_shape_at(0)[1][1]
 

@@ -97,7 +97,7 @@ class Tokenizer:
         """
         raise NotImplementedError
 
-    def get_max_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
+    def get_padding_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
         """
         When dealing with padding in TextTrainer, TextInstances need to know what to pad and how
         much.  This function takes a potential max sentence length and word length, and returns a

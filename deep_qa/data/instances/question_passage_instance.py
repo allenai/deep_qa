@@ -90,16 +90,16 @@ class IndexedQuestionPassageInstance(IndexedInstance):
         return lengths
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         In this function, we pad the questions and passages (in terms of number of words in each),
         as well as the individual words in the questions and passages themselves.
         """
-        max_lengths_tmp = max_lengths.copy()
-        max_lengths_tmp['num_sentence_words'] = max_lengths_tmp['num_question_words']
-        self.question_indices = self.pad_word_sequence(self.question_indices, max_lengths_tmp)
-        max_lengths_tmp['num_sentence_words'] = max_lengths_tmp['num_passage_words']
-        self.passage_indices = self.pad_word_sequence(self.passage_indices, max_lengths_tmp,
+        padding_lengths_tmp = padding_lengths.copy()
+        padding_lengths_tmp['num_sentence_words'] = padding_lengths_tmp['num_question_words']
+        self.question_indices = self.pad_word_sequence(self.question_indices, padding_lengths_tmp)
+        padding_lengths_tmp['num_sentence_words'] = padding_lengths_tmp['num_passage_words']
+        self.passage_indices = self.pad_word_sequence(self.passage_indices, padding_lengths_tmp,
                                                       truncate_from_right=False)
 
     @overrides

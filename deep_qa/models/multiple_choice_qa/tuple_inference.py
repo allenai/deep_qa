@@ -105,26 +105,26 @@ class TupleInferenceModel(TextTrainer):
         return custom_objects
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        max_lengths = super(TupleInferenceModel, self)._get_max_lengths()
-        max_lengths['num_question_tuples'] = self.num_question_tuples
-        max_lengths['num_background_tuples'] = self.num_background_tuples
-        max_lengths['num_slots'] = self.num_tuple_slots
-        max_lengths['num_sentence_words'] = self.num_slot_words
-        max_lengths['num_options'] = self.num_options
-        return max_lengths
+    def _get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(TupleInferenceModel, self)._get_padding_lengths()
+        padding_lengths['num_question_tuples'] = self.num_question_tuples
+        padding_lengths['num_background_tuples'] = self.num_background_tuples
+        padding_lengths['num_slots'] = self.num_tuple_slots
+        padding_lengths['num_sentence_words'] = self.num_slot_words
+        padding_lengths['num_options'] = self.num_options
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        super(TupleInferenceModel, self)._set_max_lengths(max_lengths)
-        self.num_question_tuples = max_lengths['num_question_tuples']
-        self.num_background_tuples = max_lengths['num_background_tuples']
-        self.num_tuple_slots = max_lengths['num_slots']
-        self.num_slot_words = max_lengths['num_sentence_words']
-        self.num_options = max_lengths['num_options']
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+        super(TupleInferenceModel, self)._set_padding_lengths(padding_lengths)
+        self.num_question_tuples = padding_lengths['num_question_tuples']
+        self.num_background_tuples = padding_lengths['num_background_tuples']
+        self.num_tuple_slots = padding_lengths['num_slots']
+        self.num_slot_words = padding_lengths['num_sentence_words']
+        self.num_options = padding_lengths['num_options']
 
     @overrides
-    def _set_max_lengths_from_model(self):
+    def _set_padding_lengths_from_model(self):
         # TODO(becky): actually implement this (it's required for loading a saved model)
         pass
 

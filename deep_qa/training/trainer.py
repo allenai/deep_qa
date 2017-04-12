@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import numpy
 import keras.backend as K
@@ -40,7 +40,7 @@ class Trainer:
     ----------
     train_files: List[str], optional (default=None)
         The files containing the data that should be used for training.  See
-        :func:`~Trainer._load_dataset_from_files()` for more information.
+        :func:`~Trainer.load_dataset_from_files()` for more information.
     validation_files: List[str], optional (default=None)
         The files containing the data that should be used for validation, if you do not want to use
         a split of the training data for validation.  The default of None means to just use the
@@ -167,6 +167,12 @@ class Trainer:
         self.model = None
         self.debug_model = None
 
+        # Should we update state when loading the training data in `self.train()`?  Generally, yes,
+        # you need to do this.  But if you've loaded a pre-trained model, the model state has
+        # already been frozen, and trying to update things like the vocabulary will break things.
+        # So we set this to false when loading a saved model.
+        self.update_model_state_with_training_data = True
+
         # Training-specific member variables that will get set and used later.
         self.best_epoch = -1
 
@@ -194,34 +200,52 @@ class Trainer:
     def can_train(self):
         return self.train_files is not None
 
-    def prepare_data(self, train_files, max_training_instances,
-                     validation_files=None, test_files=None, update_data_indexer=True):
-        logger.info("Getting training data")
-        training_dataset = self._load_dataset_from_files(train_files)
-        if max_training_instances is not None:
-            logger.info("Truncating the training dataset to %d instances", max_training_instances)
-            training_dataset = training_dataset.truncate(max_training_instances)
-        train_input, train_labels = self._prepare_data(training_dataset,
-                                                       for_train=True,
-                                                       update_data_indexer=update_data_indexer)
-        validation_dataset = validation_input = validation_labels = None
-        if validation_files:
-            logger.info("Getting validation data")
-            validation_dataset = self._load_dataset_from_files(validation_files)
-            validation_input, validation_labels = self._prepare_data(validation_dataset,
-                                                                     for_train=False,
-                                                                     update_data_indexer=update_data_indexer)
-        test_dataset = test_input = test_labels = None
-        if test_files:
-            logger.info("Getting test data")
-            test_dataset = self._load_dataset_from_files(test_files)
-            test_input, test_labels = self._prepare_data(validation_dataset,
-                                                         for_train=False,
-                                                         update_data_indexer=update_data_indexer)
+    def load_data_arrays(self,
+                         data_files: List[str],
+                         update_model_state: bool,
+                         max_instances: int=None) -> Tuple[Dataset, numpy.array, numpy.array]:
+        """
+        Loads a :class:`Dataset` from a list of files, then converts it into numpy arrays for
+        both inputs and outputs, returning all three of these to you.  This literally just calls
+        ``self.load_dataset_from_files``, then ``self.create_data_arrays``; it's just a convenience
+        method if you want to do both of these at the same time, and also lets you truncate the
+        dataset if you want.
 
-        return ((training_dataset, train_input, train_labels),
-                (validation_dataset, validation_input, validation_labels),
-                (test_dataset, test_input, test_labels))
+        If this is called with ``update_model_state=True``, we will set things like padding
+        dimensions and vocabulary, or whatever specific state your model keeps around.  Currently,
+        the only way to `set` this state in the first place is through this method.
+        ``self.train()`` updates the model state using the training data, then sets it to ``False``
+        afterward.
+
+        Parameters
+        ----------
+        data_files: List[str]
+            The files to load.  These will get passed to ``self.load_dataset_from_files()``, which
+            subclasses must implement.
+        update_model_state: bool
+            Should we update model state based on what we see in this dataset?
+        max_instances: int, optional (default=None)
+            If not ``None``, we will restrict the dataset to only this many instances.  This is
+            mostly useful for testing models out on subsets of your data.
+
+        Returns
+        -------
+        dataset: Dataset
+            A :class:`Dataset` object containing the instances read from the data files
+        input_arrays: numpy.array
+            An array or tuple of arrays suitable to be passed as inputs ``x`` to Keras'
+            ``model.fit(x, y)``, ``model.evaluate(x, y)`` or ``model.predict(x)`` methods
+        label_arrays: numpy.array
+            An array or tuple of arrays suitable to be passed as outputs ``y`` to Keras'
+            ``model.fit(x, y)`` or ``model.evaluate(x, y)`` methods
+        """
+        logger.info("Loading data from %s", str(data_files))
+        dataset = self.load_dataset_from_files(data_files)
+        if max_instances is not None:
+            logger.info("Truncating the dataset to %d instances", max_instances)
+            dataset = dataset.truncate(max_instances)
+        input_arrays, label_arrays = self.create_data_arrays(dataset, update_model_state)
+        return (dataset, input_arrays, label_arrays)
 
     def train(self):
         '''
@@ -233,12 +257,16 @@ class Trainer:
         logger.info("Running training (%s)", self.name)
 
         # First we need to prepare the data that we'll use for training.
-        train_data, val_data, test_data = self.prepare_data(self.train_files, self.max_training_instances,
-                                                            self.validation_files,
-                                                            self.test_files)
-        self.training_dataset, self.train_input, self.train_labels = train_data
-        self.validation_dataset, self.validation_input, self.validation_labels = val_data
-        self.test_dataset, self.test_input, self.test_labels = test_data
+        self.training_dataset, self.train_input, self.train_labels = \
+                self.load_data_arrays(self.train_files,
+                                      update_model_state=self.update_model_state_with_training_data,
+                                      max_instances=self.max_training_instances)
+        if self.validation_files:
+            self.validation_dataset, self.validation_input, self.validation_labels = \
+                    self.load_data_arrays(self.validation_files, update_model_state=False)
+        if self.test_files:
+            self.test_dataset, self.test_input, self.test_labels = \
+                    self.load_data_arrays(self.test_files, update_model_state=False)
 
         # Then we build the model and compile it.
         logger.info("Building the model")
@@ -263,8 +291,8 @@ class Trainer:
             else:
                 # If the `data` param is not "training" or "validation", we assume it's a list of
                 # file names.
-                self.debug_dataset = self._load_dataset_from_files(debug_data)
-                self.debug_input, _ = self._prepare_data(self.debug_dataset, for_train=False)
+                self.debug_dataset = self.load_dataset_from_files(debug_data)
+                self.debug_input, _ = self.create_data_arrays(self.debug_dataset, update_model_state=False)
             self.debug_model = self.__build_debug_model(debug_layer_names, debug_masks)
 
         # Now we actually train the model using various Keras callbacks to control training.
@@ -298,16 +326,8 @@ class Trainer:
                 print("{}: {}".format(metric, scores[idx]))
 
     def score_dataset(self, dataset: Dataset):
-        inputs, _ = self._prepare_data(dataset, False)
+        inputs, _ = self.create_data_arrays(dataset, update_model_state=False)
         return self.model.predict(inputs)
-
-    def score_instance(self, instance: Instance):
-        inputs, _ = self._prepare_instance(instance)
-        try:
-            return self.model.predict(inputs)
-        except:
-            print('Inputs were: ' + str(inputs))
-            raise
 
     def load_model(self, epoch: int=None):
         """
@@ -334,12 +354,13 @@ class Trainer:
         self._load_auxiliary_files()
         self._set_params_from_model()
         self.model.compile(**self.__compile_kwargs())
+        self.update_model_state_with_training_data = False
 
     ##################
     # Abstract methods - you MUST override these
     ##################
 
-    def _load_dataset_from_files(self, files: List[str]) -> Dataset:
+    def load_dataset_from_files(self, files: List[str]) -> Dataset:
         """
         Given a list of file inputs, load a raw dataset from the files.  This is a list because
         some datasets are specified in more than one file (e.g., a file containing the instances,
@@ -347,30 +368,25 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def _prepare_data(self, dataset: Dataset, for_train: bool, update_data_indexer=True):
+    def create_data_arrays(self, dataset: Dataset, update_model_state: bool=False):
         """
         Takes a raw dataset and converts it into training inputs and labels that can be used to
         either train a model or make predictions.
 
-        Input: a Dataset of the same format as read by the read_dataset_from_files() method, and an
-        indicator for whether this is being done for the training data (so that, e.g., you can set
-        model parameters based on characteristics of the training data).
+        Parameters
+        ----------
+        dataset: Dataset
+            A ``Dataset`` of the same format as read by ``load_dataset_from_files()`` (we will
+            call this directly with the output from that method, in fact)
+        update_model_state: bool, optional (default=False)
+            If true, the model is allowed to update its state based on the data that it reads here.
+            For example, you could set padding dimensions, or compute a vocabulary, or other such
+            things.  If not true, e.g., because this is test data, we do not update any such state.
 
-        Output: a tuple of (inputs, labels), which can be fed directly to Keras' model.fit()
-        and model.predict() methods.  `labels` is allowed to be None in the second case.
-        """
-        raise NotImplementedError
-
-    def _prepare_instance(self, instance: Instance, make_batch: bool=True):
-        """
-        Like self._prepare_data(), but for a single Instance.  Used most often for making
-        predictions one at a time on test data (though you should avoid that if possible, as larger
-        batches would be more efficient).
-
-        The make_batch argument determines whether we make the return value into a batch or not by
-        calling numpy.expand_dims.  Keras' model.predict() method requires a batch, so we need an
-        extra dimension.  If you're going to do the batch conversion yourself, or don't need it,
-        you can pass False for that parameter.
+        Returns
+        -------
+        input_arrays: numpy.array or Tuple[numpy.array]
+        label_arrays: numpy.array, Tuple[numpy.array], or None
         """
         raise NotImplementedError
 

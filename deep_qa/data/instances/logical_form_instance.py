@@ -103,14 +103,14 @@ class IndexedLogicalFormInstance(IndexedTrueFalseInstance):
         return lengths
 
     @overrides
-    def pad(self, max_lengths: Dict[str, int]):
+    def pad(self, padding_lengths: Dict[str, int]):
         """
         We let the super class deal with padding word_indices; we'll worry about padding
         transitions.
         """
-        super(IndexedLogicalFormInstance, self).pad(max_lengths)
+        super(IndexedLogicalFormInstance, self).pad(padding_lengths)
 
-        transition_length = max_lengths['transition_length']
+        transition_length = padding_lengths['transition_length']
         self.transitions = self.pad_sequence_to_length(self.transitions, transition_length)
 
     @overrides

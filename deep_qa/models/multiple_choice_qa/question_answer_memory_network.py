@@ -41,17 +41,17 @@ class QuestionAnswerMemoryNetwork(MemoryNetwork):
         return QuestionAnswerInstance
 
     @overrides
-    def _get_max_lengths(self) -> Dict[str, int]:
-        max_lengths = super(QuestionAnswerMemoryNetwork, self)._get_max_lengths()
-        max_lengths['answer_length'] = self.max_answer_length
-        max_lengths['num_options'] = self.num_options
-        return max_lengths
+    def _get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(QuestionAnswerMemoryNetwork, self)._get_padding_lengths()
+        padding_lengths['answer_length'] = self.max_answer_length
+        padding_lengths['num_options'] = self.num_options
+        return padding_lengths
 
     @overrides
-    def _set_max_lengths(self, max_lengths: Dict[str, int]):
-        super(QuestionAnswerMemoryNetwork, self)._set_max_lengths(max_lengths)
-        self.max_answer_length = max_lengths['answer_length']
-        self.num_options = max_lengths['num_options']
+    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+        super(QuestionAnswerMemoryNetwork, self)._set_padding_lengths(padding_lengths)
+        self.max_answer_length = padding_lengths['answer_length']
+        self.num_options = padding_lengths['num_options']
 
     @overrides
     def _get_entailment_output(self, combined_input):
