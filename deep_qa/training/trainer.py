@@ -35,84 +35,128 @@ class Trainer:
     methods (beginning with ``_``) that you are meant to override in concrete subclasses, and (4)
     private methods (beginning with ``__``) that you should not need to mess with.  We only include
     the first three in the public docs.
+
+    Parameters
+    ----------
+    train_files: List[str], optional (default=None)
+        The files containing the data that should be used for training.  See
+        :func:`~Trainer._load_dataset_from_files()` for more information.
+    validation_files: List[str], optional (default=None)
+        The files containing the data that should be used for validation, if you do not want to use
+        a split of the training data for validation.  The default of None means to just use the
+        `validation_split` parameter to split the training data for validation.
+    test_files: List[str], optional (default=None)
+        The files containing the data that should be used for evaluation.  The default of None
+        means to just not perform test set evaluation.
+    max_training_instances: int, optional (default=None)
+        Upper limit on the number of training instances.  If this is set, and we get more than
+        this, we will truncate the data.  Mostly useful for testing things out on small datasets
+        before running them on large datasets.
+    max_validation_instances: int, optional (default=None)
+        Upper limit on the number of validation instances, analogous to ``max_training_instances``.
+    max_test_instances: int, optional (default=None)
+        Upper limit on the number of test instances, analogous to ``max_training_instances``.
+    save_models: bool, optional (default=True)
+        Should we save the models that we train?  If this is True, you are required to also set the
+        model_serialization_prefix parameter, or the code will crash.
+    model_serialization_prefix: str, optional (default=None)
+        Prefix for saving and loading model files.  Must be set if ``save_models`` is ``True``.
+    batch_size: int, optional (default=32)
+        Batch size to use when training.
+    num_epochs: int, optional (default=20)
+        Number of training epochs.
+    validation_split: float, optional (default=0.1)
+        Amount of training data to use for validation.  If ``validation_files`` is not set, we will
+        split the training data into train/dev, using this proportion as dev.  If
+        ``validation_files`` is set, this parameter gets ignored.
+    optimizer: str or Dict[str, Any], optional (default='adam')
+        If this is a str, it must correspond to an optimizer available in Keras (see the list in
+        :mod:`deep_qa.training.optimizers`).  If it is a dictionary, it must contain a "type" key,
+        with a value that is one of the optimizers in that list.  The remaining parameters in the
+        dict are passed as kwargs to the optimizer's constructor.
+    loss: str, optional (default='categorical_crossentropy')
+        The loss function to pass to ``model.fit()``.  This is currently limited to only loss
+        functions that are available as strings in Keras.  If you want to use a custom loss
+        function, simply override ``self.loss`` in the constructor of your model, after the call to
+        ``super().__init__``.
+    metrics: List[str], optional (default=['accuracy'])
+        The metrics to evaluate and print after each epoch of training.  This is currently limited
+        to only loss functions that are available as strings in Keras.  If you want to use a custom
+        metric, simply override ``self.metrics`` in the constructor of your model, after the call
+        to ``super().__init__``.
+    validation_metric: str, optional (default='val_acc')
+        Metric to monitor on the validation data for things like early stopping and saving the best
+        model.
+    patience: int, optional (default=1)
+        Number of epochs to be patient before early stopping.  I.e., if the ``validation_metric``
+        does not improve for this many epochs, we will stop training.
+    fit_kwargs: Dict[str, Any], optional (default={})
+        A dict of additional arguments to Keras' ``model.fit()`` method, in case you want to set
+        something that we don't already have options for. These get added to the options already
+        captured by other arguments.
+    tensorboard_log: str, optional (default=None)
+        If set, we will output tensorboard log information here.
+    tensorboard_histogram_freq: int, optional (default=0)
+        Tensorboard histogram frequency: note that activating the tensorboard histgram (frequency >
+        0) can drastically increase model training time.  Please set frequency with consideration
+        to desired runtime.
+    debug: Dict[str, Any], optional (default={})
+        This should be a dict, containing the following keys:
+
+        - "layer_names", which has as a value a list of names that must match layer names in the
+          model built by this Trainer.
+        - "data", which has as a value either "training", "validation", or a list of file names.
+          If you give "training" or "validation", we'll use those datasets, otherwise we'll load
+          data from the provided files.  Note that currently "validation" only works if you provide
+          validation files, not if you're just using Keras to split the training data.
+        - "masks", an optional key that functions identically to "layer_names", except we output
+          the mask at each layer given here.
+
+    show_summary_with_masking_info: bool, optional (default=False)
+        This is a debugging setting, mostly - we have written a custom model.summary() method that
+        supports showing masking info, to help understand what's going on with the masks.
+    preferred_backend: str, optional (default=None)
+        Preferred backend to use for training. If a different backend is detected, we still train
+        but we also warn the user.
     """
     def __init__(self, params: Dict[str, Any]):
         self.name = "Trainer"
 
-        # Should we save the models that we train?  If this is True, you are required to also set
-        # the model_serialization_prefix parameter, or the code will crash.
-        self.save_models = params.pop('save_models', True)
+        # Data specification parameters.
+        self.train_files = params.pop('train_files', None)
+        self.validation_files = params.pop('validation_files', None)
+        self.test_files = params.pop('test_files', None)
+        self.max_training_instances = params.pop('max_training_instances', None)
+        self.max_validation_instances = params.pop('max_validation_instances', None)
+        self.max_test_instances = params.pop('max_test_instances', None)
 
-        # Prefix for saving and loading model files
+        # Model serialization parameters.
+        self.save_models = params.pop('save_models', True)
         self.model_prefix = params.pop('model_serialization_prefix', None)
         if self.model_prefix:
             parent_directory = os.path.dirname(self.model_prefix)
             os.makedirs(parent_directory, exist_ok=True)
 
-        # Preferred backend to use for training. If a different backend is detected, we still
-        # train but we also warn the user.
-        self.preferred_backend = params.pop('preferred_backend', None)
-        if self.preferred_backend and self.preferred_backend.lower() != K.backend():
-            warning_message = self.__make_backend_warning(self.preferred_backend.lower(),
-                                                          K.backend())
-            logger.warning(warning_message)
-
+        # `model.fit()` parameters.
+        self.validation_split = params.pop('validation_split', 0.1)
         self.batch_size = params.pop('batch_size', 32)
-        # Upper limit on the number of training instances.  If this is set, and we get more than
-        # this, we will truncate the data.
-        self.max_training_instances = params.pop('max_training_instances', None)
-        # Amount of training data to use for Keras' validation (not our QA validation, set by
-        # the validation_file param, which is separate).  This value is passed as
-        # 'validation_split' to Keras' model.fit().
-        self.keras_validation_split = params.pop('keras_validation_split', 0.1)
-        # Number of train epochs.
         self.num_epochs = params.pop('num_epochs', 20)
-        # Number of epochs to be patient before early stopping.
-        self.patience = params.pop('patience', 1)
-        # Log directory for tensorboard.
-        self.tensorboard_log = params.pop('tensorboard_log', None)
-        # Tensorboard histogram frequency: note that activating the tensorboard histgram (frequency > 0) can
-        # drastically increase model training time.  Please set frequency with consideration to desired runtime.
-        self.tensorboard_histogram_freq = params.pop('tensorboard_histogram_freq', 0)
-
-        # The files containing the data that should be used for training.  See
-        # _load_dataset_from_files().
-        self.train_files = params.pop('train_files', None)
-
-        # The files containing the data that should be used for validation, if you do not want to
-        # use a split of the training data for validation.  The default of None means to just use
-        # the `keras_validation_split` parameter to split the training data for validation.
-        self.validation_files = params.pop('validation_files', None)
-
-        # The files containing the data that should be used for evaluation.
-        # The default of None means to just not perform test set evaluation.
-        self.test_files = params.pop('test_files', None)
-
-        optimizer_params = params.pop('optimizer', 'adam')
-        self.optimizer = optimizer_from_params(optimizer_params)
+        self.optimizer = optimizer_from_params(params.pop('optimizer', 'adam'))
         self.loss = params.pop('loss', 'categorical_crossentropy')
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
-
-        # A dict of additional arguments to the fit method. These get added to
-        # the options already captured by other arguments.
+        self.patience = params.pop('patience', 1)
         self.fit_kwargs = params.pop('fit_kwargs', {})
 
-        # This is a debugging setting, mostly - we have written a custom model.summary() method
-        # that supports showing masking info, to help understand what's going on with the masks.
-        self.show_summary_with_masking = params.pop('show_summary_with_masking_info', False)
-
-        # This should be a dict, containing the following keys:
-        # - "layer_names", which has as a value a list of names that must match layer names in the
-        #     model build by this Trainer.
-        # - "data", which has as a value either "training", "validation", or a list of file names.
-        #     If you give "training" or "validation", we'll use those datasets, otherwise we'll
-        #     load data from the provided files.  Note that currently "validation" only works if
-        #     you provide validation files, not if you're just using Keras to split the training
-        #     data.
-        # - "masks", an optional key that functions identically to "layer_names", except we output
-        #     the mask at each layer given here.
+        # Debugging / logging / misc parameters.
+        self.tensorboard_log = params.pop('tensorboard_log', None)
+        self.tensorboard_histogram_freq = params.pop('tensorboard_histogram_freq', 0)
         self.debug_params = params.pop('debug', {})
+        self.show_summary_with_masking = params.pop('show_summary_with_masking_info', False)
+        self.preferred_backend = params.pop('preferred_backend', None)
+        if self.preferred_backend and self.preferred_backend.lower() != K.backend():
+            warning_message = self.__make_backend_warning(self.preferred_backend.lower(), K.backend())
+            logger.warning(warning_message)
 
         # We've now processed all of the parameters, and we're the base class, so there should not
         # be anything left.
@@ -227,12 +271,12 @@ class Trainer:
         callbacks = self._get_callbacks()
         kwargs = {'epochs': self.num_epochs, 'callbacks': [callbacks], 'batch_size': self.batch_size}
         # We'll check for explicit validation data first; if you provided this, you definitely
-        # wanted to use it for validation.  self.keras_validation_split is non-zero by default,
+        # wanted to use it for validation.  self.validation_split is non-zero by default,
         # so you may have left it above zero on accident.
         if self.validation_input is not None:
             kwargs['validation_data'] = (self.validation_input, self.validation_labels)
-        elif self.keras_validation_split > 0.0:
-            kwargs['validation_split'] = self.keras_validation_split
+        elif self.validation_split > 0.0:
+            kwargs['validation_split'] = self.validation_split
 
         # add the user-specified arguments to fit
         kwargs.update(self.fit_kwargs)

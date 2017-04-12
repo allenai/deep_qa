@@ -47,7 +47,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         params['embedding_dim'] = {'words': 6, 'characters': 2}
         params['encoder'] = {"default": {'type': 'bow'}}
         params['num_epochs'] = 1
-        params['keras_validation_split'] = 0.0
+        params['validation_split'] = 0.0
         if self.is_model_with_background(model_class):
             params['train_files'].append(self.TRAIN_BACKGROUND)
             params['validation_files'].append(self.VALIDATION_BACKGROUND)
