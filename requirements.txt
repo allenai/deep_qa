@@ -50,7 +50,7 @@ matplotlib
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors
-pylint
+pylint==1.6.5
 
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
 # the tests.  With this here, you can run the tests with `py.test` from the base directory.

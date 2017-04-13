@@ -4,10 +4,34 @@ Backend Layers
 Layers in this module generally just implement some simple operation from the Keras backend as a
 Layer.  The reason we have these as Layers is largely so that we can properly handle masking.
 
+AddMask
+-------
+
+.. automodule:: deep_qa.layers.backend.add_mask
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 BatchDot
 --------
 
 .. automodule:: deep_qa.layers.backend.batch_dot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+CollapseToBatch
+---------------
+
+.. automodule:: deep_qa.layers.backend.collapse_to_batch
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ExpandFromBatch
+---------------
+
+.. automodule:: deep_qa.layers.backend.expand_from_batch
     :members:
     :undoc-members:
     :show-inheritance:

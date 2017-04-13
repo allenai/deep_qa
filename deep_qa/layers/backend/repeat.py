@@ -38,6 +38,7 @@ class Repeat(MaskedLayer):
     def call(self, inputs, mask=None):
         return K.repeat_elements(K.expand_dims(inputs, self.axis), self.repetitions, self.axis)
 
+    @overrides
     def get_config(self):
         base_config = super(Repeat, self).get_config()
         config = {'axis': self.axis, 'repetitions': self.repetitions}
