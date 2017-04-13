@@ -48,7 +48,8 @@ class SoftmaxMemoryNetwork(MemoryNetwork):
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         super(SoftmaxMemoryNetwork, self)._set_padding_lengths(padding_lengths)
-        self.num_options = padding_lengths['num_options']
+        if self.num_options is None:
+            self.num_options = padding_lengths['num_options']
 
     @overrides
     def _build_model(self):

@@ -8,7 +8,7 @@ from keras.models import model_from_json
 from keras.callbacks import LambdaCallback, TensorBoard, EarlyStopping, CallbackList, ModelCheckpoint
 
 from ..common.checks import ConfigurationError
-from ..data.dataset import Dataset
+from ..data.dataset import Dataset, IndexedDataset
 from ..data.instances.instance import Instance
 from ..layers.wrappers.output_mask import OutputMask
 from .models import DeepQaModel
@@ -179,19 +179,16 @@ class Trainer:
         # We store the datasets used for training and validation, both before processing and after
         # processing, in case a subclass wants to modify it between epochs for whatever reason.
         self.training_dataset = None
-        self.train_input = None
-        self.train_labels = None
+        self.training_arrays = None
 
         self.validation_dataset = None
-        self.validation_input = None
-        self.validation_labels = None
+        self.validation_arrays = None
 
         self.test_dataset = None
-        self.test_input = None
-        self.test_labels = None
+        self.test_arrays = None
 
         self.debug_dataset = None
-        self.debug_input = None
+        self.debug_arrays = None
 
     ################
     # Public methods
@@ -202,7 +199,6 @@ class Trainer:
 
     def load_data_arrays(self,
                          data_files: List[str],
-                         update_model_state: bool,
                          max_instances: int=None) -> Tuple[Dataset, numpy.array, numpy.array]:
         """
         Loads a :class:`Dataset` from a list of files, then converts it into numpy arrays for
@@ -211,19 +207,14 @@ class Trainer:
         method if you want to do both of these at the same time, and also lets you truncate the
         dataset if you want.
 
-        If this is called with ``update_model_state=True``, we will set things like padding
-        dimensions and vocabulary, or whatever specific state your model keeps around.  Currently,
-        the only way to `set` this state in the first place is through this method.
-        ``self.train()`` updates the model state using the training data, then sets it to ``False``
-        afterward.
+        Note that if you have any kind of state in your model that depends on a training dataset
+        (e.g., a vocabulary, or padding dimensions) those must be set prior to calling this method.
 
         Parameters
         ----------
         data_files: List[str]
             The files to load.  These will get passed to ``self.load_dataset_from_files()``, which
             subclasses must implement.
-        update_model_state: bool
-            Should we update model state based on what we see in this dataset?
         max_instances: int, optional (default=None)
             If not ``None``, we will restrict the dataset to only this many instances.  This is
             mostly useful for testing models out on subsets of your data.
@@ -244,8 +235,11 @@ class Trainer:
         if max_instances is not None:
             logger.info("Truncating the dataset to %d instances", max_instances)
             dataset = dataset.truncate(max_instances)
-        input_arrays, label_arrays = self.create_data_arrays(dataset, update_model_state)
-        return (dataset, input_arrays, label_arrays)
+        logger.info("Indexing dataset")
+        indexing_kwargs = self._dataset_indexing_kwargs()
+        indexed_dataset = dataset.to_indexed_dataset(**indexing_kwargs)
+        data_arrays = self.create_data_arrays(indexed_dataset)
+        return (dataset, data_arrays)
 
     def train(self):
         '''
@@ -256,17 +250,25 @@ class Trainer:
         '''
         logger.info("Running training (%s)", self.name)
 
-        # First we need to prepare the data that we'll use for training.
-        self.training_dataset, self.train_input, self.train_labels = \
-                self.load_data_arrays(self.train_files,
-                                      update_model_state=self.update_model_state_with_training_data,
-                                      max_instances=self.max_training_instances)
+        # First we need to prepare the data that we'll use for training.  For the training data, we
+        # might need to update model state based on this dataset, so we handle it differently than
+        # we do the validation and training data.
+        self.training_dataset = self.load_dataset_from_files(self.train_files)
+        if self.max_training_instances:
+            self.training_dataset = self.training_dataset.truncate(self.max_training_instances)
+        if self.update_model_state_with_training_data:
+            self.set_model_state_from_dataset(self.training_dataset)
+        logger.info("Indexing training data")
+        indexing_kwargs = self._dataset_indexing_kwargs()
+        indexed_training_dataset = self.training_dataset.to_indexed_dataset(**indexing_kwargs)
+        if self.update_model_state_with_training_data:
+            self.set_model_state_from_indexed_dataset(indexed_training_dataset)
+        self.training_arrays = self.create_data_arrays(indexed_training_dataset)
+
         if self.validation_files:
-            self.validation_dataset, self.validation_input, self.validation_labels = \
-                    self.load_data_arrays(self.validation_files, update_model_state=False)
+            self.validation_dataset, self.validation_arrays = self.load_data_arrays(self.validation_files)
         if self.test_files:
-            self.test_dataset, self.test_input, self.test_labels = \
-                    self.load_data_arrays(self.test_files, update_model_state=False)
+            self.test_dataset, self.test_arrays = self.load_data_arrays(self.test_files)
 
         # Then we build the model and compile it.
         logger.info("Building the model")
@@ -282,17 +284,16 @@ class Trainer:
             debug_data = self.debug_params['data']
             if debug_data == "training":
                 self.debug_dataset = self.training_dataset
-                self.debug_input = self.train_input
+                self.debug_arrays = self.training_arrays
             elif debug_data == "validation":
                 # NOTE: This currently only works if you've specified specific validation data, not
                 # if you are just splitting the training data for validation.
                 self.debug_dataset = self.validation_dataset
-                self.debug_input = self.validation_input
+                self.debug_arrays = self.validation_arrays
             else:
                 # If the `data` param is not "training" or "validation", we assume it's a list of
                 # file names.
-                self.debug_dataset = self.load_dataset_from_files(debug_data)
-                self.debug_input, _ = self.create_data_arrays(self.debug_dataset, update_model_state=False)
+                self.debug_dataset, self.debug_arrays = self.load_data_arrays(debug_data)
             self.debug_model = self.__build_debug_model(debug_layer_names, debug_masks)
 
         # Now we actually train the model using various Keras callbacks to control training.
@@ -301,15 +302,16 @@ class Trainer:
         # We'll check for explicit validation data first; if you provided this, you definitely
         # wanted to use it for validation.  self.validation_split is non-zero by default,
         # so you may have left it above zero on accident.
-        if self.validation_input is not None:
-            kwargs['validation_data'] = (self.validation_input, self.validation_labels)
+        if self.validation_arrays is not None:
+            kwargs['validation_data'] = (self.validation_arrays[0], self.validation_arrays[1])
         elif self.validation_split > 0.0:
             kwargs['validation_split'] = self.validation_split
 
         # add the user-specified arguments to fit
         kwargs.update(self.fit_kwargs)
         # We now pass all the arguments to the model's fit function, which does all of the training.
-        history = self.model.fit(self.train_input, self.train_labels, **kwargs)
+        print("Training arrays:", self.training_arrays)
+        history = self.model.fit(self.training_arrays[0], self.training_arrays[1], **kwargs)
         # After finishing training, we save the best weights and
         # any auxillary files, such as the model config.
 
@@ -321,21 +323,19 @@ class Trainer:
         # If there are test files, we evaluate on the test data.
         if self.test_files:
             logger.info("Evaluting model on the test set.")
-            scores = self.model.evaluate(self.test_input, self.test_labels)
+            scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
             for idx, metric in enumerate(self.model.metrics_names):
                 print("{}: {}".format(metric, scores[idx]))
 
     def score_dataset(self, dataset: Dataset):
-        inputs, _ = self.create_data_arrays(dataset, update_model_state=False)
+        inputs, _ = self.create_data_arrays(dataset)
         return self.model.predict(inputs)
 
     def load_model(self, epoch: int=None):
         """
-        Loads a serialized model.  If epoch is not None, we try to load the model from that epoch.
-        If epoch is not given, we load the best saved model.
-
-        Paths in here must match those in self._save_model(epoch) and self._save_best_model(), or
-        things will break.
+        Loads a serialized model, using the ``model_serialization_prefix`` that was passed to the
+        constructor.  If epoch is not None, we try to load the model from that epoch.  If epoch is
+        not given, we load the best saved model.
         """
         logger.info("Loading serialized model")
         # Loading serialized model
@@ -368,20 +368,37 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def create_data_arrays(self, dataset: Dataset, update_model_state: bool=False):
+    def set_model_state_from_dataset(self, dataset: Dataset):
+        """
+        Given a raw :class:`Dataset` object, set whatever model state is necessary.  The most
+        obvious use case for this is for computing a vocabulary in
+        :class:`~deep_qa.training.text_trainer.TextTrainer`.  Note that this is not an
+        :class:`IndexedDataset`, and you should not make it one.  Use
+        :func:`~Trainer.set_model_state_from_indexed_dataset()` for setting state that depends on
+        the data having already been indexed; otherwise you'll duplicate the work of doing the
+        indexing.
+        """
+        raise NotImplementedError
+
+    def set_model_state_from_indexed_dataset(self, dataset: IndexedDataset):
+        """
+        Given an :class:`IndexedDataset`, set whatever model state is necessary.  This is typically
+        stuff around padding.
+        """
+        raise NotImplementedError
+
+    def create_data_arrays(self, dataset: IndexedDataset) -> Tuple[numpy.array, numpy.array]:
         """
         Takes a raw dataset and converts it into training inputs and labels that can be used to
-        either train a model or make predictions.
+        either train a model or make predictions.  Depending on parameters passed to the
+        constructor of this ``Trainer``, this could either return two actual array objects, or a
+        single generator that generates batches of two array objects.
 
         Parameters
         ----------
         dataset: Dataset
             A ``Dataset`` of the same format as read by ``load_dataset_from_files()`` (we will
             call this directly with the output from that method, in fact)
-        update_model_state: bool, optional (default=False)
-            If true, the model is allowed to update its state based on the data that it reads here.
-            For example, you could set padding dimensions, or compute a vocabulary, or other such
-            things.  If not true, e.g., because this is test data, we do not update any such state.
 
         Returns
         -------
@@ -405,6 +422,15 @@ class Trainer:
         parameters, like max sentence length, that are not stored as weights in the model object.
         This is necessary if you want to process a new data instance to be compatible with the
         model for prediction, for instance.
+        """
+        raise NotImplementedError
+
+    def _dataset_indexing_kwargs(self) -> Dict[str, Any]:
+        """
+        In order to index a dataset, we may need some parameters (e.g., an object that stores the
+        vocabulary of your model, in order to convert words into indices).  You can pass those
+        here, or return an emtpy dictionary if there's nothing.  These will get passed to
+        :func:`Dataset.to_indexed_dataset`.
         """
         raise NotImplementedError
 
@@ -607,7 +633,7 @@ class Trainer:
         """
         logger.info("Running debug model")
         # Shows intermediate outputs of the model on validation data
-        outputs = self.debug_model.predict(self.debug_input)
+        outputs = self.debug_model.predict(self.debug_arrays[0])
         output_dict = {}
         if len(debug_layer_names) == 1:
             output_dict[debug_layer_names[0]] = outputs

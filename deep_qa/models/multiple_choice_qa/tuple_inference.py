@@ -117,11 +117,16 @@ class TupleInferenceModel(TextTrainer):
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         super(TupleInferenceModel, self)._set_padding_lengths(padding_lengths)
-        self.num_question_tuples = padding_lengths['num_question_tuples']
-        self.num_background_tuples = padding_lengths['num_background_tuples']
-        self.num_tuple_slots = padding_lengths['num_slots']
-        self.num_slot_words = padding_lengths['num_sentence_words']
-        self.num_options = padding_lengths['num_options']
+        if self.num_question_tuples is None:
+            self.num_question_tuples = padding_lengths['num_question_tuples']
+        if self.num_background_tuples is None:
+            self.num_background_tuples = padding_lengths['num_background_tuples']
+        if self.num_tuple_slots is None:
+            self.num_tuple_slots = padding_lengths['num_slots']
+        if self.num_slot_words is None:
+            self.num_slot_words = padding_lengths['num_sentence_words']
+        if self.num_options is None:
+            self.num_options = padding_lengths['num_options']
 
     @overrides
     def _set_padding_lengths_from_model(self):

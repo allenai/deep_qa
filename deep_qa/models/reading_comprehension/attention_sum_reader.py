@@ -134,10 +134,14 @@ class AttentionSumReader(TextTrainer):
         # We should probably patch up / organize the API.
         padding_lengths["num_sentence_words"] = None
         super(AttentionSumReader, self)._set_padding_lengths(padding_lengths)
-        self.max_question_length = padding_lengths['num_question_words']
-        self.max_passage_length = padding_lengths['num_passage_words']
-        self.max_option_length = padding_lengths['num_option_words']
-        self.num_options = padding_lengths['num_options']
+        if self.max_question_length is None:
+            self.max_question_length = padding_lengths['num_question_words']
+        if self.max_passage_length is None:
+            self.max_passage_length = padding_lengths['num_passage_words']
+        if self.max_option_length is None:
+            self.max_option_length = padding_lengths['num_option_words']
+        if self.num_options is None:
+            self.num_options = padding_lengths['num_options']
 
     @overrides
     def _set_padding_lengths_from_model(self):

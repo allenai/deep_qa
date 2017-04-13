@@ -63,11 +63,16 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
 
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
-        self.num_sentence_words = padding_lengths['num_sentence_words']
-        self.max_answer_length = padding_lengths['answer_length']
-        self.max_knowledge_length = padding_lengths['background_sentences']
-        self.num_options = padding_lengths['num_options']
-        self.num_slots = padding_lengths['num_slots']
+        if self.num_sentence_words is None:
+            self.num_sentence_words = padding_lengths['num_sentence_words']
+        if self.max_answer_length is None:
+            self.max_answer_length = padding_lengths['answer_length']
+        if self.max_knowledge_length is None:
+            self.max_knowledge_length = padding_lengths['background_sentences']
+        if self.num_options is None:
+            self.num_options = padding_lengths['num_options']
+        if self.num_slots is None:
+            self.num_slots = padding_lengths['num_slots']
 
     @overrides
     def _set_padding_lengths_from_model(self):

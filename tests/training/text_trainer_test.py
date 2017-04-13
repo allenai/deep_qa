@@ -127,17 +127,15 @@ class TestTextTrainer(DeepQaTestCase):
 
         # now fit both models on some more data, and ensure that we get the same results.
         self.write_additional_true_false_model_files()
-        _, train_input, train_labels = loaded_model.load_data_arrays(loaded_model.train_files,
-                                                                     update_model_state=False)
-        model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
-        loaded_model.model.fit(train_input, train_labels, shuffle=False, nb_epoch=1)
+        _, training_arrays = loaded_model.load_data_arrays(loaded_model.train_files)
+        model.model.fit(training_arrays[0], training_arrays[1], shuffle=False, nb_epoch=1)
+        loaded_model.model.fit(training_arrays[0], training_arrays[1], shuffle=False, nb_epoch=1)
 
-        # _, validation_input, _ = loaded_model.load_data_arrays(loaded_model.validation_files,
-        #                                                        update_model_state=False)
+        # _, validation_arrays = loaded_model.load_data_arrays(loaded_model.validation_files)
         # verify that original model and the loaded model predict the same outputs
         # TODO(matt): fix the randomness that occurs here.
-        # assert_allclose(model.model.predict(validation_input),
-        #                 loaded_model.model.predict(validation_input))
+        # assert_allclose(model.model.predict(validation_arrays[0]),
+        #                 loaded_model.model.predict(validation_arrays[0]))
 
     def test_pretrained_embeddings_works_correctly(self):
         self.write_true_false_model_files()

@@ -89,8 +89,10 @@ class QuestionAnswerSimilarity(TextTrainer):
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         super(QuestionAnswerSimilarity, self)._set_padding_lengths(padding_lengths)
-        self.max_answer_length = padding_lengths['answer_length']
-        self.num_options = padding_lengths['num_options']
+        if self.max_answer_length is None:
+            self.max_answer_length = padding_lengths['answer_length']
+        if self.num_options is None:
+            self.num_options = padding_lengths['num_options']
 
     @overrides
     def _set_padding_lengths_from_model(self):

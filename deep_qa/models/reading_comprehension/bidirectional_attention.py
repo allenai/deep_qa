@@ -211,8 +211,10 @@ class BidirectionalAttentionFlow(TextTrainer):
         # expects it.
         padding_lengths['num_sentence_words'] = None
         super(BidirectionalAttentionFlow, self)._set_padding_lengths(padding_lengths)
-        self.num_passage_words = padding_lengths['num_passage_words']
-        self.num_question_words = padding_lengths['num_question_words']
+        if self.num_passage_words is None:
+            self.num_passage_words = padding_lengths['num_passage_words']
+        if self.num_question_words is None:
+            self.num_question_words = padding_lengths['num_question_words']
 
     @overrides
     def _set_padding_lengths_from_model(self):

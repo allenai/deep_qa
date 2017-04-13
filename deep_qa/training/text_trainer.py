@@ -10,7 +10,7 @@ import numpy
 
 from ..common.checks import ConfigurationError
 from ..common.params import get_choice_with_default
-from ..data.dataset import TextDataset
+from ..data.dataset import TextDataset, IndexedDataset
 from ..data.instances.instance import Instance, TextInstance
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizers import tokenizers
@@ -139,18 +139,11 @@ class TextTrainer(Trainer):
     ###########################
 
     @overrides
-    def create_data_arrays(self, dataset: TextDataset, update_model_state: bool=False):
-        if update_model_state:
-            logger.info("Fitting data indexer word dictionary.")
-            self.data_indexer.fit_word_dictionary(dataset)
-        logger.info("Indexing dataset")
-        indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
+    def create_data_arrays(self, dataset: IndexedDataset):
         padding_lengths = self._get_padding_lengths()
         logger.info("Padding dataset to lengths %s", str(padding_lengths))
-        indexed_dataset.pad_instances(padding_lengths)
-        if update_model_state:
-            self._set_padding_lengths(indexed_dataset.padding_lengths())
-        inputs, labels = indexed_dataset.as_training_data()
+        dataset.pad_instances(padding_lengths)
+        inputs, labels = dataset.as_training_data()
         if isinstance(inputs[0], tuple):
             inputs = [numpy.asarray(x) for x in zip(*inputs)]
         else:
@@ -160,6 +153,18 @@ class TextTrainer(Trainer):
         else:
             labels = numpy.asarray(labels)
         return inputs, labels
+
+    @overrides
+    def set_model_state_from_dataset(self, dataset: TextDataset):
+        logger.info("Fitting data indexer word dictionary.")
+        self.data_indexer.fit_word_dictionary(dataset)
+
+    @overrides
+    def set_model_state_from_indexed_dataset(self, dataset: IndexedDataset):
+        self._set_padding_lengths(dataset.padding_lengths())
+
+    def _dataset_indexing_kwargs(self) -> Dict[str, Any]:
+        return {'data_indexer': self.data_indexer}
 
     @overrides
     def _set_params_from_model(self):
@@ -445,6 +450,11 @@ class TextTrainer(Trainer):
         but needs to set all of the values set in that method just by inspecting the loaded model.
         If we didn't have this, we would not be able to correctly pad data after loading a model.
         """
+        # TODO(matt): I wonder if we can be fancy here and remove this method, instead using
+        # `self._instance_type` to figure out what this should be ourselves, or delegating it to
+        # the `Instance` type.  But that might run into issues with dynamic padding, though,
+        # actually - how can the `Instance` know which things you want your model to pad
+        # dynamically?
         raise NotImplementedError
 
     ########################
@@ -464,15 +474,20 @@ class TextTrainer(Trainer):
         """
         return self.tokenizer.get_padding_lengths(self.num_sentence_words, self.num_word_characters)
 
-    def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
+    def _set_padding_lengths(self, dataset_padding_lengths: Dict[str, int]):
         """
         This is about padding.  Any solver will have some number of things that need padding in
-        order to make a compilable model, like the length of a sentence.  This method sets those
-        variables given a dictionary of lengths, perhaps computed from training data or loaded from
-        a saved model.
+        order to make a consistent set of input arrays, like the length of a sentence.  This method
+        sets those variables given a dictionary of lengths from a dataset.
+
+        Note that you might choose not to update some of these lengths, either because you want to
+        keep the model flexible to allow for dynamic (batch-specific) padding, or because you've
+        set a hard limit in the class parameters and don't want to change it.
         """
-        self.num_sentence_words = padding_lengths['num_sentence_words']
-        self.num_word_characters = padding_lengths.get('num_word_characters', None)
+        if self.num_sentence_words is None:
+            self.num_sentence_words = dataset_padding_lengths['num_sentence_words']
+        if self.num_word_characters is None:
+            self.num_word_characters = dataset_padding_lengths.get('num_word_characters', None)
 
     #################
     # Private methods - you can't to override these.  If you find yourself needing to, we can

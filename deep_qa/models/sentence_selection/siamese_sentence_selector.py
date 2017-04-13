@@ -144,8 +144,10 @@ class SiameseSentenceSelector(TextTrainer):
         Set the padding lengths of the model.
         """
         super(SiameseSentenceSelector, self)._set_padding_lengths(padding_lengths)
-        self.num_question_words = padding_lengths['num_question_words']
-        self.num_sentences = padding_lengths['num_sentences']
+        if self.num_question_words is None:
+            self.num_question_words = padding_lengths['num_question_words']
+        if self.num_sentences is None:
+            self.num_sentences = padding_lengths['num_sentences']
 
     @overrides
     def _set_padding_lengths_from_model(self):

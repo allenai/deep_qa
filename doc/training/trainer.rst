@@ -17,10 +17,17 @@ Public methods
 Abstract methods
 ~~~~~~~~~~~~~~~~
 
+If you're doing NLP, :class:`~deep_qa.training.text_trainer.TextTrainer` implements most of these,
+so you shouldn't have to worry about them.  The only one it doesn't is ``_build_model`` (though it
+adds some other abstract methods that you `might` have to worry about).
+
 .. automethod:: Trainer.load_dataset_from_files
+.. automethod:: Trainer.set_model_state_from_dataset
+.. automethod:: Trainer.set_model_state_from_indexed_dataset
 .. automethod:: Trainer.create_data_arrays
 .. automethod:: Trainer._build_model
 .. automethod:: Trainer._set_params_from_model
+.. automethod:: Trainer._dataset_indexing_kwargs
 
 Protected methods
 ~~~~~~~~~~~~~~~~~

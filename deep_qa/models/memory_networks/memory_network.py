@@ -169,7 +169,8 @@ class MemoryNetwork(TextTrainer):
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         super(MemoryNetwork, self)._set_padding_lengths(padding_lengths)
-        self.max_knowledge_length = padding_lengths['background_sentences']
+        if self.max_knowledge_length is None:
+            self.max_knowledge_length = padding_lengths['background_sentences']
 
     @overrides
     def _set_padding_lengths_from_model(self):

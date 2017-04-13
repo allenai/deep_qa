@@ -74,15 +74,14 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         loaded_model.load_model()
 
         # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.validation_input),
-                        loaded_model.model.predict(model.validation_input))
+        assert_allclose(model.model.predict(model.validation_arrays[0]),
+                        loaded_model.model.predict(model.validation_arrays[0]))
 
         # We should get the same result if we index the data from the
         # original model and the loaded model.
-        _, indexed_validation_input, _ = loaded_model.load_data_arrays(model.validation_files,
-                                                                       update_model_state=False)
-        assert_allclose(model.model.predict(model.validation_input),
-                        loaded_model.model.predict(indexed_validation_input))
+        _, indexed_validation_arrays = loaded_model.load_data_arrays(model.validation_files)
+        assert_allclose(model.model.predict(model.validation_arrays[0]),
+                        loaded_model.model.predict(indexed_validation_arrays[0]))
         return model, loaded_model
 
     @staticmethod

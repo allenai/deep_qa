@@ -41,6 +41,7 @@ class Dataset:
         that each group of four instances has exactly one instance with label True, and all other
         labels are False (i.e., no None labels for validation data).
         """
+        # TODO(matt): this method does not belong on `Dataset`.
         for instance in self.instances:
             if isinstance(instance, MultipleTrueFalseInstance):
                 return False
@@ -98,6 +99,7 @@ class TextDataset(Dataset):
         return IndexedDataset(indexed_instances)
 
     def to_question_dataset(self) -> 'Dataset':
+        # TODO(matt): this method does not belong on `TextDataset`
         assert self.can_be_converted_to_multiple_choice()
         questions = zip(*[self.instances[i::4] for i in range(4)])
         question_instances = []
