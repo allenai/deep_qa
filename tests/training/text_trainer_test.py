@@ -8,6 +8,7 @@ from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification.true_false_model import TrueFalseModel
 from deep_qa.models.multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
 from ..common.test_case import DeepQaTestCase
+from ..common.test_markers import requires_tensorflow
 
 
 class TestTextTrainer(DeepQaTestCase):
@@ -114,7 +115,6 @@ class TestTextTrainer(DeepQaTestCase):
         model.train()
 
     def test_load_model_and_fit(self):
-        # train a model and serialize it.
         args = {
                 'test_files': [self.TEST_FILE],
                 'embedding_dim': {'words': 4, 'characters': 2},
@@ -136,6 +136,33 @@ class TestTextTrainer(DeepQaTestCase):
         # TODO(matt): fix the randomness that occurs here.
         # assert_allclose(model.model.predict(validation_arrays[0]),
         #                 loaded_model.model.predict(validation_arrays[0]))
+
+    def test_data_generator_works(self):
+        args = {
+                'test_files': [self.TEST_FILE],
+                'embedding_dim': {'words': 4, 'characters': 2},
+                'save_models': True,
+                'tokenizer': {'type': 'words and characters'},
+                'use_data_generator': True,
+                'use_dynamic_padding': False,
+                'show_summary_with_masking_info': True,
+        }
+        self.write_true_false_model_files()
+        self.ensure_model_trains_and_loads(TrueFalseModel, args)
+
+    @requires_tensorflow
+    def test_dynamic_padding_works(self):
+        args = {
+                'test_files': [self.TEST_FILE],
+                'embedding_dim': {'words': 4, 'characters': 2},
+                'save_models': True,
+                'tokenizer': {'type': 'words and characters'},
+                'use_data_generator': True,
+                'use_dynamic_padding': True,
+                'batch_size': 2,
+        }
+        self.write_true_false_model_files()
+        self.ensure_model_trains_and_loads(TrueFalseModel, args)
 
     def test_pretrained_embeddings_works_correctly(self):
         self.write_true_false_model_files()

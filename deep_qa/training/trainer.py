@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 from typing import Any, Dict, List, Tuple
 
@@ -56,6 +57,14 @@ class Trainer:
         Upper limit on the number of validation instances, analogous to ``max_training_instances``.
     max_test_instances: int, optional (default=None)
         Upper limit on the number of test instances, analogous to ``max_training_instances``.
+    train_steps_per_epoch: int, optional (default=None)
+        If :func:`~Trainer.create_data_arrays` returns a generator instead of actual arrays, how
+        many steps should we run from this generator before declaring an "epoch" finished?  The
+        default here is reasonable - if this is None, we will set it from the data.
+    validation_steps: int, optional (default=None)
+        Like ``train_steps_per_epoch``, but for validation data.
+    test_steps: int, optional (default=None)
+        Like ``train_steps_per_epoch``, but for test data.
     save_models: bool, optional (default=True)
         Should we save the models that we train?  If this is True, you are required to also set the
         model_serialization_prefix parameter, or the code will crash.
@@ -129,6 +138,11 @@ class Trainer:
         self.max_training_instances = params.pop('max_training_instances', None)
         self.max_validation_instances = params.pop('max_validation_instances', None)
         self.max_test_instances = params.pop('max_test_instances', None)
+
+        # Data generator parameters.
+        self.train_steps_per_epoch = params.pop('train_steps_per_epoch', None)
+        self.validation_steps = params.pop('train_steps_per_epoch', None)
+        self.test_steps = params.pop('train_steps_per_epoch', None)
 
         # Model serialization parameters.
         self.save_models = params.pop('save_models', True)
@@ -303,18 +317,31 @@ class Trainer:
         # wanted to use it for validation.  self.validation_split is non-zero by default,
         # so you may have left it above zero on accident.
         if self.validation_arrays is not None:
-            kwargs['validation_data'] = (self.validation_arrays[0], self.validation_arrays[1])
+            kwargs['validation_data'] = self.validation_arrays
         elif self.validation_split > 0.0:
             kwargs['validation_split'] = self.validation_split
 
-        # add the user-specified arguments to fit
+        # Add the user-specified arguments to fit.
         kwargs.update(self.fit_kwargs)
         # We now pass all the arguments to the model's fit function, which does all of the training.
-        print("Training arrays:", self.training_arrays)
-        history = self.model.fit(self.training_arrays[0], self.training_arrays[1], **kwargs)
+        if isinstance(self.training_arrays, tuple):
+            history = self.model.fit(self.training_arrays[0], self.training_arrays[1], **kwargs)
+        else:
+            # If the data was produced by a generator, we have a bit more work to do to get the
+            # arguments right.
+            kwargs.pop('batch_size')
+            kwargs['steps_per_epoch'] = self.train_steps_per_epoch
+            if kwargs['steps_per_epoch'] is None:
+                kwargs['steps_per_epoch'] = math.ceil(len(self.training_dataset.instances) / self.batch_size)
+            if self.validation_arrays is not None and not isinstance(self.validation_arrays, tuple):
+                kwargs['validation_steps'] = self.validation_steps
+                if kwargs['validation_steps'] is None:
+                    kwargs['validation_steps'] = math.ceil(len(self.validation_dataset.instances) /
+                                                           self.batch_size)
+            history = self.model.fit_generator(self.training_arrays, **kwargs)
+
         # After finishing training, we save the best weights and
         # any auxillary files, such as the model config.
-
         self.best_epoch = int(numpy.argmax(history.history[self.validation_metric]))
         if self.save_models:
             self.__save_best_model()
@@ -323,7 +350,13 @@ class Trainer:
         # If there are test files, we evaluate on the test data.
         if self.test_files:
             logger.info("Evaluting model on the test set.")
-            scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
+            if isinstance(self.test_arrays, tuple):
+                scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
+            else:
+                test_steps = self.test_steps
+                if test_steps is None:
+                    test_steps = math.ceil(len(self.test_dataset.instances) / self.batch_size)
+                scores = self.model.evaluate_generator(self.test_arrays, test_steps)
             for idx, metric in enumerate(self.model.metrics_names):
                 print("{}: {}".format(metric, scores[idx]))
 
@@ -404,6 +437,9 @@ class Trainer:
         -------
         input_arrays: numpy.array or Tuple[numpy.array]
         label_arrays: numpy.array, Tuple[numpy.array], or None
+        generator: a Python generator returning Tuple[input_arrays, label_arrays]
+            If this is returned, it is the only return value.  We `either` return a
+            ``Tuple[input_arrays, label_arrays]``, `or` this generator.
         """
         raise NotImplementedError
 

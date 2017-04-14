@@ -204,36 +204,60 @@ class IndexedDataset(Dataset):
             padding_lengths[key] = max(x[key] if key in x else 0 for x in lengths)
         return padding_lengths
 
-    def pad_instances(self, padding_lengths: Dict[str, int]=None):
+    def pad_instances(self, padding_lengths: Dict[str, int]=None, verbose: bool=True):
         """
-        Make all of the IndexedInstances in the dataset have the same length by padding them (in
-        the front) with zeros.
+        Makes all of the ``IndexedInstances`` in the dataset have the same length by padding them.
+        This ``Dataset`` object doesn't know what things there are in the ``Instance`` to pad, but
+        the ``Instances`` do, and so does the model that called us, passing in a
+        ``padding_lengths`` dictionary.  The keys in that dictionary must match the lengths that
+        the ``Instance`` knows about.
 
-        If max_length is given for a particular dimension, we will pad all instances to that length
-        (including left-truncating instances if necessary).  If not, we will find the longest
-        instance and pad all instances to that length.  Note that padding_lengths is a _List_, not an
-        int - there could be several dimensions on which we need to pad, depending on what kind of
-        instance we are dealing with.
+        Given that, this method does two things: (1) it asks each of the ``Instances`` what their
+        padding lengths are, and takes a max (using :func:`~IndexedDataset.padding_lengths()`).  It
+        then reconciles those values with the ``padding_lengths`` we were passed as an argument to
+        this method, and pads the instances with :func:`IndexedInstance.pad()`.  If
+        ``padding_lengths`` has a particular key specified with a value, that value takes
+        precedence over whatever we computed in our data.  TODO(matt): with dynamic padding, we
+        should probably have this be a max padding length, not a hard setting, but that requires
+        some API changes.
 
-        This method _modifies_ the current object, it does not return a new IndexedDataset.
+        This method `modifies` the current object, it does not return a new ``IndexedDataset``.
+
+        Parameters
+        ----------
+        padding_lengths: Dict[str, int]
+            If a key is present in this dictionary with a non-`None` value, we will pad to that
+            length instead of the length calculated from the data.  This lets you, e.g., set a
+            maximum value for sentence length, or word length, if you want to throw out long
+            sequences.
+        verbose: bool, optional (default=True)
+            Should we output logging information when we're doing this padding?  If the dataset is
+            large, this is nice to have, because padding a large dataset could take a long time.
+            But if you're doing this inside of a data generator, having all of this output per
+            batch is a bit obnoxious.
         """
         # First we need to decide _how much_ to pad.  To do that, we find the max length for all
         # relevant padding decisions from the instances themselves.  Then we check whether we were
         # given a max length for a particular dimension.  If we were, we use that instead of the
         # instance-based one.
-        logger.info("Getting max lengths from instances")
+        if verbose:
+            logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.padding_lengths()
-        logger.info("Instance max lengths: %s", str(instance_padding_lengths))
+        if verbose:
+            logger.info("Instance max lengths: %s", str(instance_padding_lengths))
         lengths_to_use = {}
         for key in instance_padding_lengths:
             if padding_lengths and padding_lengths[key] is not None:
                 lengths_to_use[key] = padding_lengths[key]
             else:
                 lengths_to_use[key] = instance_padding_lengths[key]
-
-        logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
-        for instance in tqdm.tqdm(self.instances):
-            instance.pad(lengths_to_use)
+        if verbose:
+            logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
+            for instance in tqdm.tqdm(self.instances):
+                instance.pad(lengths_to_use)
+        else:
+            for instance in self.instances:
+                instance.pad(lengths_to_use)
 
     def as_training_data(self):
         """

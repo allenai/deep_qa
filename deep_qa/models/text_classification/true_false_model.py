@@ -51,7 +51,7 @@ class TrueFalseModel(TextTrainer):
         output_probabilities = softmax_layer(projection_layer(regularized_sentence_encoding))
 
         # Step 4: Define crossentropy against labels as the loss.
-        return DeepQaModel(input=sentence_input, output=output_probabilities)
+        return DeepQaModel(inputs=sentence_input, outputs=output_probabilities)
 
     def _instance_type(self):
         return TrueFalseInstance

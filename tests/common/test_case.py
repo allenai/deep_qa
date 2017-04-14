@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,protected-access
 from copy import deepcopy
+from typing import Any, Dict
 from unittest import TestCase
 import codecs
 import gzip
@@ -64,8 +65,13 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         params = self.get_model_params(model_class, additional_arguments)
         return model_class(params)
 
-    def ensure_model_trains_and_loads(self, model_class, args):
+    def ensure_model_trains_and_loads(self, model_class, args: Dict[str, Any]):
         args['save_models'] = True
+        # Our loading tests work better if you're not using data generators.  Unless you
+        # specifically request it in your test, we'll avoid using them here, and if you _do_ use
+        # them, we'll skip some of the stuff below that isn't compatible.
+        args.setdefault('use_data_generator', False)
+        args.setdefault('use_dynamic_padding', False)
         model = self.get_model(model_class, args)
         model.train()
 
@@ -74,14 +80,23 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         loaded_model.load_model()
 
         # verify that original model and the loaded model predict the same outputs
-        assert_allclose(model.model.predict(model.validation_arrays[0]),
-                        loaded_model.model.predict(model.validation_arrays[0]))
+        if isinstance(model.validation_arrays, tuple):
+            assert_allclose(model.model.predict(model.validation_arrays[0]),
+                            loaded_model.model.predict(model.validation_arrays[0]))
+        else:
+            # We shuffle the data in the data generator.  Instead of making that logic more
+            # complicated, we'll just pass on the loading tests here.  See comment above.
+            pass
 
-        # We should get the same result if we index the data from the
-        # original model and the loaded model.
+        # We should get the same result if we index the data from the original model and the loaded
+        # model.
         _, indexed_validation_arrays = loaded_model.load_data_arrays(model.validation_files)
-        assert_allclose(model.model.predict(model.validation_arrays[0]),
-                        loaded_model.model.predict(indexed_validation_arrays[0]))
+        if isinstance(indexed_validation_arrays, tuple):
+            assert_allclose(model.model.predict(model.validation_arrays[0]),
+                            loaded_model.model.predict(indexed_validation_arrays[0]))
+        else:
+            # As above, we'll just pass on this.
+            pass
         return model, loaded_model
 
     @staticmethod

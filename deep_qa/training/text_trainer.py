@@ -1,8 +1,9 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 import logging
-import dill as pickle
+import random
 
+import dill as pickle
 from keras import backend as K
 from keras.layers import Dense, Dropout, Layer, TimeDistributed
 from overrides import overrides
@@ -10,6 +11,7 @@ import numpy
 
 from ..common.checks import ConfigurationError
 from ..common.params import get_choice_with_default
+from ..common.util import group_by_count
 from ..data.dataset import TextDataset, IndexedDataset
 from ..data.instances.instance import Instance, TextInstance
 from ..data.embeddings import PretrainedEmbeddings
@@ -62,6 +64,22 @@ class TextTrainer(Trainer):
         LSTMs, if you don't specify an output size in the ``encoder`` params.
     embedding_dropout: float, optional (default=0.5)
         Dropout parameter to apply to the embedding layer
+    use_data_generator: bool, optional (default=False)
+        In :func:`~TextTrainer.create_data_arrays`, should we return one big, padded data array, or
+        should we return a data generator?  Using a data generator allows for dynamic
+        (batch-specific) padding, which can dramatically reduce runtime, but your model must be
+        written correctly to take advantage of that.  See :func:`~TextTrainer._set_padding_lengths`
+        and :func:`~TextTrainer._get_padding_lengths` for more details on that.
+    use_dynamic_padding: bool, optional (default=False)
+        If ``True``, we will set padding lengths based on the data `per batch`, instead of on the
+        whole dataset.  This only works if ``use_data_generator`` is ``True``, if your model is
+        structured to allow variable-length sequences (typically using ``None`` for specific
+        dimensions when you build your model), and if you don't set padding values in
+        :func:`~TextTrainer._set_padding_lengths`.  This flag specifically is read in
+        :func:`~TextTrainer._set_padding_lengths` to know if we should set certain padding values
+        or not.  It's handled correctly for ``num_sentence_words`` and ``num_word_characters`` in
+        this class, but you need to be sure to implement it correctly in subclasses for this to
+        work.
     num_sentence_words: int, optional (default=None)
         Upper limit on length of word sequences in the training data. Ignored during testing (we
         use the value set at training time, either from this parameter or from a loaded model).  If
@@ -103,6 +121,8 @@ class TextTrainer(Trainer):
         self.project_embeddings = params.pop('project_embeddings', False)
         self.embedding_dim = params.pop('embedding_dim', {'words': 50, 'characters': 8})
         self.embedding_dropout = params.pop('embedding_dropout', 0.5)
+        self.use_data_generator = params.pop('use_data_generator', False)
+        self.use_dynamic_padding = params.pop('use_dynamic_padding', False)
         self.num_sentence_words = params.pop('num_sentence_words', None)
         self.num_word_characters = params.pop('num_word_characters', None)
 
@@ -140,19 +160,22 @@ class TextTrainer(Trainer):
 
     @overrides
     def create_data_arrays(self, dataset: IndexedDataset):
-        padding_lengths = self._get_padding_lengths()
-        logger.info("Padding dataset to lengths %s", str(padding_lengths))
-        dataset.pad_instances(padding_lengths)
-        inputs, labels = dataset.as_training_data()
-        if isinstance(inputs[0], tuple):
-            inputs = [numpy.asarray(x) for x in zip(*inputs)]
+        if self.use_data_generator:
+            instances = dataset.instances
+            # TODO(matt): sort by padding lengths here, if self.use_dynamic_padding is True
+            grouped_instances = group_by_count(instances, self.batch_size, None)
+            grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
+            def generator():
+                while True:
+                    random.shuffle(grouped_instances)
+                    for group in grouped_instances:
+                        inputs, labels = self.__pad_and_convert_dataset(IndexedDataset(group),
+                                                                        verbose=False)
+                        yield (inputs, labels)
+            return generator()
         else:
-            inputs = numpy.asarray(inputs)
-        if isinstance(labels[0], tuple):
-            labels = [numpy.asarray(x) for x in zip(*labels)]
-        else:
-            labels = numpy.asarray(labels)
-        return inputs, labels
+            inputs, labels = self.__pad_and_convert_dataset(dataset)
+            return (inputs, labels)
 
     @overrides
     def set_model_state_from_dataset(self, dataset: TextDataset):
@@ -465,8 +488,15 @@ class TextTrainer(Trainer):
     def _get_padding_lengths(self) -> Dict[str, int]:
         """
         This is about padding.  Any solver will have some number of things that need padding in
-        order to make a compilable model, like the length of a sentence.  This method returns a
-        dictionary of all of those things, mapping a length key to an int.
+        order to make consistently-sized data arrays, like the length of a sentence.  This method
+        returns a dictionary of all of those things, mapping a length key to an int.
+
+        If any of the entries in this dictionary is ``None``, the padding code will calculate a
+        padding length from the data itself.  This could either be a good idea or a bad idea - if
+        you have outliers in your data, you could be wasting a whole lot of memory and computation
+        time if you pad the whole dataset to the size of the outlier.  On the other hand, if you do
+        batch-specific padding, this can save you a whole lot of time, if you group batches by
+        similar lengths.
 
         Here we return the lengths that are applicable to encoding words and sentences.  If you
         have additional padding dimensions, call super()._get_padding_lengths() and then update the
@@ -484,15 +514,33 @@ class TextTrainer(Trainer):
         keep the model flexible to allow for dynamic (batch-specific) padding, or because you've
         set a hard limit in the class parameters and don't want to change it.
         """
-        if self.num_sentence_words is None:
+        if not self.use_dynamic_padding and self.num_sentence_words is None:
             self.num_sentence_words = dataset_padding_lengths['num_sentence_words']
-        if self.num_word_characters is None:
+        if not self.use_dynamic_padding and self.num_word_characters is None:
             self.num_word_characters = dataset_padding_lengths.get('num_word_characters', None)
 
     #################
     # Private methods - you can't to override these.  If you find yourself needing to, we can
     # consider making them protected instead.
     #################
+
+    def __pad_and_convert_dataset(self,
+                                  dataset: IndexedDataset,
+                                  verbose: bool=True) -> Tuple[numpy.array, numpy.array]:
+        padding_lengths = self._get_padding_lengths()
+        if verbose:
+            logger.info("Padding dataset to lengths %s", str(padding_lengths))
+        dataset.pad_instances(padding_lengths, verbose)
+        inputs, labels = dataset.as_training_data()
+        if isinstance(inputs[0], tuple):
+            inputs = [numpy.asarray(x) for x in zip(*inputs)]
+        else:
+            inputs = numpy.asarray(inputs)
+        if isinstance(labels[0], tuple):
+            labels = [numpy.asarray(x) for x in zip(*labels)]
+        else:
+            labels = numpy.asarray(labels)
+        return inputs, labels
 
     def __get_embedded_input(self,
                              input_layer: Layer,

@@ -40,7 +40,8 @@ class VectorMatrixSplit(MaskedLayer):
         vector_shape = list(input_shape)
         del vector_shape[self.split_axis]
         matrix_shape = list(input_shape)
-        matrix_shape[self.split_axis] -= 1
+        if matrix_shape[self.split_axis] is not None:
+            matrix_shape[self.split_axis] -= 1
         return [tuple(vector_shape), tuple(matrix_shape)]
 
     @overrides
