@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models.sentence_selection.siamese_sentence_selector import SiameseSentenceSelector
+from deep_qa.models import SiameseSentenceSelector
 from ...common.test_case import DeepQaTestCase
 
 

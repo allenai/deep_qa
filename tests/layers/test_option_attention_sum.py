@@ -5,7 +5,7 @@ import keras.backend as K
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.option_attention_sum import OptionAttentionSum
+from deep_qa.layers import OptionAttentionSum
 from deep_qa.common.checks import ConfigurationError
 from ..common.test_case import DeepQaTestCase
 

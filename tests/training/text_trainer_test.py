@@ -5,8 +5,7 @@ import numpy
 
 from deep_qa.common.params import get_choice_with_default
 from deep_qa.layers.encoders import encoders
-from deep_qa.models.text_classification.true_false_model import TrueFalseModel
-from deep_qa.models.multiple_choice_qa.question_answer_similarity import QuestionAnswerSimilarity
+from deep_qa.models import TrueFalseModel, QuestionAnswerSimilarity
 from ..common.test_case import DeepQaTestCase
 from ..common.test_markers import requires_tensorflow
 

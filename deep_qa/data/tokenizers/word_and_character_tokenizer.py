@@ -7,10 +7,11 @@ from keras.layers import Concatenate, Layer
 from .tokenizer import Tokenizer
 from .word_processor import WordProcessor
 from ..data_indexer import DataIndexer
-from ...layers.backend.collapse_to_batch import CollapseToBatch
-from ...layers.backend.expand_from_batch import ExpandFromBatch
-from ...layers.wrappers.encoder_wrapper import EncoderWrapper
-from ...layers.vector_matrix_split import VectorMatrixSplit
+from ...layers.backend import CollapseToBatch
+from ...layers.backend import ExpandFromBatch
+from ...layers.wrappers import EncoderWrapper
+from ...layers import VectorMatrixSplit
+
 
 class WordAndCharacterTokenizer(Tokenizer):
     """

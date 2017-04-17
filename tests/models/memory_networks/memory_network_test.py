@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models.memory_networks.memory_network import MemoryNetwork
+from deep_qa.models import MemoryNetwork
 from ...common.test_case import DeepQaTestCase
 
 

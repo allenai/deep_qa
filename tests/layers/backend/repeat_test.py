@@ -4,7 +4,7 @@ import numpy
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.backend.repeat import Repeat
+from deep_qa.layers.backend import Repeat
 
 class TestRepeatLayer:
     def test_call_works_on_simple_input(self):

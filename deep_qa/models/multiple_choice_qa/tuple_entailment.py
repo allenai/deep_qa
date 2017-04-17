@@ -8,7 +8,7 @@ from ...data.dataset import TextDataset
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
 from ...data.instances.tuple_instance import TupleInstance
 from ...layers.entailment_models import MultipleChoiceTupleEntailment
-from ...layers.wrappers.encoder_wrapper import EncoderWrapper
+from ...layers.wrappers import EncoderWrapper
 
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel

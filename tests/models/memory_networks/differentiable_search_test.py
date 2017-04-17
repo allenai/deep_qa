@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use
 import gzip
 
-from deep_qa.models.memory_networks.differentiable_search import DifferentiableSearchMemoryNetwork
+from deep_qa.models import DifferentiableSearchMemoryNetwork
 from deep_qa.data.instances.true_false_instance import TrueFalseInstance
 from ...common.test_case import DeepQaTestCase
 

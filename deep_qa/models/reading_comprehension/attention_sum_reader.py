@@ -3,9 +3,9 @@ from overrides import overrides
 from keras.layers import Input
 
 from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
-from ...layers.attention.attention import Attention
-from ...layers.option_attention_sum import OptionAttentionSum
-from ...layers.l1_normalize import L1Normalize
+from ...layers.attention import Attention
+from ...layers import OptionAttentionSum
+from ...layers import L1Normalize
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 

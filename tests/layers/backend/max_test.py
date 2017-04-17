@@ -4,7 +4,7 @@ import numpy
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.backend.max import Max
+from deep_qa.layers.backend import Max
 
 class TestMaxLayer:
     def test_call_works_on_simple_input(self):

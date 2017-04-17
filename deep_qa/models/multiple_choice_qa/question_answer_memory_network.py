@@ -4,7 +4,7 @@ from overrides import overrides
 from keras.layers import Input
 
 from ...data.instances.question_answer_instance import QuestionAnswerInstance
-from ...layers.wrappers.encoder_wrapper import EncoderWrapper
+from ...layers.wrappers import EncoderWrapper
 from ..memory_networks.memory_network import MemoryNetwork
 
 

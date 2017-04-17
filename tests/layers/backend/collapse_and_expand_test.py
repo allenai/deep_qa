@@ -5,9 +5,7 @@ from numpy.testing import assert_allclose
 from keras.layers import Input, Dense
 from keras.models import Model
 
-from deep_qa.layers.backend.collapse_to_batch import CollapseToBatch
-from deep_qa.layers.backend.expand_from_batch import ExpandFromBatch
-from deep_qa.layers.backend.add_mask import AddMask
+from deep_qa.layers.backend import CollapseToBatch, ExpandFromBatch, AddMask
 from ...common.test_markers import requires_tensorflow
 
 class TestCollapseAndExpand:

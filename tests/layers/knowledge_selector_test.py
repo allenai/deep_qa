@@ -4,10 +4,8 @@ from keras.layers import Input, merge
 from keras import backend as K
 
 from deep_qa.layers.encoders import BOWEncoder
-from deep_qa.layers.knowledge_selectors import DotProductKnowledgeSelector
-from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
-from deep_qa.layers.wrappers.encoder_wrapper import EncoderWrapper
-from deep_qa.layers.wrappers.output_mask import OutputMask
+from deep_qa.layers import DotProductKnowledgeSelector, TimeDistributedEmbedding
+from deep_qa.layers.wrappers import EncoderWrapper, OutputMask
 from deep_qa.training.models import DeepQaModel
 from ..common.test_case import DeepQaTestCase
 

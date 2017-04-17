@@ -9,8 +9,8 @@ from keras.models import Model
 from keras import activations
 
 from deep_qa.tensors.backend import apply_feed_forward
-from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
-from deep_qa.layers.tuple_matchers.threshold_tuple_matcher import ThresholdTupleMatcher
+from deep_qa.layers import TimeDistributedEmbedding
+from deep_qa.layers.tuple_matchers import ThresholdTupleMatcher
 from ...common.test_case import DeepQaTestCase
 
 

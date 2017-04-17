@@ -5,7 +5,7 @@ from keras.layers import Input, Dense, Dropout, merge
 from keras.regularizers import l2
 
 from ...data.instances.logical_form_instance import LogicalFormInstance
-from ..layers.tree_composition_lstm import TreeCompositionLSTM
+from ..layers import TreeCompositionLSTM
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 

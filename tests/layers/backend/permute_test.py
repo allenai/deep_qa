@@ -4,7 +4,7 @@ import numpy
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.backend.permute import Permute
+from deep_qa.layers.backend import Permute
 
 class TestPermuteLayer:
     def test_call_works_on_simple_input(self):

@@ -4,13 +4,9 @@ from keras.layers import Dense, Input, Concatenate, TimeDistributed
 from overrides import overrides
 
 from ...data.instances.character_span_instance import CharacterSpanInstance
-from ...layers.attention.matrix_attention import MatrixAttention
-from ...layers.attention.masked_softmax import MaskedSoftmax
-from ...layers.attention.weighted_sum import WeightedSum
-from ...layers.backend.max import Max
-from ...layers.backend.repeat import Repeat
-from ...layers.complex_concat import ComplexConcat
-from ...layers.highway import Highway
+from ...layers.attention import MatrixAttention, MaskedSoftmax, WeightedSum
+from ...layers.backend import Max, Repeat
+from ...layers import ComplexConcat, Highway
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 

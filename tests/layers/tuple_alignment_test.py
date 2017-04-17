@@ -4,7 +4,7 @@ from keras.layers import Input
 from keras.models import Model
 
 from deep_qa.layers.entailment_models import MultipleChoiceTupleEntailment
-from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
+from deep_qa.layers import TimeDistributedEmbedding
 
 class TestTupleAlignment:
     def test_tuple_alignment_does_not_crash(self):

@@ -4,8 +4,8 @@ from keras.layers import Input
 
 from .multiple_true_false_memory_network import MultipleTrueFalseMemoryNetwork
 from ...training.models import DeepQaModel
-from ...layers.attention.max_similarity_softmax import MaxSimilaritySoftmax
-from ...layers.wrappers.encoder_wrapper import EncoderWrapper
+from ...layers.attention import MaxSimilaritySoftmax
+from ...layers.wrappers import EncoderWrapper
 
 
 #TODO(pradeep): If we go down this route, properly merge this with memory networks.

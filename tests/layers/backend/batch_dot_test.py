@@ -5,8 +5,8 @@ import keras.backend as K
 from keras.layers import Input, Masking
 from keras.models import Model
 
-from deep_qa.layers.backend.batch_dot import BatchDot
-from deep_qa.layers.wrappers.output_mask import OutputMask
+from deep_qa.layers.backend import BatchDot
+from deep_qa.layers.wrappers import OutputMask
 from ...common.test_case import DeepQaTestCase
 
 

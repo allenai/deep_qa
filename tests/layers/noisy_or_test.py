@@ -5,7 +5,7 @@ from numpy.testing import assert_array_almost_equal
 from keras import backend as K
 from keras.layers import Input
 from keras.models import Model
-from deep_qa.layers.noisy_or import NoisyOr, BetweenZeroAndOne
+from deep_qa.layers import NoisyOr, BetweenZeroAndOne
 from ..common.test_case import DeepQaTestCase
 
 class TestNoisyOr(DeepQaTestCase):

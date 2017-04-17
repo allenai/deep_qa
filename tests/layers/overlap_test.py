@@ -5,7 +5,7 @@ import keras.backend as K
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.overlap import Overlap
+from deep_qa.layers import Overlap
 
 
 class TestOverlap:

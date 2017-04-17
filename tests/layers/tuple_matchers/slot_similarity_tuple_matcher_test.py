@@ -6,7 +6,7 @@ from keras.layers import Input, Masking
 from keras.models import Model
 from scipy.stats import logistic
 
-from deep_qa.layers.tuple_matchers.slot_similarity_tuple_matcher import SlotSimilarityTupleMatcher
+from deep_qa.layers.tuple_matchers import SlotSimilarityTupleMatcher
 from deep_qa.tensors.similarity_functions.cosine_similarity import CosineSimilarity
 from ...common.test_case import DeepQaTestCase
 

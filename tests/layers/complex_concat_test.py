@@ -5,7 +5,7 @@ from flaky import flaky
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.complex_concat import ComplexConcat
+from deep_qa.layers import ComplexConcat
 
 class TestComplexConcatLayer:
     def test_call_works_on_simple_input(self):

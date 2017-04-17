@@ -5,7 +5,7 @@ from keras.layers import Input
 
 from ...data.instances.snli_instance import SnliInstance
 from ...training.text_trainer import TextTrainer
-from ...layers.entailment_models.decomposable_attention import DecomposableAttentionEntailment
+from ...layers.entailment_models import DecomposableAttentionEntailment
 from ...training.models import DeepQaModel
 
 

@@ -6,7 +6,7 @@ from keras.layers import merge, Dense, Input
 from .memory_network import MemoryNetwork
 from ...data.instances.babi_instance import BabiInstance
 from ...training.models import DeepQaModel
-from ...layers.vector_matrix_merge import VectorMatrixMerge
+from ...layers import VectorMatrixMerge
 
 
 class SoftmaxMemoryNetwork(MemoryNetwork):

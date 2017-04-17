@@ -6,7 +6,7 @@ from keras.layers import Input
 from keras.models import Model
 from scipy.stats import logistic
 
-from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
+from deep_qa.layers.tuple_matchers import WordOverlapTupleMatcher
 from ...common.test_case import DeepQaTestCase
 
 

@@ -5,7 +5,7 @@ from numpy.testing import assert_almost_equal
 from keras.layers import Input
 from keras.models import Model
 
-from deep_qa.layers.bigru_index_selector import BiGRUIndexSelector
+from deep_qa.layers import BiGRUIndexSelector
 
 
 class TestBiGRUIndexSelector():

@@ -4,8 +4,8 @@ from numpy.testing import assert_allclose
 from keras.layers import Dense, Embedding, Input
 from keras.models import Model, load_model
 
-from deep_qa.layers.attention.matrix_attention import MatrixAttention
-from deep_qa.layers.wrappers.output_mask import OutputMask
+from deep_qa.layers.attention import MatrixAttention
+from deep_qa.layers.wrappers import OutputMask
 from ...common.test_case import DeepQaTestCase
 
 class TestMatrixAttentionLayer(DeepQaTestCase):

@@ -6,7 +6,7 @@ from keras.models import Model
 
 from deep_qa.layers.backend.add_mask import AddMask
 from deep_qa.layers.backend.multiply import Multiply
-from deep_qa.layers.wrappers.output_mask import OutputMask
+from deep_qa.layers.wrappers import OutputMask
 
 class TestMultiply:
     def test_call_works_on_simple_input(self):

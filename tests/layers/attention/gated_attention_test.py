@@ -5,7 +5,7 @@ from numpy.testing import assert_almost_equal
 import keras.backend as K
 from keras.layers import Input
 from keras.models import Model
-from deep_qa.layers.attention.gated_attention import GatedAttention
+from deep_qa.layers.attention import GatedAttention
 
 
 class TestGatedAttentionLayer:

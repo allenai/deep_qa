@@ -5,15 +5,10 @@ from keras.callbacks import LearningRateScheduler
 
 from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
 from ...common.checks import ConfigurationError
-from ...layers.backend.batch_dot import BatchDot
-from ...layers.attention.attention import Attention
-from ...layers.attention.masked_softmax import MaskedSoftmax
-from ...layers.option_attention_sum import OptionAttentionSum
-from ...layers.overlap import Overlap
-from ...layers.attention.gated_attention import GatedAttention
-from ...layers.l1_normalize import L1Normalize
-from ...layers.vector_matrix_split import VectorMatrixSplit
-from ...layers.bigru_index_selector import BiGRUIndexSelector
+from ...layers.backend import BatchDot
+from ...layers.attention import Attention, MaskedSoftmax, GatedAttention
+from ...layers import OptionAttentionSum, Overlap, L1Normalize
+from ...layers import VectorMatrixSplit, BiGRUIndexSelector
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 

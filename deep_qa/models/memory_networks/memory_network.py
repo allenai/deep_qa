@@ -11,12 +11,12 @@ from ...data.instances.background_instance import BackgroundInstance
 from ...data.instances.instance import TextInstance
 from ...data.instances.true_false_instance import TrueFalseInstance
 from ...layers.entailment_models import entailment_models, entailment_input_combiners
-from ...layers.knowledge_combiners import knowledge_combiners
-from ...layers.knowledge_encoders import knowledge_encoders
-from ...layers.knowledge_selectors import selectors
-from ...layers.memory_updaters import updaters
-from ...layers.vector_matrix_merge import VectorMatrixMerge
-from ...layers.recurrence_modes import recurrence_modes
+from ...layers import knowledge_combiners
+from ...layers import knowledge_encoders
+from ...layers import selectors
+from ...layers import updaters
+from ...layers import VectorMatrixMerge
+from ...layers import recurrence_modes
 
 from ...training.models import DeepQaModel
 from ...training.text_trainer import TextTrainer

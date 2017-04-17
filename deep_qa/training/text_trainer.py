@@ -18,7 +18,7 @@ from ..data.embeddings import PretrainedEmbeddings
 from ..data.tokenizers import tokenizers
 from ..data.data_indexer import DataIndexer
 from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
-from ..layers.time_distributed_embedding import TimeDistributedEmbedding
+from ..layers import TimeDistributedEmbedding
 from .trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

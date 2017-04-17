@@ -3,7 +3,7 @@ import numpy
 from keras.layers import Input
 from keras import backend as K
 
-from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
+from deep_qa.layers import TimeDistributedEmbedding
 from ..common.test_case import DeepQaTestCase
 
 

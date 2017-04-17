@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models.multiple_choice_qa.tuple_inference import TupleInferenceModel
+from deep_qa.models import TupleInferenceModel
 from ...common.test_case import DeepQaTestCase
 
 class TestTupleInferenceModel(DeepQaTestCase):

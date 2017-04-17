@@ -2,7 +2,7 @@
 import numpy
 from flaky import flaky
 
-from deep_qa.models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
+from deep_qa.models import BidirectionalAttentionFlow
 from ...common.test_case import DeepQaTestCase
 
 

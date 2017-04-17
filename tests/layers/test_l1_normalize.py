@@ -4,7 +4,7 @@ from numpy.testing import assert_array_almost_equal
 
 from keras.layers import Input, Masking
 from keras.models import Model
-from deep_qa.layers.l1_normalize import L1Normalize
+from deep_qa.layers import L1Normalize
 from ..common.test_case import DeepQaTestCase
 
 

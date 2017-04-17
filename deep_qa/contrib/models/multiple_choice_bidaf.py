@@ -8,11 +8,11 @@ from overrides import overrides
 from ...common.models import get_submodel
 from ...models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
 from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
-from ...layers.attention.attention import Attention
-from ...layers.backend.envelope import Envelope
-from ...layers.backend.multiply import Multiply
-from ...layers.wrappers.encoder_wrapper import EncoderWrapper
-from ...layers.wrappers.time_distributed_with_mask import TimeDistributedWithMask
+from ...layers.attention import Attention
+from ...layers.backend import Envelope
+from ...layers.backend import Multiply
+from ...layers.wrappers import EncoderWrapper
+from ...layers.wrappers import TimeDistributedWithMask
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 

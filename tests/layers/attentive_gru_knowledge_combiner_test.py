@@ -5,7 +5,7 @@ from keras.layers import Input, Embedding, merge
 from keras.models import Model
 import keras.backend as K
 
-from deep_qa.layers.knowledge_combiners import AttentiveGRUKnowledgeCombiner
+from deep_qa.layers import AttentiveGRUKnowledgeCombiner
 
 
 class TestAttentiveGRUKnowledgeCombiner:

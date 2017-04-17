@@ -4,12 +4,9 @@ import numpy
 from keras.layers import Input
 
 from deep_qa.layers.encoders import BOWEncoder
-from deep_qa.layers.time_distributed_embedding import TimeDistributedEmbedding
-from deep_qa.layers.wrappers.encoder_wrapper import EncoderWrapper
-from deep_qa.layers.wrappers.time_distributed_with_mask import TimeDistributedWithMask
-from deep_qa.layers.wrappers.output_mask import OutputMask
-from deep_qa.layers.tuple_matchers.slot_similarity_tuple_matcher import SlotSimilarityTupleMatcher
-from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
+from deep_qa.layers import TimeDistributedEmbedding
+from deep_qa.layers.wrappers import EncoderWrapper, TimeDistributedWithMask, OutputMask
+from deep_qa.layers.tuple_matchers import SlotSimilarityTupleMatcher, WordOverlapTupleMatcher
 from deep_qa.training.models import DeepQaModel
 from ...common.test_case import DeepQaTestCase
 

@@ -5,13 +5,12 @@ from keras.layers import Input, Layer
 from overrides import overrides
 import numpy
 
-from deep_qa.data.instances.tuple_inference_instance import TupleInferenceInstance
-from deep_qa.layers.tuple_matchers.word_overlap_tuple_matcher import WordOverlapTupleMatcher
-from deep_qa.layers.tuple_matchers import tuple_matchers
-from ...layers.attention.masked_softmax import MaskedSoftmax
-from ...layers.backend.repeat import Repeat
-from ...layers.noisy_or import NoisyOr
-from ...layers.wrappers.time_distributed_with_mask import TimeDistributedWithMask
+from ...data.instances.tuple_inference_instance import TupleInferenceInstance
+from ...layers.tuple_matchers import tuple_matchers, WordOverlapTupleMatcher
+from ...layers.attention import MaskedSoftmax
+from ...layers.backend import Repeat
+from ...layers import NoisyOr
+from ...layers.wrappers import TimeDistributedWithMask
 from ...training.models import DeepQaModel
 from ...training.text_trainer import TextTrainer
 from ...common.params import get_choice_with_default

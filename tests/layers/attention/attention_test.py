@@ -5,7 +5,7 @@ from numpy.testing import assert_almost_equal
 from keras.layers import Embedding, Input
 from keras.models import Model
 import keras.backend as K
-from deep_qa.layers.attention.attention import Attention
+from deep_qa.layers.attention import Attention
 
 
 class TestAttentionLayer:

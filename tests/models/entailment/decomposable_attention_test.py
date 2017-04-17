@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models.entailment.decomposable_attention import DecomposableAttention
+from deep_qa.models import DecomposableAttention
 from ...common.test_case import DeepQaTestCase
 
 

@@ -11,7 +11,7 @@ from keras.callbacks import LambdaCallback, TensorBoard, EarlyStopping, Callback
 from ..common.checks import ConfigurationError
 from ..data.dataset import Dataset, IndexedDataset
 from ..data.instances.instance import Instance
-from ..layers.wrappers.output_mask import OutputMask
+from ..layers.wrappers import OutputMask
 from .models import DeepQaModel
 from .optimizers import optimizer_from_params
 
