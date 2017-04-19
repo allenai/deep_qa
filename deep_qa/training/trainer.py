@@ -349,6 +349,7 @@ class Trainer:
 
         # If there are test files, we evaluate on the test data.
         if self.test_files:
+            self.load_model()
             logger.info("Evaluting model on the test set.")
             if isinstance(self.test_arrays, tuple):
                 scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
