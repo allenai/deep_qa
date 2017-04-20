@@ -4,7 +4,7 @@ from overrides import overrides
 from keras.layers import Input, Dense, Dropout, merge
 from keras.regularizers import l2
 
-from ...data.instances.logical_form_instance import LogicalFormInstance
+from ...data.instances.text_classification import LogicalFormInstance
 from ..layers import TreeCompositionLSTM
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel

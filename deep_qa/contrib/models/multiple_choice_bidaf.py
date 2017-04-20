@@ -6,15 +6,15 @@ from keras.layers import Input
 from overrides import overrides
 
 from ...common.models import get_submodel
-from ...models.reading_comprehension.bidirectional_attention import BidirectionalAttentionFlow
-from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
+from ...data.instances.reading_comprehension import McQuestionPassageInstance
 from ...layers.attention import Attention
 from ...layers.backend import Envelope
 from ...layers.backend import Multiply
 from ...layers.wrappers import EncoderWrapper
 from ...layers.wrappers import TimeDistributedWithMask
-from ...training.text_trainer import TextTrainer
+from ...models.reading_comprehension import BidirectionalAttentionFlow
 from ...training.models import DeepQaModel
+from ...training.text_trainer import TextTrainer
 
 
 class MultipleChoiceBidaf(TextTrainer):
@@ -179,7 +179,7 @@ class MultipleChoiceBidaf(TextTrainer):
 
     @overrides
     def _instance_type(self):  # pylint: disable=no-self-use
-        return McQuestionAnswerInstance
+        return McQuestionPassageInstance
 
     @overrides
     def _get_padding_lengths(self) -> Dict[str, int]:

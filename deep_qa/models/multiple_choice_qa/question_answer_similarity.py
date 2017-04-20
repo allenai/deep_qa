@@ -4,10 +4,10 @@ from overrides import overrides
 from keras import backend as K
 from keras.layers import Dense, Dropout, Input
 
-from ...data.instances.question_answer_instance import QuestionAnswerInstance
+from ...data.instances.multiple_choice_qa import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
 from ...layers.attention import Attention
-from ...training.text_trainer import TextTrainer
+from ...training import TextTrainer
 from ...training.models import DeepQaModel
 
 

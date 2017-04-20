@@ -5,8 +5,8 @@ from overrides import overrides
 from keras.layers import Input
 
 from ...data.dataset import TextDataset
-from ...data.instances.question_answer_instance import QuestionAnswerInstance
-from ...data.instances.tuple_instance import TupleInstance
+from ...data.instances.multiple_choice_qa.question_answer_instance import QuestionAnswerInstance
+from ...data.instances.text_classification.tuple_instance import TupleInstance
 from ...layers.entailment_models import MultipleChoiceTupleEntailment
 from ...layers.wrappers import EncoderWrapper
 

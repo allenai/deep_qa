@@ -9,5 +9,8 @@ modify this file, adding their own pretrainer.  Instead, you should _modify_ thi
 __init__.py module of your code, adding whatever pretrainers you need to use.  That way we can
 create your pretrainer objects without having to know about them in this module.
 """
+from .text_trainer import TextTrainer
+from .trainer import Trainer
+
 concrete_pretrainers = {  # pylint: disable=invalid-name
         }

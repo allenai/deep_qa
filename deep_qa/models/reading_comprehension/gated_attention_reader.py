@@ -3,7 +3,7 @@ from overrides import overrides
 from keras.layers import Input, Dropout, Concatenate
 from keras.callbacks import LearningRateScheduler
 
-from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
+from ...data.instances.reading_comprehension.mc_question_passage_instance import McQuestionPassageInstance
 from ...common.checks import ConfigurationError
 from ...layers.backend import BatchDot
 from ...layers.attention import Attention, MaskedSoftmax, GatedAttention
@@ -225,7 +225,7 @@ class GatedAttentionReader(TextTrainer):
         """
         Return the instance type that the model trains on.
         """
-        return McQuestionAnswerInstance
+        return McQuestionPassageInstance
 
     @overrides
     def _get_padding_lengths(self) -> Dict[str, int]:

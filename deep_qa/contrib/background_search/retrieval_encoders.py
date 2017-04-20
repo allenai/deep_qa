@@ -12,7 +12,7 @@ import tqdm
 from ...common.models import get_submodel
 from ...common.params import get_choice, replace_none
 from ...common import util
-from ...data.instances.sentence_selection_instance import SentenceSelectionInstance
+from ...data.instances.sentence_selection.sentence_selection_instance import SentenceSelectionInstance
 from ...models import concrete_models
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 
-from deep_qa.models import SimpleTagger
+from deep_qa.models.sequence_tagging import SimpleTagger
 from ...common.test_case import DeepQaTestCase
 
 

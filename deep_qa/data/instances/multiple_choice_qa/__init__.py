@@ -1,0 +1,4 @@
+from .babi_instance import BabiInstance, IndexedBabiInstance
+from .multiple_true_false_instance import MultipleTrueFalseInstance, IndexedMultipleTrueFalseInstance
+from .question_answer_instance import QuestionAnswerInstance, IndexedQuestionAnswerInstance
+from .tuple_inference_instance import TupleInferenceInstance, IndexedTupleInferenceInstance

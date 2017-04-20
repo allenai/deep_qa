@@ -3,10 +3,10 @@ from overrides import overrides
 from keras.layers import Input
 from keras.layers.wrappers import TimeDistributed
 
-from ...data.instances.sentence_selection_instance import SentenceSelectionInstance
+from ...data.instances.sentence_selection import SentenceSelectionInstance
 from ...layers.attention import Attention
 from ...layers.wrappers import EncoderWrapper
-from ...training.text_trainer import TextTrainer
+from ...training import TextTrainer
 from ...training.models import DeepQaModel
 
 

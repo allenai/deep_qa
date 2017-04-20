@@ -4,7 +4,7 @@ from overrides import overrides
 from keras.layers import merge, Dense, Input
 
 from .memory_network import MemoryNetwork
-from ...data.instances.babi_instance import BabiInstance
+from ...data.instances.multiple_choice_qa.babi_instance import BabiInstance
 from ...training.models import DeepQaModel
 from ...layers import VectorMatrixMerge
 

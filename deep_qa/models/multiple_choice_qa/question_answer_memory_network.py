@@ -3,16 +3,16 @@ from typing import Dict, Any
 from overrides import overrides
 from keras.layers import Input
 
-from ...data.instances.question_answer_instance import QuestionAnswerInstance
+from ...data.instances.multiple_choice_qa import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
-from ..memory_networks.memory_network import MemoryNetwork
+from ..memory_networks import MemoryNetwork
 
 
 class QuestionAnswerMemoryNetwork(MemoryNetwork):
     '''
     This is a MemoryNetwork that is trained on QuestionAnswerInstances.
 
-    The base MemoryNetwork assumes we're dealing with TrueFalseInstances, so there is no
+    The base MemoryNetwork assumes we're dealing with TextClassificationInstances, so there is no
     separate question and answer text.  We need to add an additional input, and handle it specially
     at the end, with a very different final "entailment" model, where we're doing dot-product
     similarity with encoded answer options, or something similar.

@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models import AttentionSumReader
+from deep_qa.models.reading_comprehension import AttentionSumReader
 from ...common.test_case import DeepQaTestCase
 
 

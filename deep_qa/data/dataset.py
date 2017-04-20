@@ -7,9 +7,8 @@ from typing import Dict, List
 import tqdm
 
 from .instances.instance import Instance, TextInstance, IndexedInstance
-from .instances.background_instance import BackgroundInstance
-from .instances.labeled_background_instance import LabeledBackgroundInstance
-from .instances.multiple_true_false_instance import MultipleTrueFalseInstance
+from .instances.wrappers.background_instance import BackgroundInstance
+from .instances.multiple_choice_qa.multiple_true_false_instance import MultipleTrueFalseInstance
 from .data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -140,6 +139,8 @@ class TextDataset(Dataset):
         This code will also work if the data is formatted simply as [index][tab][sentence], one per
         line.
         """
+        # TODO(matt): figure out a way to make this more general, or just put this as a static
+        # method on BackgroundInstance.  It doesn't really belong here.
         new_instances = OrderedDict()
         for instance in dataset.instances:
             background_instance = BackgroundInstance(instance, [])
@@ -153,37 +154,6 @@ class TextDataset(Dataset):
                     instance.background.append(background_class.read_from_line(sequence, None))
         return TextDataset(list(new_instances.values()))
 
-    @staticmethod
-    def read_labeled_background_from_file(dataset: 'TextDataset', filename: str) -> 'TextDataset':
-        """
-        Reads a file formatted as labeled background information and matches the background to the
-        sentences in the given dataset.  The given dataset must have instance indices, so we can
-        match the background information in the file to the instances in the dataset.
-
-        This is like read_background_from_file(), except we create LabeledBackgroundInstances
-        instead of BackgroundInstances.
-
-        The format for the file is assumed to be the following:
-        [sentence index][tab][correct background indices][tab][background 1][tab][background 2][tab][...]
-        where [sentence index] corresponds to the index of one of the instances in `dataset`, and
-        [correct background indices] is a comma-separated list of (0-indexed) integers, pointing to
-        the background sentences which are positive examples.
-        """
-        new_instances = {}
-        for instance in dataset.instances:
-            background_instance = LabeledBackgroundInstance(instance, [], [])
-            new_instances[instance.index] = background_instance
-        for line in codecs.open(filename, "r", "utf-8"):
-            fields = line.strip().split("\t")
-            index = int(fields[0])
-            correct_background_indices = [int(x) for x in fields[1].split(',')]
-            if index in new_instances:
-                instance = new_instances[index]
-                instance.label = correct_background_indices
-                for sequence in fields[2:]:
-                    instance.background.append(sequence)
-        return TextDataset(list(new_instances.values()))
-
 
 class IndexedDataset(Dataset):
     """
@@ -195,9 +165,22 @@ class IndexedDataset(Dataset):
     def __init__(self, instances: List[IndexedInstance]):
         super(IndexedDataset, self).__init__(instances)
 
+    def sort_by_padding(self, sorting_keys: List[str]):
+        """
+        Sorts the ``Instances`` in this ``Dataset`` by their padding lengths, using the keys in
+        ``sorting_keys`` (in the order in which they are provided).
+        """
+        instances_with_lengths = []
+        for instance in self.instances:
+            padding_lengths = instance.get_padding_lengths()
+            instance_with_lengths = [padding_lengths[key] for key in sorting_keys] + [instance]
+            instances_with_lengths.append(instance_with_lengths)
+        instances_with_lengths.sort(key=lambda x: x[:-1])
+        self.instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
+
     def padding_lengths(self):
         padding_lengths = {}
-        lengths = [instance.get_lengths() for instance in self.instances]
+        lengths = [instance.get_padding_lengths() for instance in self.instances]
         if not lengths:
             return padding_lengths
         for key in lengths[0]:

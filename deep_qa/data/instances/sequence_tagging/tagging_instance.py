@@ -64,7 +64,7 @@ class IndexedTaggingInstance(IndexedInstance):
         return TaggingInstance([], label=None, index=None)
 
     @overrides
-    def get_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]:
         return self._get_word_sequence_lengths(self.text_indices)
 
     @overrides

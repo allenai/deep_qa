@@ -2,11 +2,11 @@ from typing import Any, Dict
 from overrides import overrides
 from keras.layers import Input
 
-from ...data.instances.mc_question_answer_instance import McQuestionAnswerInstance
-from ...layers.attention import Attention
-from ...layers import OptionAttentionSum
+from ...data.instances.reading_comprehension import McQuestionPassageInstance
 from ...layers import L1Normalize
-from ...training.text_trainer import TextTrainer
+from ...layers import OptionAttentionSum
+from ...layers.attention import Attention
+from ...training import TextTrainer
 from ...training.models import DeepQaModel
 
 
@@ -110,7 +110,7 @@ class AttentionSumReader(TextTrainer):
         """
         Return the instance type that the model trains on.
         """
-        return McQuestionAnswerInstance
+        return McQuestionPassageInstance
 
     @overrides
     def _get_padding_lengths(self) -> Dict[str, int]:

@@ -7,9 +7,9 @@ from keras.layers import Dropout, Input, Layer, Concatenate
 
 from ...common.params import get_choice_with_default
 from ...data.dataset import TextDataset
-from ...data.instances.background_instance import BackgroundInstance
+from ...data.instances.wrappers.background_instance import BackgroundInstance
 from ...data.instances.instance import TextInstance
-from ...data.instances.true_false_instance import TrueFalseInstance
+from ...data.instances.text_classification.text_classification_instance import TextClassificationInstance
 from ...layers.entailment_models import entailment_models, entailment_input_combiners
 from ...layers import knowledge_combiners
 from ...layers import knowledge_encoders
@@ -144,11 +144,11 @@ class MemoryNetwork(TextTrainer):
 
     @overrides
     def _instance_type(self):
-        return TrueFalseInstance
+        return TextClassificationInstance
 
     @staticmethod
     def _background_instance_type():
-        return TrueFalseInstance
+        return TextClassificationInstance
 
     @classmethod
     @overrides

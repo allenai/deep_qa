@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models import MultipleTrueFalseSimilarity
+from deep_qa.models.multiple_choice_qa import MultipleTrueFalseSimilarity
 from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 

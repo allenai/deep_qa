@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import mock
 
-from deep_qa.models import QuestionAnswerSimilarity
+from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
 from ...common.test_case import DeepQaTestCase
 
 

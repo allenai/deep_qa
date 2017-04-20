@@ -1,8 +1,8 @@
 # pylint: disable=no-self-use
 import gzip
 
-from deep_qa.models import DifferentiableSearchMemoryNetwork
-from deep_qa.data.instances.true_false_instance import TrueFalseInstance
+from deep_qa.models.memory_networks import DifferentiableSearchMemoryNetwork
+from deep_qa.data.instances.text_classification import TextClassificationInstance
 from ...common.test_case import DeepQaTestCase
 
 class FakeEncoder:
@@ -44,4 +44,4 @@ class TestDifferentiableSearchMemoryNetwork(DeepQaTestCase):
         model._initialize_lsh()
         model.num_sentence_words = 5
         model.max_knowledge_length = 2
-        model.get_nearest_neighbors(TrueFalseInstance("this is a sentence", True))
+        model.get_nearest_neighbors(TextClassificationInstance("this is a sentence", True))

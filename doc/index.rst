@@ -59,9 +59,16 @@ This library has several main components:
    :hidden:
 
    data/about_data
-   data/general_data_utils
    data/instances
+   data/entailment
+   data/multiple_choice_qa
+   data/reading_comprehension
+   data/sentence_selection
+   data/sequence_tagging
+   data/text_classification
+   data/wrappers
    data/tokenizers
+   data/general_data_utils
 
 .. toctree::
    :caption: Models

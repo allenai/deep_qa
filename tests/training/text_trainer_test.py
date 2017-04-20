@@ -5,7 +5,8 @@ import numpy
 
 from deep_qa.common.params import get_choice_with_default
 from deep_qa.layers.encoders import encoders
-from deep_qa.models import TrueFalseModel, QuestionAnswerSimilarity
+from deep_qa.models.text_classification import ClassificationModel
+from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
 from ..common.test_case import DeepQaTestCase
 from ..common.test_markers import requires_tensorflow
 
@@ -15,13 +16,13 @@ class TestTextTrainer(DeepQaTestCase):
 
     def test_get_encoder_works_without_params(self):
         self.write_true_false_model_files()
-        model = self.get_model(TrueFalseModel, {'encoder': {}})
+        model = self.get_model(ClassificationModel, {'encoder': {}})
         encoder = model._get_encoder()
         encoder_type = get_choice_with_default({}, "type", list(encoders.keys()))
         expected_encoder = encoders[encoder_type](**{})
         assert isinstance(encoder, expected_encoder.__class__)
 
-    @mock.patch.object(TrueFalseModel, '_output_debug_info')
+    @mock.patch.object(ClassificationModel, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):
         self.write_true_false_model_files()
         args = {
@@ -38,7 +39,7 @@ class TestTextTrainer(DeepQaTestCase):
                                 ],
                         }
                 }
-        model = self.get_model(TrueFalseModel, args)
+        model = self.get_model(ClassificationModel, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
             # We're going to check two things in here: that the shape of combined word embedding is
@@ -122,7 +123,7 @@ class TestTextTrainer(DeepQaTestCase):
                 'show_summary_with_masking_info': True,
         }
         self.write_true_false_model_files()
-        model, loaded_model = self.ensure_model_trains_and_loads(TrueFalseModel, args)
+        model, loaded_model = self.ensure_model_trains_and_loads(ClassificationModel, args)
 
         # now fit both models on some more data, and ensure that we get the same results.
         self.write_additional_true_false_model_files()
@@ -147,7 +148,7 @@ class TestTextTrainer(DeepQaTestCase):
                 'show_summary_with_masking_info': True,
         }
         self.write_true_false_model_files()
-        self.ensure_model_trains_and_loads(TrueFalseModel, args)
+        self.ensure_model_trains_and_loads(ClassificationModel, args)
 
     @requires_tensorflow
     def test_dynamic_padding_works(self):
@@ -161,7 +162,7 @@ class TestTextTrainer(DeepQaTestCase):
                 'batch_size': 2,
         }
         self.write_true_false_model_files()
-        self.ensure_model_trains_and_loads(TrueFalseModel, args)
+        self.ensure_model_trains_and_loads(ClassificationModel, args)
 
     def test_pretrained_embeddings_works_correctly(self):
         self.write_true_false_model_files()
@@ -172,5 +173,5 @@ class TestTextTrainer(DeepQaTestCase):
                 'fine_tune_embeddings': False,
                 'project_embeddings': False,
                 }
-        model = self.get_model(TrueFalseModel, args)
+        model = self.get_model(ClassificationModel, args)
         model.train()

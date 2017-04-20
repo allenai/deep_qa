@@ -2,7 +2,10 @@
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.tokenizers import tokenizers
-from deep_qa.data.instances.true_false_instance import IndexedTrueFalseInstance, TrueFalseInstance
+# pylint: disable=line-too-long
+from deep_qa.data.instances.text_classification.text_classification_instance import IndexedTextClassificationInstance
+from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
+# pylint: enable=line-too-long
 
 from ...common.test_case import DeepQaTestCase
 
@@ -16,7 +19,7 @@ class TestTextInstance(DeepQaTestCase):
         TextInstance.tokenizer = tokenizers['words']({})
 
     def test_words_tokenizes_the_sentence_correctly(self):
-        t = TrueFalseInstance("This is a sentence.", None)
+        t = TextClassificationInstance("This is a sentence.", None)
         assert t.words() == {'words': ['this', 'is', 'a', 'sentence', '.']}
         TextInstance.tokenizer = tokenizers['characters']({})
         assert t.words() == {'characters': ['T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 's',
@@ -39,32 +42,32 @@ class TestTextInstance(DeepQaTestCase):
         t_index = data_indexer.add_word_to_index("t", namespace='characters')
         c_index = data_indexer.add_word_to_index("c", namespace='characters')
 
-        instance = TrueFalseInstance("A sentence", None).to_indexed_instance(data_indexer)
+        instance = TextClassificationInstance("A sentence", None).to_indexed_instance(data_indexer)
         assert instance.word_indices == [a_word_index, sentence_index]
         TextInstance.tokenizer = tokenizers['characters']({})
-        instance = TrueFalseInstance("A sentence", None).to_indexed_instance(data_indexer)
+        instance = TextClassificationInstance("A sentence", None).to_indexed_instance(data_indexer)
         assert instance.word_indices == [capital_a_index, space_index, s_index, e_index, n_index, t_index,
                                          e_index, n_index, c_index, e_index]
         TextInstance.tokenizer = tokenizers['words and characters']({})
-        instance = TrueFalseInstance("A sentence", None).to_indexed_instance(data_indexer)
+        instance = TextClassificationInstance("A sentence", None).to_indexed_instance(data_indexer)
         assert instance.word_indices == [[a_word_index, a_index],
                                          [sentence_index, s_index, e_index, n_index, t_index,
                                           e_index, n_index, c_index, e_index]]
 
 
 class TestIndexedInstance(DeepQaTestCase):
-    def test_get_lengths_works_with_words_and_characters(self):
-        instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
-        assert instance.get_lengths() == {'num_sentence_words': 2, 'num_word_characters': 3}
+    def test_get_padding_lengths_works_with_words_and_characters(self):
+        instance = IndexedTextClassificationInstance([[1, 2], [3, 1, 2]], True)
+        assert instance.get_padding_lengths() == {'num_sentence_words': 2, 'num_word_characters': 3}
 
     def test_pad_word_sequence_handles_words_and_characters_less(self):
-        instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
+        instance = IndexedTextClassificationInstance([[1, 2], [3, 1, 2]], True)
         padded = instance.pad_word_sequence(instance.word_indices,
                                             {'num_sentence_words': 3, 'num_word_characters': 4})
         assert padded == [[0, 0, 0, 0], [1, 2, 0, 0], [3, 1, 2, 0]]
 
     def test_pad_word_sequence_handles_words_and_characters_greater(self):
-        instance = IndexedTrueFalseInstance([[1, 2], [3, 1, 2]], True)
+        instance = IndexedTextClassificationInstance([[1, 2], [3, 1, 2]], True)
         padded = instance.pad_word_sequence(instance.word_indices,
                                             {'num_sentence_words': 5, 'num_word_characters': 4})
         assert padded == [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [1, 2, 0, 0], [3, 1, 2, 0]]

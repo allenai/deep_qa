@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import keras.backend as K
 
-from deep_qa.models import MemoryNetwork
+from deep_qa.models.memory_networks import MemoryNetwork
 from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 

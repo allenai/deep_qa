@@ -5,8 +5,8 @@ import numpy
 from keras.layers import Layer, TimeDistributed
 
 from ..memory_networks.memory_network import MemoryNetwork
-from ...data.instances.true_false_instance import TrueFalseInstance
-from ...data.instances.multiple_true_false_instance import MultipleTrueFalseInstance
+from ...data.instances.text_classification import TextClassificationInstance
+from ...data.instances.multiple_choice_qa import MultipleTrueFalseInstance
 from ...layers.wrappers import EncoderWrapper
 
 
@@ -50,7 +50,7 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
 
     @overrides
     def _instance_type(self):
-        return TrueFalseInstance
+        return TextClassificationInstance
 
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):

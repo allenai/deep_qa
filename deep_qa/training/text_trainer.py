@@ -145,13 +145,11 @@ class TextTrainer(Trainer):
         self.name = "TextTrainer"
         self.data_indexer = DataIndexer()
 
-        # Model-specific member variables that will get set and used later.  For many of these, we
-        # don't want to set them now, because they use max length information that only gets set
-        # after reading the training data.
+        # These keep track of which names you've used to get embeddings and encoders, so that we
+        # reuse layers that you want to reuse.
         self.embedding_layers = {}
         self.encoder_layers = {}
         self.seq2seq_encoder_layers = {}
-        self._sentence_encoder_model = None
 
     ###########################
     # Overriden Trainer methods - you shouldn't have to worry about these, though for some
@@ -161,8 +159,9 @@ class TextTrainer(Trainer):
     @overrides
     def create_data_arrays(self, dataset: IndexedDataset):
         if self.use_data_generator:
+            if self.use_dynamic_padding:
+                dataset.sort_by_padding(self._get_instance_sorting_keys())
             instances = dataset.instances
-            # TODO(matt): sort by padding lengths here, if self.use_dynamic_padding is True
             grouped_instances = group_by_count(instances, self.batch_size, None)
             grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
             def generator():
@@ -484,6 +483,26 @@ class TextTrainer(Trainer):
     # Model-specific methods - if you do anything complicated, you probably need to override these,
     # but simple models might be able to get by with just the default implementation
     ########################
+
+    def _get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
+        """
+        If we're using dynamic padding, we want to group the instances by padding length, so that
+        we minimize the amount of padding necessary per batch.  This variable sets what exactly
+        gets sorted by.  We'll call
+        :func:`~deep_qa.data.instances.instance.IndexedInstance.get_padding_lengths()` on each
+        instance, pull out these keys, and sort by them in the order specified.  You'll want to
+        override this in your model class if you have more complex models.
+
+        The default implementation is to sort first by ``num_sentence_words``, then by
+        ``num_word_characters`` (if applicable).
+        """
+        sorting_keys = ['num_sentence_words']
+        if isinstance(self.tokenizer, tokenizers['words and characters']):
+            # TODO(matt): This is a bit brittle, because other tokenizers might need similar
+            # handling.  We could consider adding an API call to Tokenizer classes to get this kind
+            # of information.  If we find ourselves adding more tokenizers, it might be worth it.
+            sorting_keys.append('num_word_characters')
+        return sorting_keys
 
     def _get_padding_lengths(self) -> Dict[str, int]:
         """

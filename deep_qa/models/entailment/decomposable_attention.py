@@ -3,7 +3,7 @@ from overrides import overrides
 
 from keras.layers import Input
 
-from ...data.instances.snli_instance import SnliInstance
+from ...data.instances.entailment.snli_instance import SnliInstance
 from ...training.text_trainer import TextTrainer
 from ...layers.entailment_models import DecomposableAttentionEntailment
 from ...training.models import DeepQaModel

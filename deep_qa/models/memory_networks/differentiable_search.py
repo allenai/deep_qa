@@ -11,8 +11,8 @@ import numpy
 from sklearn.neighbors import LSHForest
 
 from ...data.dataset import TextDataset
-from ...data.instances.background_instance import BackgroundInstance
-from ...data.instances.true_false_instance import TrueFalseInstance
+from ...data.instances.wrappers.background_instance import BackgroundInstance
+from ...data.instances.text_classification.text_classification_instance import TextClassificationInstance
 from .memory_network import MemoryNetwork
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -88,7 +88,7 @@ class DifferentiableSearchMemoryNetwork(MemoryNetwork):
         else:
             self._initialize_lsh()
 
-    def get_nearest_neighbors(self, instance: TrueFalseInstance) -> List[TrueFalseInstance]:
+    def get_nearest_neighbors(self, instance: TextClassificationInstance) -> List[TextClassificationInstance]:
         '''
         Search in the corpus for the nearest neighbors to `instance`.  The corpus we search, how
         many neighbors to return, and the specifics of the encoder model are all defined in
@@ -188,7 +188,7 @@ class DifferentiableSearchMemoryNetwork(MemoryNetwork):
         """
         new_instances = []
         for instance in dataset.instances:  # type: BackgroundInstance
-            text_instance = TrueFalseInstance(instance.text, label=True)
+            text_instance = TextClassificationInstance(instance.text, label=True)
             new_background = self.get_nearest_neighbors(text_instance)
             background_text = [background.text for background in new_background]
             new_instances.append(BackgroundInstance(instance, background_text))

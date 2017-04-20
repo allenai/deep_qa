@@ -2,11 +2,11 @@
 
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.dataset import TextDataset
-from deep_qa.data.instances.true_false_instance import TrueFalseInstance
+from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
 
 class TestDataIndexer:
     def test_fit_word_dictionary_respects_min_count(self):
-        instance = TrueFalseInstance("a a a a b b c c c", True)
+        instance = TextClassificationInstance("a a a a b b c c c", True)
         dataset = TextDataset([instance])
         data_indexer = DataIndexer()
         data_indexer.fit_word_dictionary(dataset, min_count=4)
@@ -56,7 +56,6 @@ class TestDataIndexer:
         assert data_indexer.get_word_from_index(word_index, namespace='2') == "word"
         assert data_indexer.get_word_from_index(word2_index, namespace='2') == "word2"
         assert data_indexer.get_vocab_size(namespace='2') == initial_vocab_size + 2
-
 
     def test_unknown_token(self):
         # pylint: disable=protected-access

@@ -5,15 +5,15 @@ from keras.layers import Input, Layer
 from overrides import overrides
 import numpy
 
-from ...data.instances.tuple_inference_instance import TupleInferenceInstance
-from ...layers.tuple_matchers import tuple_matchers, WordOverlapTupleMatcher
+from ...common.params import get_choice_with_default
+from ...data.instances.multiple_choice_qa import TupleInferenceInstance
+from ...layers import NoisyOr
 from ...layers.attention import MaskedSoftmax
 from ...layers.backend import Repeat
-from ...layers import NoisyOr
+from ...layers.tuple_matchers import tuple_matchers, WordOverlapTupleMatcher
 from ...layers.wrappers import TimeDistributedWithMask
+from ...training import TextTrainer
 from ...training.models import DeepQaModel
-from ...training.text_trainer import TextTrainer
-from ...common.params import get_choice_with_default
 
 
 class TupleInferenceModel(TextTrainer):

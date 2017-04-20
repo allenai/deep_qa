@@ -10,8 +10,8 @@ class TestIndexedTaggingInstance(DeepQaTestCase):
         super(TestIndexedTaggingInstance, self).setUp()
         self.instance = IndexedTaggingInstance([1, 2, 3, 4], [4, 5, 6])
 
-    def test_get_lengths_returns_correct_lengths(self):
-        assert self.instance.get_lengths() == {'num_sentence_words': 4}
+    def test_get_padding_lengths_returns_correct_lengths(self):
+        assert self.instance.get_padding_lengths() == {'num_sentence_words': 4}
 
     def test_pad_truncates_correctly(self):
         self.instance.pad({'num_sentence_words': 2})

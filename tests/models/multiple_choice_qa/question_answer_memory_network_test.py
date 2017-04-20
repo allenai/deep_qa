@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from deep_qa.models import QuestionAnswerMemoryNetwork
+from deep_qa.models.multiple_choice_qa import QuestionAnswerMemoryNetwork
 from ...common.test_case import DeepQaTestCase
 
 

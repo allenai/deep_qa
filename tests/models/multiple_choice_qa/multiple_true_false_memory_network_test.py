@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import mock
 
-from deep_qa.models import MultipleTrueFalseMemoryNetwork
+from deep_qa.models.multiple_choice_qa import MultipleTrueFalseMemoryNetwork
 from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 
