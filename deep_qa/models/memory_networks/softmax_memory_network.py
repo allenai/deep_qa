@@ -1,10 +1,11 @@
-from typing import Any, Dict
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import merge, Dense, Input
 
 from .memory_network import MemoryNetwork
 from ...data.instances.multiple_choice_qa.babi_instance import BabiInstance
+from ...common.params import Params
 from ...training.models import DeepQaModel
 from ...layers import VectorMatrixMerge
 
@@ -28,7 +29,7 @@ class SoftmaxMemoryNetwork(MemoryNetwork):
     has_sigmoid_entailment = False
     has_multiple_backgrounds = False
 
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         super(SoftmaxMemoryNetwork, self).__init__(params)
         self.name = "SoftmaxMemoryNetwork"
         self.num_options = None

@@ -1,9 +1,7 @@
-from typing import Any, Dict
-
 from keras.layers import Dense, Input, TimeDistributed
 from overrides import overrides
 
-from ...common.params import get_choice
+from ...common.params import Params
 from ...data.instances.sequence_tagging import concrete_instances
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
@@ -23,9 +21,9 @@ class SimpleTagger(TextTrainer):
         Specifies the particular subclass of ``TaggedSequenceInstance`` to use for loading data,
         which in turn defines things like how the input data is formatted and tokenized.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.num_stacked_rnns = params.pop('num_stacked_rnns', 1)
-        instance_type_choice = get_choice(params, "instance_type", concrete_instances.keys())
+        instance_type_choice = params.pop_choice("instance_type", concrete_instances.keys())
         self.instance_type = concrete_instances[instance_type_choice]
         super(SimpleTagger, self).__init__(params)
 

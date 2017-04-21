@@ -11,6 +11,7 @@ from ...layers.backend import CollapseToBatch
 from ...layers.backend import ExpandFromBatch
 from ...layers.wrappers import EncoderWrapper
 from ...layers import VectorMatrixSplit
+from ...common.params import Params
 
 
 class WordAndCharacterTokenizer(Tokenizer):
@@ -29,7 +30,7 @@ class WordAndCharacterTokenizer(Tokenizer):
     documentation there for some more info).  If you do not give a ``"word"`` key in the
     ``encoder`` dict, we'll create a new encoder using the ``"default"`` parameters.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.word_processor = WordProcessor(params.pop('processor', {}))
         super(WordAndCharacterTokenizer, self).__init__(params)
 

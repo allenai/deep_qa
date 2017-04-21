@@ -3,7 +3,7 @@ import logging
 import pickle
 
 from itertools import zip_longest
-from typing import Any, Dict, List
+from typing import List
 
 from overrides import overrides
 import numpy
@@ -13,9 +13,11 @@ from sklearn.neighbors import LSHForest
 from ...data.dataset import TextDataset
 from ...data.instances.wrappers.background_instance import BackgroundInstance
 from ...data.instances.text_classification.text_classification_instance import TextClassificationInstance
+from ...common.params import Params
 from .memory_network import MemoryNetwork
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class DifferentiableSearchMemoryNetwork(MemoryNetwork):
     """
@@ -36,7 +38,7 @@ class DifferentiableSearchMemoryNetwork(MemoryNetwork):
     file, using the standard MemoryNetwork code.  It is only in subsequent epochs that we
     will override that and use our differentiable search to find background knowledge.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         # Location of corpus to use for background knowledge search. This corpus is assumed to be
         # gzipped, one sentence per line.
         self.corpus_path = params.pop('corpus_path', None)

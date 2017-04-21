@@ -1,17 +1,17 @@
 from collections import OrderedDict
-from typing import Dict, Any
 
 from keras.layers import LSTM
 from keras.layers.wrappers import Bidirectional
 from keras.regularizers import l1_l2
 
+from ...common.params import Params
 from .bag_of_words import BOWEncoder
 from .convolutional_encoder import CNNEncoder
 from .positional_encoder import PositionalEncoder
 from .shareable_gru import ShareableGRU as GRU
 
 
-def set_regularization_params(encoder_type: str, params: Dict[str, Any]):
+def set_regularization_params(encoder_type: str, params: Params):
     """
     This method takes regularization parameters that are specified in `params` and converts them
     into Keras regularization objects, modifying `params` to contain the correct keys for the given
@@ -20,8 +20,8 @@ def set_regularization_params(encoder_type: str, params: Dict[str, Any]):
     Currently, we only allow specifying a consistent regularization across all the weights of a
     layer.
     """
-    l1_regularization = params.pop("l1_regularization", None)
     l2_regularization = params.pop("l2_regularization", None)
+    l1_regularization = params.pop("l1_regularization", None)
     regularizer = lambda: l1_l2(l1=l1_regularization, l2=l2_regularization)
     if encoder_type == 'cnn':
         # Regularization with the CNN encoder is complicated, so we'll just pass in the L1 and L2

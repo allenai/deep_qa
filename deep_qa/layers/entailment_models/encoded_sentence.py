@@ -12,8 +12,6 @@ attended_background_knowledge and current_memory are two different vectors that 
 reasoning over this background knowledge, which the entailment model can choose to use as desired.
 """
 
-from typing import Any, Dict
-
 from keras import backend as K
 from keras.layers import Dense, Layer, TimeDistributed
 
@@ -27,10 +25,13 @@ class TrueFalseEntailmentModel:
     a single vector, then pass that vector through an MLP.  How we actually merge the three inputs
     is specified by one of the combiners below.
     """
-    def __init__(self, params: Dict[str, Any]):
-        self.num_hidden_layers = params.pop('num_hidden_layers', 1)
-        self.hidden_layer_width = params.pop('hidden_layer_width', 50)
-        self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
+    def __init__(self,
+                 num_hidden_layers: int=1,
+                 hidden_layer_width: int=50,
+                 hidden_layer_activation: str="relu"):
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_layer_width = hidden_layer_width
+        self.hidden_layer_activation = hidden_layer_activation
 
         self.hidden_layers = None
         self.softmax_layer = None
@@ -69,11 +70,15 @@ class QuestionAnswerEntailmentModel:
     into the same dimension as the answer encoding, does a dot product between the combined input
     encoding and the answer encoding, and does a final softmax over those similar scores.
     """
-    def __init__(self, params: Dict[str, Any]):
-        self.num_hidden_layers = params.pop('num_hidden_layers', 1)
-        self.hidden_layer_width = params.pop('hidden_layer_width', 50)
-        self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
-        self.answer_dim = params.pop('answer_dim')
+    def __init__(self,
+                 answer_dim: int,
+                 num_hidden_layers: int=1,
+                 hidden_layer_width: int=50,
+                 hidden_layer_activation: str="relu"):
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_layer_width = hidden_layer_width
+        self.hidden_layer_activation = hidden_layer_activation
+        self.answer_dim = answer_dim
 
         self.hidden_layers = None
         self.softmax_layer = None
@@ -119,10 +124,13 @@ class MultipleChoiceEntailmentModel:
     a single vector, then pass that vector through an MLP, once for each of the multiple choices,
     then have a final softmax over answer options.
     """
-    def __init__(self, params: Dict[str, Any]):
-        self.num_hidden_layers = params.pop('num_hidden_layers', 1)
-        self.hidden_layer_width = params.pop('hidden_layer_width', 50)
-        self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')
+    def __init__(self,
+                 num_hidden_layers: int=1,
+                 hidden_layer_width: int=50,
+                 hidden_layer_activation: str="relu"):
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_layer_width = hidden_layer_width
+        self.hidden_layer_activation = hidden_layer_activation
 
         self.hidden_layers = None
         self.score_layer = None

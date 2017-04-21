@@ -2,11 +2,12 @@
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.tokenizers import tokenizers
+
 # pylint: disable=line-too-long
 from deep_qa.data.instances.text_classification.text_classification_instance import IndexedTextClassificationInstance
 from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
 # pylint: enable=line-too-long
-
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 
 class TestTextInstance(DeepQaTestCase):
@@ -16,15 +17,15 @@ class TestTextInstance(DeepQaTestCase):
     """
     def tearDown(self):
         super(TestTextInstance, self).tearDown()
-        TextInstance.tokenizer = tokenizers['words']({})
+        TextInstance.tokenizer = tokenizers['words'](Params({}))
 
     def test_words_tokenizes_the_sentence_correctly(self):
         t = TextClassificationInstance("This is a sentence.", None)
         assert t.words() == {'words': ['this', 'is', 'a', 'sentence', '.']}
-        TextInstance.tokenizer = tokenizers['characters']({})
+        TextInstance.tokenizer = tokenizers['characters'](Params({}))
         assert t.words() == {'characters': ['T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 's',
                                             'e', 'n', 't', 'e', 'n', 'c', 'e', '.']}
-        TextInstance.tokenizer = tokenizers['words and characters']({})
+        TextInstance.tokenizer = tokenizers['words and characters'](Params({}))
         assert t.words() == {'words': ['this', 'is', 'a', 'sentence', '.'],
                              'characters': ['t', 'h', 'i', 's', 'i', 's', 'a', 's', 'e', 'n', 't',
                                             'e', 'n', 'c', 'e', '.']}
@@ -44,12 +45,14 @@ class TestTextInstance(DeepQaTestCase):
 
         instance = TextClassificationInstance("A sentence", None).to_indexed_instance(data_indexer)
         assert instance.word_indices == [a_word_index, sentence_index]
-        TextInstance.tokenizer = tokenizers['characters']({})
+
+        TextInstance.tokenizer = tokenizers['characters'](Params({}))
         instance = TextClassificationInstance("A sentence", None).to_indexed_instance(data_indexer)
         assert instance.word_indices == [capital_a_index, space_index, s_index, e_index, n_index, t_index,
                                          e_index, n_index, c_index, e_index]
-        TextInstance.tokenizer = tokenizers['words and characters']({})
+        TextInstance.tokenizer = tokenizers['words and characters'](Params({}))
         instance = TextClassificationInstance("A sentence", None).to_indexed_instance(data_indexer)
+
         assert instance.word_indices == [[a_word_index, a_index],
                                          [sentence_index, s_index, e_index, n_index, t_index,
                                           e_index, n_index, c_index, e_index]]

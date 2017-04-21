@@ -1,6 +1,5 @@
 # pylint: disable=invalid-name,protected-access
 from copy import deepcopy
-from typing import Any, Dict
 from unittest import TestCase
 import codecs
 import gzip
@@ -13,6 +12,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from deep_qa.common.checks import log_keras_version_info
+from deep_qa.common.params import Params
 from deep_qa.models.memory_networks.memory_network import MemoryNetwork
 from deep_qa.models.multiple_choice_qa.multiple_true_false_similarity import MultipleTrueFalseSimilarity
 
@@ -40,7 +40,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             K.clear_session()
 
     def get_model_params(self, model_class, additional_arguments=None):
-        params = {}
+        params = Params({})
         params['save_models'] = False
         params['model_serialization_prefix'] = self.TEST_DIR
         params['train_files'] = [self.TRAIN_FILE]
@@ -50,8 +50,10 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         params['num_epochs'] = 1
         params['validation_split'] = 0.0
         if self.is_model_with_background(model_class):
+            # pylint: disable=no-member
             params['train_files'].append(self.TRAIN_BACKGROUND)
             params['validation_files'].append(self.VALIDATION_BACKGROUND)
+            # pylint: enable=no-member
         if self.is_memory_network(model_class):
             params['knowledge_selector'] = {'type': 'dot_product'}
             params['memory_updater'] = {'type': 'sum'}
@@ -65,7 +67,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         params = self.get_model_params(model_class, additional_arguments)
         return model_class(params)
 
-    def ensure_model_trains_and_loads(self, model_class, args: Dict[str, Any]):
+    def ensure_model_trains_and_loads(self, model_class, args: Params):
         args['save_models'] = True
         # Our loading tests work better if you're not using data generators.  Unless you
         # specifically request it in your test, we'll avoid using them here, and if you _do_ use

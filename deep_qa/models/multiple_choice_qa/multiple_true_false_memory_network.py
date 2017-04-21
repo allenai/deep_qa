@@ -1,9 +1,10 @@
-from typing import Any, Dict, List
+from typing import Dict, List
 from overrides import overrides
 
 import numpy
 from keras.layers import Layer, TimeDistributed
 
+from ...common.params import Params  # pylint disable: unused-import
 from ..memory_networks.memory_network import MemoryNetwork
 from ...data.instances.text_classification import TextClassificationInstance
 from ...data.instances.multiple_choice_qa import MultipleTrueFalseInstance
@@ -31,7 +32,7 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
     has_sigmoid_entailment = True
     has_multiple_backgrounds = True
 
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         # Upper limit on number of options per question in the training data. Ignored during
         # testing (we use the value set at training time, either from this parameter or from a
         # loaded model).  If this is not set, we'll calculate a max length from the data.

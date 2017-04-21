@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict
 
 from overrides import overrides
 from keras.layers import Input
@@ -6,6 +6,7 @@ from keras.layers import Input
 from ...data.instances.multiple_choice_qa import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
 from ..memory_networks import MemoryNetwork
+from ...common.params import Params
 
 
 class QuestionAnswerMemoryNetwork(MemoryNetwork):
@@ -25,7 +26,7 @@ class QuestionAnswerMemoryNetwork(MemoryNetwork):
         encoder used for questions (in this case, that's currently ``"default"``).
     '''
 
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.answer_encoder_name = params.pop("answer_encoder_name", "answer")
         super(QuestionAnswerMemoryNetwork, self).__init__(params)
 

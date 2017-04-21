@@ -14,11 +14,9 @@ implemented optimizers I can grab.
 \* I should also note that Keras is an incredibly useful library that does a lot
 of things really well. It just has a few quirks...
 """
-
+from typing import Union
 from keras.optimizers import SGD, RMSprop, Adagrad, Adadelta, Adam, Adamax, Nadam
-
-from ..common.params import get_choice
-
+from ..common.params import Params
 
 optimizers = {  # pylint: disable=invalid-name
         'sgd': SGD,
@@ -31,7 +29,7 @@ optimizers = {  # pylint: disable=invalid-name
         }
 
 
-def optimizer_from_params(params):
+def optimizer_from_params(params: Union[Params, str]):
     """
     This method converts from a parameter object like we use in our Trainer
     code into an optimizer object suitable for use with Keras. The simplest
@@ -44,5 +42,5 @@ def optimizer_from_params(params):
     """
     if isinstance(params, str) and params in optimizers.keys():
         return params
-    optimizer = get_choice(params, "type", optimizers.keys())
+    optimizer = params.pop_choice("type", optimizers.keys())
     return optimizers[optimizer](**params)

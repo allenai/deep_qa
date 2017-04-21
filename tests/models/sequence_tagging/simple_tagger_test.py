@@ -2,18 +2,19 @@
 import numpy
 
 from deep_qa.models.sequence_tagging import SimpleTagger
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 
 
 class TestSimpleTagger(DeepQaTestCase):
     def test_trains_and_loads_correctly(self):
         self.write_sequence_tagging_files()
-        args = {
+        args = Params({
                 'save_models': True,
                 'show_summary_with_masking_info': True,
                 'instance_type': 'PreTokenizedTaggingInstance',
                 'tokenizer': {'processor': {'word_splitter': 'no_op'}},
-                }
+                })
         self.ensure_model_trains_and_loads(SimpleTagger, args)
 
     def test_loss_function_uses_mask(self):
@@ -23,11 +24,11 @@ class TestSimpleTagger(DeepQaTestCase):
         # accuracy value, just that all of them are the same - I ran this a few times by hand to be
         # sure that we're getting different accuracy values, depending on the initialization.
         self.write_sequence_tagging_files()
-        args = {
+        args = Params({
                 'show_summary_with_masking_info': True,
                 'instance_type': 'PreTokenizedTaggingInstance',
                 'tokenizer': {'processor': {'word_splitter': 'no_op'}},
-                }
+                })
         model = self.get_model(SimpleTagger, args)
         model.train()
 

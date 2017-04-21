@@ -1,4 +1,3 @@
-from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import Input, merge
@@ -8,6 +7,8 @@ from ...layers.attention import MaskedSoftmax
 from ...layers.wrappers import TimeDistributedWithMask, EncoderWrapper
 from ...layers import TopKnowledgeSelector
 from ...training.models import DeepQaModel
+from ...common.params import Params
+
 
 class MultipleTrueFalseDecomposableAttention(MultipleTrueFalseMemoryNetwork):
     '''
@@ -19,7 +20,7 @@ class MultipleTrueFalseDecomposableAttention(MultipleTrueFalseMemoryNetwork):
     We inherit from MultipleTrueFalseMemoryNetwork to get a few convenience methods for
     dealing with multiple choice inputs (e.g., question shape, background shape, and loading data).
     '''
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         if 'entailment_model' not in params or 'final_activation' not in params['entailment_model']:
             params.setdefault('entailment_model', {})['final_activation'] = 'sigmoid'
         super(MultipleTrueFalseDecomposableAttention, self).__init__(params)

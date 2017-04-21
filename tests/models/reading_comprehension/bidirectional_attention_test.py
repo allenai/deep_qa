@@ -3,6 +3,7 @@ import numpy
 from flaky import flaky
 
 from deep_qa.models.reading_comprehension import BidirectionalAttentionFlow
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 
 
@@ -10,12 +11,12 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
     @flaky
     def test_trains_and_loads_correctly(self):
         self.write_span_prediction_files()
-        args = {
+        args = Params({
                 'embedding_dim': {'words': 4, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
-                }
+                })
         self.ensure_model_trains_and_loads(BidirectionalAttentionFlow, args)
 
     def test_get_best_span(self):

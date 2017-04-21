@@ -7,6 +7,7 @@ from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.instances.sequence_tagging.pretokenized_tagging_instance import PreTokenizedTaggingInstance
 from deep_qa.data.tokenizers import tokenizers
+from deep_qa.common.params import Params
 from ....common.test_case import DeepQaTestCase
 
 
@@ -16,11 +17,11 @@ class TestPreTokenizedTaggingInstance(DeepQaTestCase):
         tokens = ["cats", "are", "animals", "."]
         tags = ["N", "V", "N", "."]
         self.instance = PreTokenizedTaggingInstance(tokens, tags)
-        TextInstance.tokenizer = tokenizers['words']({'processor': {'word_splitter': 'no_op'}})
+        TextInstance.tokenizer = tokenizers['words'](Params({'processor': {'word_splitter': 'no_op'}}))
 
     def tearDown(self):
         super(TestPreTokenizedTaggingInstance, self).tearDown()
-        TextInstance.tokenizer = tokenizers['words']({})
+        TextInstance.tokenizer = tokenizers['words'](Params({}))
 
     @staticmethod
     def instance_to_line(tokens: List[str], tags: List[str], index=None):

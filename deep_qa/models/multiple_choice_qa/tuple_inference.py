@@ -1,11 +1,10 @@
-from typing import Dict, Any
+from typing import Dict
 import textwrap
 
 from keras.layers import Input, Layer
 from overrides import overrides
 import numpy
 
-from ...common.params import get_choice_with_default
 from ...data.instances.multiple_choice_qa import TupleInferenceInstance
 from ...layers import NoisyOr
 from ...layers.attention import MaskedSoftmax
@@ -14,6 +13,7 @@ from ...layers.tuple_matchers import tuple_matchers, WordOverlapTupleMatcher
 from ...layers.wrappers import TimeDistributedWithMask
 from ...training import TextTrainer
 from ...training.models import DeepQaModel
+from ...common.params import Params
 
 
 class TupleInferenceModel(TextTrainer):
@@ -57,7 +57,7 @@ class TupleInferenceModel(TextTrainer):
         each of the answer tuples in a given instance when displaying the tuple match scores.
 
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.noisy_or_param_init = params.pop('noisy_or_param_init', 'uniform')
         self.num_question_tuples = params.pop('num_question_tuples', 10)
         self.num_background_tuples = params.pop('num_background_tuples', 10)
@@ -67,9 +67,7 @@ class TupleInferenceModel(TextTrainer):
         self.display_text_wrap = params.pop('display_text_wrap', 150)
         self.display_num_tuples = params.pop('display_num_tuples', 5)
         tuple_matcher_params = params.pop('tuple_matcher', {})
-        tuple_matcher_choice = get_choice_with_default(tuple_matcher_params,
-                                                       "type",
-                                                       list(tuple_matchers.keys()))
+        tuple_matcher_choice = tuple_matcher_params.pop_choice_with_default("type", list(tuple_matchers.keys()))
         tuple_matcher_class = tuple_matchers[tuple_matcher_choice]
         # This is a little ugly, but necessary, because the Keras Layer API treats arguments
         # differently than our model API, and we need access to the TextTrainer object in the tuple

@@ -9,6 +9,7 @@ from keras.models import model_from_json
 from keras.callbacks import LambdaCallback, TensorBoard, EarlyStopping, CallbackList, ModelCheckpoint
 
 from ..common.checks import ConfigurationError
+from ..common.params import Params
 from ..data.dataset import Dataset, IndexedDataset
 from ..data.instances.instance import Instance
 from ..layers.wrappers import OutputMask
@@ -128,7 +129,7 @@ class Trainer:
         Preferred backend to use for training. If a different backend is detected, we still train
         but we also warn the user.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.name = "Trainer"
 
         # Data specification parameters.

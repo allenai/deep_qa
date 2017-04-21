@@ -1,4 +1,3 @@
-from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import Dense, Dropout, Input
@@ -6,6 +5,7 @@ from keras.layers import Dense, Dropout, Input
 from ...data.instances.text_classification.text_classification_instance import TextClassificationInstance
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
+from ...common.params import Params
 
 
 class ClassificationModel(TextTrainer):
@@ -24,7 +24,7 @@ class ClassificationModel(TextTrainer):
     post-processing to get from true/false decisions to question answers, and I removed that from
     TextTrainer to make the code simpler.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         super(ClassificationModel, self).__init__(params)
 
     @overrides

@@ -1,10 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 
 from deep_qa.data.tokenizers.word_tokenizer import WordTokenizer
-
+from deep_qa.common.params import Params
 
 class TestTokenizer:
-    tokenizer = WordTokenizer({})
+    tokenizer = WordTokenizer(Params({}))
     passage = "On January 7, 2012, Beyoncé gave birth to her first child, a daughter, Blue Ivy " +\
         "Carter, at Lenox Hill Hospital in New York. Five months later, she performed for four " +\
         "nights at Revel Atlantic City's Ovation Hall to celebrate the resort's opening, her " +\

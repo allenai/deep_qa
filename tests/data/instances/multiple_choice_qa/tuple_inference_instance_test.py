@@ -7,6 +7,7 @@ from deep_qa.data.instances.multiple_choice_qa.tuple_inference_instance import T
 from deep_qa.data.instances.multiple_choice_qa.tuple_inference_instance import IndexedTupleInferenceInstance
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.tokenizers import WordAndCharacterTokenizer, tokenizers
+from deep_qa.common.params import Params
 from ....common.test_case import DeepQaTestCase
 
 
@@ -148,7 +149,7 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         answer_options_simple = ("a<>a sentence<><>")
         background_simple = ("a<>a sentence<><>")
         line_simple = "\t".join(str(x) for x in [answer_options_simple, background_simple, "0"])
-        TextInstance.tokenizer = WordAndCharacterTokenizer({})
+        TextInstance.tokenizer = WordAndCharacterTokenizer(Params({}))
         data_indexer = DataIndexer()
         a_word_index = data_indexer.add_word_to_index("a", namespace='words')
         sentence_index = data_indexer.add_word_to_index("sentence", namespace='words')
@@ -172,4 +173,4 @@ class TestTupleInferenceInstance(DeepQaTestCase):
         expected_background_indexed = numpy.asarray(expected_indexed_tuple)
         assert numpy.all(indexed.answers_indexed == expected_answers_indexed)
         assert numpy.all(indexed.background_indexed == expected_background_indexed)
-        TextInstance.tokenizer = tokenizers['words']({})
+        TextInstance.tokenizer = tokenizers['words'](Params({}))

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 from overrides import overrides
 
 from keras.layers import Input, Dense, Dropout, merge
@@ -8,6 +8,7 @@ from ...data.instances.text_classification import LogicalFormInstance
 from ..layers import TreeCompositionLSTM
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
+from ...common.params import Params
 
 
 class TreeLSTMModel(TextTrainer):
@@ -20,7 +21,7 @@ class TreeLSTMModel(TextTrainer):
     We haven't worked on this in a while, so I would not be surprised if it doesn't actually run at
     the moment.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         super(TreeLSTMModel, self).__init__(params)
         self.max_transition_length = None
 

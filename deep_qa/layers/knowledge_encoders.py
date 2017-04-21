@@ -6,7 +6,6 @@ Network hops.
 '''
 
 from collections import OrderedDict
-from typing import Any, Dict
 from keras.layers.wrappers import Bidirectional
 from keras.layers.recurrent import GRU
 
@@ -23,9 +22,10 @@ class IndependentKnowledgeEncoder:
     Therefore, to apply the question encoder to all of the background knowledge, we simply
     TimeDistribute it. The 'time' dimension is assumed to be 1.
     '''
-    def __init__(self, params: Dict[str, Any]):
-        self.question_encoder = params.pop('question_encoder')
-        self.name = params.pop('name')
+    # pylint: disable=unused-argument
+    def __init__(self, question_encoder, name, **kwargs):
+        self.question_encoder = question_encoder
+        self.name = name
         self.encoder_wrapper = EncoderWrapper(self.question_encoder, name=self.name)
 
     def __call__(self, knowledge_embedding):
@@ -37,14 +37,13 @@ class TemporalKnowledgeEncoder(IndependentKnowledgeEncoder):
     This class implements the "temporal encoding" from the end-to-end memory networks paper, which
     adds a learned vector to the encoding of each time step in the memory.
     """
-    def __init__(self, params: Dict[str, Any]):
-        super(TemporalKnowledgeEncoder, self).__init__(params)
+    def __init__(self, **kwargs):
+        super(TemporalKnowledgeEncoder, self).__init__(**kwargs)
         self.additive_layer = Additive(name=self.name + "_additive")
 
     def __call__(self, knowledge_embedding):
         encoded_knowledge = self.encoder_wrapper(knowledge_embedding)
         return self.additive_layer(encoded_knowledge)
-
 
 
 class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
@@ -72,11 +71,11 @@ class BiGRUKnowledgeEncoder(IndependentKnowledgeEncoder):
     background knowledge related to each answer. If this is the case, then we again TimeDistribute
     the BiDirectional GRU to apply this to every set of background knowledge.
     '''
-    def __init__(self, params: Dict[str, Any]):
-        self.knowledge_length = params.pop('knowledge_length')
-        self.encoding_dim = params.pop('encoding_dim')
-        self.has_multiple_backgrounds = params.pop('has_multiple_backgrounds')
-        super(BiGRUKnowledgeEncoder, self).__init__(params)
+    def __init__(self, **kwargs):
+        self.knowledge_length = kwargs.pop("knowledge_length")
+        self.encoding_dim = kwargs.pop("encoding_dim")
+        self.has_multiple_backgrounds = kwargs.pop("has_multiple_backgrounds")
+        super(BiGRUKnowledgeEncoder, self).__init__(**kwargs)
         # TODO: allow the merge_mode of the GRU/other parameters to be passed as arguments.
         self.bi_gru = Bidirectional(GRU(self.encoding_dim, return_sequences=True),
                                     input_shape=(self.knowledge_length, self.encoding_dim),

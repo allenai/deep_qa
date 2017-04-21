@@ -1,11 +1,11 @@
 from copy import deepcopy
-from typing import Any, Dict, List
+from typing import Dict, List
 from overrides import overrides
 
 import numpy
 from keras.layers import Dropout, Input, Layer, Concatenate
 
-from ...common.params import get_choice_with_default
+from ...common.params import Params
 from ...data.dataset import TextDataset
 from ...data.instances.wrappers.background_instance import BackgroundInstance
 from ...data.instances.instance import TextInstance
@@ -92,7 +92,7 @@ class MemoryNetwork(TextTrainer):
     has_sigmoid_entailment = False
     has_multiple_backgrounds = False
 
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
 
         self.num_memory_layers = params.pop('num_memory_layers', 1)
         # This is used to label names for layers within the memory network loop. We have to define it here
@@ -230,13 +230,13 @@ class MemoryNetwork(TextTrainer):
         # we'll make a copy and use that instead of self.knowledge_encoder_params.
 
         params = deepcopy(self.knowledge_encoder_params)
-        knowledge_encoder_type = get_choice_with_default(params, "type", list(knowledge_encoders.keys()))
+        knowledge_encoder_type = params.pop_choice_with_default("type", list(knowledge_encoders.keys()))
         params['name'] = name
         params['encoding_dim'] = self.embedding_dim['words']
         params['knowledge_length'] = self.max_knowledge_length
         params['question_encoder'] = question_encoder
         params['has_multiple_backgrounds'] = self.has_multiple_backgrounds
-        return knowledge_encoders[knowledge_encoder_type](params)
+        return knowledge_encoders[knowledge_encoder_type](**params)
 
     def _get_knowledge_selector(self, layer_num: int):
         """
@@ -253,7 +253,7 @@ class MemoryNetwork(TextTrainer):
         # calls to params.pop()), but it's possible we'll want to call this more than once.  So
         # we'll make a copy and use that instead of self.knowledge_selector_params.
         params = deepcopy(self.knowledge_selector_params)
-        selector_type = get_choice_with_default(params, "type", list(selectors.keys()))
+        selector_type = params.pop_choice_with_default("type", list(selectors.keys()))
         params['name'] = name
         return selectors[selector_type](**params)
 
@@ -277,7 +277,7 @@ class MemoryNetwork(TextTrainer):
         params['output_dim'] = self.embedding_dim['words']
         params['input_length'] = self.max_knowledge_length
 
-        combiner_type = get_choice_with_default(params, "type", list(knowledge_combiners.keys()))
+        combiner_type = params.pop_choice_with_default("type", list(knowledge_combiners.keys()))
         return knowledge_combiners[combiner_type](**params)
 
     def _get_memory_updater(self, layer_num: int):
@@ -295,7 +295,7 @@ class MemoryNetwork(TextTrainer):
         # to params.pop()), but it's possible we'll want to call this more than once.  So we'll
         # make a copy and use that instead of self.memory_updater_params.
         params = deepcopy(self.memory_updater_params)
-        updater_type = get_choice_with_default(params, "type", list(updaters.keys()))
+        updater_type = params.pop_choice_with_default("type", list(updaters.keys()))
         params['name'] = name
         params['output_dim'] = self.embedding_dim['words']
         return updaters[updater_type](**params)
@@ -315,7 +315,7 @@ class MemoryNetwork(TextTrainer):
         # we'll make a copy and use that instead of self.entailment_combiner_params.
         params = deepcopy(self.entailment_combiner_params)
         params['encoding_dim'] = self.embedding_dim['words']
-        combiner_type = get_choice_with_default(params, "type", list(entailment_input_combiners.keys()))
+        combiner_type = params.pop_choice_with_default("type", list(entailment_input_combiners.keys()))
         return entailment_input_combiners[combiner_type](**params)
 
     def _get_entailment_output(self, combined_input):
@@ -340,21 +340,20 @@ class MemoryNetwork(TextTrainer):
         # to params.pop()), but it's possible we'll want to call this more than once.  So we'll
         # make a copy and use that instead of self.entailment_model_params.
         entailment_params = deepcopy(self.entailment_model_params)
-        model_type = get_choice_with_default(entailment_params, "type", self.entailment_choices)
+        model_type = entailment_params.pop_choice_with_default("type", self.entailment_choices)
         # TODO(matt): Not great to have these two lines here.
         if model_type == 'question_answer_mlp':
             entailment_params['answer_dim'] = self.embedding_dim['words']
-        return entailment_models[model_type](entailment_params)
+        return entailment_models[model_type](**entailment_params)
 
     def _get_memory_network_recurrence(self):
         # This code determines how the memory step is controlled within the memory network. If the
         # recurrence method is 'fixed' we simply do a fixed number of memory steps. If the method is
         # adaptive, the number of steps is data dependent and is a parameter of the model.
         recurrence_params = deepcopy(self.recurrence_params)
-        recurrence_type = get_choice_with_default(recurrence_params, "type", list(recurrence_modes.keys()))
-        recurrence_params["memory_step"] = self.memory_step
+        recurrence_type = recurrence_params.pop_choice_with_default("type", list(recurrence_modes.keys()))
         recurrence_params["num_memory_layers"] = self.num_memory_layers
-        return recurrence_modes[recurrence_type](self, recurrence_params)
+        return recurrence_modes[recurrence_type](self, **recurrence_params.as_dict())
 
     @overrides
     def _build_model(self):

@@ -8,6 +8,7 @@ from deep_qa.layers.attention import MatrixAttention
 from deep_qa.layers.wrappers import OutputMask
 from ...common.test_case import DeepQaTestCase
 
+
 class TestMatrixAttentionLayer(DeepQaTestCase):
     def test_call_works_on_simple_input(self):
         sentence_1_length = 2

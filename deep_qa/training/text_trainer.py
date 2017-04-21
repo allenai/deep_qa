@@ -10,7 +10,7 @@ from overrides import overrides
 import numpy
 
 from ..common.checks import ConfigurationError
-from ..common.params import get_choice_with_default
+from ..common.params import Params
 from ..common.util import group_by_count
 from ..data.dataset import TextDataset, IndexedDataset
 from ..data.instances.instance import Instance, TextInstance
@@ -115,7 +115,7 @@ class TextTrainer(Trainer):
         information.
     """
     # pylint: enable=line-too-long
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.pretrained_embeddings_file = params.pop('pretrained_embeddings_file', None)
         self.fine_tune_embeddings = params.pop('fine_tune_embeddings', False)
         self.project_embeddings = params.pop('project_embeddings', False)
@@ -127,7 +127,7 @@ class TextTrainer(Trainer):
         self.num_word_characters = params.pop('num_word_characters', None)
 
         tokenizer_params = params.pop('tokenizer', {})
-        tokenizer_choice = get_choice_with_default(tokenizer_params, 'type', list(tokenizers.keys()))
+        tokenizer_choice = tokenizer_params.pop_choice_with_default('type', list(tokenizers.keys()))
         self.tokenizer = tokenizers[tokenizer_choice](tokenizer_params)
         # Note that the way this works is a little odd - we need each Instance object to do the
         # right thing when we call instance.words() and instance.to_indexed_instance().  So we set
@@ -137,9 +137,13 @@ class TextTrainer(Trainer):
 
         self.encoder_params = params.pop('encoder', {'default': {}})
         self.encoder_fallback_behavior = params.pop('encoder_fallback_behavior', 'crash')
-        self.seq2seq_encoder_params = params.pop('seq2seq_encoder', {'default': {"encoder_params": {},
-                                                                                 "wrapper_params": {}}})
-        self.seq2seq_encoder_fallback_behavior = params.pop('seq2seq_encoder_fallback_behavior', 'crash')
+        self.seq2seq_encoder_params = params.pop('seq2seq_encoder',
+                                                 {'default': {"encoder_params": {},
+                                                              "wrapper_params": {}}})
+        self.seq2seq_encoder_fallback_behavior = \
+            params.pop_choice_with_default('seq2seq_encoder_fallback_behavior', ['crash',
+                                                                                 "use default encoder",
+                                                                                 "use default params"])
         super(TextTrainer, self).__init__(params)
 
         self.name = "TextTrainer"
@@ -614,20 +618,18 @@ class TextTrainer(Trainer):
                                                name=name + '_projection')
         return embedding_layer, projection_layer
 
-    def __get_new_encoder(self, params: Dict[str, Any], name: str):
-        encoder_type = get_choice_with_default(params, "type", list(encoders.keys()))
+    def __get_new_encoder(self, params: Params, name: str):
+        encoder_type = params.pop_choice_with_default("type", list(encoders.keys()))
         params["name"] = name
         params.setdefault("units", self.embedding_dim['words'])
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
-    def __get_new_seq2seq_encoder(self, params: Dict[str, Any], name="seq2seq_encoder"):
+    def __get_new_seq2seq_encoder(self, params: Params, name="seq2seq_encoder"):
         encoder_params = params["encoder_params"]
         wrapper_params = params["wrapper_params"]
         wrapper_params["name"] = name
-        seq2seq_encoder_type = get_choice_with_default(encoder_params,
-                                                       "type",
-                                                       list(seq2seq_encoders.keys()))
+        seq2seq_encoder_type = encoder_params.pop_choice_with_default("type", list(seq2seq_encoders.keys()))
         encoder_params.setdefault("units", self.embedding_dim['words'])
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)

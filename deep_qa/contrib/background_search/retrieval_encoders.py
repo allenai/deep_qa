@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import gzip
 import logging
-from typing import Any, Dict, List
+from typing import List
 
 import numpy
 from overrides import overrides
@@ -10,7 +10,7 @@ import spacy
 import tqdm
 
 from ...common.models import get_submodel
-from ...common.params import get_choice, replace_none
+from ...common.params import replace_none, Params
 from ...common import util
 from ...data.instances.sentence_selection.sentence_selection_instance import SentenceSelectionInstance
 from ...models import concrete_models
@@ -73,7 +73,7 @@ class BagOfWordsRetrievalEncoder(RetrievalEncoder):
     his IDF feature.  We should update this class to also have an option for IDF encoding, and then
     we can officially retire ``bow_lsh.py``.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         embeddings_file = params.pop('embeddings_file')
         self.en_nlp = spacy.load('en')
 
@@ -151,11 +151,11 @@ class SentenceSelectionRetrievalEncoder(RetrievalEncoder):
     model_param_file: str
         This is the parameter file used to train the sentence selection model with ``run_model.py``.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         model_param_file = params.pop('model_param_file')
         model_params = pyhocon.ConfigFactory.parse_file(model_param_file)
         model_params = replace_none(model_params)
-        model_type = get_choice(model_params, 'model_class', concrete_models.keys())
+        model_type = params.pop_choice('model_class', concrete_models.keys())
         model_class = concrete_models[model_type]
         self.model = model_class(model_params)
         self.model.load_model()

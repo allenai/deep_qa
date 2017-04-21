@@ -2,6 +2,7 @@
 from unittest import mock
 
 from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 
 
@@ -14,7 +15,7 @@ class TestQuestionAnswerSimilarity(DeepQaTestCase):
     @mock.patch.object(QuestionAnswerSimilarity, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):
         self.write_question_answer_memory_network_files()
-        args = {
+        args = Params({
                 'num_hidden_layers': 1,
                 'hidden_layer_width': 2,
                 'show_summary_with_masking_info': True,
@@ -22,7 +23,7 @@ class TestQuestionAnswerSimilarity(DeepQaTestCase):
                         'data': 'training',
                         'layer_names': ['answer_similarity_softmax']
                         }
-                }
+                })
         model = self.get_model(QuestionAnswerSimilarity, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument

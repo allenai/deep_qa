@@ -1,12 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
+
 from deep_qa.models.reading_comprehension import AttentionSumReader
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 
 
 class TestAttentionSumReader(DeepQaTestCase):
     def test_train_does_not_crash_and_load_works(self):
         self.write_who_did_what_files()
-        args = {
+        args = Params({
                 'save_models': True,
                 "encoder": {
                         "default": {
@@ -24,5 +26,5 @@ class TestAttentionSumReader(DeepQaTestCase):
                         }
                 },
                 "embedding_dim": {"words": 5},
-        }
+        })
         self.ensure_model_trains_and_loads(AttentionSumReader, args)

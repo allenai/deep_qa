@@ -1,4 +1,3 @@
-from typing import Any, Dict
 from overrides import overrides
 
 from keras.layers import Input
@@ -7,6 +6,7 @@ from ...data.instances.entailment.snli_instance import SnliInstance
 from ...training.text_trainer import TextTrainer
 from ...layers.entailment_models import DecomposableAttentionEntailment
 from ...training.models import DeepQaModel
+from ...common.params import Params
 
 
 class DecomposableAttention(TextTrainer):
@@ -41,7 +41,7 @@ class DecomposableAttention(TextTrainer):
         layer object, and control things like the number of output labels, number of hidden layers
         in the entailment MLPs, etc.  See that class for a complete description of options here.
     '''
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.num_seq2seq_layers = params.pop('num_seq2seq_layers', 0)
         self.share_encoders = params.pop('share_encoders', True)
         self.decomposable_attention_params = params.pop('decomposable_attention_params', {})

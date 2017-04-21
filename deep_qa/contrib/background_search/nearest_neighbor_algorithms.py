@@ -1,9 +1,10 @@
 from collections import OrderedDict
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy
 from sklearn.neighbors import LSHForest
+from ...common.params import Params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -46,7 +47,7 @@ class ScikitLearnLsh(NearestNeighborAlgorithm):
     random_state: int, optional (default=12345)
         Used to initialize the LSHForest, so that runs are consistent.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         random_state = params.pop('random_state', 12345)
         self.lsh = LSHForest(random_state=random_state)
 

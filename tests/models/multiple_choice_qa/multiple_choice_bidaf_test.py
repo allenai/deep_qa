@@ -4,6 +4,7 @@ import pytest
 
 from deep_qa.contrib.models.multiple_choice_bidaf import MultipleChoiceBidaf
 from deep_qa.models.reading_comprehension import BidirectionalAttentionFlow
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 
@@ -19,23 +20,23 @@ class TestMultipleChoiceBidaf(DeepQaTestCase):
                       "figure out and fix the Keras 2 bug (or wait for someone else to do it...).")
     def test_trains_and_loads_correctly(self):
         self.write_span_prediction_files()
-        args = {
+        args = Params({
                 'model_serialization_prefix': self.TEST_DIR + "_bidaf",
                 'embedding_dim': {"words": 4, "characters": 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
-                }
+                })
         bidaf_model = self.get_model(BidirectionalAttentionFlow, args)
         bidaf_model.train()
         K.clear_session()
 
         bidaf_model_params = self.get_model_params(BidirectionalAttentionFlow, args)
-        args = {
+        args = Params({
                 'bidaf_params': bidaf_model_params,
                 'train_bidaf': False,
                 'similarity_function': {'type': 'linear', 'combination': 'x,y'},
-                }
+                })
         self.write_who_did_what_files()
         model, _ = self.ensure_model_trains_and_loads(MultipleChoiceBidaf, args)
         # All of the params come from the linear similarity function in the attention layer,

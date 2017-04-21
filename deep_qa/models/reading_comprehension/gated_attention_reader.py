@@ -1,14 +1,16 @@
-from typing import Any, Dict
+from typing import Dict
 from overrides import overrides
 from keras.layers import Input, Dropout, Concatenate
 from keras.callbacks import LearningRateScheduler
 
 from ...data.instances.reading_comprehension.mc_question_passage_instance import McQuestionPassageInstance
 from ...common.checks import ConfigurationError
+
 from ...layers.backend import BatchDot
 from ...layers.attention import Attention, MaskedSoftmax, GatedAttention
 from ...layers import OptionAttentionSum, Overlap, L1Normalize
 from ...layers import VectorMatrixSplit, BiGRUIndexSelector
+from ...common.params import Params
 from ...training.text_trainer import TextTrainer
 from ...training.models import DeepQaModel
 
@@ -54,7 +56,7 @@ class GatedAttentionReader(TextTrainer):
         indicates, for each word in the document, whether it appears in the query
         and has been shown to improve reading comprehension performance.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.max_question_length = params.pop('max_question_length', None)
         self.max_passage_length = params.pop('max_passage_length', None)
         self.max_option_length = params.pop('max_option_length', None)

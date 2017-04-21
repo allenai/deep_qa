@@ -1,16 +1,17 @@
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 from keras.layers import Layer
 from overrides import overrides
 
 from .tokenizer import Tokenizer
 from ..data_indexer import DataIndexer
+from ...common.params import Params
 
 
 class CharacterTokenizer(Tokenizer):
     """
     A CharacterTokenizer splits strings into character tokens.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         super(CharacterTokenizer, self).__init__(params)
 
     @overrides

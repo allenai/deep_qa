@@ -3,7 +3,7 @@ from unittest import mock
 
 import numpy
 
-from deep_qa.common.params import get_choice_with_default
+from deep_qa.common.params import Params
 from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification import ClassificationModel
 from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
@@ -18,14 +18,14 @@ class TestTextTrainer(DeepQaTestCase):
         self.write_true_false_model_files()
         model = self.get_model(ClassificationModel, {'encoder': {}})
         encoder = model._get_encoder()
-        encoder_type = get_choice_with_default({}, "type", list(encoders.keys()))
+        encoder_type = Params({}).pop_choice_with_default("type", list(encoders.keys()))
         expected_encoder = encoders[encoder_type](**{})
         assert isinstance(encoder, expected_encoder.__class__)
 
     @mock.patch.object(ClassificationModel, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):
         self.write_true_false_model_files()
-        args = {
+        args = Params({
                 'embedding_dim': {'words': 2, 'characters': 2},
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
@@ -38,7 +38,7 @@ class TestTextTrainer(DeepQaTestCase):
                                 'combined_word_embedding_for_sentence_input',
                                 ],
                         }
-                }
+                })
         model = self.get_model(ClassificationModel, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
@@ -51,7 +51,7 @@ class TestTextTrainer(DeepQaTestCase):
             word_embeddings = output_dict['combined_word_embedding_for_sentence_input'][0]
             assert len(word_embeddings) == 6
             assert word_embeddings[0].shape == (3, 4)
-            word_masks = output_dict['masks']['combined_word_embedding_for_sentence_input']
+            word_masks = output_dict['combined_word_embedding_for_sentence_input'][1]
             # Zeros are added to sentences _from the left_.
             assert word_masks[0][0] == 0
             assert word_masks[0][1] == 0
@@ -71,7 +71,7 @@ class TestTextTrainer(DeepQaTestCase):
     @mock.patch.object(QuestionAnswerSimilarity, '_output_debug_info')
     def test_words_and_characters_works_with_matrices(self, _output_debug_info):
         self.write_question_answer_memory_network_files()
-        args = {
+        args = Params({
                 'embedding_dim': {'words': 2, 'characters': 2},
                 'tokenizer': {'type': 'words and characters'},
                 'debug': {
@@ -83,7 +83,7 @@ class TestTextTrainer(DeepQaTestCase):
                                 'combined_word_embedding_for_answer_input',
                                 ],
                         }
-                }
+                })
         model = self.get_model(QuestionAnswerSimilarity, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
@@ -96,7 +96,7 @@ class TestTextTrainer(DeepQaTestCase):
             word_embeddings = output_dict['combined_word_embedding_for_answer_input'][0]
             assert len(word_embeddings) == 4
             assert word_embeddings[0].shape == (3, 2, 4)
-            word_masks = output_dict['masks']['combined_word_embedding_for_answer_input']
+            word_masks = output_dict['combined_word_embedding_for_answer_input'][1]
             # Zeros are added to answer words _from the left_, and to answer options from the
             # _right_.
             assert numpy.all(word_masks[0, 0, :] == numpy.asarray([1, 1]))
@@ -115,13 +115,13 @@ class TestTextTrainer(DeepQaTestCase):
         model.train()
 
     def test_load_model_and_fit(self):
-        args = {
+        args = Params({
                 'test_files': [self.TEST_FILE],
                 'embedding_dim': {'words': 4, 'characters': 2},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
-        }
+        })
         self.write_true_false_model_files()
         model, loaded_model = self.ensure_model_trains_and_loads(ClassificationModel, args)
 
@@ -138,7 +138,7 @@ class TestTextTrainer(DeepQaTestCase):
         #                 loaded_model.model.predict(validation_arrays[0]))
 
     def test_data_generator_works(self):
-        args = {
+        args = Params({
                 'test_files': [self.TEST_FILE],
                 'embedding_dim': {'words': 4, 'characters': 2},
                 'save_models': True,
@@ -146,13 +146,13 @@ class TestTextTrainer(DeepQaTestCase):
                 'use_data_generator': True,
                 'use_dynamic_padding': False,
                 'show_summary_with_masking_info': True,
-        }
+        })
         self.write_true_false_model_files()
         self.ensure_model_trains_and_loads(ClassificationModel, args)
 
     @requires_tensorflow
     def test_dynamic_padding_works(self):
-        args = {
+        args = Params({
                 'test_files': [self.TEST_FILE],
                 'embedding_dim': {'words': 4, 'characters': 2},
                 'save_models': True,
@@ -160,18 +160,18 @@ class TestTextTrainer(DeepQaTestCase):
                 'use_data_generator': True,
                 'use_dynamic_padding': True,
                 'batch_size': 2,
-        }
+        })
         self.write_true_false_model_files()
         self.ensure_model_trains_and_loads(ClassificationModel, args)
 
     def test_pretrained_embeddings_works_correctly(self):
         self.write_true_false_model_files()
         self.write_pretrained_vector_files()
-        args = {
+        args = Params({
                 'embedding_dim': {'words': 8, 'characters': 8},
                 'pretrained_embeddings_file': self.PRETRAINED_VECTORS_GZIP,
                 'fine_tune_embeddings': False,
                 'project_embeddings': False,
-                }
+                })
         model = self.get_model(ClassificationModel, args)
         model.train()

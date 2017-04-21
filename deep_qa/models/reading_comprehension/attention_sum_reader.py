@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 from overrides import overrides
 from keras.layers import Input
 
@@ -7,6 +7,7 @@ from ...layers import L1Normalize
 from ...layers import OptionAttentionSum
 from ...layers.attention import Attention
 from ...training import TextTrainer
+from ...common.params import Params
 from ...training.models import DeepQaModel
 
 
@@ -20,7 +21,7 @@ class AttentionSumReader(TextTrainer):
     document, and it then selects the option with the highest summed or mean
     weight as the answer.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.max_question_length = params.pop('max_question_length', None)
         self.max_passage_length = params.pop('max_passage_length', None)
         self.max_option_length = params.pop('max_option_length', None)

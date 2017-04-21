@@ -2,6 +2,7 @@
 from unittest import mock
 
 from deep_qa.models.multiple_choice_qa import MultipleTrueFalseMemoryNetwork
+from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
 from ...common.test_markers import requires_tensorflow
 
@@ -17,7 +18,7 @@ class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
 
     @mock.patch.object(MultipleTrueFalseMemoryNetwork, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):
-        args = {
+        args = Params({
                 'num_options': 5,
                 'embedding_dim': {"words": 2},
                 'max_knowledge_length': 3,
@@ -29,7 +30,7 @@ class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
                                 'timedist_knowledge_selector_0',
                                 ],
                         }
-                }
+                })
         model = self.get_model(MultipleTrueFalseMemoryNetwork, args)
 
         def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
@@ -55,6 +56,6 @@ class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
 
     @requires_tensorflow
     def test_train_does_not_crash_using_adaptive_recurrence(self):
-        args = {'recurrence_mode': {'type': 'adaptive'}}
+        args = Params({'recurrence_mode': {'type': 'adaptive'}})
         model = self.get_model(MultipleTrueFalseMemoryNetwork, args)
         model.train()

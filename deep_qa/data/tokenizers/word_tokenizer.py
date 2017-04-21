@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from overrides import overrides
 from keras.layers import Layer
@@ -6,6 +6,7 @@ from keras.layers import Layer
 from .tokenizer import Tokenizer
 from .word_processor import WordProcessor
 from ..data_indexer import DataIndexer
+from ...common.params import Params
 
 
 class WordTokenizer(Tokenizer):
@@ -26,7 +27,7 @@ class WordTokenizer(Tokenizer):
         splitting, stemming, and filtering words.  See ``WordProcessor`` for a complete description
         of available parameters.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.word_processor = WordProcessor(params.pop('processor', {}))
         super(WordTokenizer, self).__init__(params)
 

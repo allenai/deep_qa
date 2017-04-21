@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 from overrides import overrides
 
 from keras import backend as K
@@ -8,6 +8,7 @@ from ...data.instances.multiple_choice_qa import QuestionAnswerInstance
 from ...layers.wrappers import EncoderWrapper
 from ...layers.attention import Attention
 from ...training import TextTrainer
+from ...common.params import Params
 from ...training.models import DeepQaModel
 
 
@@ -21,7 +22,7 @@ class QuestionAnswerSimilarity(TextTrainer):
     between words in the question and words in the answer are necessary to select the correct
     choice.  There is no notion of external memory or background knowledge here.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Params):
         self.num_hidden_layers = params.pop('num_hidden_layers', 1)
         self.hidden_layer_width = params.pop('hidden_layer_width', 50)
         self.hidden_layer_activation = params.pop('hidden_layer_activation', 'relu')

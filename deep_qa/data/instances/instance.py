@@ -20,6 +20,7 @@ for each ``Instance`` type.
 import itertools
 from typing import Any, Callable, Dict, List
 
+from ...common.params import Params
 from ..tokenizers import tokenizers
 from ..data_indexer import DataIndexer
 
@@ -69,7 +70,7 @@ class TextInstance(Instance):
     options.  By default we use word tokens.  You can override this by setting
     the ``encoder`` class variable.
     """
-    tokenizer = tokenizers['words']({})
+    tokenizer = tokenizers['words'](Params({}))
 
     def __init__(self, label, index: int=None):
         super(TextInstance, self).__init__(label, index)
