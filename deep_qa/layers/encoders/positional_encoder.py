@@ -6,6 +6,7 @@ from ..masked_layer import MaskedLayer
 from ...tensors.backend import switch
 
 
+
 class PositionalEncoder(MaskedLayer):
     '''
     A ``PositionalEncoder`` is very similar to a kind of weighted bag of words encoder,
@@ -50,20 +51,6 @@ class PositionalEncoder(MaskedLayer):
     def call(self, inputs, mask=None):
         # pylint: disable=redefined-variable-type
 
-        def my_keras_cumsum(tensor, axis=0):
-            """
-            Keras doesn't have a cumsum operation yet, but it seems to be nearly there - see this PR:
-            https://github.com/fchollet/keras/pull/3791.
-            """
-            # Putting the imports here so that tests and things don't have to run them, unless
-            # they're using this encoder with the particular backend.
-            if K.backend() == "tensorflow":
-                import tensorflow as tf
-                return tf.cumsum(tensor, axis=axis)
-            else:
-                import theano.tensor.extra_ops as T
-                return T.cumsum(tensor, axis=axis)
-
         # This section implements the positional encoder on all the vectors at once.
         # The general idea is to use ones matrices in the shape of `inputs` to create indexes per
         # word.
@@ -82,13 +69,13 @@ class PositionalEncoder(MaskedLayer):
 
         if mask is None:
             one_over_m = ones_like_x / masked_m
-            j_index = my_keras_cumsum(ones_like_x, 1)
+            j_index = K.cumsum(ones_like_x, 1)
         else:
             one_over_m = switch(ones_like_x, ones_like_x/masked_m, K.zeros_like(ones_like_x))
 
-            j_index = my_keras_cumsum(ones_like_x, 1) * K.expand_dims(float_mask, 2)
+            j_index = K.cumsum(ones_like_x, 1) * K.expand_dims(float_mask, 2)
 
-        k_over_d = my_keras_cumsum(ones_like_x, 2) * 1.0/K.cast(K.shape(inputs)[2], 'float32')
+        k_over_d = K.cumsum(ones_like_x, 2) * 1.0/K.cast(K.shape(inputs)[2], 'float32')
 
         l_weighting_vectors = (ones_like_x - (j_index * one_over_m)) - \
                               (k_over_d * (ones_like_x - 2 * j_index * one_over_m))

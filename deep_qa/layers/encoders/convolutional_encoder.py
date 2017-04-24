@@ -110,12 +110,6 @@ class CNNEncoder(MaskedLayer):
         filter_outputs = [K.batch_flatten(max_pooling_layer.call(convolution_layer.call(inputs)))
                           for max_pooling_layer, convolution_layer in zip(self.max_pooling_layers,
                                                                           self.convolution_layers)]
-        if K.backend() == 'theano':
-            # Just using the `call` method on layers does not set the _keras_shape, which is
-            # necessary with the theano backend.  So we set it manually here to what we expect the
-            # shape to be.
-            for filter_output in filter_outputs:
-                filter_output._keras_shape = (None, self.num_filters)  # pylint: disable=protected-access
         maxpool_output = Concatenate()(filter_outputs) if len(filter_outputs) > 1 else filter_outputs[0]
         return self.projection_layer.call(maxpool_output)
 

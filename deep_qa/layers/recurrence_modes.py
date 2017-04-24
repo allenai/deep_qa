@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
-from keras import backend as K
-
+from .adaptive_recurrence import AdaptiveRecurrence
 
 class FixedRecurrence:
     '''
@@ -23,6 +22,5 @@ class FixedRecurrence:
 
 recurrence_modes = OrderedDict()  # pylint: disable=invalid-name
 recurrence_modes["fixed"] = FixedRecurrence
-if K.backend() == 'tensorflow':
-    from .adaptive_recurrence import AdaptiveRecurrence
-    recurrence_modes["adaptive"] = AdaptiveRecurrence
+
+recurrence_modes["adaptive"] = AdaptiveRecurrence

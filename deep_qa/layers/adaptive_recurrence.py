@@ -25,7 +25,7 @@ class AdaptiveRecurrence:
     debugging code within this repository, as all the parameters for intermediate layers will
     be assigned to the AdaptiveLayer.
 
-    Additionally, because Tensorflow (and Theano) build static computational graphs, this recurrence
+    Additionally, because Tensorflow builds static computational graphs, this recurrence
     method only supports Layers within it's adaptive step that share weights across memory network steps.
     The reason for this is because we don't know the number of steps we are going to do in advance,
     Tensorflow can't generate all the required weights. However, if weight sharing is used, Tensorflow
@@ -34,11 +34,6 @@ class AdaptiveRecurrence:
     '''
     # pylint: disable=unused-argument
     def __init__(self, memory_network, params: Dict=None, **kwargs):
-        if K.backend() == 'theano':
-            raise Exception("You are trying to use an adaptive method for performing memory network "
-                            "steps using Keras with Theano as its backend. This recurrence method "
-                            "requires Keras to use Tensorflow as it's backend, as it has native "
-                            "tensorflow code mixed in which is not compatible with theano.")
         if params is None:
             params = {}
         self.memory_network = memory_network

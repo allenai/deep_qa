@@ -97,35 +97,20 @@ class WordAndCharacterTokenizer(Tokenizer):
         # that you have 0s in the word-level mask, so `Concatenate` further below will do the right
         # thing.
 
-        if text_trainer.use_dynamic_padding:
-            # character_embedding has shape `(batch_size, ..., num_words, word_length,
-            # embedding_dim)`, but our encoder expects a tensor with shape `(batch_size,
-            # word_length, embedding_dim)` to the word encoder.  Typically, we would use Keras'
-            # TimeDistributed layer to handle this.  However, if we're using dynamic padding, we
-            # may not know `num_words` (which we're collapsing) or even `word_length` at runtime,
-            # which messes with TimeDistributed.  In order to handle this correctly, we'll use
-            # CollapseToBatch and ExpandFromBatch instead of TimeDistributed.  Those layers
-            # together do basically the same thing, collapsing all of the unwanted dimensions into
-            # the batch_size temporarily, but they can handle unknown runtime shapes.
-            dims_to_collapse = K.ndim(character_embedding) - 3
-            collapsed_character_embedding = CollapseToBatch(dims_to_collapse)(character_embedding)
-            word_encoder = text_trainer._get_encoder(name="word", fallback_behavior="use default params")
-            collapsed_word_encoding = word_encoder(collapsed_character_embedding)
-            word_encoding = ExpandFromBatch(dims_to_collapse)([collapsed_word_encoding, character_embedding])
-        else:
-            # TODO(matt): I made this an if-else block just to appease Theano, really.  Using
-            # CollapseToBatch and ExpandFromBatch is exactly what TimeDistributed does in this
-            # case, so the two are equivalent in tensorflow.  Those layers don't work in Theano,
-            # though, so we have this block to let you still keep around Theano for a bit if you
-            # want to.  We'll be ditching Theano soon, though, and then this if/else block can be
-            # removed, just keeping the version above.
-            word_encoder = EncoderWrapper(
-                    text_trainer._get_encoder(name="word", fallback_behavior="use default params"))
-            # We might need to TimeDistribute this again, if our input has ndim higher than 3.
-            for _ in range(3, K.ndim(characters)):
-                word_encoder = EncoderWrapper(word_encoder, name="timedist_" + word_encoder.name)
-            word_encoding = word_encoder(character_embedding)
-
+        # character_embedding has shape `(batch_size, ..., num_words, word_length,
+        # embedding_dim)`, but our encoder expects a tensor with shape `(batch_size,
+        # word_length, embedding_dim)` to the word encoder.  Typically, we would use Keras'
+        # TimeDistributed layer to handle this.  However, if we're using dynamic padding, we
+        # may not know `num_words` (which we're collapsing) or even `word_length` at runtime,
+        # which messes with TimeDistributed.  In order to handle this correctly, we'll use
+        # CollapseToBatch and ExpandFromBatch instead of TimeDistributed.  Those layers
+        # together do basically the same thing, collapsing all of the unwanted dimensions into
+        # the batch_size temporarily, but they can handle unknown runtime shapes.
+        dims_to_collapse = K.ndim(character_embedding) - 3
+        collapsed_character_embedding = CollapseToBatch(dims_to_collapse)(character_embedding)
+        word_encoder = text_trainer._get_encoder(name="word", fallback_behavior="use default params")
+        collapsed_word_encoding = word_encoder(collapsed_character_embedding)
+        word_encoding = ExpandFromBatch(dims_to_collapse)([collapsed_word_encoding, character_embedding])
         # If you're embedding multiple inputs in your model, we need the final concatenation here
         # to have a unique name each time.  In order to get a unique name, we use the name of the
         # input layer.  Except sometimes Keras adds funny things to the ends of the input layer, so

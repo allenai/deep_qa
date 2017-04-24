@@ -122,14 +122,14 @@ class BatchDot(MaskedLayer):
         elif a_dot_axis < b_dot_axis:
             # tensor_a has less dimensions than tensor_b.
             # We would tile tensor_a to have the same shape as tensor_b,
-            # but we can just expand tensor_a and have Theano/TF broadcast
+            # but we can just expand tensor_a and have TF broadcast
             # over the last dimension
             float_mask_a = K.expand_dims(float_mask_a, axis=-1)
             final_mask = float_mask_a * float_mask_b
         else:
             # tensor_a has more dimensions than tensor_b.
             # We would tile tensor_b to have the same shape as tensor_a,
-            # but we can just expand tensor_b and have Theano/TF broadcast
+            # but we can just expand tensor_b and have TF broadcast
             # over the last dimension
             float_mask_b = K.expand_dims(float_mask_b, axis=-1)
             final_mask = float_mask_a * float_mask_b
@@ -163,10 +163,6 @@ class BatchDot(MaskedLayer):
     @overrides
     def call(self, inputs, mask=None):
         tensor_a, tensor_b = inputs
-        if (K.ndim(tensor_a) > 3 or K.ndim(tensor_b) > 3) and K.backend() == 'theano':
-            raise RuntimeError("K.batch_dot() in theano is broken for tensors with more than"
-                               " three dimensions.  Use tensorflow instead.")
-
         a_dot_axis = K.ndim(tensor_a) - 1
         b_dot_axis = K.ndim(tensor_b) - 1
         if a_dot_axis > b_dot_axis:

@@ -36,8 +36,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)
-        if K.backend() == "tensorflow":
-            K.clear_session()
+        K.clear_session()
 
     def get_model_params(self, model_class, additional_arguments=None):
         params = Params({})

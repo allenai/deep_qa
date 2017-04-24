@@ -41,13 +41,7 @@ class Linear(SimilarityFunction):
     def compute_similarity(self, tensor_1, tensor_2):
         combined_tensors = self._combine_tensors(tensor_1, tensor_2)
         dot_product = K.squeeze(K.dot(combined_tensors, self.weight_vector), axis=-1)
-        if K.backend() == 'theano':
-            # For some reason theano is having a hard time broadcasting the elementwise addition,
-            # so we need to do this repeat.
-            bias = K.repeat_elements(self.bias, K.int_shape(tensor_2)[-2], 0)
-        else:
-            bias = self.bias
-        return self.activation(dot_product + bias)
+        return self.activation(dot_product + self.bias)
 
     def _combine_tensors(self, tensor_1, tensor_2):
         combined_tensor = self._get_combination(self.combinations[0], tensor_1, tensor_2)

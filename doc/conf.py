@@ -93,6 +93,8 @@ autodoc_default_flags = ['private-members']
 def maybe_skip_member(app, what, name, obj, skip, options):
     if '__' in name:
         return True
+    if name == 'call':
+        return True
     return skip
 
 def setup(app):

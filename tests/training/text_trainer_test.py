@@ -8,7 +8,6 @@ from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification import ClassificationModel
 from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
 from ..common.test_case import DeepQaTestCase
-from ..common.test_markers import requires_tensorflow
 
 
 class TestTextTrainer(DeepQaTestCase):
@@ -150,7 +149,6 @@ class TestTextTrainer(DeepQaTestCase):
         self.write_true_false_model_files()
         self.ensure_model_trains_and_loads(ClassificationModel, args)
 
-    @requires_tensorflow
     def test_dynamic_padding_works(self):
         args = Params({
                 'test_files': [self.TEST_FILE],

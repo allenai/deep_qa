@@ -33,6 +33,7 @@ def log_keras_version_info():
     if backend == 'theano':
         import theano
         logger.info("Theano version: " + theano.__version__)
+        logger.warning("Using Keras' theano backend is not supported! Expect to crash...")
     elif backend == 'tensorflow':
         import tensorflow
         logger.info("Tensorflow version: " + tensorflow.__version__)  # pylint: disable=no-member

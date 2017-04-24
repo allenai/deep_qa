@@ -27,5 +27,4 @@ from .knowledge_selectors import ParameterizedHeuristicMatchingKnowledgeSelector
 from .memory_updaters import updaters, DenseConcatMemoryUpdater
 from .memory_updaters import DenseConcatNoQuestionMemoryUpdater, SumMemoryUpdater
 from .recurrence_modes import recurrence_modes, FixedRecurrence
-if K.backend() == "tensorflow":
-    from .recurrence_modes import AdaptiveRecurrence
+from .recurrence_modes import AdaptiveRecurrence

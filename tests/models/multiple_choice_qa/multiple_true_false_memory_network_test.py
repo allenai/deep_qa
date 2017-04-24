@@ -4,7 +4,6 @@ from unittest import mock
 from deep_qa.models.multiple_choice_qa import MultipleTrueFalseMemoryNetwork
 from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
-from ...common.test_markers import requires_tensorflow
 
 
 class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
@@ -54,7 +53,6 @@ class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
         _output_debug_info.side_effect = new_debug
         model.train()
 
-    @requires_tensorflow
     def test_train_does_not_crash_using_adaptive_recurrence(self):
         args = Params({'recurrence_mode': {'type': 'adaptive'}})
         model = self.get_model(MultipleTrueFalseMemoryNetwork, args)

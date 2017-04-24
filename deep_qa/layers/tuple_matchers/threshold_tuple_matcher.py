@@ -187,9 +187,6 @@ class ThresholdTupleMatcher(MaskedLayer):
         # shape: (batch size, num_slots, num_slot_words_tuple1, num_slot_words_tuple2)
         # TODO(becky): this isn't actually differentiable, is it?  fix?? don't care??
         threshold = self.similarity_threshold
-        if K.backend() == 'theano':
-            # Theano doesn't want to automatically broadcast the >=, so we'll do a tile.
-            threshold = K.tile(self.similarity_threshold, [1, 1, num_slot_words_t1, num_slot_words_t2])
         tuple_words_overlap = K.cast(tuple_word_similarities >= threshold, "float32")
 
         # Exclude padded/masked elements from counting.

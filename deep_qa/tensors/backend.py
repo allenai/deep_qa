@@ -4,6 +4,7 @@ because a current function in keras.backend is broken, some are things that just
 implemented.
 """
 import keras.backend as K
+import tensorflow as tf
 
 VERY_LARGE_NUMBER = 1e30
 VERY_SMALL_NUMBER = 1e-30
@@ -17,31 +18,14 @@ def switch(cond, then_tensor, else_tensor):
     tensorflow's where, we can exactly retrieve this functionality.
     """
 
-    if K.backend() == 'tensorflow':
-        import tensorflow as tf
-        cond_shape = cond.get_shape()
-        input_shape = then_tensor.get_shape()
-        if cond_shape[-1] != input_shape[-1] and cond_shape[-1] == 1:
-            # This happens when the last dim in the input is an embedding dimension. Keras usually does not
-            # mask the values along that dimension. Theano broadcasts the value passed along this dimension,
-            # but TF does not. Using K.dot() since cond can be a tensor.
-            cond = K.dot(tf.cast(cond, tf.float32), tf.ones((1, input_shape[-1])))
-        return tf.where(tf.cast(cond, dtype=tf.bool), then_tensor, else_tensor)
-    else:
-        import theano.tensor as T
-        return T.switch(cond, then_tensor, else_tensor)
-
-
-def cumulative_sum(tensor, axis=-1):
-    """
-    Keras' backend does not have tf.cumsum().  We're adding it here.
-    """
-    if K.backend() == 'tensorflow':
-        import tensorflow as tf
-        return tf.cumsum(tensor, axis=axis)
-    else:
-        import theano.tensor as T
-        return T.cumsum(tensor, axis=axis)
+    cond_shape = cond.get_shape()
+    input_shape = then_tensor.get_shape()
+    if cond_shape[-1] != input_shape[-1] and cond_shape[-1] == 1:
+        # This happens when the last dim in the input is an embedding dimension. Keras usually does not
+        # mask the values along that dimension. Theano broadcasts the value passed along this dimension,
+        # but TF does not. Using K.dot() since cond can be a tensor.
+        cond = K.dot(tf.cast(cond, tf.float32), tf.ones((1, input_shape[-1])))
+    return tf.where(tf.cast(cond, dtype=tf.bool), then_tensor, else_tensor)
 
 
 def very_negative_like(tensor):

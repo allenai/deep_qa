@@ -6,7 +6,6 @@ import keras.backend as K
 
 from deep_qa.tensors.backend import l1_normalize
 from deep_qa.tensors.masked_operations import masked_batch_dot, masked_softmax
-from ..common.test_markers import requires_tensorflow
 
 
 class TestMaskedOperations:
@@ -106,13 +105,10 @@ class TestMaskedOperations:
                                                  K.variable(mask_a)))
         assert numpy.all(result == flipped_result)
 
-    @requires_tensorflow
     def test_masked_batch_dot_handles_uneven_higher_order_tensors(self):
         # We're going to test masked_batch_dot with tensors of shape (batch_size, common,
         # a_length, embedding_dim) and (batch_size, common, embedding_dim).  The result should have
-        # shape (batch_size, common, a_length).  This currently doesn't work with the theano
-        # backend, because of an inconsistency in K.batch_dot for higher-order tensors.  The code
-        # will crash if you try to run this in Theano, so we require tensorflow for this test.
+        # shape (batch_size, common, a_length).
         embedding_dim = 3
         common_length = 4
         a_length = 5

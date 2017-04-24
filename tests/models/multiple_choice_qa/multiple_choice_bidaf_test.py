@@ -6,15 +6,9 @@ from deep_qa.contrib.models.multiple_choice_bidaf import MultipleChoiceBidaf
 from deep_qa.models.reading_comprehension import BidirectionalAttentionFlow
 from deep_qa.common.params import Params
 from ...common.test_case import DeepQaTestCase
-from ...common.test_markers import requires_tensorflow
 
 
 class TestMultipleChoiceBidaf(DeepQaTestCase):
-    # Theano has some problems with saving the loaded model in h5, because of how it names weights
-    # (pretty sure this arises because we're using two different BiDAF-based submodels in our
-    # model).  We'll punt on fixing that for now; the fix would likely be a pretty major hack.
-    # Theano can _train_ the model alright, but it can't _save_ it, or (presumably) load it.
-    @requires_tensorflow
     @pytest.mark.skip(reason="There is some Keras 2 bug that blocks this model from working.  "
                       "Checkout an Keras 1 version of the code if you want to use this model, or "
                       "figure out and fix the Keras 2 bug (or wait for someone else to do it...).")

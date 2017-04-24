@@ -1,7 +1,7 @@
 from overrides import overrides
 
+from keras import backend as K
 from ..masked_layer import MaskedLayer
-from ...tensors.backend import cumulative_sum
 
 
 class Envelope(MaskedLayer):
@@ -12,8 +12,8 @@ class Envelope(MaskedLayer):
 
     Specifically, the computation done here is the following::
 
-        after_span_begin = cumulative_sum(span_begin)
-        after_span_end = cumulative_sum(span_end)
+        after_span_begin = K.cumsum(span_begin, axis=-1)
+        after_span_end = K.cumsum(span_end, axis=-1)
         before_span_end = 1 - after_span_end
         envelope = after_span_begin * before_span_end
 
@@ -49,7 +49,7 @@ class Envelope(MaskedLayer):
     @overrides
     def call(self, inputs, mask=None):
         span_begin, span_end = inputs
-        after_span_begin = cumulative_sum(span_begin)
-        after_span_end = cumulative_sum(span_end)
+        after_span_begin = K.cumsum(span_begin, axis=-1)
+        after_span_end = K.cumsum(span_end, axis=-1)
         before_span_end = 1.0 - after_span_end
         return after_span_begin * before_span_end

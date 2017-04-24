@@ -6,13 +6,12 @@ from keras.layers import Input, Dense
 from keras.models import Model
 
 from deep_qa.layers.backend import CollapseToBatch, ExpandFromBatch, AddMask
-from ...common.test_markers import requires_tensorflow
+
 
 class TestCollapseAndExpand:
     # We need to test CollapseToBatch and ExpandFromBatch together, because Keras doesn't like it
     # if you change the batch size between inputs and outputs.  It makes sense to test them
     # together, anyway.
-    @requires_tensorflow
     def test_collapse_and_expand_works_with_dynamic_shape(self):
         batch_size = 3
         length1 = 5

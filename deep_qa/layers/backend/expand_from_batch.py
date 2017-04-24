@@ -32,13 +32,6 @@ class ExpandFromBatch(MaskedLayer):
     ----------
     num_to_expand: int
         The number of dimensions to expand from the batch size.
-
-    Notes
-    -----
-    This layer requires tensorflow, because of the way we get runtime shapes.  I tried getting it
-    to work with Theano using K.shape, etc., but T.reshape requires an argument in this usage that
-    K.reshape doesn't pass it, so it's not going to work, and not worth it to make it work, as
-    we'll probably be dropping theano support entirely soon.
     """
     def __init__(self, num_to_expand: int, **kwargs):
         self.num_to_expand = num_to_expand

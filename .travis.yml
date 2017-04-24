@@ -13,10 +13,8 @@ cache:
 
 env:
   matrix:
-    # test theano keras backend (theano first, because it's slower)
-    - KERAS_BACKEND="theano" COVERAGE="true"
-    # test tensorflow keras backend
-    - KERAS_BACKEND="tensorflow" COVERAGE="true"
+    # run tests, submit coverage info
+    - COVERAGE="true"
     # pylint checks skip the tests
     - RUN_PYLINT="true" SKIP_TESTS="true"
 

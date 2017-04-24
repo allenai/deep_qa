@@ -22,8 +22,6 @@ class TestBOWEncoder:
         embedding_weights = embedding.get_weights()[0]  # get_weights returns a list with one element.
         expected_output = numpy.mean(embedding_weights[test_input], axis=1)
         actual_output = model.predict(test_input)
-        # Exact comparison of the two arrays may break because theano's floating point operations
-        # usually have an epsilon. The following comparison is done till the sixth decimal, hence good enough.
         numpy.testing.assert_array_almost_equal(expected_output, actual_output)
 
     def test_on_masked_input(self):

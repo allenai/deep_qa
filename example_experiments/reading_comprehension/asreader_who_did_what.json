@@ -1,7 +1,6 @@
 {
     "model_class": "AttentionSumReader",
     "model_serialization_prefix": "models/multiple_choice_qa/asreader",
-    "preferred_backend": "theano",
     "encoder": {
         "default": {
             "type": "bi_gru",

@@ -160,14 +160,7 @@ class TestBatchDotLayer(DeepQaTestCase):
         masked_tensor_a = Masking(mask_value=0)(input_tensor_a)
         input_tensor_b = Input(shape=(4, 2, 5))
         masked_tensor_b = Masking(mask_value=0)(input_tensor_b)
-
-        if K.backend() == "theano":
-            self.assertRaises(RuntimeError, BatchDot(),
-                              [masked_tensor_a, masked_tensor_b])
-            return
-        else:
-            a_dot_b = BatchDot()([masked_tensor_a, masked_tensor_b])
-
+        a_dot_b = BatchDot()([masked_tensor_a, masked_tensor_b])
         a_dot_b_mask = OutputMask()(a_dot_b)
         model = Model(inputs=[input_tensor_a, input_tensor_b],
                       outputs=[a_dot_b, a_dot_b_mask])
@@ -202,13 +195,7 @@ class TestBatchDotLayer(DeepQaTestCase):
         masked_tensor_a = Masking(mask_value=0)(input_tensor_a)
         input_tensor_b = Input(shape=(4, 5))
         masked_tensor_b = Masking(mask_value=0)(input_tensor_b)
-
-        if K.backend() == "theano":
-            self.assertRaises(RuntimeError, BatchDot(),
-                              [masked_tensor_a, masked_tensor_b])
-            return
-        else:
-            a_dot_b = BatchDot()([masked_tensor_a, masked_tensor_b])
+        a_dot_b = BatchDot()([masked_tensor_a, masked_tensor_b])
         a_dot_b_mask = OutputMask()(a_dot_b)
         model = Model(inputs=[input_tensor_a, input_tensor_b],
                       outputs=[a_dot_b, a_dot_b_mask])
@@ -233,10 +220,5 @@ class TestBatchDotLayer(DeepQaTestCase):
         b_shapes = [(5, 10), (1, 1, 1), (1, 2, 3), (1, 5, 3), (1, 5, 4, 3)]
         expected_shapes = [(5, 1), (1, 1, 1), (1, 5, 2), (1, 5, 4), (1, 5, 4)]
         for a_shape, b_shape, expected_shape in zip(a_shapes, b_shapes, expected_shapes):
-            if (len(a_shape) > 3 or len(b_shape) > 3) and K.backend() == "theano":
-                # this breaks in theano, so check that an error is raised
-                self.assertRaises(RuntimeError, bd.call,
-                                  [K.ones(shape=a_shape), K.ones(shape=b_shape)])
-            else:
-                assert K.eval(bd([K.ones(shape=a_shape), K.ones(shape=b_shape)])).shape == expected_shape
+            assert K.eval(bd([K.ones(shape=a_shape), K.ones(shape=b_shape)])).shape == expected_shape
             assert bd.compute_output_shape([a_shape, b_shape]) == expected_shape

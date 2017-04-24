@@ -56,8 +56,7 @@ def main():
         logger.info("Not enough training inputs.  Assuming you wanted to load a model instead.")
         # TODO(matt): figure out a way to specify which epoch you want to load a model from.
         model.load_model()
-    if K.backend() == "tensorflow":
-        K.clear_session()
+    K.clear_session()
 
 
 if __name__ == "__main__":

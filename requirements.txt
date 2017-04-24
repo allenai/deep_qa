@@ -3,12 +3,10 @@
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
-# Neural net and related libraries.  This Keras commit has some recent bugfixes, can update to a
-# released version once > 2.0.2 comes out.
-git+git://github.com/fchollet/keras@b5dc734
+# Neural net and related libraries.
+keras>=2.0.3
 h5py
 scikit-learn
-theano>=0.9.0
 
 ## Tensorflow Requirements ##
 # Tensorflow is required to run this code but depends on specific configurations. Install from:

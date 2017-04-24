@@ -4,7 +4,6 @@ import os
 from typing import Any, Dict, List, Tuple
 
 import numpy
-import keras.backend as K
 from keras.models import model_from_json
 from keras.callbacks import LambdaCallback, TensorBoard, EarlyStopping, CallbackList, ModelCheckpoint
 
@@ -125,9 +124,6 @@ class Trainer:
     show_summary_with_masking_info: bool, optional (default=False)
         This is a debugging setting, mostly - we have written a custom model.summary() method that
         supports showing masking info, to help understand what's going on with the masks.
-    preferred_backend: str, optional (default=None)
-        Preferred backend to use for training. If a different backend is detected, we still train
-        but we also warn the user.
     """
     def __init__(self, params: Params):
         self.name = "Trainer"
@@ -168,10 +164,6 @@ class Trainer:
         self.tensorboard_histogram_freq = params.pop('tensorboard_histogram_freq', 0)
         self.debug_params = params.pop('debug', {})
         self.show_summary_with_masking = params.pop('show_summary_with_masking_info', False)
-        self.preferred_backend = params.pop('preferred_backend', None)
-        if self.preferred_backend and self.preferred_backend.lower() != K.backend():
-            warning_message = self.__make_backend_warning(self.preferred_backend.lower(), K.backend())
-            logger.warning(warning_message)
 
         # We've now processed all of the parameters, and we're the base class, so there should not
         # be anything left.
@@ -491,9 +483,6 @@ class Trainer:
         callbacks = [early_stop, model_callbacks]
 
         if self.tensorboard_log is not None:
-            if K.backend() == 'theano':
-                raise ConfigurationError("Tensorboard logging is only compatibile with Tensorflow. "
-                                         "Change the backend using the KERAS_BACKEND environment variable.")
             tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log,
                                                     histogram_freq=self.tensorboard_histogram_freq)
             callbacks.append(tensorboard_visualisation)
@@ -613,25 +602,6 @@ class Trainer:
         final_weight_file = "%s_weights.h5" % self.model_prefix
         copyfile(epoch_weight_file, final_weight_file)
         logger.info("Saved the best model to %s", final_weight_file)
-
-    @staticmethod
-    def __make_backend_warning(preferred_backend, actual_backend):
-        warning_info = ("@ Preferred backend is %s, but "
-                        "current backend is %s. @" % (preferred_backend,
-                                                      actual_backend))
-        end_row = "@" * len(warning_info)
-        warning_row_spaces = len(warning_info) - len("@ WARNING: @")
-        left_warning_row_spaces = right_warning_row_spaces = warning_row_spaces // 2
-        if warning_row_spaces % 2 == 1:
-            # left and right have uneven spacing
-            right_warning_row_spaces += 1
-        left_warning_row = "\n@" + " " * left_warning_row_spaces
-        right_warning_row = " " * right_warning_row_spaces + "@\n"
-        warning_message = ("\n" + end_row +
-                           left_warning_row + " WARNING: " + right_warning_row +
-                           warning_info +
-                           "\n" + end_row)
-        return warning_message
 
     def __build_debug_model(self, debug_layer_names: List[str], debug_masks: List[str]):
         """
