@@ -127,7 +127,8 @@ class TextTrainer(Trainer):
         self.num_word_characters = params.pop('num_word_characters', None)
 
         tokenizer_params = params.pop('tokenizer', {})
-        tokenizer_choice = tokenizer_params.pop_choice_with_default('type', list(tokenizers.keys()))
+        tokenizer_choice = tokenizer_params.pop_choice('type', list(tokenizers.keys()),
+                                                       default_to_first_choice=True)
         self.tokenizer = tokenizers[tokenizer_choice](tokenizer_params)
         # Note that the way this works is a little odd - we need each Instance object to do the
         # right thing when we call instance.words() and instance.to_indexed_instance().  So we set
@@ -136,14 +137,15 @@ class TextTrainer(Trainer):
         TextInstance.tokenizer = self.tokenizer
 
         self.encoder_params = params.pop('encoder', {'default': {}})
-        self.encoder_fallback_behavior = params.pop('encoder_fallback_behavior', 'crash')
+        fallback_choices = ['crash', 'use default encoder', 'use default params']
+        self.encoder_fallback_behavior = params.pop_choice('encoder_fallback_behavior', fallback_choices,
+                                                           default_to_first_choice=True)
         self.seq2seq_encoder_params = params.pop('seq2seq_encoder',
                                                  {'default': {"encoder_params": {},
                                                               "wrapper_params": {}}})
-        self.seq2seq_encoder_fallback_behavior = \
-            params.pop_choice_with_default('seq2seq_encoder_fallback_behavior', ['crash',
-                                                                                 "use default encoder",
-                                                                                 "use default params"])
+        self.seq2seq_encoder_fallback_behavior = params.pop_choice('seq2seq_encoder_fallback_behavior',
+                                                                   fallback_choices,
+                                                                   default_to_first_choice=True)
         super(TextTrainer, self).__init__(params)
 
         self.name = "TextTrainer"
@@ -619,7 +621,8 @@ class TextTrainer(Trainer):
         return embedding_layer, projection_layer
 
     def __get_new_encoder(self, params: Params, name: str):
-        encoder_type = params.pop_choice_with_default("type", list(encoders.keys()))
+        encoder_type = params.pop_choice("type", list(encoders.keys()),
+                                         default_to_first_choice=True)
         params["name"] = name
         params.setdefault("units", self.embedding_dim['words'])
         set_regularization_params(encoder_type, params)
@@ -629,7 +632,8 @@ class TextTrainer(Trainer):
         encoder_params = params["encoder_params"]
         wrapper_params = params["wrapper_params"]
         wrapper_params["name"] = name
-        seq2seq_encoder_type = encoder_params.pop_choice_with_default("type", list(seq2seq_encoders.keys()))
+        seq2seq_encoder_type = encoder_params.pop_choice("type", list(seq2seq_encoders.keys()),
+                                                         default_to_first_choice=True)
         encoder_params.setdefault("units", self.embedding_dim['words'])
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)

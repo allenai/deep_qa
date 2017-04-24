@@ -175,8 +175,7 @@ class Trainer:
 
         # We've now processed all of the parameters, and we're the base class, so there should not
         # be anything left.
-        if len(params.keys()) != 0:
-            raise ConfigurationError("You passed unrecognized parameters: " + str(params))
+        params.assert_empty("Trainer")
 
         # Model-specific member variables that will get set and used later.
         self.model = None

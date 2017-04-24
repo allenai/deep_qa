@@ -5,7 +5,7 @@ from keras import backend as K
 from keras import initializers, activations
 from overrides import overrides
 
-from ...common.params import pop_choice_with_default
+from ...common.params import pop_choice
 from ...tensors.backend import apply_feed_forward
 from ...tensors.similarity_functions import similarity_functions
 from ..masked_layer import MaskedLayer
@@ -36,7 +36,7 @@ class SlotSimilarityTupleMatcher(MaskedLayer):
 
     Parameters
     ----------
-    - similarity_function_params: Dict, default={}
+    - similarity_function_params: Dict[str, Any], default={}
         These parameters get passed to a similarity function (see
         :mod:`deep_qa.tensors.similarity_functions` for more info on what's acceptable).  The default
         similarity function with no parameters is a simple dot product.
@@ -60,8 +60,6 @@ class SlotSimilarityTupleMatcher(MaskedLayer):
     def __init__(self, similarity_function: Dict[str, Any]=None, num_hidden_layers: int=1,
                  hidden_layer_width: int=4, initialization: str='glorot_uniform',
                  hidden_layer_activation: str='tanh', final_activation: str='sigmoid', **kwargs):
-        if similarity_function is None:
-            similarity_function = {}
         self.supports_masking = True
         # Parameters for the shallow neural network
         self.num_hidden_layers = num_hidden_layers
@@ -69,14 +67,19 @@ class SlotSimilarityTupleMatcher(MaskedLayer):
         self.hidden_layer_init = initialization
         self.hidden_layer_activation = hidden_layer_activation
         self.final_activation = final_activation
-        self.hidden_layer_weights = []
-        self.score_layer = None
-        super(SlotSimilarityTupleMatcher, self).__init__(**kwargs)
         self.similarity_function_params = deepcopy(similarity_function)
-        sim_function_choice = pop_choice_with_default(similarity_function, 'type',
-                                                      list(similarity_functions.keys()))
+        super(SlotSimilarityTupleMatcher, self).__init__(**kwargs)
+
+        if similarity_function is None:
+            similarity_function = {}
+        sim_function_choice = pop_choice(similarity_function, 'type',
+                                         list(similarity_functions.keys()),
+                                         default_to_first_choice=True)
         similarity_function['name'] = self.name + '_similarity_function'
         self.similarity_function = similarity_functions[sim_function_choice](**similarity_function)
+
+        self.hidden_layer_weights = []
+        self.score_layer = None
 
     @overrides
     def get_config(self):

@@ -67,7 +67,8 @@ class TupleInferenceModel(TextTrainer):
         self.display_text_wrap = params.pop('display_text_wrap', 150)
         self.display_num_tuples = params.pop('display_num_tuples', 5)
         tuple_matcher_params = params.pop('tuple_matcher', {})
-        tuple_matcher_choice = tuple_matcher_params.pop_choice_with_default("type", list(tuple_matchers.keys()))
+        tuple_matcher_choice = tuple_matcher_params.pop_choice("type", list(tuple_matchers.keys()),
+                                                               default_to_first_choice=True)
         tuple_matcher_class = tuple_matchers[tuple_matcher_choice]
         # This is a little ugly, but necessary, because the Keras Layer API treats arguments
         # differently than our model API, and we need access to the TextTrainer object in the tuple

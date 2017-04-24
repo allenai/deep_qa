@@ -3,7 +3,7 @@ from unittest import mock
 
 import numpy
 
-from deep_qa.common.params import Params
+from deep_qa.common.params import Params, pop_choice
 from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification import ClassificationModel
 from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
@@ -18,7 +18,7 @@ class TestTextTrainer(DeepQaTestCase):
         self.write_true_false_model_files()
         model = self.get_model(ClassificationModel, {'encoder': {}})
         encoder = model._get_encoder()
-        encoder_type = Params({}).pop_choice_with_default("type", list(encoders.keys()))
+        encoder_type = pop_choice({}, "type", list(encoders.keys()), default_to_first_choice=True)
         expected_encoder = encoders[encoder_type](**{})
         assert isinstance(encoder, expected_encoder.__class__)
 

@@ -36,7 +36,7 @@ def main():
     param_file = sys.argv[1]
     param_dict = pyhocon.ConfigFactory.parse_file(param_file)
     params = Params(replace_none(param_dict))
-    log_dir = params.pop("model_serialization_prefix", None)  # pylint: disable=no-member
+    log_dir = params.get("model_serialization_prefix", None)  # pylint: disable=no-member
     if log_dir is not None:
         sys.stdout = TeeLogger(log_dir + "_stdout.log", sys.stdout)
         sys.stderr = TeeLogger(log_dir + "_stderr.log", sys.stderr)
