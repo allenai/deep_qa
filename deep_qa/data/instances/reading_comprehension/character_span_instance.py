@@ -49,7 +49,8 @@ class CharacterSpanInstance(QuestionPassageInstance):
         return None
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads a CharacterSpanInstance object from a line. The format has one of two options:
 
@@ -57,8 +58,6 @@ class CharacterSpanInstance(QuestionPassageInstance):
         (2) [question][tab][passage][tab][label]
 
         [label] is assumed to be a comma-separated pair of integers.
-
-        default_label is ignored, but we keep the argument to match the interface.
         """
         fields = line.split("\t")
 

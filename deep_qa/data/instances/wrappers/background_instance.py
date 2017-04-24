@@ -1,3 +1,5 @@
+import codecs
+from collections import OrderedDict
 from typing import Dict, List
 
 import numpy
@@ -5,6 +7,34 @@ from overrides import overrides
 
 from ..instance import TextInstance, IndexedInstance
 from ...data_indexer import DataIndexer
+from ...dataset import TextDataset
+
+
+def read_background_from_file(dataset: TextDataset, filename: str, background_class) -> TextDataset:
+    """
+    Reads a file formatted as background information and matches the background to the
+    sentences in the given dataset.  The given dataset must have instance indices, so we can
+    match the background information in the file to the instances in the dataset.
+
+    The format for the file is assumed to be the following:
+    [sentence index][tab][background 1][tab][background 2][tab][...]
+    where [sentence index] corresponds to the index of one of the instances in `dataset`.
+
+    This code will also work if the data is formatted simply as [index][tab][sentence], one per
+    line.
+    """
+    new_instances = OrderedDict()
+    for instance in dataset.instances:
+        background_instance = BackgroundInstance(instance, [])
+        new_instances[instance.index] = background_instance
+    for line in codecs.open(filename, "r", "utf-8"):
+        fields = line.strip().split("\t")
+        index = int(fields[0])
+        if index in new_instances:
+            instance = new_instances[index]
+            for sequence in fields[1:]:
+                instance.background.append(background_class.read_from_line(sequence))
+    return TextDataset(list(new_instances.values()))
 
 
 class BackgroundInstance(TextInstance):

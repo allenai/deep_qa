@@ -45,7 +45,8 @@ class SentenceSelectionInstance(TextInstance):
                                                 self.index)
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads a SentenceSelectionInstance object from a line.
         The format has one of two options:
@@ -55,8 +56,6 @@ class SentenceSelectionInstance(TextInstance):
 
         The ``list_of_sentences`` column is assumed formatted as: ``[sentence]###[sentence]###[sentence]...``
         That is, we split on three hashes (``"###"``).
-
-        ``default_label`` is ignored, but we keep the argument to match the interface.
         """
         fields = line.split("\t")
 

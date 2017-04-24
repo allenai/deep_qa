@@ -39,7 +39,8 @@ class TupleInstance(TextInstance):
         return IndexedTupleInstance(indices, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=True):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads a TupleInstances from a line.  The format has one of four options:
 
@@ -56,13 +57,13 @@ class TupleInstance(TextInstance):
             # Case 1
             tuple_string = fields[0]
             index = None
-            label = default_label
+            label = None
         elif len(fields) == 2:
             if fields[0].isdigit():
                 # Case 2
                 index = int(fields[0])
                 tuple_string = fields[1]
-                label = default_label
+                label = None
             else:
                 # Case 3
                 tuple_string = fields[0]

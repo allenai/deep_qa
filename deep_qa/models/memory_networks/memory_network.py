@@ -6,8 +6,7 @@ import numpy
 from keras.layers import Dropout, Input, Layer, Concatenate
 
 from ...common.params import Params
-from ...data.dataset import TextDataset
-from ...data.instances.wrappers.background_instance import BackgroundInstance
+from ...data.instances.wrappers import BackgroundInstance, read_background_from_file
 from ...data.instances.instance import TextInstance
 from ...data.instances.text_classification.text_classification_instance import TextClassificationInstance
 from ...layers.entailment_models import entailment_models, entailment_input_combiners
@@ -140,7 +139,7 @@ class MemoryNetwork(TextTrainer):
     @overrides
     def load_dataset_from_files(self, files: List[str]):
         dataset = super(MemoryNetwork, self).load_dataset_from_files(files)
-        return TextDataset.read_background_from_file(dataset, files[1], self._background_instance_type())
+        return read_background_from_file(dataset, files[1], self._background_instance_type())
 
     @overrides
     def _instance_type(self):

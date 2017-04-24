@@ -11,7 +11,7 @@ import numpy
 from sklearn.neighbors import LSHForest
 
 from ...data.dataset import TextDataset
-from ...data.instances.wrappers.background_instance import BackgroundInstance
+from ...data.instances.wrappers import BackgroundInstance
 from ...data.instances.text_classification.text_classification_instance import TextClassificationInstance
 from ...common.params import Params
 from .memory_network import MemoryNetwork

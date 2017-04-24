@@ -27,18 +27,13 @@ from ..data_indexer import DataIndexer
 
 class Instance:
     """
-    A data instance, used either for training a neural network or for
-    testing one.
+    A data instance, used either for training a neural network or for testing one.
 
     Parameters
     ----------
-    label : boolean or index
-        For simple ``Instances`` (like ``TextInstance``), this is
-        either ``True``, ``False``, or ``None``, indicating whether the
-        instance is a positive, negative or unknown (i.e., test) example,
-        respectively. For ``MultipleChoiceInstances`` or other more
-        complicated things, is a class index.
-
+    label : Any
+        Any kind of label that you might want to predict in a model.  Could be a class label, a
+        tag sequence, a character span in a passage, etc.
     index : int, optional
         Used for matching instances with other data, such as background
         sentences.
@@ -46,11 +41,6 @@ class Instance:
     def __init__(self, label, index: int=None):
         self.label = label
         self.index = index
-
-    @staticmethod
-    def _check_label(label: bool, default_label: bool):
-        if default_label is not None and label is not None and label != default_label:
-            raise RuntimeError("Default label given with file, and label in file doesn't match!")
 
 
 class TextInstance(Instance):
@@ -127,7 +117,7 @@ class TextInstance(Instance):
         raise NotImplementedError
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    def read_from_line(cls, line: str):
         """
         Reads an instance of this type from a line.
 
@@ -135,9 +125,6 @@ class TextInstance(Instance):
         ----------
         line : str
             A line from a data file.
-        default_label: bool
-            If a label is not provided, the default to use. Mainly used in
-            ``TrueFalseInstance``.
 
         Returns
         -------

@@ -1,5 +1,4 @@
 import codecs
-from collections import OrderedDict
 import itertools
 import logging
 from typing import Dict, List
@@ -7,8 +6,6 @@ from typing import Dict, List
 import tqdm
 
 from .instances.instance import Instance, TextInstance, IndexedInstance
-from .instances.wrappers.background_instance import BackgroundInstance
-from .instances.multiple_choice_qa.multiple_true_false_instance import MultipleTrueFalseInstance
 from .data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -29,32 +26,6 @@ class Dataset:
         class that call the constructor, such as `merge()` and `truncate()`.
         """
         self.instances = instances
-
-    def can_be_converted_to_multiple_choice(self):
-        """
-        This method checks that dataset matches the assumptions we make about question data: that
-        it is a list of sentences corresponding to four-choice questions, with one correct answer
-        for every four instances.
-
-        So, specifically, we check that the number of instances is a multiple of four, and we check
-        that each group of four instances has exactly one instance with label True, and all other
-        labels are False (i.e., no None labels for validation data).
-        """
-        # TODO(matt): this method does not belong on `Dataset`.
-        for instance in self.instances:
-            if isinstance(instance, MultipleTrueFalseInstance):
-                return False
-        if len(self.instances) % 4 != 0:
-            return False
-        questions = zip(*[self.instances[i::4] for i in range(4)])
-        for question in questions:
-            question_labels = [instance.label for instance in question]
-            label_counts = {x: question_labels.count(x) for x in set(question_labels)}
-            if label_counts[True] != 1:
-                return False
-            if label_counts[False] != 3:
-                return False
-        return True
 
     def merge(self, other: 'Dataset') -> 'Dataset':
         """
@@ -97,24 +68,15 @@ class TextDataset(Dataset):
         indexed_instances = [instance.to_indexed_instance(data_indexer) for instance in tqdm.tqdm(self.instances)]
         return IndexedDataset(indexed_instances)
 
-    def to_question_dataset(self) -> 'Dataset':
-        # TODO(matt): this method does not belong on `TextDataset`
-        assert self.can_be_converted_to_multiple_choice()
-        questions = zip(*[self.instances[i::4] for i in range(4)])
-        question_instances = []
-        for question in questions:
-            question_instances.append(MultipleTrueFalseInstance(question))
-        return TextDataset(question_instances)
-
     @staticmethod
-    def read_from_file(filename: str, instance_class, label: bool=None):
+    def read_from_file(filename: str, instance_class):
         lines = [x.strip() for x in tqdm.tqdm(codecs.open(filename, "r",
                                                           "utf-8").readlines())]
-        return TextDataset.read_from_lines(lines, instance_class, label)
+        return TextDataset.read_from_lines(lines, instance_class)
 
     @staticmethod
-    def read_from_lines(lines: List[str], instance_class, label: bool=None):
-        instances = [instance_class.read_from_line(x, label) for x in lines]
+    def read_from_lines(lines: List[str], instance_class):
+        instances = [instance_class.read_from_line(x) for x in lines]
         labels = [(x.label, x) for x in instances]
         labels.sort(key=lambda x: str(x[0]))
         label_counts = [(label, len([x for x in group]))
@@ -124,35 +86,6 @@ class TextDataset(Dataset):
             label_count_str = label_count_str[:100] + '...'
         logger.info("Finished reading dataset; label counts: %s", label_count_str)
         return TextDataset(instances)
-
-    @staticmethod
-    def read_background_from_file(dataset: 'TextDataset', filename: str, background_class):
-        """
-        Reads a file formatted as background information and matches the background to the
-        sentences in the given dataset.  The given dataset must have instance indices, so we can
-        match the background information in the file to the instances in the dataset.
-
-        The format for the file is assumed to be the following:
-        [sentence index][tab][background 1][tab][background 2][tab][...]
-        where [sentence index] corresponds to the index of one of the instances in `dataset`.
-
-        This code will also work if the data is formatted simply as [index][tab][sentence], one per
-        line.
-        """
-        # TODO(matt): figure out a way to make this more general, or just put this as a static
-        # method on BackgroundInstance.  It doesn't really belong here.
-        new_instances = OrderedDict()
-        for instance in dataset.instances:
-            background_instance = BackgroundInstance(instance, [])
-            new_instances[instance.index] = background_instance
-        for line in codecs.open(filename, "r", "utf-8"):
-            fields = line.strip().split("\t")
-            index = int(fields[0])
-            if index in new_instances:
-                instance = new_instances[index]
-                for sequence in fields[1:]:
-                    instance.background.append(background_class.read_from_line(sequence, None))
-        return TextDataset(list(new_instances.values()))
 
 
 class IndexedDataset(Dataset):

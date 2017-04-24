@@ -33,7 +33,8 @@ class SentencePairInstance(TextInstance):
         return IndexedSentencePairInstance(first_sentence, second_sentence, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Expected format:
         [sentence1][tab][sentence2][tab][label]

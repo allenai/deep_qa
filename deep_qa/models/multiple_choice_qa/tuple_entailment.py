@@ -5,9 +5,9 @@ from overrides import overrides
 from keras.layers import Input
 
 from ...common.params import Params
-from ...data.dataset import TextDataset
-from ...data.instances.multiple_choice_qa.question_answer_instance import QuestionAnswerInstance
-from ...data.instances.text_classification.tuple_instance import TupleInstance
+from ...data.instances.multiple_choice_qa import QuestionAnswerInstance
+from ...data.instances.text_classification import TupleInstance
+from ...data.instances.wrappers import read_background_from_file
 from ...layers.entailment_models import MultipleChoiceTupleEntailment
 from ...layers.wrappers import EncoderWrapper
 
@@ -43,7 +43,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
     @overrides
     def load_dataset_from_files(self, files: List[str]):
         dataset = super(MultipleChoiceTupleEntailmentModel, self).load_dataset_from_files(files)
-        return TextDataset.read_background_from_file(dataset, files[1], self._background_instance_type())
+        return read_background_from_file(dataset, files[1], self._background_instance_type())
 
     @classmethod
     @overrides

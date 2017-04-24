@@ -60,28 +60,6 @@ class TestTextClassificationInstance:
         assert instance.label is label
         assert instance.index == index
 
-    def test_read_from_line_handles_two_column_with_default_true(self):
-        index = 23
-        text = "this is a sentence"
-        label = None
-        line = self.instance_to_line(text, label, index)
-
-        instance = TextClassificationInstance.read_from_line(line, default_label=True)
-        assert instance.text == text
-        assert instance.label is True
-        assert instance.index == index
-
-    def test_read_from_line_handles_two_column_with_default_false(self):
-        index = 23
-        text = "this is a sentence"
-        label = None
-        line = self.instance_to_line(text, label, index)
-
-        instance = TextClassificationInstance.read_from_line(line, default_label=False)
-        assert instance.text == text
-        assert instance.label is False
-        assert instance.index == index
-
     def test_words_tokenizes_the_sentence_correctly(self):
         t = TextClassificationInstance("This is a sentence.", None)
         assert t.words() == {'words': ['this', 'is', 'a', 'sentence', '.']}

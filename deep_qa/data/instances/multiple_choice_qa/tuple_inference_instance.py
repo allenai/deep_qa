@@ -211,7 +211,8 @@ class TupleInferenceInstance(TextInstance):
         return indexed
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: int=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads a TupleInstances from a line.  The format has two options:
 

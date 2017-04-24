@@ -5,7 +5,47 @@ import numpy
 from overrides import overrides
 
 from ..instance import TextInstance, IndexedInstance
+from ...dataset import TextDataset
 from ...data_indexer import DataIndexer
+
+def __can_be_converted_to_multiple_true_false(dataset: TextDataset) -> bool:
+    """
+    This method checks that dataset matches the assumptions we make about question data: that
+    it is a list of sentences corresponding to four-choice questions, with one correct answer
+    for every four instances.
+
+    So, specifically, we check that the number of instances is a multiple of four, and we check
+    that each group of four instances has exactly one instance with label True, and all other
+    labels are False (i.e., no None labels for validation data).
+    """
+    for instance in dataset.instances:
+        if isinstance(instance, MultipleTrueFalseInstance):
+            return False
+    if len(dataset.instances) % 4 != 0:
+        return False
+    questions = zip(*[dataset.instances[i::4] for i in range(4)])
+    for question in questions:
+        question_labels = [instance.label for instance in question]
+        label_counts = {x: question_labels.count(x) for x in set(question_labels)}
+        if label_counts[True] != 1:
+            return False
+        if label_counts[False] != 3:
+            return False
+    return True
+
+
+def convert_dataset_to_multiple_true_false(dataset: TextDataset) -> TextDataset:
+    """
+    Converts a ``Dataset`` of ``TextClassificationInstances`` (assumed to have binary labels) into
+    a dataset of ``MultipleTrueFalse`` labels, by considering each consecutive group of 4 instances
+    to represent one question, with exactly one ``True`` label in each group of 4.
+    """
+    assert __can_be_converted_to_multiple_true_false(dataset)
+    questions = zip(*[dataset.instances[i::4] for i in range(4)])
+    question_instances = []
+    for question in questions:
+        question_instances.append(MultipleTrueFalseInstance(question))
+    return TextDataset(question_instances)
 
 
 class MultipleTrueFalseInstance(TextInstance):

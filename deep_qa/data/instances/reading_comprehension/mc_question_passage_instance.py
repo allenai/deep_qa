@@ -54,7 +54,8 @@ class McQuestionPassageInstance(QuestionPassageInstance):
                                                 option_indices, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads a McQuestionPassageInstance object from a line.  The format has one of two options:
 
@@ -63,8 +64,6 @@ class McQuestionPassageInstance(QuestionPassageInstance):
 
         The ``answer_options`` column is assumed formatted as: ``[option]###[option]###[option]...``
         That is, we split on three hashes (``"###"``).
-
-        ``default_label`` is ignored, but we keep the argument to match the interface.
         """
         fields = line.split("\t")
 

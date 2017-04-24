@@ -32,7 +32,8 @@ class TextClassificationInstance(TextInstance):
         return IndexedTextClassificationInstance(indices, self.label, self.index)
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads a TextClassificationInstance object from a line.  The format has one of four options:
 
@@ -41,41 +42,27 @@ class TextClassificationInstance(TextInstance):
         (3) [sentence][tab][label]
         (4) [sentence index][tab][sentence][tab][label]
 
-        For options (1) and (2), we use the default_label to give the Instance a label, and for
-        options (3) and (4), we check that default_label matches the label in the file, if
-        default_label is given.
-
-        The reason we check for a match between the read label and the default label in cases (3)
-        and (4) is that if you passed a default label, you should be confident that everything
-        you're reading has that label.  If we find one that doesn't match, you probably messed up
-        some parameters somewhere else in your code.
+        If no label is given, we use ``None`` as the label.
         """
         fields = line.split("\t")
 
-        # We'll call Instance._check_label for all four cases, even though it means passing None to
-        # two of them.  We do this mainly for consistency, and in case the _check_label() ever
-        # changes to actually do something with the label=None case.
         if len(fields) == 3:
             index, text, label_string = fields
             label = label_string == '1'
-            cls._check_label(label, default_label)
             return cls(text, label, int(index))
         elif len(fields) == 2:
             if fields[0].isdecimal():
                 index, text = fields
-                cls._check_label(None, default_label)
-                return cls(text, default_label, int(index))
+                return cls(text, None, int(index))
             elif fields[1].isdecimal():
                 text, label_string = fields
                 label = label_string == '1'
-                cls._check_label(label, default_label)
                 return cls(text, label)
             else:
                 raise RuntimeError("Unrecognized line format: " + line)
         elif len(fields) == 1:
             text = fields[0]
-            cls._check_label(None, default_label)
-            return cls(text, default_label)
+            return cls(text, None)
         else:
             raise RuntimeError("Unrecognized line format: " + line)
 

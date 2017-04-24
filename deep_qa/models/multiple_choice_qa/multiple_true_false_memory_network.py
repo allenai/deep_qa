@@ -7,7 +7,7 @@ from keras.layers import Layer, TimeDistributed
 from ...common.params import Params  # pylint disable: unused-import
 from ..memory_networks.memory_network import MemoryNetwork
 from ...data.instances.text_classification import TextClassificationInstance
-from ...data.instances.multiple_choice_qa import MultipleTrueFalseInstance
+from ...data.instances.multiple_choice_qa import MultipleTrueFalseInstance, convert_dataset_to_multiple_true_false
 from ...layers.wrappers import EncoderWrapper
 
 
@@ -105,7 +105,7 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
     @overrides
     def load_dataset_from_files(self, files: List[str]):
         dataset = super(MultipleTrueFalseMemoryNetwork, self).load_dataset_from_files(files)
-        return dataset.to_question_dataset()
+        return convert_dataset_to_multiple_true_false(dataset)
 
     @classmethod
     @overrides

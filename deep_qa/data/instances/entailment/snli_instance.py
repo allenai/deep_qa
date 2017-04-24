@@ -1,3 +1,5 @@
+from overrides import overrides
+
 from .sentence_pair_instance import SentencePairInstance
 
 
@@ -76,7 +78,8 @@ class SnliInstance(SentencePairInstance):
         return SnliInstance(self.first_sentence, self.second_sentence, new_label, self.index)
 
     @classmethod
-    def read_from_line(cls, line: str, default_label: bool=None):
+    @overrides
+    def read_from_line(cls, line: str):
         """
         Reads an SnliInstance object from a line.  The format has one of two options:
 
@@ -84,8 +87,6 @@ class SnliInstance(SentencePairInstance):
         (2) [text][tab][hypothesis][tab][label]
 
         [label] is assumed to be one of "entails", "contradicts", or "neutral".
-
-        default_label is ignored, but we keep the argument to match the interface.
         """
         fields = line.split("\t")
 

@@ -44,7 +44,7 @@ class QuestionAnswerInstance(TextInstance):
 
     @classmethod
     @overrides
-    def read_from_line(cls, line: str, default_label: bool=None):
+    def read_from_line(cls, line: str):
         """
         Reads a QuestionAnswerInstance object from a line.  The format has two options:
 
@@ -53,8 +53,6 @@ class QuestionAnswerInstance(TextInstance):
 
         The `answer_options` column is assumed formatted as: [option]###[option]###[option]...
         That is, we split on three hashes ("###").
-
-        default_label is ignored, but we keep the argument to match the interface.
         """
         fields = line.split("\t")
 
