@@ -2,7 +2,7 @@ from typing import Tuple
 
 from keras import backend as K
 from keras.engine import InputSpec
-from keras.layers import Convolution1D, MaxPooling1D, Concatenate, Dense
+from keras.layers import Convolution1D, Concatenate, Dense
 from keras.regularizers import l1_l2
 from overrides import overrides
 
@@ -71,7 +71,6 @@ class CNNEncoder(MaskedLayer):
 
     @overrides
     def build(self, input_shape):
-        input_length = input_shape[1]  # number of words
         # We define convolution, maxpooling and dense layers first.
         self.convolution_layers = [Convolution1D(filters=self.num_filters,
                                                  kernel_size=ngram_size,
@@ -79,15 +78,11 @@ class CNNEncoder(MaskedLayer):
                                                  kernel_regularizer=self.regularizer(),
                                                  bias_regularizer=self.regularizer())
                                    for ngram_size in self.ngram_filter_sizes]
-        self.max_pooling_layers = [MaxPooling1D(pool_length=input_length - ngram_size + 1)
-                                   for ngram_size in self.ngram_filter_sizes]
         self.projection_layer = Dense(self.output_dim)
         # Building all layers because these sub-layers are not explitly part of the computatonal graph.
-        for convolution_layer, max_pooling_layer in zip(self.convolution_layers, self.max_pooling_layers):
+        for convolution_layer in self.convolution_layers:
             with K.name_scope(convolution_layer.name):
                 convolution_layer.build(input_shape)
-            with K.name_scope(max_pooling_layer.name):
-                max_pooling_layer.build(convolution_layer.compute_output_shape(input_shape))
         maxpool_output_dim = self.num_filters * len(self.ngram_filter_sizes)
         projection_input_shape = (input_shape[0], maxpool_output_dim)
         with K.name_scope(self.projection_layer.name):
@@ -95,21 +90,20 @@ class CNNEncoder(MaskedLayer):
         # Defining the weights of this "layer" as the set of weights from all convolution
         # and maxpooling layers.
         self.trainable_weights = []
-        for layer in self.convolution_layers + self.max_pooling_layers + [self.projection_layer]:
+        for layer in self.convolution_layers + [self.projection_layer]:
             self.trainable_weights.extend(layer.trainable_weights)
 
         super(CNNEncoder, self).build(input_shape)
 
     @overrides
     def call(self, inputs, mask=None):  # pylint: disable=unused-argument
-        # Each convolution layer returns output of size (samples, pool_length, num_filters),
-        #       where pool_length = num_words - ngram_size + 1
-        # Each maxpooling layer returns output of size (samples, 1, num_filters).
-        # We need to flatten to remove the second dimension of length 1 from the maxpooled output.
+        # Each convolution layer returns output of size (batch_size, pool_length, num_filters),
+        # where `pool_length = num_words - ngram_size + 1`.  We then do max pooling over each
+        # filter for the whole input sequence, just using K.max, giving a resultant tensor of shape
+        # (batch_size, num_filters), which then gets projected using the projection layer.
         # TODO(matt): we need to use a convolutional layer here that supports masking.
-        filter_outputs = [K.batch_flatten(max_pooling_layer.call(convolution_layer.call(inputs)))
-                          for max_pooling_layer, convolution_layer in zip(self.max_pooling_layers,
-                                                                          self.convolution_layers)]
+        filter_outputs = [K.max(convolution_layer.call(inputs), axis=1)
+                          for convolution_layer in self.convolution_layers]
         maxpool_output = Concatenate()(filter_outputs) if len(filter_outputs) > 1 else filter_outputs[0]
         return self.projection_layer.call(maxpool_output)
 

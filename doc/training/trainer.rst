@@ -40,3 +40,4 @@ Protected methods
 .. automethod:: Trainer._post_epoch_hook
 .. automethod:: Trainer._pre_epoch_hook
 .. automethod:: Trainer._save_auxiliary_files
+.. automethod:: Trainer._uses_data_generators

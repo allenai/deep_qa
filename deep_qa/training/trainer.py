@@ -310,13 +310,13 @@ class Trainer:
         # so you may have left it above zero on accident.
         if self.validation_arrays is not None:
             kwargs['validation_data'] = self.validation_arrays
-        elif self.validation_split > 0.0:
+        elif self.validation_split > 0.0 and not self._uses_data_generators():
             kwargs['validation_split'] = self.validation_split
 
         # Add the user-specified arguments to fit.
         kwargs.update(self.fit_kwargs)
         # We now pass all the arguments to the model's fit function, which does all of the training.
-        if isinstance(self.training_arrays, tuple):
+        if not self._uses_data_generators():
             history = self.model.fit(self.training_arrays[0], self.training_arrays[1], **kwargs)
         else:
             # If the data was produced by a generator, we have a bit more work to do to get the
@@ -325,7 +325,7 @@ class Trainer:
             kwargs['steps_per_epoch'] = self.train_steps_per_epoch
             if kwargs['steps_per_epoch'] is None:
                 kwargs['steps_per_epoch'] = math.ceil(len(self.training_dataset.instances) / self.batch_size)
-            if self.validation_arrays is not None and not isinstance(self.validation_arrays, tuple):
+            if self.validation_arrays is not None and self._uses_data_generators():
                 kwargs['validation_steps'] = self.validation_steps
                 if kwargs['validation_steps'] is None:
                     kwargs['validation_steps'] = math.ceil(len(self.validation_dataset.instances) /
@@ -343,7 +343,7 @@ class Trainer:
         if self.test_files:
             self.load_model()
             logger.info("Evaluting model on the test set.")
-            if isinstance(self.test_arrays, tuple):
+            if not self._uses_data_generators():
                 scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
             else:
                 test_steps = self.test_steps
@@ -572,6 +572,17 @@ class Trainer:
         model_config_file = open("%s_config.json" % (self.model_prefix), "w")
         print(model_config, file=model_config_file)
         model_config_file.close()
+
+
+    def _uses_data_generators(self):  # pylint: disable=no-self-use
+        """
+        Training models with Keras requires a different API if you produce data in batches uses a
+        generator or if you just provide one big numpy array with all of your data, which Keras has
+        to split into batches.  This method tells us which Keras API we should use.  If your model
+        class produces data using a generator, return ``True`` here; otherwise, return ``False``.
+        The default implementation just returns ``False.``
+        """
+        return False
 
     @classmethod
     def _get_custom_objects(cls):

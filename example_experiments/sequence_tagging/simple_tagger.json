@@ -27,6 +27,8 @@
       "processor": {"word_splitter": "no_op"}
     },
     "embedding_dropout": 0.2,
+    "use_data_generator": true,
+    "use_dynamic_padding": true,
     "patience": 3,
     "embedding_dim": {"words": 100, "characters": 8},
     "num_epochs": 20,
@@ -34,6 +36,6 @@
       "type": "adadelta",
       "lr": 0.5
     },
-    //"validation_files": ["/net/efs/aristo/dlfa/squad/processed/tagging_dev.tsv"],
+    "validation_files": ["/net/efs/aristo/dlfa/squad/processed/tagging_dev.tsv"],
     "train_files": ["/net/efs/aristo/dlfa/squad/processed/tagging_train.tsv"]
 }

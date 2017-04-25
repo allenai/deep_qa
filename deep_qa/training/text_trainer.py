@@ -240,6 +240,10 @@ class TextTrainer(Trainer):
                 result += self.__render_embedding_matrix(embedding_layer)
         return result
 
+    @overrides
+    def _uses_data_generators(self):
+        return self.use_data_generator
+
     @classmethod
     def _get_custom_objects(cls):
         custom_objects = super(TextTrainer, cls)._get_custom_objects()
