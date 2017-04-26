@@ -67,3 +67,11 @@ Repeat
     :members:
     :undoc-members:
     :show-inheritance:
+
+RepeatLike
+----------
+
+.. automodule:: deep_qa.layers.backend.repeat_like
+    :members:
+    :undoc-members:
+    :show-inheritance:

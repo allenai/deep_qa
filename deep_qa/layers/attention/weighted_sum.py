@@ -71,40 +71,21 @@ class WeightedSum(MaskedLayer):
 
     @overrides
     def call(self, inputs, mask=None):
+        # pylint: disable=redefined-variable-type
         matrix, attention_vector = inputs
-        matrix_shape = K.int_shape(matrix)
-        matrix = self._expand_matrix_if_necessary(matrix, matrix_shape[:-1], attention_vector)
+        num_attention_dims = K.ndim(attention_vector)
+        num_matrix_dims = K.ndim(matrix) - 1
+        for _ in range(num_attention_dims - num_matrix_dims):
+            matrix = K.expand_dims(matrix, axis=1)
         if mask is None:
             matrix_mask = None
         else:
             matrix_mask = mask[0]
         if self.use_masking and matrix_mask is not None:
-            matrix_mask = self._expand_matrix_if_necessary(matrix_mask, matrix_shape[:-1], attention_vector)
-            # Doing a multiply here instead of a `switch` to avoid allocating another large tensor.
+            for _ in range(num_attention_dims - num_matrix_dims):
+                matrix_mask = K.expand_dims(matrix_mask, axis=1)
             matrix = K.cast(K.expand_dims(matrix_mask), 'float32') * matrix
         return K.sum(K.expand_dims(attention_vector, axis=-1) * matrix, -2)
-
-    @staticmethod
-    def _expand_matrix_if_necessary(matrix, matrix_shape, attention_vector):
-        """
-        This function gets the tiles the matrix to have the same shape as the attention vector,
-        ignoring the embedding dimension.  We take the shape as input (where the shape already has
-        the embedding dimension removed) so we can call this on the mask as well as the input
-        matrix.
-        """
-        attention_shape = K.int_shape(attention_vector)
-        if matrix_shape != attention_shape:
-            # We'll take care of the batch size first.  After this, the matrix_shape should match
-            # the end of the attention_shape exactly.
-            assert matrix_shape[0] == attention_shape[0], "somehow batch sizes don't match"
-            matrix_shape = matrix_shape[1:]
-            attention_shape = attention_shape[1:]
-            assert attention_shape[-len(matrix_shape):] == matrix_shape, ("matrix_shape must be "
-                                                                          "subset of attention_shape")
-            for i in range(len(attention_shape) - len(matrix_shape)):
-                matrix = K.expand_dims(matrix, axis=i+1)  # +1 to account for batch_size
-                matrix = K.repeat_elements(matrix, attention_shape[i], axis=i+1)
-        return matrix
 
     @overrides
     def get_config(self):

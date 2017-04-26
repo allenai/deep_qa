@@ -48,12 +48,14 @@ class MaskedSoftmax(MaskedLayer):
             inputs = K.squeeze(inputs, axis=-1)
             input_shape = input_shape[:-1]
         if len(input_shape) > 2:
+            original_inputs = inputs
             inputs = last_dim_flatten(inputs)
             if mask is not None:
                 mask = last_dim_flatten(mask)
         # Now we have both inputs and mask with shape (?, num_options), and can do a softmax.
         softmax_result = masked_softmax(inputs, mask)
         if len(input_shape) > 2:
-            input_shape = (-1,) + input_shape[1:]
+            original_shape = K.shape(original_inputs)
+            input_shape = K.concatenate([[-1], original_shape[1:]], 0)
             softmax_result = K.reshape(softmax_result, input_shape)
         return softmax_result

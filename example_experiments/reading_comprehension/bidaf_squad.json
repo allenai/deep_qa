@@ -27,7 +27,8 @@
       "type": "adadelta",
       "lr": 0.5
     },
-    "max_training_instances": 100,
-    "validation_files": ["/efs/data/dlfa/sciq_da/processed/dev.tsv"],
-    "train_files": ["/efs/data/dlfa/sciq_da/processed/train.tsv"]
+    "use_data_generator": true,
+    "use_dynamic_padding": true,
+    "validation_files": ["/net/efs/aristo/dlfa/squad/processed/dev.tsv"],
+    "train_files": ["/net/efs/aristo/dlfa/squad/processed/train.tsv"]
 }

@@ -80,24 +80,13 @@ class MatrixAttention(MaskedLayer):
 
     @overrides
     def call(self, inputs, mask=None):
-        """
-        NOTE: This does not work if ``num_rows_1`` or ``num_rows_2`` is ``None``!  I tried to get
-        it to work, but ``K.dot()`` breaks.
-        """
         matrix_1, matrix_2 = inputs
-        matrix_1_shape = K.int_shape(matrix_1)
-        matrix_2_shape = K.int_shape(matrix_2)
-        num_rows_1 = matrix_1_shape[1]
-        num_rows_2 = matrix_2_shape[1]
-        tiled_matrix_1 = K.repeat_elements(K.expand_dims(matrix_1, axis=2), num_rows_2, axis=2)
-        tiled_matrix_2 = K.repeat_elements(K.expand_dims(matrix_2, axis=1), num_rows_1, axis=1)
-
-        # We need to be able to access K.int_shape() in compute_similarity() below, but in theano,
-        # calling a backend function makes it so you can't use K.int_shape() anymore.  Setting
-        # tensor._keras_shape here fixes that.
-        # pylint: disable=protected-access
-        tiled_matrix_1._keras_shape = matrix_1_shape[:2] + (num_rows_2,) + matrix_1_shape[2:]
-        tiled_matrix_2._keras_shape = matrix_2_shape[:1] + (num_rows_1,) + matrix_2_shape[1:]
+        num_rows_1 = K.shape(matrix_1)[1]
+        num_rows_2 = K.shape(matrix_2)[1]
+        tile_dims_1 = K.concatenate([[1, 1], [num_rows_2], [1]], 0)
+        tile_dims_2 = K.concatenate([[1], [num_rows_1], [1, 1]], 0)
+        tiled_matrix_1 = K.tile(K.expand_dims(matrix_1, axis=2), tile_dims_1)
+        tiled_matrix_2 = K.tile(K.expand_dims(matrix_2, axis=1), tile_dims_2)
         return self.similarity_function.compute_similarity(tiled_matrix_1, tiled_matrix_2)
 
     @overrides

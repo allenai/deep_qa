@@ -272,9 +272,11 @@ class Trainer:
         self.training_arrays = self.create_data_arrays(indexed_training_dataset)
 
         if self.validation_files:
-            self.validation_dataset, self.validation_arrays = self.load_data_arrays(self.validation_files)
+            self.validation_dataset, self.validation_arrays = self.load_data_arrays(self.validation_files,
+                                                                                    self.max_validation_instances)
         if self.test_files:
-            self.test_dataset, self.test_arrays = self.load_data_arrays(self.test_files)
+            self.test_dataset, self.test_arrays = self.load_data_arrays(self.test_files,
+                                                                        self.max_test_instances)
 
         # Then we build the model and compile it.
         logger.info("Building the model")

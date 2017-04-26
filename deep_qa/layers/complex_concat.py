@@ -81,7 +81,10 @@ class ComplexConcat(MaskedLayer):
             first_tensor = self._get_combination(combination[0], tensors)
             second_tensor = self._get_combination(combination[2], tensors)
             if K.int_shape(first_tensor) != K.int_shape(second_tensor):
-                raise ConfigurationError("Cannot combine two tensors with different shapes!")
+                shapes_message = "Shapes were: {} and {}".format(K.int_shape(first_tensor),
+                                                                 K.int_shape(second_tensor))
+                raise ConfigurationError("Cannot combine two tensors with different shapes!  " +
+                                         shapes_message)
             operation = combination[1]
             if operation == '*':
                 return first_tensor * second_tensor

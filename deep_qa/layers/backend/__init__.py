@@ -7,5 +7,6 @@ from .max import Max
 from .permute import Permute
 from .multiply import Multiply
 from .repeat import Repeat
+from .repeat_like import RepeatLike
 from .squeeze import Squeeze
 from .add_mask import AddMask

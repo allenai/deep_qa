@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 from keras.layers import Dense, Input, Concatenate, TimeDistributed
 from overrides import overrides
@@ -6,7 +6,7 @@ from overrides import overrides
 from ...data.instances.reading_comprehension import CharacterSpanInstance
 from ...layers import ComplexConcat, Highway
 from ...layers.attention import MatrixAttention, MaskedSoftmax, WeightedSum
-from ...layers.backend import Max, Repeat
+from ...layers.backend import Max, RepeatLike, Repeat
 from ...training import TextTrainer
 from ...training.models import DeepQaModel
 from ...common.params import Params
@@ -139,9 +139,9 @@ class BidirectionalAttentionFlow(TextTrainer):
 
         # Then he repeats this question/passage vector for every word in the passage, and uses it
         # as an additional input to the hidden layers above.
-        repeat_layer = Repeat(axis=1, repetitions=self.num_passage_words)
+        repeat_layer = RepeatLike(axis=1, copy_from_axis=1)
         # Shape: (batch_size, num_passage_words, embedding_dim * 2)
-        tiled_question_passage_vector = repeat_layer(question_passage_vector)
+        tiled_question_passage_vector = repeat_layer([question_passage_vector, encoded_passage])
 
         # Shape: (batch_size, num_passage_words, embedding_dim * 8)
         complex_concat_layer = ComplexConcat(combination='1,2,1*2,1*3', name='final_merged_passage')
@@ -176,9 +176,10 @@ class BidirectionalAttentionFlow(TextTrainer):
         # his figure makes it clear this is what he intended; he just wrote the equations wrong).
         # Shape: (batch_size, num_passage_words, embedding_dim * 2)
         sum_layer = WeightedSum(name="passage_weighted_by_predicted_span", use_masking=False)
-        repeat_layer = Repeat(axis=1, repetitions=self.num_passage_words)
-        passage_weighted_by_predicted_span = repeat_layer(sum_layer([modeled_passage,
-                                                                     span_begin_probabilities]))
+        repeat_layer = RepeatLike(axis=1, copy_from_axis=1)
+        passage_weighted_by_predicted_span = repeat_layer([sum_layer([modeled_passage,
+                                                                      span_begin_probabilities]),
+                                                           encoded_passage])
         span_end_representation = ComplexConcat(combination="1,2,3,2*3")([final_merged_passage,
                                                                           modeled_passage,
                                                                           passage_weighted_by_predicted_span])
@@ -204,13 +205,10 @@ class BidirectionalAttentionFlow(TextTrainer):
 
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
-        # Adding this because we're bypassing num_sentence_words in our model, but TextTrainer
-        # expects it.
-        padding_lengths['num_sentence_words'] = None
         super(BidirectionalAttentionFlow, self)._set_padding_lengths(padding_lengths)
-        if self.num_passage_words is None:
+        if not self.use_dynamic_padding and self.num_passage_words is None:
             self.num_passage_words = padding_lengths['num_passage_words']
-        if self.num_question_words is None:
+        if not self.use_dynamic_padding and self.num_question_words is None:
             self.num_question_words = padding_lengths['num_question_words']
 
     @overrides
@@ -224,6 +222,9 @@ class BidirectionalAttentionFlow(TextTrainer):
         # self.num_sentence_words.
         self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][1:])
 
+    def _get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
+        return ['num_passage_words', 'num_question_words']
+
     @classmethod
     def _get_custom_objects(cls):
         custom_objects = super(BidirectionalAttentionFlow, cls)._get_custom_objects()
@@ -232,6 +233,7 @@ class BidirectionalAttentionFlow(TextTrainer):
         custom_objects["MatrixAttention"] = MatrixAttention
         custom_objects["Max"] = Max
         custom_objects["Repeat"] = Repeat
+        custom_objects["RepeatLike"] = RepeatLike
         custom_objects["WeightedSum"] = WeightedSum
         return custom_objects
 

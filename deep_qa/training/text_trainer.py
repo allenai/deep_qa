@@ -535,7 +535,7 @@ class TextTrainer(Trainer):
 
     def _set_padding_lengths(self, dataset_padding_lengths: Dict[str, int]):
         """
-        This is about padding.  Any solver will have some number of things that need padding in
+        This is about padding.  Any model will have some number of things that need padding in
         order to make a consistent set of input arrays, like the length of a sentence.  This method
         sets those variables given a dictionary of lengths from a dataset.
 
@@ -544,7 +544,7 @@ class TextTrainer(Trainer):
         set a hard limit in the class parameters and don't want to change it.
         """
         if not self.use_dynamic_padding and self.num_sentence_words is None:
-            self.num_sentence_words = dataset_padding_lengths['num_sentence_words']
+            self.num_sentence_words = dataset_padding_lengths.get('num_sentence_words', None)
         if not self.use_dynamic_padding and self.num_word_characters is None:
             self.num_word_characters = dataset_padding_lengths.get('num_word_characters', None)
 
