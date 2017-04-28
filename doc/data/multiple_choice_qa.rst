@@ -13,6 +13,14 @@ BabiInstances
     :undoc-members:
     :show-inheritance:
 
+GraphAlignInstances
+-------------------
+
+.. automodule:: deep_qa.data.instances.multiple_choice_qa.graph_align_instance
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 MultipleTrueFalseInstances
 --------------------------
 
