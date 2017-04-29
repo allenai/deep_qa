@@ -43,7 +43,8 @@ library, [DeepQA Experiments](https://github.com/allenai/deep_qa_experiments), w
 originally designed to produce input files and run experiments, and can be used to generate
 required data files for most of the tasks we have models for.  We're moving towards putting the
 data processing code directly into DeepQA, so that DeepQA Experiments is not necessary, but for
-now, getting training data files in the right format is most easily done with DeepQA Experiments.
+now, getting training data files in the right format is most easily [done with DeepQA
+Experiments](https://github.com/allenai/deep_qa/issues/328#issuecomment-298176527).
 
 ## Implementing your own models
 
