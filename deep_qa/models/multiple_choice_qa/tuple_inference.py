@@ -9,6 +9,7 @@ from ...data.instances.multiple_choice_qa import TupleInferenceInstance
 from ...layers import NoisyOr
 from ...layers.attention import MaskedSoftmax
 from ...layers.backend import Repeat
+from ...layers.subtract_minimum import SubtractMinimum
 from ...layers.tuple_matchers import tuple_matchers, WordOverlapTupleMatcher
 from ...layers.wrappers import TimeDistributedWithMask
 from ...training import TextTrainer
@@ -49,6 +50,12 @@ class TupleInferenceModel(TextTrainer):
     num_options: int, default=4
         The number of answer options/candidates.
 
+    normalize_tuples_across_answers: bool, default=False
+        Whether or not to normalize each question tuple's score across the answer options.  This
+        assumes that the tuples are in the same order for all answer options.  Normalization is
+        currently done by subtracting the minimum score for a given tuple "position" from all the
+        tuples in that position.
+
     display_text_wrap: int, default=150
         This is used by the debug output methods to wrap long tuple strings.
 
@@ -64,6 +71,7 @@ class TupleInferenceModel(TextTrainer):
         self.num_tuple_slots = params.pop('num_tuple_slots', 4)
         self.num_slot_words = params.pop('num_sentence_words', 5)
         self.num_options = params.pop('num_answer_options', 4)
+        self.normalize_tuples_across_answers = params.pop('normalize_tuples_across_answers', False)
         self.display_text_wrap = params.pop('display_text_wrap', 150)
         self.display_num_tuples = params.pop('display_num_tuples', 5)
         tuple_matcher_params = params.pop('tuple_matcher', {})
@@ -100,6 +108,7 @@ class TupleInferenceModel(TextTrainer):
         custom_objects['NoisyOr'] = NoisyOr
         custom_objects['Repeat'] = Repeat
         custom_objects['TimeDistributedWithMask'] = TimeDistributedWithMask
+        custom_objects['SubtractMinimum'] = SubtractMinimum
         return custom_objects
 
     @overrides
@@ -185,6 +194,12 @@ class TupleInferenceModel(TextTrainer):
         combine_background_evidence = NoisyOr(axis=-1, param_init=self.noisy_or_param_init)
         combine_background_evidence.name = "noisy_or_1"
         qi_probabilities = combine_background_evidence(matches)
+
+        # If desired, peek across the options, and normalize the amount that a given answer tuple template "counts"
+        # towards a correct answer.
+        if self.normalize_tuples_across_answers:
+            normalize_across_options = SubtractMinimum(axis=1)
+            qi_probabilities = normalize_across_options(qi_probabilities)
 
         # Find the probability that any given option is correct, given the entailement scores of each of its
         # question tuples given the set of background tuples.

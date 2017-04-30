@@ -17,5 +17,6 @@ class TestTupleInferenceModel(DeepQaTestCase):
                        "num_tuple_slots": 4,
                        "num_sentence_words": 10,
                        "num_answer_options": 4,
+                       "normalize_tuples_across_answers": True,
                        "save_models": True})
         self.ensure_model_trains_and_loads(TupleInferenceModel, args)

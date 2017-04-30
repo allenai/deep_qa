@@ -30,7 +30,7 @@ class AddMask(MaskedLayer):
 
     @overrides
     def compute_mask(self, inputs, mask=None):  # pylint: disable=unused-argument
-        return K.cast(K.not_equal(inputs, self.mask_value), 'uint8')
+        return K.cast(K.not_equal(inputs, self.mask_value), 'bool')
 
     @overrides
     def compute_output_shape(self, input_shape):

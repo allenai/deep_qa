@@ -113,6 +113,14 @@ RecurrenceModes
     :undoc-members:
     :show-inheritance:
 
+SubtractMinimum
+---------------
+
+.. automodule:: deep_qa.layers.subtract_minimum
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 TimeDistributedEmbedding
 ------------------------
 
