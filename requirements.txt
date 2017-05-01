@@ -4,7 +4,7 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-keras>=2.0.3
+keras==2.0.3
 h5py
 scikit-learn
 

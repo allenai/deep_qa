@@ -143,6 +143,15 @@ code is [Matt Gardner](https://matt-gardner.github.io/), with a lot of help from
 Dasigi](http://www.cs.cmu.edu/~pdasigi/) (who was the initial author of this codebase), [Mark
 Neumann](http://markneumann.xyz/) and [Nelson Liu](http://nelsonliu.me/).
 
+A note on issues: we are a very small team, and our focus is on getting research done, not on
+building this library.  We do not have anyone dedicated full-time to maintaining and improving
+this code.  As such, we generally do not have bandwidth to solve your problems.  Sorry.  The code
+is well tested and works on our continuous integration server, so if the tests do not pass in your
+environment, there is something wrong with your environment, not the code.  Please only submit
+issues _after_ having made sure the tests pass, and trying to figure out the issue yourself.  In
+your issue, explain clearly what the problem is and what you tried to do to fix it, including
+commands run and full stack traces.  You're a whole lot more likely to actually get help that way.
+
 ## License
 
 This code is released under the terms of the [Apache 2
