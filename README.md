@@ -33,7 +33,7 @@ code for these systems is typically 50 lines or less.
 ## Using DeepQA
 
 To train or evaluate a model using DeepQA, the recommended entry point is to use the
-[`run_model.py`](./scripts/run_model.py) script.  That script takes one argument, which is a
+[`run.py`](./scripts/run.py) script.  That script takes one argument, which is a
 parameter file.  You can see example parameter files in the [examples
 directory](./example_experiments).  You can get some notion of what parameters are available by
 looking through the [documentation](http://deep-qa.readthedocs.io).
@@ -46,6 +46,29 @@ data processing code directly into DeepQA, so that DeepQA Experiments is not nec
 now, getting training data files in the right format is most easily [done with DeepQA
 Experiments](https://github.com/allenai/deep_qa/issues/328#issuecomment-298176527).
 
+## Running a Model
+Running a model in DeepQA is very straightforward. Once you have specified model parameters in a
+json file you can run the following:
+
+```
+from deep_qa import run_model, evaluate_model, load_model
+
+# Train a model given a json specification
+run_model("/path/to/json/parameter/file")
+
+
+# Load a model given a json specification
+loaded_model = load_model("/path/to/json/parameter/file")
+# Do some more exciting things with your model here!
+
+
+# Evaluate a pretrained model on some test data specified in the json parameters.
+predictions = evaluate_model("/path/to/json/parameter/file")
+```
+
+We have provided some example json specifications in the [example_experiments](./example_experiments) directory.
+
+
 ## Implementing your own models
 
 To implement a new model in DeepQA, you need to subclass `TextTrainer`.  There is
@@ -56,11 +79,24 @@ section.  For a simple example of a fully functional model, see the [simple sequ
 tagger](./deep_qa/models/sequence_tagging/simple_tagger.py), which has about 20 lines of actual
 implementation code.
 
-One snag is that if you're doing a new task, or a new variant of a task with a different
+In order to train, load and evaluate models which you have written yourself, simply pass an additional
+argument to the functions above and remove the `model_class` parameter from your json specification.
+For example:
+```
+from deep_qa import run_model
+from .local_project import MyGreatModel
+
+# Train a model given a json specification (without a "model_class" attribute).
+run_model("/path/to/json/parameter/file", model_class=MyGreatModel)
+```
+
+If you're doing a new task, or a new variant of a task with a different
 input/output specification, you probably also need to implement an
 [`Instance`](./deep_qa/data/instances/instance.py) type.  The `Instance` handles reading data from
 a file and converting it into numpy arrays that can be used for training and evaluation.  This
 only needs to happen once for each input/output spec.
+
+
 
 ## Organization
 

@@ -149,7 +149,8 @@ class SentenceSelectionRetrievalEncoder(RetrievalEncoder):
     Parameters
     ----------
     model_param_file: str
-        This is the parameter file used to train the sentence selection model with ``run_model.py``.
+        This is the parameter file used to train the sentence selection
+        model with :func:`~deep_qa.run.run_model()`.
     """
     def __init__(self, params: Params):
         model_param_file = params.pop('model_param_file')

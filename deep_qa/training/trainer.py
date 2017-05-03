@@ -31,7 +31,7 @@ class Trainer:
     The intended use of this class is that you construct a subclass that defines a model,
     overriding the abstract methods and (optionally) some of the protected methods in this class.
     Thus there are four kinds of methods in this class: (1) public methods, that are typically only
-    used by ``scripts/run_model.py`` (or some other driver that you create), (2) abstract methods
+    used by ``deep_qa/run.py`` (or some other driver that you create), (2) abstract methods
     (beginning with ``_``), which `must` be overridden by any concrete subclass, (3) protected
     methods (beginning with ``_``) that you are meant to override in concrete subclasses, and (4)
     private methods (beginning with ``__``) that you should not need to mess with.  We only include
@@ -355,10 +355,6 @@ class Trainer:
             for idx, metric in enumerate(self.model.metrics_names):
                 print("{}: {}".format(metric, scores[idx]))
 
-    def score_dataset(self, dataset: Dataset):
-        inputs, _ = self.create_data_arrays(dataset)
-        return self.model.predict(inputs)
-
     def load_model(self, epoch: int=None):
         """
         Loads a serialized model, using the ``model_serialization_prefix`` that was passed to the
@@ -387,6 +383,23 @@ class Trainer:
     ##################
     # Abstract methods - you MUST override these
     ##################
+
+    def score_dataset(self, dataset: Dataset) -> List[Any]:
+        """
+        Takes a `Dataset`, indexes it, and returns the output of evaluating the model on all
+        instances. The return type here depends on the output of your model.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            A ``Dataset`` read by `:func:`~Trainer.load_dataset_from_files()`.
+
+        Returns
+        -------
+        Predictions for each ``Instance`` in the ``Dataset``. The actual type depends on
+        the output of your model.
+        """
+        raise NotImplementedError
 
     def load_dataset_from_files(self, files: List[str]) -> Dataset:
         """

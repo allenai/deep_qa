@@ -44,6 +44,7 @@ This library has several main components:
    :hidden:
 
    self
+   run
 
 .. toctree::
    :caption: Training

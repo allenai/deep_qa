@@ -259,6 +259,12 @@ class TextTrainer(Trainer):
     # Utility methods - meant to be called by subclasses, not overriden
     #################
 
+    @overrides
+    def score_dataset(self, dataset: TextDataset):
+        indexed_dataset = dataset.to_indexed_dataset(self.data_indexer)
+        inputs, _ = self.create_data_arrays(indexed_dataset)
+        return self.model.predict(inputs)
+
     def _get_sentence_shape(self, sentence_length: int=None) -> Tuple[int]:
         """
         Returns a tuple specifying the shape of a tensor representing a sentence.  This is not
