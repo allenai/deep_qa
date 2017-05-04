@@ -30,7 +30,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                            level=logging.INFO)
+                            level=logging.DEBUG)
         log_keras_version_info()
         os.makedirs(self.TEST_DIR, exist_ok=True)
 

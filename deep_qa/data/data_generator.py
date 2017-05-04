@@ -46,6 +46,18 @@ class DataGenerator:
         certain padding values or not.  It's handled correctly for ``num_sentence_words`` and
         ``num_word_characters`` in :class:`~deep_qa.training.TextTrainer`, but you need to be sure
         to implement it correctly in subclasses for this to work.
+    padding_noise: double, optional (default=.1)
+        When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
+        isn't deterministic.  This parameter determines how much noise we add, as a percentage of
+        the actual padding value for each instance.
+    sort_every_epoch: bool, optional (default=True)
+        If ``True``, we will re-sort the data after every epoch, then re-group the instances into
+        batches.  If ``padding_noise`` is zero, this does nothing, but if it's non-zero, this will
+        give you a slightly different ordering, so you don't have exactly the same batches at every
+        epoch.  If you're doing adaptive batch sizes, this will lead to re-computing the adaptive
+        batches each epoch, which could give a different number of batches for the whole dataset,
+        which means each "epoch" might no longer correspond to `exactly` one pass over the data.
+        This is probably a pretty minor issue, though.
     adaptive_batch_sizes: bool, optional (default=False)
         Only relevant if ``dynamic_padding`` is ``True``.  If ``adaptive_batch_sizes`` is ``True``,
         we will vary the batch size to try to optimize GPU memory usage.  Because padding lengths
@@ -59,7 +71,18 @@ class DataGenerator:
         Only relevant if ``adaptive_batch_sizes`` is ``True``.  This is a manually-tuned parameter,
         specific to a particular model architecture and amount of GPU memory (e.g., if you change
         the number of hidden layers in your model, this number will need to change).  See
-        :func:`~TextTrainer._get_padding_memory_scaling` for more detail.
+        :func:`~TextTrainer._get_padding_memory_scaling` for more detail.  The recommended way to
+        tune this parameter is to (1) use a fixed batch size, with ``biggest_batch_first`` set to
+        ``True``, and find out the maximum batch size you can handle on your biggest instances
+        without running out of memory.  Then (2) turn on ``adaptive_batch_sizes``, and set this
+        parameter so that you get the right batch size for your biggest instances.  If you set the
+        log level to ``DEBUG`` in ``scripts/run_model.py``, you can see the batch sizes that are
+        computed.
+    maximum_batch_size: int, optional (default=1000000)
+        If we're using adaptive batch sizes, you can use this to be sure you do not create batches
+        larger than this, even if you have enough memory to handle it on your GPU.  You might
+        choose to do this to keep smaller batches because you like the noisier gradient estimates
+        that come from smaller batches, for instance.
     biggest_batch_first: bool, optional (default=False)
         This is largely for testing, to see how large of a batch you can safely use with your GPU.
         It's only meaningful if you're using dynamic padding - this will let you try out the
@@ -70,8 +93,11 @@ class DataGenerator:
     def __init__(self, text_trainer, params: Params):
         self.text_trainer = text_trainer
         self.dynamic_padding = params.pop('dynamic_padding', False)
+        self.padding_noise = params.pop('padding_noise', 0.2)
+        self.sort_every_epoch = params.pop('sort_every_epoch', True)
         self.adaptive_batch_sizes = params.pop('adaptive_batch_sizes', False)
         self.adaptive_memory_usage_constant = params.pop('adaptive_memory_usage_constant', False)
+        self.maximum_batch_size = params.pop('maximum_batch_size', 1000000)
         self.biggest_batch_first = params.pop('biggest_batch_first', False)
 
         #: This field can be read after calling ``create_generator`` to get the number of steps you
@@ -84,47 +110,63 @@ class DataGenerator:
         Main external API call: converts an ``IndexedDataset`` into a data generator suitable for
         use with Keras' ``fit_generator`` and related methods.
         """
+        grouped_instances = self.__create_batches(dataset)
+        self.last_num_batches = len(grouped_instances)
+        def generator():
+            while True:
+                if self.sort_every_epoch:
+                    groups = self.__create_batches(dataset)
+                else:
+                    groups = grouped_instances
+                for group in groups:
+                    batch = IndexedDataset(group)
+                    batch.pad_instances(self.text_trainer.get_padding_lengths(), verbose=False)
+                    yield batch.as_training_data()
+        return generator()
+
+    def __create_batches(self, dataset: IndexedDataset) -> List[List[IndexedInstance]]:
         if self.dynamic_padding:
-            dataset.sort_by_padding(self.text_trainer.get_instance_sorting_keys())
+            dataset.sort_by_padding(self.text_trainer.get_instance_sorting_keys(), self.padding_noise)
         instances = dataset.instances
         if self.adaptive_batch_sizes:
             grouped_instances = self.__adaptive_grouping(instances)
         else:
             grouped_instances = group_by_count(instances, self.text_trainer.batch_size, None)
             grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
-        self.last_num_batches = len(grouped_instances)
-        def generator():
-            while True:
-                if self.biggest_batch_first:
-                    # We'll actually pop the last _two_ batches, because the last one might not
-                    # be full.
-                    last_batch = grouped_instances.pop()
-                    penultimate_batch = grouped_instances.pop()
-                    random.shuffle(grouped_instances)
-                    grouped_instances.insert(0, penultimate_batch)
-                    grouped_instances.insert(0, last_batch)
-                else:
-                    random.shuffle(grouped_instances)
-                for group in grouped_instances:
-                    dataset = IndexedDataset(group)
-                    dataset.pad_instances(self.text_trainer.get_padding_lengths(), verbose=False)
-                    yield dataset.as_training_data()
-        return generator()
+        if self.biggest_batch_first:
+            # We'll actually pop the last _two_ batches, because the last one might not
+            # be full.
+            last_batch = grouped_instances.pop()
+            penultimate_batch = grouped_instances.pop()
+            random.shuffle(grouped_instances)
+            grouped_instances.insert(0, penultimate_batch)
+            grouped_instances.insert(0, last_batch)
+        else:
+            random.shuffle(grouped_instances)
+        return grouped_instances
 
     def __adaptive_grouping(self, instances: List[IndexedInstance]):
         batches = []
         current_batch = []
-        #max_batch_size = 60
+        current_lengths = {}
         logger.info("Creating adatpive groups")
         for instance in tqdm.tqdm(instances):
             current_batch.append(instance)
-            padding_lengths = IndexedDataset(current_batch).padding_lengths()
-            big_o_memory_constant = self.text_trainer.get_padding_memory_scaling(padding_lengths)
-            if len(current_batch) * big_o_memory_constant > self.adaptive_memory_usage_constant:
+            instance_lengths = instance.get_padding_lengths()
+            for key in instance_lengths:
+                current_lengths[key] = max(instance_lengths[key], current_lengths.get(key, -1))
+            big_o_memory_constant = self.text_trainer.get_padding_memory_scaling(current_lengths)
+            if (len(current_batch) * big_o_memory_constant > self.adaptive_memory_usage_constant
+                        or len(current_batch) > self.maximum_batch_size):
                 current_batch.pop()
-                padding_lengths = IndexedDataset(current_batch).padding_lengths()
+                if logger.getEffectiveLevel() <= logging.DEBUG:
+                    padding_lengths = IndexedDataset(current_batch).padding_lengths()
+                    logger.debug("Batch size: %d; padding: %s", len(current_batch), padding_lengths)
                 batches.append(current_batch)
                 current_batch = [instance]
-        padding_lengths = IndexedDataset(current_batch).padding_lengths()
+                current_lengths = instance_lengths
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            padding_lengths = IndexedDataset(current_batch).padding_lengths()
+            logger.debug("Batch size: %d; padding: %s", len(current_batch), padding_lengths)
         batches.append(current_batch)
         return batches

@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from numpy.testing import assert_array_equal
 
 from deep_qa.common.params import Params
 from deep_qa.data import DataGenerator, IndexedDataset
@@ -26,31 +25,51 @@ class TestDataGenerator(DeepQaTestCase):
 
     def test_instances_are_sorted_by_sorting_keys(self):
         params = Params({
-                'dynamic_padding': True
+                'dynamic_padding': True,
+                'padding_noise': 0.0,
                 })
         generator = DataGenerator(self.text_trainer, params)
         batches = generator.create_generator(IndexedDataset(self.instances))
         assert generator.last_num_batches == 4
         one_epoch_arrays = [next(batches) for _ in range(4)]
         one_epoch_arrays.sort(key=lambda x: x[0][0])
-        assert_array_equal(one_epoch_arrays[0][0], numpy.asarray([[1], [0], [4]]))
-        assert_array_equal(one_epoch_arrays[1][0], numpy.asarray([[3]]))
-        assert_array_equal(one_epoch_arrays[2][0], numpy.asarray([[6], [7], [2]]))
-        assert_array_equal(one_epoch_arrays[3][0], numpy.asarray([[8], [9], [5]]))
+        assert self.as_list(one_epoch_arrays[0][0]) == [1, 0, 4]
+        assert self.as_list(one_epoch_arrays[1][0]) == [3]
+        assert self.as_list(one_epoch_arrays[2][0]) == [6, 7, 2]
+        assert self.as_list(one_epoch_arrays[3][0]) == [8, 9, 5]
+
+    def test_batches_are_consistent_with_no_repermuting(self):
+        params = Params({
+                'padding_noise': 0.0,
+                'sort_every_epoch': False,
+                'dynamic_padding': True,
+                })
+        generator = DataGenerator(self.text_trainer, params)
+        batches = generator.create_generator(IndexedDataset(self.instances))
+        assert generator.last_num_batches == 4
+        first_epoch_arrays = [next(batches) for _ in range(4)]
+        second_epoch_arrays = [next(batches) for _ in range(4)]
+        first_epoch_arrays.sort(key=lambda x: x[0][0])
+        second_epoch_arrays.sort(key=lambda x: x[0][0])
+        first_epoch = [self.as_list(x[0]) for x in first_epoch_arrays]
+        second_epoch = [self.as_list(x[0]) for x in second_epoch_arrays]
+        assert first_epoch == second_epoch
 
     def test_biggest_batch_first(self):
         params = Params({
+                'padding_noise': 0.0,
                 'dynamic_padding': True,
                 'biggest_batch_first': True,
                 })
         generator = DataGenerator(self.text_trainer, params)
         batches = generator.create_generator(IndexedDataset(self.instances))
         biggest_batches = [next(batches) for _ in range(2)]
-        assert_array_equal(biggest_batches[0][0], numpy.asarray([[3]]))
-        assert_array_equal(biggest_batches[1][0], numpy.asarray([[1], [0], [4]]))
+        assert self.as_list(biggest_batches[0][0]) == [3]
+        assert self.as_list(biggest_batches[1][0]) == [1, 0, 4]
 
     def test_adaptive_grouping(self):
         params = Params({
+                'padding_noise': 0.0,
                 'dynamic_padding': True,
                 'adaptive_batch_sizes': True,
                 'adaptive_memory_usage_constant': 130,
@@ -60,10 +79,54 @@ class TestDataGenerator(DeepQaTestCase):
         assert generator.last_num_batches == 4
         one_epoch_arrays = [next(batches) for _ in range(4)]
         one_epoch_arrays.sort(key=lambda x: x[0][0])
-        assert_array_equal(one_epoch_arrays[0][0], numpy.asarray([[0], [4]]))
-        assert_array_equal(one_epoch_arrays[1][0], numpy.asarray([[3]]))
-        assert_array_equal(one_epoch_arrays[2][0], numpy.asarray([[7], [2], [1]]))
-        assert_array_equal(one_epoch_arrays[3][0], numpy.asarray([[8], [9], [5], [6]]))
+        assert self.as_list(one_epoch_arrays[0][0]) == [0, 4]
+        assert self.as_list(one_epoch_arrays[1][0]) == [3]
+        assert self.as_list(one_epoch_arrays[2][0]) == [7, 2, 1]
+        assert self.as_list(one_epoch_arrays[3][0]) == [8, 9, 5, 6]
+
+    def test_sort_every_batch_actually_adds_noise_every_batch(self):
+        # We're just going to get two epoch's worth of batches, and make sure that they're
+        # different.
+        params = Params({
+                'padding_noise': 0.8,
+                'sort_every_epoch': True,
+                'dynamic_padding': True,
+                })
+        generator = DataGenerator(self.text_trainer, params)
+        batches = generator.create_generator(IndexedDataset(self.instances))
+        assert generator.last_num_batches == 4
+        first_epoch_arrays = [next(batches) for _ in range(4)]
+        second_epoch_arrays = [next(batches) for _ in range(4)]
+        first_epoch_arrays.sort(key=lambda x: x[0][0])
+        second_epoch_arrays.sort(key=lambda x: x[0][0])
+        first_epoch = [self.as_list(x[0]) for x in first_epoch_arrays]
+        second_epoch = [self.as_list(x[0]) for x in second_epoch_arrays]
+        assert first_epoch != second_epoch
+
+    def test_maximum_batch_size_is_actually_a_maximum(self):
+        params = Params({
+                'padding_noise': 0.0,
+                'dynamic_padding': True,
+                'adaptive_batch_sizes': True,
+                'adaptive_memory_usage_constant': 50,
+                'maximum_batch_size': 2,
+                })
+        generator = DataGenerator(self.text_trainer, params)
+        batches = generator.create_generator(IndexedDataset(self.instances))
+        assert generator.last_num_batches == 7
+        one_epoch_arrays = [next(batches) for _ in range(7)]
+        one_epoch_arrays.sort(key=lambda x: x[0][0])
+        print([self.as_list(x[0]) for x in one_epoch_arrays])
+        assert self.as_list(one_epoch_arrays[0][0]) == [0]
+        assert self.as_list(one_epoch_arrays[1][0]) == [2, 1]
+        assert self.as_list(one_epoch_arrays[2][0]) == [3]
+        assert self.as_list(one_epoch_arrays[3][0]) == [4]
+        assert self.as_list(one_epoch_arrays[4][0]) == [5, 6]
+        assert self.as_list(one_epoch_arrays[5][0]) == [7]
+        assert self.as_list(one_epoch_arrays[6][0]) == [8, 9]
+
+    def as_list(self, array):
+        return list(numpy.squeeze(array, axis=-1))
 
 
 class FakeInstance:

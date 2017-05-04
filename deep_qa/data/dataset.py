@@ -6,8 +6,9 @@ from typing import Dict, List
 import numpy
 import tqdm
 
-from .instances.instance import Instance, TextInstance, IndexedInstance
+from ..common.util import add_noise_to_dict_values
 from .data_indexer import DataIndexer
+from .instances.instance import Instance, TextInstance, IndexedInstance
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -99,7 +100,7 @@ class IndexedDataset(Dataset):
     def __init__(self, instances: List[IndexedInstance]):
         super(IndexedDataset, self).__init__(instances)
 
-    def sort_by_padding(self, sorting_keys: List[str]):
+    def sort_by_padding(self, sorting_keys: List[str], padding_noise: float=0.0):
         """
         Sorts the ``Instances`` in this ``Dataset`` by their padding lengths, using the keys in
         ``sorting_keys`` (in the order in which they are provided).
@@ -107,6 +108,8 @@ class IndexedDataset(Dataset):
         instances_with_lengths = []
         for instance in self.instances:
             padding_lengths = instance.get_padding_lengths()
+            if padding_noise > 0.0:
+                padding_lengths = add_noise_to_dict_values(padding_lengths, padding_noise)
             instance_with_lengths = [padding_lengths[key] for key in sorting_keys] + [instance]
             instances_with_lengths.append(instance_with_lengths)
         instances_with_lengths.sort(key=lambda x: x[:-1])
