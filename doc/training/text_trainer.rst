@@ -36,7 +36,9 @@ Semi-abstract methods
 You'll likely need to override these methods, if you have anything more complex than a single sentence
 as input.
 
-.. automethod:: TextTrainer._get_padding_lengths
+.. automethod:: TextTrainer.get_padding_lengths
+.. automethod:: TextTrainer.get_instance_sorting_keys
+.. automethod:: TextTrainer.get_padding_memory_scaling
 .. automethod:: TextTrainer._set_padding_lengths
 
 Overridden ``Trainer`` methods

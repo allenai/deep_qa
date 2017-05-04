@@ -3,6 +3,7 @@ import itertools
 import logging
 from typing import Dict, List
 
+import numpy
 import tqdm
 
 from .instances.instance import Instance, TextInstance, IndexedInstance
@@ -157,6 +158,7 @@ class IndexedDataset(Dataset):
         # given a max length for a particular dimension.  If we were, we use that instead of the
         # instance-based one.
         if verbose:
+            logger.info("Padding dataset of size %d to lengths %s", len(self.instances), str(padding_lengths))
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.padding_lengths()
         if verbose:
@@ -177,9 +179,10 @@ class IndexedDataset(Dataset):
 
     def as_training_data(self):
         """
-        Takes each IndexedInstance and converts it into (inputs, labels), according to the
-        Instance's as_training_data() method.  Note that you might need to call numpy.asarray() on
-        the results of this; we don't do that for you, because the inputs might be complicated.
+        Takes each ``IndexedInstance`` and converts it into (inputs, labels), according to the
+        Instance's as_training_data() method.  Both the inputs and the labels are numpy arrays.
+        Note that if the ``Instances`` return tuples for their inputs, we convert the list of
+        tuples into a tuple of lists, before converting everything to numpy arrays.
         """
         inputs = []
         labels = []
@@ -188,4 +191,12 @@ class IndexedDataset(Dataset):
             instance_inputs, label = instance.as_training_data()
             inputs.append(instance_inputs)
             labels.append(label)
+        if isinstance(inputs[0], tuple):
+            inputs = [numpy.asarray(x) for x in zip(*inputs)]
+        else:
+            inputs = numpy.asarray(inputs)
+        if isinstance(labels[0], tuple):
+            labels = [numpy.asarray(x) for x in zip(*labels)]
+        else:
+            labels = numpy.asarray(labels)
         return inputs, labels

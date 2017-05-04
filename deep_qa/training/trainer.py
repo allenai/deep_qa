@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 from typing import Any, Dict, List, Tuple
 
@@ -270,13 +269,19 @@ class Trainer:
         if self.update_model_state_with_training_data:
             self.set_model_state_from_indexed_dataset(indexed_training_dataset)
         self.training_arrays = self.create_data_arrays(indexed_training_dataset)
+        if self._uses_data_generators():
+            self.train_steps_per_epoch = self.data_generator.last_num_batches  # pylint: disable=no-member
 
         if self.validation_files:
             self.validation_dataset, self.validation_arrays = self.load_data_arrays(self.validation_files,
                                                                                     self.max_validation_instances)
+        if self._uses_data_generators():
+            self.validation_steps = self.data_generator.last_num_batches  # pylint: disable=no-member
         if self.test_files:
             self.test_dataset, self.test_arrays = self.load_data_arrays(self.test_files,
                                                                         self.max_test_instances)
+        if self._uses_data_generators():
+            self.test_steps = self.data_generator.last_num_batches  # pylint: disable=no-member
 
         # Then we build the model and compile it.
         logger.info("Building the model")
@@ -325,13 +330,8 @@ class Trainer:
             # arguments right.
             kwargs.pop('batch_size')
             kwargs['steps_per_epoch'] = self.train_steps_per_epoch
-            if kwargs['steps_per_epoch'] is None:
-                kwargs['steps_per_epoch'] = math.ceil(len(self.training_dataset.instances) / self.batch_size)
             if self.validation_arrays is not None and self._uses_data_generators():
                 kwargs['validation_steps'] = self.validation_steps
-                if kwargs['validation_steps'] is None:
-                    kwargs['validation_steps'] = math.ceil(len(self.validation_dataset.instances) /
-                                                           self.batch_size)
             history = self.model.fit_generator(self.training_arrays, **kwargs)
 
         # After finishing training, we save the best weights and
@@ -349,8 +349,6 @@ class Trainer:
                 scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
             else:
                 test_steps = self.test_steps
-                if test_steps is None:
-                    test_steps = math.ceil(len(self.test_dataset.instances) / self.batch_size)
                 scores = self.model.evaluate_generator(self.test_arrays, test_steps)
             for idx, metric in enumerate(self.model.metrics_names):
                 print("{}: {}".format(metric, scores[idx]))

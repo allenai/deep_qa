@@ -81,8 +81,8 @@ class QuestionAnswerSimilarity(TextTrainer):
         return QuestionAnswerInstance
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(QuestionAnswerSimilarity, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(QuestionAnswerSimilarity, self).get_padding_lengths()
         padding_lengths['num_options'] = self.num_options
         padding_lengths['answer_length'] = self.max_answer_length
         return padding_lengths

@@ -44,8 +44,8 @@ class MultipleTrueFalseMemoryNetwork(MemoryNetwork):
         self.entailment_choices = ['multiple_choice_mlp']
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(MultipleTrueFalseMemoryNetwork, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(MultipleTrueFalseMemoryNetwork, self).get_padding_lengths()
         padding_lengths['num_options'] = self.num_options
         return padding_lengths
 

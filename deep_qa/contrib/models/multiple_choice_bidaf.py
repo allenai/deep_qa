@@ -175,8 +175,8 @@ class MultipleChoiceBidaf(TextTrainer):
         return McQuestionPassageInstance
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = self._bidaf_model._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = self._bidaf_model.get_padding_lengths()
         padding_lengths['num_options'] = self.num_options
         padding_lengths['num_option_words'] = self.num_option_words
         return padding_lengths

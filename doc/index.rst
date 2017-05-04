@@ -69,6 +69,7 @@ This library has several main components:
    data/text_classification
    data/wrappers
    data/tokenizers
+   data/data_generator
    data/general_data_utils
 
 .. toctree::

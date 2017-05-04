@@ -193,12 +193,13 @@ class BidirectionalAttentionFlow(TextTrainer):
         return DeepQaModel(inputs=[question_input, passage_input],
                            outputs=[span_begin_probabilities, span_end_probabilities])
 
+    @overrides
     def _instance_type(self):  # pylint: disable=no-self-use
         return CharacterSpanInstance
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(BidirectionalAttentionFlow, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(BidirectionalAttentionFlow, self).get_padding_lengths()
         padding_lengths['num_passage_words'] = self.num_passage_words
         padding_lengths['num_question_words'] = self.num_question_words
         return padding_lengths
@@ -206,9 +207,11 @@ class BidirectionalAttentionFlow(TextTrainer):
     @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         super(BidirectionalAttentionFlow, self)._set_padding_lengths(padding_lengths)
-        if not self.use_dynamic_padding and self.num_passage_words is None:
+        if self.data_generator is not None and self.data_generator.dynamic_padding:
+            return
+        if self.num_passage_words is None:
             self.num_passage_words = padding_lengths['num_passage_words']
-        if not self.use_dynamic_padding and self.num_question_words is None:
+        if self.num_question_words is None:
             self.num_question_words = padding_lengths['num_question_words']
 
     @overrides
@@ -222,10 +225,18 @@ class BidirectionalAttentionFlow(TextTrainer):
         # self.num_sentence_words.
         self._set_text_lengths_from_model_input(self.model.get_input_shape_at(0)[1][1:])
 
-    def _get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
+    @overrides
+    def get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
         return ['num_passage_words', 'num_question_words']
 
+    @overrides
+    def get_padding_memory_scaling(self, padding_lengths: Dict[str, int]) -> int:
+        num_passage_words = padding_lengths['num_passage_words']
+        num_question_words = padding_lengths['num_question_words']
+        return num_passage_words * num_question_words
+
     @classmethod
+    @overrides
     def _get_custom_objects(cls):
         custom_objects = super(BidirectionalAttentionFlow, cls)._get_custom_objects()
         custom_objects["ComplexConcat"] = ComplexConcat

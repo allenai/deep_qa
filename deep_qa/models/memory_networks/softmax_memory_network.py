@@ -40,8 +40,8 @@ class SoftmaxMemoryNetwork(MemoryNetwork):
         return BabiInstance
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(SoftmaxMemoryNetwork, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(SoftmaxMemoryNetwork, self).get_padding_lengths()
         padding_lengths['num_options'] = self.num_options
         padding_lengths['answer_length'] = 1  # because BabiInstance inherits from QuestionAnswerInstance...
         return padding_lengths

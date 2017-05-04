@@ -160,8 +160,8 @@ class MemoryNetwork(TextTrainer):
         return custom_objects
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(MemoryNetwork, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(MemoryNetwork, self).get_padding_lengths()
         padding_lengths['background_sentences'] = self.max_knowledge_length
         return padding_lengths
 

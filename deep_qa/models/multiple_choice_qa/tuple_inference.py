@@ -112,8 +112,8 @@ class TupleInferenceModel(TextTrainer):
         return custom_objects
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(TupleInferenceModel, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(TupleInferenceModel, self).get_padding_lengths()
         padding_lengths['num_question_tuples'] = self.num_question_tuples
         padding_lengths['num_background_tuples'] = self.num_background_tuples
         padding_lengths['num_slots'] = self.num_tuple_slots

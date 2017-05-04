@@ -19,7 +19,7 @@
     },
     // This is not quite the same as Min's paper; we don't have encoder dropout yet.
     "embedding_dropout": 0.2,
-    "batch_size": 10,
+    "batch_size": 25,
     "patience": 3,
     "embedding_dim": {"words": 100, "characters": 8},
     "num_epochs": 20,
@@ -29,6 +29,9 @@
     },
     "use_data_generator": true,
     "use_dynamic_padding": true,
-    "validation_files": ["/net/efs/aristo/dlfa/squad/processed/dev.tsv"],
-    "train_files": ["/net/efs/aristo/dlfa/squad/processed/train.tsv"]
+    "use_adaptive_batch_sizes": true,
+    "adaptive_batch_size_memory_usage_constant": 440000,
+    "biggest_batch_first": true,
+    "validation_files": ["/efs/data/dlfa/squad/processed/dev.tsv"],
+    "train_files": ["/efs/data/dlfa/squad/processed/train.tsv"]
 }

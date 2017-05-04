@@ -130,11 +130,11 @@ class SiameseSentenceSelector(TextTrainer):
         return SentenceSelectionInstance
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]:
         """
         Return a dictionary with the appropriate padding lengths.
         """
-        padding_lengths = super(SiameseSentenceSelector, self)._get_padding_lengths()
+        padding_lengths = super(SiameseSentenceSelector, self).get_padding_lengths()
         padding_lengths['num_question_words'] = self.num_question_words
         padding_lengths['num_sentences'] = self.num_sentences
         return padding_lengths

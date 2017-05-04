@@ -53,7 +53,7 @@ class MultipleChoiceTupleEntailmentModel(TextTrainer):
         return custom_objects
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]:
         return {
                 'num_sentence_words': self.num_sentence_words,
                 'answer_length': self.max_answer_length,

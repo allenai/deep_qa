@@ -1,7 +1,6 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 import logging
-import random
 
 import dill as pickle
 from keras import backend as K
@@ -11,14 +10,11 @@ import numpy
 
 from ..common.checks import ConfigurationError
 from ..common.params import Params
-from ..common.util import group_by_count
-from ..data.dataset import TextDataset, IndexedDataset
-from ..data.instances.instance import Instance, TextInstance
+from ..data import tokenizers, DataIndexer, DataGenerator, IndexedDataset, TextDataset
 from ..data.embeddings import PretrainedEmbeddings
-from ..data.tokenizers import tokenizers
-from ..data.data_indexer import DataIndexer
-from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
+from ..data.instances import Instance, TextInstance
 from ..layers import TimeDistributedEmbedding
+from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
 from .trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -64,22 +60,18 @@ class TextTrainer(Trainer):
         LSTMs, if you don't specify an output size in the ``encoder`` params.
     embedding_dropout: float, optional (default=0.5)
         Dropout parameter to apply to the embedding layer
-    use_data_generator: bool, optional (default=False)
-        In :func:`~TextTrainer.create_data_arrays`, should we return one big, padded data array, or
-        should we return a data generator?  Using a data generator allows for dynamic
-        (batch-specific) padding, which can dramatically reduce runtime, but your model must be
-        written correctly to take advantage of that.  See :func:`~TextTrainer._set_padding_lengths`
-        and :func:`~TextTrainer._get_padding_lengths` for more details on that.
-    use_dynamic_padding: bool, optional (default=False)
-        If ``True``, we will set padding lengths based on the data `per batch`, instead of on the
-        whole dataset.  This only works if ``use_data_generator`` is ``True``, if your model is
-        structured to allow variable-length sequences (typically using ``None`` for specific
-        dimensions when you build your model), and if you don't set padding values in
-        :func:`~TextTrainer._set_padding_lengths`.  This flag specifically is read in
-        :func:`~TextTrainer._set_padding_lengths` to know if we should set certain padding values
-        or not.  It's handled correctly for ``num_sentence_words`` and ``num_word_characters`` in
-        this class, but you need to be sure to implement it correctly in subclasses for this to
-        work.
+    data_generator: Dict[str, Any], optional (default=None)
+        If not ``None``, we will pass these parameters to a :class:`DataGenerator` object to create
+        data batches, instead of creating one big array for all of our training data.  See
+        :class:`DataGenerator` for the available options here.  Note that in order to take full
+        advantage of the capabilities of a ``DataGenerator``, you should make sure your model
+        correctly implements :func:`~TextTrainer._set_padding_lengths`,
+        :func:`~TextTrainer.get_padding_lengths`,
+        :func:`~TextTrainer.get_padding_memory_scaling`, and
+        :func:`~TextTrainer.get_instance_sorting_keys`.  Also note that some of the things
+        ``DataGenerator`` does can change the behavior of your learning algorithm, so you should
+        think carefully about how exactly you want batches to be structured before you choose these
+        parameters.
     num_sentence_words: int, optional (default=None)
         Upper limit on length of word sequences in the training data. Ignored during testing (we
         use the value set at training time, either from this parameter or from a loaded model).  If
@@ -121,8 +113,11 @@ class TextTrainer(Trainer):
         self.project_embeddings = params.pop('project_embeddings', False)
         self.embedding_dim = params.pop('embedding_dim', {'words': 50, 'characters': 8})
         self.embedding_dropout = params.pop('embedding_dropout', 0.5)
-        self.use_data_generator = params.pop('use_data_generator', False)
-        self.use_dynamic_padding = params.pop('use_dynamic_padding', False)
+        data_generator_params = params.pop('data_generator', None)
+        if data_generator_params is not None:
+            self.data_generator = DataGenerator(self, data_generator_params)
+        else:
+            self.data_generator = None
         self.num_sentence_words = params.pop('num_sentence_words', None)
         self.num_word_characters = params.pop('num_word_characters', None)
 
@@ -146,6 +141,7 @@ class TextTrainer(Trainer):
         self.seq2seq_encoder_fallback_behavior = params.pop_choice('seq2seq_encoder_fallback_behavior',
                                                                    fallback_choices,
                                                                    default_to_first_choice=True)
+
         super(TextTrainer, self).__init__(params)
 
         self.name = "TextTrainer"
@@ -164,23 +160,11 @@ class TextTrainer(Trainer):
 
     @overrides
     def create_data_arrays(self, dataset: IndexedDataset):
-        if self.use_data_generator:
-            if self.use_dynamic_padding:
-                dataset.sort_by_padding(self._get_instance_sorting_keys())
-            instances = dataset.instances
-            grouped_instances = group_by_count(instances, self.batch_size, None)
-            grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
-            def generator():
-                while True:
-                    random.shuffle(grouped_instances)
-                    for group in grouped_instances:
-                        inputs, labels = self.__pad_and_convert_dataset(IndexedDataset(group),
-                                                                        verbose=False)
-                        yield (inputs, labels)
-            return generator()
+        if self.data_generator is not None:
+            return self.data_generator.create_generator(dataset)
         else:
-            inputs, labels = self.__pad_and_convert_dataset(dataset)
-            return (inputs, labels)
+            dataset.pad_instances(self.get_padding_lengths())
+            return dataset.as_training_data()
 
     @overrides
     def set_model_state_from_dataset(self, dataset: TextDataset):
@@ -242,7 +226,7 @@ class TextTrainer(Trainer):
 
     @overrides
     def _uses_data_generators(self):
-        return self.use_data_generator
+        return self.data_generator is not None
 
     @classmethod
     def _get_custom_objects(cls):
@@ -497,10 +481,12 @@ class TextTrainer(Trainer):
 
     ########################
     # Model-specific methods - if you do anything complicated, you probably need to override these,
-    # but simple models might be able to get by with just the default implementation
+    # but simple models might be able to get by with just the default implementation.  Some of
+    # these methods are also callable by non-TextTrainer objects, so that we can separate out the
+    # DataGenerator and other functionality.
     ########################
 
-    def _get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
+    def get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
         """
         If we're using dynamic padding, we want to group the instances by padding length, so that
         we minimize the amount of padding necessary per batch.  This variable sets what exactly
@@ -520,7 +506,7 @@ class TextTrainer(Trainer):
             sorting_keys.append('num_word_characters')
         return sorting_keys
 
-    def _get_padding_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]:
         """
         This is about padding.  Any solver will have some number of things that need padding in
         order to make consistently-sized data arrays, like the length of a sentence.  This method
@@ -534,7 +520,7 @@ class TextTrainer(Trainer):
         similar lengths.
 
         Here we return the lengths that are applicable to encoding words and sentences.  If you
-        have additional padding dimensions, call super()._get_padding_lengths() and then update the
+        have additional padding dimensions, call super().get_padding_lengths() and then update the
         dictionary.
         """
         return self.tokenizer.get_padding_lengths(self.num_sentence_words, self.num_word_characters)
@@ -549,33 +535,49 @@ class TextTrainer(Trainer):
         keep the model flexible to allow for dynamic (batch-specific) padding, or because you've
         set a hard limit in the class parameters and don't want to change it.
         """
-        if not self.use_dynamic_padding and self.num_sentence_words is None:
+        if self.data_generator is not None and self.data_generator.dynamic_padding:
+            return
+        if self.num_sentence_words is None:
             self.num_sentence_words = dataset_padding_lengths.get('num_sentence_words', None)
-        if not self.use_dynamic_padding and self.num_word_characters is None:
+        if self.num_word_characters is None:
             self.num_word_characters = dataset_padding_lengths.get('num_word_characters', None)
+
+    # pylint: disable=no-self-use,unused-argument
+    def get_padding_memory_scaling(self, padding_lengths: Dict[str, int]) -> int:
+        """
+        This method is for computing adaptive batch sizes.  We assume that memory usage is a
+        function that looks like this: :math:`M = b * O(p) * c`, where :math:`M` is the memory
+        usage, :math:`b` is the batch size, :math:`c` is some constant that depends on how much GPU
+        memory you have and various model hyperparameters, and :math:`O(p)` is a function outlining
+        how memory usage asymptotically varies with the padding lengths.  Our approach will be to
+        let the user effectively set :math:`\\frac{M}{c}` using the
+        ``adaptive_memory_usage_constant`` parameter in :class:`DataGenerator`.  The model (this
+        method) specifies :math:`O(p)`, so we can solve for the batch size :math:`b`.  The more
+        specific you get in specifying :math:`O(p)` in this function, the better a job we can do in
+        optimizing memory usage.
+
+        Parameters
+        ----------
+        padding_lengths: Dict[str, int]
+            Dictionary containing padding lengths, mapping keys like ``num_sentence_words`` to
+            ints.  This method computes a function of these ints.
+
+        Returns
+        -------
+        O(p): int
+            The big-O complexity of the model, evaluated with the specific ints given in
+            ``padding_lengths`` dictionary.
+        """
+        # This is a RuntimeError instead of a NotImplementedError because it's not required to
+        # implement this method to have a valid TextTrainer.  You only have to implement it if you
+        # want to use adaptive batch sizes.
+        raise RuntimeError("You need to implement this method for your model!")
+    # pylint: enable=no-self-use,unused-argument
 
     #################
     # Private methods - you can't to override these.  If you find yourself needing to, we can
     # consider making them protected instead.
     #################
-
-    def __pad_and_convert_dataset(self,
-                                  dataset: IndexedDataset,
-                                  verbose: bool=True) -> Tuple[numpy.array, numpy.array]:
-        padding_lengths = self._get_padding_lengths()
-        if verbose:
-            logger.info("Padding dataset to lengths %s", str(padding_lengths))
-        dataset.pad_instances(padding_lengths, verbose)
-        inputs, labels = dataset.as_training_data()
-        if isinstance(inputs[0], tuple):
-            inputs = [numpy.asarray(x) for x in zip(*inputs)]
-        else:
-            inputs = numpy.asarray(inputs)
-        if isinstance(labels[0], tuple):
-            labels = [numpy.asarray(x) for x in zip(*labels)]
-        else:
-            labels = numpy.asarray(labels)
-        return inputs, labels
 
     def __get_embedded_input(self,
                              input_layer: Layer,

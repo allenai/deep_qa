@@ -70,8 +70,8 @@ class TreeLSTMModel(TextTrainer):
         return DeepQaModel(input=[transitions_input, logical_form_input], output=output_probabilities)
 
     @overrides
-    def _get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = super(TreeLSTMModel, self)._get_padding_lengths()
+    def get_padding_lengths(self) -> Dict[str, int]:
+        padding_lengths = super(TreeLSTMModel, self).get_padding_lengths()
         padding_lengths['transition_length'] = self.max_transition_length
         return padding_lengths
 

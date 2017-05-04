@@ -71,8 +71,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         # Our loading tests work better if you're not using data generators.  Unless you
         # specifically request it in your test, we'll avoid using them here, and if you _do_ use
         # them, we'll skip some of the stuff below that isn't compatible.
-        args.setdefault('use_data_generator', False)
-        args.setdefault('use_dynamic_padding', False)
+        args.setdefault('data_generator', None)
         model = self.get_model(model_class, args)
         model.train()
 
@@ -81,23 +80,23 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         loaded_model.load_model()
 
         # verify that original model and the loaded model predict the same outputs
-        if isinstance(model.validation_arrays, tuple):
-            assert_allclose(model.model.predict(model.validation_arrays[0]),
-                            loaded_model.model.predict(model.validation_arrays[0]))
-        else:
+        if model._uses_data_generators():
             # We shuffle the data in the data generator.  Instead of making that logic more
             # complicated, we'll just pass on the loading tests here.  See comment above.
             pass
+        else:
+            assert_allclose(model.model.predict(model.validation_arrays[0]),
+                            loaded_model.model.predict(model.validation_arrays[0]))
 
         # We should get the same result if we index the data from the original model and the loaded
         # model.
         _, indexed_validation_arrays = loaded_model.load_data_arrays(model.validation_files)
-        if isinstance(indexed_validation_arrays, tuple):
-            assert_allclose(model.model.predict(model.validation_arrays[0]),
-                            loaded_model.model.predict(indexed_validation_arrays[0]))
-        else:
+        if model._uses_data_generators():
             # As above, we'll just pass on this.
             pass
+        else:
+            assert_allclose(model.model.predict(model.validation_arrays[0]),
+                            loaded_model.model.predict(indexed_validation_arrays[0]))
         return model, loaded_model
 
     @staticmethod

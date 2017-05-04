@@ -142,8 +142,7 @@ class TestTextTrainer(DeepQaTestCase):
                 'embedding_dim': {'words': 4, 'characters': 2},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
-                'use_data_generator': True,
-                'use_dynamic_padding': False,
+                'data_generator': {},
                 'show_summary_with_masking_info': True,
         })
         self.write_true_false_model_files()
@@ -155,8 +154,7 @@ class TestTextTrainer(DeepQaTestCase):
                 'embedding_dim': {'words': 4, 'characters': 2},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
-                'use_data_generator': True,
-                'use_dynamic_padding': True,
+                'data_generator': {'dynamic_padding': True},
                 'batch_size': 2,
         })
         self.write_true_false_model_files()
