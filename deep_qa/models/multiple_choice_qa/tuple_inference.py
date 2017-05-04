@@ -1,17 +1,16 @@
-from typing import Dict
+from typing import Dict, List
 import textwrap
 
-from keras.layers import Input, Layer
+from keras.layers import Input
 from overrides import overrides
 import numpy
 
 from ...data.instances.multiple_choice_qa import TupleInferenceInstance
 from ...layers import NoisyOr
 from ...layers.attention import MaskedSoftmax
-from ...layers.backend import Repeat
+from ...layers.backend import RepeatLike
 from ...layers.subtract_minimum import SubtractMinimum
-from ...layers.tuple_matchers import tuple_matchers, WordOverlapTupleMatcher
-from ...layers.wrappers import TimeDistributedWithMask
+from ...layers.tuple_matchers import tuple_matchers
 from ...training import TextTrainer
 from ...training.models import DeepQaModel
 from ...common.params import Params
@@ -66,11 +65,11 @@ class TupleInferenceModel(TextTrainer):
     """
     def __init__(self, params: Params):
         self.noisy_or_param_init = params.pop('noisy_or_param_init', 'uniform')
-        self.num_question_tuples = params.pop('num_question_tuples', 10)
-        self.num_background_tuples = params.pop('num_background_tuples', 10)
-        self.num_tuple_slots = params.pop('num_tuple_slots', 4)
-        self.num_slot_words = params.pop('num_sentence_words', 5)
-        self.num_options = params.pop('num_answer_options', 4)
+        self.num_question_tuples = params.pop('num_question_tuples', None)
+        self.num_background_tuples = params.pop('num_background_tuples', None)
+        self.num_tuple_slots = params.pop('num_tuple_slots', None)
+        self.num_slot_words = params.pop('num_slot_words', None)
+        self.num_options = params.pop('num_answer_options', None)
         self.normalize_tuples_across_answers = params.pop('normalize_tuples_across_answers', False)
         self.display_text_wrap = params.pop('display_text_wrap', 150)
         self.display_num_tuples = params.pop('display_num_tuples', 5)
@@ -78,17 +77,7 @@ class TupleInferenceModel(TextTrainer):
         tuple_matcher_choice = tuple_matcher_params.pop_choice("type", list(tuple_matchers.keys()),
                                                                default_to_first_choice=True)
         tuple_matcher_class = tuple_matchers[tuple_matcher_choice]
-        # This is a little ugly, but necessary, because the Keras Layer API treats arguments
-        # differently than our model API, and we need access to the TextTrainer object in the tuple
-        # matcher if it's not a Layer.
-        if issubclass(tuple_matcher_class, Layer):
-            # These TimeDistributed wrappers correspond to distributing across each of num_options,
-            # num_question_tuples, and num_background_tuples.
-            match_layer = tuple_matcher_class(**tuple_matcher_params)
-            self.tuple_matcher = TimeDistributedWithMask(
-                    TimeDistributedWithMask(TimeDistributedWithMask(match_layer)))
-        else:
-            self.tuple_matcher = tuple_matcher_class(self, tuple_matcher_params)
+        self.tuple_matcher = tuple_matcher_class(self, tuple_matcher_params)
         self.tuple_matcher.name = "match_layer"
         super(TupleInferenceModel, self).__init__(params)
 
@@ -102,12 +91,11 @@ class TupleInferenceModel(TextTrainer):
     @overrides
     def _get_custom_objects(cls):
         custom_objects = super(TupleInferenceModel, cls)._get_custom_objects()
-        # TODO(matt): Figure out a better way to handle the concrete TupleMatchers here.
-        custom_objects['WordOverlapTupleMatcher'] = WordOverlapTupleMatcher
+        for tuple_matcher in tuple_matchers.values():
+            custom_objects.update(tuple_matcher.get_custom_objects())
         custom_objects['MaskedSoftmax'] = MaskedSoftmax
         custom_objects['NoisyOr'] = NoisyOr
-        custom_objects['Repeat'] = Repeat
-        custom_objects['TimeDistributedWithMask'] = TimeDistributedWithMask
+        custom_objects['RepeatLike'] = RepeatLike
         custom_objects['SubtractMinimum'] = SubtractMinimum
         return custom_objects
 
@@ -122,23 +110,43 @@ class TupleInferenceModel(TextTrainer):
         return padding_lengths
 
     @overrides
+    def get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
+        return ['num_sentence_words', 'num_background_tuples', 'num_question_tuples', 'num_slots']
+
+    @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         super(TupleInferenceModel, self)._set_padding_lengths(padding_lengths)
+        # The number of tuple slots determines the shape of some of the weights in our model, so we
+        # need to keep this constant.
+        if self.num_tuple_slots is None:
+            self.num_tuple_slots = padding_lengths['num_slots']
+        if self.data_generator is not None and self.data_generator.dynamic_padding:
+            return
         if self.num_question_tuples is None:
             self.num_question_tuples = padding_lengths['num_question_tuples']
         if self.num_background_tuples is None:
             self.num_background_tuples = padding_lengths['num_background_tuples']
-        if self.num_tuple_slots is None:
-            self.num_tuple_slots = padding_lengths['num_slots']
         if self.num_slot_words is None:
             self.num_slot_words = padding_lengths['num_sentence_words']
         if self.num_options is None:
             self.num_options = padding_lengths['num_options']
 
     @overrides
+    def get_padding_memory_scaling(self, padding_lengths: Dict[str, int]) -> int:
+        num_question_tuples = padding_lengths['num_question_tuples']
+        num_background_tuples = padding_lengths['num_background_tuples']
+        num_sentence_words = padding_lengths['num_sentence_words']
+        num_options = padding_lengths['num_options']
+        return num_question_tuples * num_background_tuples * num_sentence_words * num_options
+
+    @overrides
     def _set_padding_lengths_from_model(self):
-        # TODO(becky): actually implement this (it's required for loading a saved model)
-        pass
+        self.num_background_tuples = self.model.get_input_shape_at(0)[1][1]
+        self.num_options = self.model.get_input_shape_at(0)[0][1]
+        self.num_question_tuples = self.model.get_input_shape_at(0)[0][2]
+        self.num_tuple_slots = self.model.get_input_shape_at(0)[0][3]
+        self.num_slot_words = self.model.get_input_shape_at(0)[0][4]
+        self._set_text_lengths_from_model_input = self.model.get_input_shape_at(0)[0][4:]
 
     @overrides
     def _build_model(self):
@@ -175,15 +183,15 @@ class TupleInferenceModel(TextTrainer):
         # Expand and tile the question input to be:
         # shape: (batch size, num_options, num_question_tuples, num_background_tuples, num_tuple_slots,
         #         num_slot_words)
-        tiled_question = Repeat(axis=3, repetitions=self.num_background_tuples)(question_input)
+        tiled_question = RepeatLike(axis=3, copy_from_axis=1)([question_input, background_input])
 
         # Expand and tile the background input to match question input.
         # shape: (batch size, num_options, num_question_tuples, num_background_tuples, num_tuple_slots,
         #               num_slot_words)
         # First, add num_options.
-        tiled_background = Repeat(axis=1, repetitions=self.num_options)(background_input)
+        tiled_background = RepeatLike(axis=1, copy_from_axis=1)([background_input, question_input])
         # Next, add num_question_tuples.
-        tiled_background = Repeat(axis=2, repetitions=self.num_question_tuples)(tiled_background)
+        tiled_background = RepeatLike(axis=2, copy_from_axis=2)([tiled_background, question_input])
 
         # Find the matches between the question and background tuples.
         # shape: (batch size, num_options, num_question_tuples, num_background_tuples)

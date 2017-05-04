@@ -128,11 +128,13 @@ class WordOverlapTupleMatcher(MaskedLayer):
 
         # Expand tuple1 to shape: (batch size, num_slots, num_slot_words_t1, num_slot_words_t2)
         expanded_tuple1 = K.expand_dims(tuple1_input, 3)    # now (b, num_slots, num_slot_words_tuple1, 1)
-        tiled_tuple1 = K.repeat_elements(expanded_tuple1, K.int_shape(tuple2_input)[2], axis=3)
+        tile_shape = K.concatenate([[1, 1, 1], [K.shape(tuple2_input)[2]]], 0)
+        tiled_tuple1 = K.tile(expanded_tuple1, tile_shape)
 
         # Expand tuple2 to shape: (batch size, num_slots, num_slot_words_t1, num_slot_words_t2)
         expanded_tuple2 = K.expand_dims(tuple2_input, 2)    # now (b, num_slots, 1, num_slot_words_tuple2)
-        tiled_tuple2 = K.repeat_elements(expanded_tuple2, K.int_shape(tuple1_input)[2], axis=2)
+        tile_shape = K.concatenate([[1, 1], [K.shape(tuple1_input)[2]], [1]], 0)
+        tiled_tuple2 = K.tile(expanded_tuple2, tile_shape)
 
         # This generates a binary tensor of the same shape as tiled_tuple1 /
         # tiled_tuple2 that indicates if given word matches between tuple1 and tuple2 in a particular slot.

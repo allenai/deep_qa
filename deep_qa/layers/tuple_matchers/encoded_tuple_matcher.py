@@ -54,6 +54,14 @@ class EncodedTupleMatcher:
         match_layer = TimeDistributedWithMask(TimeDistributedWithMask(TimeDistributedWithMask(self.tuple_matcher)))
         return match_layer([encoded_tuple1, encoded_tuple2])
 
+    @staticmethod
+    def get_custom_objects():
+        return {
+                'EncoderWrapper': EncoderWrapper,
+                'TimeDistributedWithMask': TimeDistributedWithMask,
+                'SlotSimilarityTupleMatcher': SlotSimilarityTupleMatcher,
+                }
+
 
 # The first item added here will be used as the default in some cases.
 encoded_tuple_matchers = OrderedDict()  # pylint: disable=invalid-name

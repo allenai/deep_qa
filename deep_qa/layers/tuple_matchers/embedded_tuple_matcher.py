@@ -42,6 +42,13 @@ class EmbeddedTupleMatcher:
         match_layer = TimeDistributedWithMask(TimeDistributedWithMask(TimeDistributedWithMask(self.tuple_matcher)))
         return match_layer([embedded_tuple1, embedded_tuple2])
 
+    @staticmethod
+    def get_custom_objects():
+        return {
+                'TimeDistributedWithMask': TimeDistributedWithMask,
+                'ThresholdTupleMatcher': ThresholdTupleMatcher,
+                }
+
 
 # The first item added here will be used as the default in some cases.
 embedded_tuple_matchers = OrderedDict()  # pylint: disable=invalid-name

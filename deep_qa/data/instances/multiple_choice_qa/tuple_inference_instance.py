@@ -70,7 +70,6 @@ class TextTuple:
 
         return text_list
 
-
     @classmethod
     def from_string(cls, input_string: str):
         """

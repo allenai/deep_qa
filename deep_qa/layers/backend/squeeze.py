@@ -16,6 +16,11 @@ class Squeeze(MaskedLayer):
 
     Output:
         - A tensor with the same data as ``inputs`` but reduced dimensions.
+
+    Parameters
+    ----------
+    axis: int, optional (default=-1)
+        The axis that we should squeeze.
     """
     def __init__(self, axis: int=-1, **kwargs):
         self.axis = axis
