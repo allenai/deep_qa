@@ -2,15 +2,15 @@ import json
 import os
 
 from deep_qa.models.text_classification import ClassificationModel
-from deep_qa.run import run_model, load_model, evaluate_model
+from deep_qa.run import run_model, load_model, evaluate_model, score_dataset
 
-from ..common.test_case import DeepQaTestCase
+from .common.test_case import DeepQaTestCase
 
 
-class TestRunModel(DeepQaTestCase):
-
+class TestRun(DeepQaTestCase):
+    # Our point here is mostly just to make sure the scripts don't crash.
     def setUp(self):
-        super(TestRunModel, self).setUp()
+        super(TestRun, self).setUp()
         self.write_true_false_model_files()
         model_params = self.get_model_params(ClassificationModel, {"model_class": "ClassificationModel",
                                                                    'save_models': True})
@@ -26,6 +26,10 @@ class TestRunModel(DeepQaTestCase):
         loaded_model = load_model(self.param_path)
         assert loaded_model.can_train()
 
-    def test_evaluate_model(self):
+    def test_score_dataset(self):
         run_model(self.param_path)
-        evaluate_model(self.param_path)
+        score_dataset(self.param_path)
+
+    def test_evalaute_model(self):
+        run_model(self.param_path)
+        evaluate_model(self.param_path, [self.TEST_FILE])

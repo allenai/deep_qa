@@ -8,7 +8,7 @@ This is unreleased code!  We're at the pre-alpha stage, things could change, and
 a lot of rough edges.  This grew out of some research code, and we think it'll be pretty useful
 generally, but we're still working on making it easily usable by people outside of our group.  Feel
 free to submit issues for problems that arise so that we're aware of them, but we're not to the
-point of having a supported release yet. 
+point of having a supported release yet.
 
 # DeepQA
 
@@ -38,13 +38,19 @@ the details of your model based on the data that you're working with.
   answering systems (though we've dabbled in models for other tasks, as well).  The actual model
 code for these systems is typically 50 lines or less.
 
-## Using DeepQA
 
-To train or evaluate a model using DeepQA, the recommended entry point is to use the
-[`run_model.py`](./scripts/run_model.py) script.  That script takes one argument, which is a
-parameter file.  You can see example parameter files in the [examples
-directory](./example_experiments).  You can get some notion of what parameters are available by
-looking through the [documentation](http://deep-qa.readthedocs.io).
+## Working in a clone of DeepQA
+
+To train or evaluate a model using a clone of the DeepQA repository, the recommended entry point is
+to use the [`run_model.py`](./scripts/run_model.py) script.  The first argument to that script
+is a parameter file, described more below.  The second argument determines the behavior, either
+training a model or evaluating a trained model against a test dataset.  Current valid options for
+the second argument are `train` and `test` (omitting the argument is the same as passing `train`).
+
+Parameter files specify the model class you're using, model hyperparameters, training details,
+data files, data generator details, and many other things.  You can see example parameter files in
+the [examples directory](./example_experiments).  You can get some notion of what parameters are
+available by looking through the [documentation](http://deep-qa.readthedocs.io).
 
 Actually training a model will require input files, which you need to provide.  We have a companion
 library, [DeepQA Experiments](https://github.com/allenai/deep_qa_experiments), which was
@@ -54,12 +60,15 @@ data processing code directly into DeepQA, so that DeepQA Experiments is not nec
 now, getting training data files in the right format is most easily [done with DeepQA
 Experiments](https://github.com/allenai/deep_qa/issues/328#issuecomment-298176527).
 
-## Running a Model
-Running a model in DeepQA is very straightforward. Once you have specified model parameters in a
-json file you can run the following:
+
+## Using DeepQA as a library
+
+If you are using DeepQA as a library in your own code, it is still straightforward to run your
+model.  Instead of using the [`run_model.py`](./scripts/run_model.py) script to do the
+training/evaluation, you can do it yourself as follows:
 
 ```
-from deep_qa import run_model, evaluate_model, load_model
+from deep_qa import run_model, evaluate_model, load_model, score_dataset
 
 # Train a model given a json specification
 run_model("/path/to/json/parameter/file")
@@ -70,26 +79,32 @@ loaded_model = load_model("/path/to/json/parameter/file")
 # Do some more exciting things with your model here!
 
 
-# Evaluate a pretrained model on some test data specified in the json parameters.
-predictions = evaluate_model("/path/to/json/parameter/file")
+# Get predictions from a pre-trained model on some test data specified in the json parameters.
+predictions = score_dataset("/path/to/json/parameter/file")
+# Compute your own metrics, or do beam search, or whatever you want with the predictions here.
+
+
+# Compute Keras' metrics on a test dataset, using a pre-trained model.
+evaluate_model("/path/to/json/parameter/file", ["/path/to/data/file"])
 ```
 
-We have provided some example json specifications in the [example_experiments](./example_experiments) directory.
+The rest of the usage guidelines, examples, etc., are the same as when [working in a clone of the
+repository](#working-in-a-clone-of-deepqa).
 
 
 ## Implementing your own models
 
 To implement a new model in DeepQA, you need to subclass `TextTrainer`.  There is
 [documentation](http://deep-qa.readthedocs.io/en/latest/training/text_trainer.html) on what is
-necessary for this; see in particular the [Abstracts
+necessary for this; see in particular the [Abstract
 methods](http://deep-qa.readthedocs.io/en/latest/training/text_trainer.html#abstract-methods)
 section.  For a simple example of a fully functional model, see the [simple sequence
 tagger](./deep_qa/models/sequence_tagging/simple_tagger.py), which has about 20 lines of actual
 implementation code.
 
-In order to train, load and evaluate models which you have written yourself, simply pass an additional
-argument to the functions above and remove the `model_class` parameter from your json specification.
-For example:
+In order to train, load and evaluate models which you have written yourself, simply pass an
+additional argument to the functions above and remove the `model_class` parameter from your json
+specification.  For example:
 ```
 from deep_qa import run_model
 from .local_project import MyGreatModel
@@ -98,12 +113,10 @@ from .local_project import MyGreatModel
 run_model("/path/to/json/parameter/file", model_class=MyGreatModel)
 ```
 
-If you're doing a new task, or a new variant of a task with a different
-input/output specification, you probably also need to implement an
-[`Instance`](./deep_qa/data/instances/instance.py) type.  The `Instance` handles reading data from
-a file and converting it into numpy arrays that can be used for training and evaluation.  This
-only needs to happen once for each input/output spec.
-
+If you're doing a new task, or a new variant of a task with a different input/output specification,
+you probably also need to implement an [`Instance`](./deep_qa/data/instances/instance.py) type.
+The `Instance` handles reading data from a file and converting it into numpy arrays that can be
+used for training and evaluation.  This only needs to happen once for each input/output spec.
 
 
 ## Organization

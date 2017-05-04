@@ -277,11 +277,6 @@ class Trainer:
                                                                                     self.max_validation_instances)
         if self._uses_data_generators():
             self.validation_steps = self.data_generator.last_num_batches  # pylint: disable=no-member
-        if self.test_files:
-            self.test_dataset, self.test_arrays = self.load_data_arrays(self.test_files,
-                                                                        self.max_test_instances)
-        if self._uses_data_generators():
-            self.test_steps = self.data_generator.last_num_batches  # pylint: disable=no-member
 
         # Then we build the model and compile it.
         logger.info("Building the model")
@@ -343,15 +338,7 @@ class Trainer:
 
         # If there are test files, we evaluate on the test data.
         if self.test_files:
-            self.load_model()
-            logger.info("Evaluting model on the test set.")
-            if not self._uses_data_generators():
-                scores = self.model.evaluate(self.test_arrays[0], self.test_arrays[1])
-            else:
-                test_steps = self.test_steps
-                scores = self.model.evaluate_generator(self.test_arrays, test_steps)
-            for idx, metric in enumerate(self.model.metrics_names):
-                print("{}: {}".format(metric, scores[idx]))
+            self.evaluate_model(self.test_files, self.max_test_instances)
 
     def load_model(self, epoch: int=None):
         """
@@ -377,6 +364,20 @@ class Trainer:
         self._set_params_from_model()
         self.model.compile(**self.__compile_kwargs())
         self.update_model_state_with_training_data = False
+
+    def evaluate_model(self, data_files: List[str], max_instances: int=None):
+        # We call self.load_model() first, to be sure that we load the best model we have, if we've
+        # trained for a while.
+        self.load_model()
+        _, arrays = self.load_data_arrays(data_files, max_instances)
+        logger.info("Evaluting model on the test set.")
+        if not self._uses_data_generators():
+            scores = self.model.evaluate(arrays[0], arrays[1])
+        else:
+            steps = self.data_generator.last_num_batches  # pylint: disable=no-member
+            scores = self.model.evaluate_generator(arrays, steps)
+        for idx, metric in enumerate(self.model.metrics_names):
+            print("{}: {}".format(metric, scores[idx]))
 
     ##################
     # Abstract methods - you MUST override these

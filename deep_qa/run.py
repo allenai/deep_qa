@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 import sys
 import logging
 import shutil
@@ -133,9 +133,10 @@ def load_model(param_path: str, model_class=None):
     return model
 
 
-def evaluate_model(param_path: str, test: str=False, model_class=None):
+def score_dataset(param_path: str, test: str=False, model_class=None):
     """
-    Loads and evaluates a dataset from a saved parameter path.
+    Loads a model from a saved parameter path and scores a dataset with it, returning the
+    predictions.
 
     Parameters
     ----------
@@ -156,3 +157,29 @@ def evaluate_model(param_path: str, test: str=False, model_class=None):
     dataset_files = model.test_files if test else model.validation_files
     dataset = model.load_dataset_from_files(dataset_files)
     return model.score_dataset(dataset)
+
+
+def evaluate_model(param_path: str, dataset_files: List[str]=None, model_class=None):
+    """
+    Loads a model and evaluates it on some test set.
+
+    Parameters
+    ----------
+    param_path: str, required
+        A json file specifying a DeepQaModel.
+    dataset_files: List[str], optional, (default=None)
+        A list of dataset files to evaluate on.  If this is ``None``, we'll evaluate from the
+        ``test_files`` parameter in the input files.  If that's also ``None``, we'll crash.
+    model_class: ``DeepQaModel``, optional (default=None)
+        This option is useful if you have implemented a new model class which
+        is not one of the ones implemented in this library.
+
+    Returns
+    -------
+    Numpy arrays of model predictions in the format of model.outputs.
+
+    """
+    model = load_model(param_path, model_class=model_class)
+    if dataset_files is None:
+        dataset_files = model.test_files
+    model.evaluate_model(dataset_files)
