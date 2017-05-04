@@ -2,6 +2,14 @@
 [![Documentation Status](https://readthedocs.org/projects/deep-qa/badge/?version=latest)](http://deep-qa.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/allenai/deep_qa/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/deep_qa)
 
+# WARNING
+
+This is unreleased code!  We're at the pre-alpha stage, things could change, and there are still
+a lot of rough edges.  This grew out of some research code, and we think it'll be pretty useful
+generally, but we're still working on making it easily usable by people outside of our group.  Feel
+free to submit issues for problems that arise so that we're aware of them, but we're not to the
+point of having a supported release yet. 
+
 # DeepQA
 
 DeepQA is a library for doing high-level NLP tasks with deep learning, particularly focused on
