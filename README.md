@@ -41,7 +41,7 @@ code for these systems is typically 50 lines or less.
 ## Using DeepQA
 
 To train or evaluate a model using DeepQA, the recommended entry point is to use the
-[`run.py`](./scripts/run.py) script.  That script takes one argument, which is a
+[`run_model.py`](./scripts/run_model.py) script.  That script takes one argument, which is a
 parameter file.  You can see example parameter files in the [examples
 directory](./example_experiments).  You can get some notion of what parameters are available by
 looking through the [documentation](http://deep-qa.readthedocs.io).
