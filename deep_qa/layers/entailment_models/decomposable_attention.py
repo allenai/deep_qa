@@ -3,6 +3,7 @@ from keras import activations
 from overrides import overrides
 
 from .word_alignment import WordAlignmentEntailment
+from ..attention import WeightedSum
 from ...tensors.backend import switch, apply_feed_forward
 
 
@@ -174,11 +175,11 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         p2h_alignment = self._align(projected_premise, projected_hypothesis, premise_mask, hypothesis_mask)
         # beta in the paper (equation 2)
         # (batch_size, premise_length, emb_dim)
-        p2h_attention = self._attend(hypothesis_embedding, p2h_alignment, self.premise_length)
+        p2h_attention = self._attend(hypothesis_embedding, p2h_alignment)
         h2p_alignment = self._align(projected_hypothesis, projected_premise, hypothesis_mask, premise_mask)
         # alpha in the paper (equation 2)
         # (batch_size, hyp_length, emb_dim)
-        h2p_attention = self._attend(premise_embedding, h2p_alignment, self.hypothesis_length)
+        h2p_attention = self._attend(premise_embedding, h2p_alignment)
 
         ## Step 2: Compare
         # Equation 3 in the paper.
@@ -196,7 +197,8 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         scores = final_activation(K.dot(input_to_scorer, self.scorer))
         return scores
 
-    def _attend(self, target_embedding, s2t_alignment, source_length):
+    @staticmethod
+    def _attend(target_embedding, s2t_alignment):
         '''
         Takes target embedding, and source-target alignment attention and produces a weighted average of the
         target embedding per each source word.
@@ -204,17 +206,10 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         target_embedding: (batch_size, target_length, embed_dim)
         s2t_alignment: (batch_size, source_length, target_length)
         '''
-        # We have to explicitly tile tensors below because TF does not broadcast values while performing *.
-        # (batch_size, source_length, target_length, embed_dim)
-        tiled_s2t_alignment = K.dot(K.expand_dims(s2t_alignment), K.ones((1, self.input_dim)))
-        # (batch_size, source_length, target_length, embed_dim)
-        tiled_target_embedding = K.permute_dimensions(K.dot(K.expand_dims(target_embedding),
-                                                            K.ones((1, source_length))), (0, 3, 1, 2))
-
-        # alpha or beta in the paper depending on whether the source is the premise or hypothesis.
-        # sum((batch_size, src_length, target_length, embed_dim), axis=2) = (batch_size, src_length, emb_dim)
-        s2t_attention = K.sum(tiled_s2t_alignment * tiled_target_embedding, axis=2)
-        return s2t_attention
+        # NOTE: This Layer was written before we had things like WeightedSum.  We could probably
+        # implement this whole thing a lot more easily now, but I'm just replacing bits of it at a
+        # time.
+        return WeightedSum().call([target_embedding, s2t_alignment])
 
     def _compare(self, source_embedding, s2t_attention):
         '''

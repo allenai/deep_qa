@@ -1,6 +1,7 @@
-from overrides import overrides
+from typing import Dict
 
 from keras.layers import Input
+from overrides import overrides
 
 from ...data.instances.entailment.snli_instance import SnliInstance
 from ...training.text_trainer import TextTrainer
@@ -71,6 +72,10 @@ class DecomposableAttention(TextTrainer):
         entailment_layer = DecomposableAttentionEntailment(**self.decomposable_attention_params)
         entailment_probabilities = entailment_layer([text_embedding, hypothesis_embedding])
         return DeepQaModel(inputs=[text_input, hypothesis_input], outputs=entailment_probabilities)
+
+    @overrides
+    def get_padding_memory_scaling(self, padding_lengths: Dict[str, int]) -> int:
+        return padding_lengths['num_sentence_words'] ** 2
 
     @overrides
     def _set_padding_lengths_from_model(self):

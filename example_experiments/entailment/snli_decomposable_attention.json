@@ -17,6 +17,10 @@
       "hidden_layer_activation": "relu",
       "initializer": "random_normal"
     },
+    "data_generator": {
+      "dynamic_padding": true
+    },
+    "batch_size": 60,
     "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.840B.300d.txt.gz",
     "project_embeddings": true,
     "fine_tune_embeddings": false,
