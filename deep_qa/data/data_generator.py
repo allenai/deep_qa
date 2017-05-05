@@ -2,8 +2,6 @@ from typing import List
 import logging
 import random
 
-import tqdm
-
 from ..common.params import Params
 from ..common.util import group_by_count
 from . import IndexedDataset
@@ -149,8 +147,8 @@ class DataGenerator:
         batches = []
         current_batch = []
         current_lengths = {}
-        logger.info("Creating adatpive groups")
-        for instance in tqdm.tqdm(instances):
+        logger.debug("Creating adatpive groups")
+        for instance in instances:
             current_batch.append(instance)
             instance_lengths = instance.get_padding_lengths()
             for key in instance_lengths:

@@ -1,19 +1,29 @@
 {
     "model_class": "TupleInferenceModel",
     "model_serialization_prefix": "/net/efs/aristo/dlfa/models/tuple_inference/peek_across/",
+    "tokenizer": {
+      "processor": {
+        "word_splitter": "simple",
+        "word_filter": "stopwords",
+        "word_stemmer": "porter"
+      }
+    },
+    "optimizer": {
+      "type": "adam",
+      "lr": 0.01
+    },
     "tuple_matcher": {
       "type": "word_token_matcher",
       "matcher_type": "word_overlap",
       "num_hidden_layers": 1,
-      "hidden_layer_width": 4
+      "hidden_layer_width": 4,
+      "hidden_layer_activation": "relu"
     },
     "data_generator": {
-      "dynamic_padding": true,
-      "adaptive_batch_sizes": true,
-      "adaptive_memory_usage_constant": 4000000
+      "dynamic_padding": true
     },
     "patience": 5,
-    "num_slot_words": 10,
+    "num_slot_words": 5,
     "normalize_tuples_across_answers": true,
     "train_files": ["/net/efs/aristo/dlfa/questions/processed/queryTuples_Omnibus_Train.txt.fixed"],
     "validation_files": ["/net/efs/aristo/dlfa/questions/processed/queryTuples_Omnibus_Dev.txt.fixed"]
