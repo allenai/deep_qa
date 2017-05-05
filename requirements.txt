@@ -72,7 +72,7 @@ codecov
 argparse
 
 # Used to read the NewsQA CSV and output a clean one.
-pandas
+pandas==0.19.2
 
 # progress bars in data cleaning scripts
 tqdm
