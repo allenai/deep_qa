@@ -7,6 +7,7 @@ from keras import backend as K
 from keras.layers import Dense, Dropout, Layer, TimeDistributed
 from overrides import overrides
 import numpy
+import tensorflow
 
 from ..common.checks import ConfigurationError
 from ..common.params import Params
@@ -613,24 +614,25 @@ class TextTrainer(Trainer):
         parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
         could include a projection or not, and so on.
         """
-        if vocab_name == 'words' and self.pretrained_embeddings_file:
-            embedding_layer = PretrainedEmbeddings.get_embedding_layer(
-                    self.pretrained_embeddings_file,
-                    self.data_indexer,
-                    self.fine_tune_embeddings,
-                    name=name)
-        else:
-            # TimeDistributedEmbedding works with inputs of any shape.
-            embedding_layer = TimeDistributedEmbedding(
-                    input_dim=self.data_indexer.get_vocab_size(vocab_name),
-                    output_dim=embedding_dim,
-                    mask_zero=True,  # this handles padding correctly
-                    name=name)
-        projection_layer = None
-        if self.project_embeddings:
-            projection_layer = TimeDistributed(Dense(units=embedding_dim,),
-                                               name=name + '_projection')
-        return embedding_layer, projection_layer
+        with tensorflow.device("/cpu:0"):
+            if vocab_name == 'words' and self.pretrained_embeddings_file:
+                embedding_layer = PretrainedEmbeddings.get_embedding_layer(
+                        self.pretrained_embeddings_file,
+                        self.data_indexer,
+                        self.fine_tune_embeddings,
+                        name=name)
+            else:
+                # TimeDistributedEmbedding works with inputs of any shape.
+                embedding_layer = TimeDistributedEmbedding(
+                        input_dim=self.data_indexer.get_vocab_size(vocab_name),
+                        output_dim=embedding_dim,
+                        mask_zero=True,  # this handles padding correctly
+                        name=name)
+            projection_layer = None
+            if self.project_embeddings:
+                projection_layer = TimeDistributed(Dense(units=embedding_dim,),
+                                                   name=name + '_projection')
+            return embedding_layer, projection_layer
 
     def __get_new_encoder(self, params: Params, name: str):
         encoder_type = params.pop_choice("type", list(encoders.keys()),
