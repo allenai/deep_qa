@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import List, Tuple, Union
 import sys
 import logging
 import shutil
@@ -24,7 +24,7 @@ def prepare_environment(params: Union[Params, dict]):
 
      Parameters
     ----------
-    params: ``Params`` object or dict, required.
+    params: Params object or dict, required.
         A ``Params`` object or dict holding the json parameters.
     """
     seed = params.pop("random_seed", 13370)
@@ -60,7 +60,7 @@ def run_model(param_path: str, model_class=None):
     ----------
     param_path: str, required.
         A json file specifying a DeepQaModel.
-    model_class: ``DeepQaModel``, optional (default=None).
+    model_class: DeepQaModel, optional (default=None).
         This option is useful if you have implemented a new model class which
         is not one of the ones implemented in this library.
     """
@@ -116,6 +116,7 @@ def load_model(param_path: str, model_class=None):
     -------
     A ``DeepQaModel`` instance.
     """
+    logger.info("Loading model from parameter file: %s", param_path)
     param_dict = pyhocon.ConfigFactory.parse_file(param_path)
     params = Params(replace_none(param_dict))
     prepare_environment(params)
@@ -133,7 +134,7 @@ def load_model(param_path: str, model_class=None):
     return model
 
 
-def score_dataset(param_path: str, test: str=False, model_class=None):
+def score_dataset(param_path: str, dataset_files: List[str], model_class=None):
     """
     Loads a model from a saved parameter path and scores a dataset with it, returning the
     predictions.
@@ -142,19 +143,23 @@ def score_dataset(param_path: str, test: str=False, model_class=None):
     ----------
     param_path: str, required
         A json file specifying a DeepQaModel.
-    test: str, optional, (default=False)
-        Whether to use the test data or validation data to evaluate the model.
-    model_class: ``DeepQaModel``, optional (default=None)
+    dataset_files: List[str]
+        A list of dataset files to score, the same as you would have specified as ``train_files``
+        or ``test_files`` in your parameter file.
+    model_class: DeepQaModel, optional (default=None)
         This option is useful if you have implemented a new model class which
         is not one of the ones implemented in this library.
 
     Returns
     -------
-    Numpy arrays of model predictions in the format of model.outputs.
-
+    predictions: numpy.array
+        Numpy array of model predictions in the format of model.outputs (typically one array, but
+        could be List[numpy.array] if your model has multiple outputs).
+    labels: numpy.array
+        The labels on the dataset, as read by the model.  We return this so you can compute
+        whatever metrics you want, if the data was labeled.
     """
     model = load_model(param_path, model_class=model_class)
-    dataset_files = model.test_files if test else model.validation_files
     dataset = model.load_dataset_from_files(dataset_files)
     return model.score_dataset(dataset)
 
@@ -170,7 +175,7 @@ def evaluate_model(param_path: str, dataset_files: List[str]=None, model_class=N
     dataset_files: List[str], optional, (default=None)
         A list of dataset files to evaluate on.  If this is ``None``, we'll evaluate from the
         ``test_files`` parameter in the input files.  If that's also ``None``, we'll crash.
-    model_class: ``DeepQaModel``, optional (default=None)
+    model_class: DeepQaModel, optional (default=None)
         This option is useful if you have implemented a new model class which
         is not one of the ones implemented in this library.
 
@@ -183,3 +188,62 @@ def evaluate_model(param_path: str, dataset_files: List[str]=None, model_class=N
     if dataset_files is None:
         dataset_files = model.test_files
     model.evaluate_model(dataset_files)
+
+
+def score_dataset_with_ensemble(param_paths: List[str],
+                                dataset_files: List[str],
+                                model_class=None) -> Tuple[numpy.array, numpy.array]:
+    """
+    Loads all of the models specified in ``param_paths``, uses each of them to score the dataset
+    specified by ``dataset_files``, and averages their scores, return an array of ensembled model
+    predictions.
+
+    Parameters
+    ----------
+    param_paths: List[str]
+        A list of parameter files that were used to train models.  You must have already trained
+        the corresponding model, as we'll load it and use it in an ensemble here.
+    dataset_files: List[str]
+        A list of dataset files to score, the same as you would have specified as ``test_files`` in
+        any one of the model parameter files.
+    model_class: ``DeepQaModel``, optional (default=None)
+        This option is useful if you have implemented a new model class which is not one of the
+        ones implemented in this library.
+
+    Returns
+    -------
+    predictions: numpy.array
+        Numpy array of model predictions in the format of model.outputs (typically one array, but
+        could be List[numpy.array] if your model has multiple outputs).
+    labels: numpy.array
+        The labels on the dataset, as read by the first model.  We return this so you can compute
+        whatever metrics you want, if the data was labeled.  Note that if your models all represent
+        that data differently, this will only give the first one.  Hopefully the representation of
+        the labels is consistent across the models, though; if not, the whole idea of ensembling
+        them this way is moot, anyway.
+    """
+    models = [load_model(param_path, model_class) for param_path in param_paths]
+    predictions = []
+    labels_to_return = None
+    for i, model in enumerate(models):
+        logger.info("Scoring model %d of %d", i + 1, len(models))
+        dataset = model.load_dataset_from_files(dataset_files)
+        model_predictions, labels = model.score_dataset(dataset)
+        predictions.append(model_predictions)
+        if labels_to_return is None:
+            labels_to_return = labels
+    logger.info("Averaging model predictions")
+    all_predictions = numpy.stack(predictions)
+    averaged = numpy.mean(all_predictions, axis=0)
+    return averaged, labels_to_return
+
+
+def compute_accuracy(predictions: numpy.array, labels: numpy.array):
+    """
+    Computes a simple categorical accuracy metric, useful if you used ``score_dataset`` to get
+    predictions.
+    """
+    accuracy = numpy.mean(numpy.equal(numpy.argmax(predictions, axis=-1),
+                                      numpy.argmax(labels, axis=-1)))
+    logger.info("Accuracy: %f", accuracy)
+    return accuracy

@@ -384,10 +384,11 @@ class Trainer:
     # Abstract methods - you MUST override these
     ##################
 
-    def score_dataset(self, dataset: Dataset) -> List[Any]:
+    def score_dataset(self, dataset: Dataset) -> Tuple[numpy.array, numpy.array]:
         """
-        Takes a `Dataset`, indexes it, and returns the output of evaluating the model on all
-        instances. The return type here depends on the output of your model.
+        Takes a ``Dataset``, indexes it, and returns the output of evaluating the model on all
+        instances, and labels for the instances from the data, if they were given. The specifics of
+        the numpy array that are returned depend on the model and the instance type in the dataset.
 
         Parameters
         ----------
@@ -396,8 +397,15 @@ class Trainer:
 
         Returns
         -------
-        Predictions for each ``Instance`` in the ``Dataset``. The actual type depends on
-        the output of your model.
+        predictions: numpy.array
+            Predictions for each ``Instance`` in the ``Dataset``.  This could actually be a
+            tuple/list of arrays, if your model has multiple outputs
+        labels: numpy.array
+            The labels for each ``Instance`` in the ``Dataset``, if there were any (this will be
+            ``None`` if there were no labels).  We return this so you can easily compute metrics
+            over these predictions if you wish.  It's hard to get numpy arrays with the labels from
+            a non-indexed-and-padded ``Dataset``, so we return it here so you don't have to do any
+            funny business to get the label array.
         """
         raise NotImplementedError
 

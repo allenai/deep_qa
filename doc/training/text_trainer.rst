@@ -45,13 +45,18 @@ Overridden ``Trainer`` methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You probably don't need to override these, except for probably ``_get_custom_objects``.  The rest
-of them you shouldn't need to worry about at all, but we document them here for completeness.
+of them you shouldn't need to worry about at all (except to call them, if they are part of the
+external ``Trainer`` API), but we document them here for completeness.
 
-.. automethod:: TextTrainer._get_custom_objects
 .. automethod:: TextTrainer.create_data_arrays
 .. automethod:: TextTrainer.load_dataset_from_files
+.. automethod:: TextTrainer.score_dataset
+.. automethod:: TextTrainer.set_model_state_from_dataset
+.. automethod:: TextTrainer.set_model_state_from_indexed_dataset
+.. automethod:: TextTrainer._get_custom_objects
 .. automethod:: TextTrainer._dataset_indexing_kwargs
 .. automethod:: TextTrainer._load_auxiliary_files
 .. automethod:: TextTrainer._overall_debug_output
 .. automethod:: TextTrainer._save_auxiliary_files
 .. automethod:: TextTrainer._set_params_from_model
+.. automethod:: TextTrainer._uses_data_generators
