@@ -152,6 +152,7 @@ class Trainer:
         self.batch_size = params.pop('batch_size', 32)
         self.num_epochs = params.pop('num_epochs', 20)
         self.optimizer = optimizer_from_params(params.pop('optimizer', 'adam'))
+        self.gradient_clipping = params.pop('gradient_clipping', {'type': 'clip_by_norm', "value": 10})
         self.loss = params.pop('loss', 'categorical_crossentropy')
         self.metrics = params.pop('metrics', ['accuracy'])
         self.validation_metric = params.pop('validation_metric', 'val_acc')
@@ -282,7 +283,7 @@ class Trainer:
         logger.info("Building the model")
         self.model = self._build_model()
         self.model.summary(show_masks=self.show_summary_with_masking)
-        self.model.compile(**self.__compile_kwargs())
+        self.model.compile(self.__compile_kwargs())
 
         if self.debug_params:
             # Get the list of layers whose outputs will be visualized as per the
@@ -362,7 +363,7 @@ class Trainer:
         self.model.summary(show_masks=self.show_summary_with_masking)
         self._load_auxiliary_files()
         self._set_params_from_model()
-        self.model.compile(**self.__compile_kwargs())
+        self.model.compile(self.__compile_kwargs())
         self.update_model_state_with_training_data = False
 
     def evaluate_model(self, data_files: List[str], max_instances: int=None):
@@ -684,8 +685,10 @@ class Trainer:
         member variables that we use to set arguments for model.compile(), we group those arguments
         together here, to only specify them once.
         """
-        return {
+        # TODO(mark): factor all compile kwargs into a single dict in the json config.
+        return Params({
+                'gradient_clipping': self.gradient_clipping,
                 'loss': self.loss,
                 'optimizer': self.optimizer,
                 'metrics': self.metrics,
-                }
+                })

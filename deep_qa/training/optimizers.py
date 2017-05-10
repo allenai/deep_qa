@@ -14,18 +14,27 @@ implemented optimizers I can grab.
 \* I should also note that Keras is an incredibly useful library that does a lot
 of things really well. It just has a few quirks...
 """
+import logging
 from typing import Union
-from keras.optimizers import SGD, RMSprop, Adagrad, Adadelta, Adam, Adamax, Nadam
+
+# pylint: disable=no-name-in-module
+from tensorflow.python.training.gradient_descent import GradientDescentOptimizer
+from tensorflow.python.training.rmsprop import RMSPropOptimizer
+from tensorflow.python.training.adadelta import AdadeltaOptimizer
+from tensorflow.python.training.adagrad import AdagradOptimizer
+from tensorflow.python.training.adam import AdamOptimizer
+# pylint: enable=no-name-in-module
 from ..common.params import Params
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
 optimizers = {  # pylint: disable=invalid-name
-        'sgd': SGD,
-        'rmsprop': RMSprop,
-        'adagrad': Adagrad,
-        'adadelta': Adadelta,
-        'adam': Adam,
-        'adamax': Adamax,
-        'nadam': Nadam,
+        'sgd': GradientDescentOptimizer,
+        'rmsprop': RMSPropOptimizer,
+        'adagrad': AdagradOptimizer,
+        'adadelta': AdadeltaOptimizer,
+        'adam': AdamOptimizer
         }
 
 
@@ -40,7 +49,9 @@ def optimizer_from_params(params: Union[Params, str]):
     of the parameters and pass them to the optimizer's constructor.
 
     """
-    if isinstance(params, str) and params in optimizers.keys():
-        return params
-    optimizer = params.pop_choice("type", optimizers.keys())
+    if isinstance(params, str):
+        optimizer = params
+        params = {}
+    else:
+        optimizer = params.pop_choice("type", optimizers.keys())
     return optimizers[optimizer](**params)

@@ -1,7 +1,6 @@
 from typing import Dict
 from overrides import overrides
 from keras.layers import Input, Dropout, Concatenate
-from keras.callbacks import LearningRateScheduler
 
 from ...data.instances.reading_comprehension.mc_question_passage_instance import McQuestionPassageInstance
 from ...common.checks import ConfigurationError
@@ -267,18 +266,6 @@ class GatedAttentionReader(TextTrainer):
         self.max_passage_length = self.model.get_input_shape_at(0)[1][1]
         self.num_options = self.model.get_input_shape_at(0)[2][1]
         self.max_option_length = self.model.get_input_shape_at(0)[2][2]
-
-    @overrides
-    def _get_callbacks(self):
-        callbacks = super(GatedAttentionReader, self)._get_callbacks()
-        def _half_lr(epoch):
-            initial_lr = 0.0005
-            if epoch > 3:
-                return initial_lr / ((epoch-3)*.5)
-            return initial_lr
-        lrate = LearningRateScheduler(_half_lr)
-        callbacks.append(lrate)
-        return callbacks
 
     @classmethod
     def _get_custom_objects(cls):
