@@ -1,6 +1,6 @@
 {
     "model_class": "BidirectionalAttentionFlow",
-    "model_serialization_prefix": "/tmp/models/bidaf",
+    "model_serialization_prefix": "/net/efs/aristo/dlfa/models/bidaf",
     "encoder": {
         "word": {
           "type": "cnn",
@@ -8,6 +8,9 @@
           "num_filters": 100
         }
     },
+    "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
+    "project_embeddings": false,
+    "fine_tune_embeddings": false,
     "seq2seq_encoder": {
         "default": {
             "type": "bi_gru",
@@ -17,9 +20,14 @@
             "wrapper_params": {}
         }
     },
+    "data_generator": {
+      "dynamic_padding": true,
+      "adaptive_batch_sizes": true,
+      "adaptive_memory_usage_constant": 440000,
+      "maximum_batch_size": 60
+    },
     // This is not quite the same as Min's paper; we don't have encoder dropout yet.
     "embedding_dropout": 0.2,
-    "batch_size": 25,
     "patience": 3,
     "embedding_dim": {"words": 100, "characters": 8},
     "num_epochs": 20,
@@ -27,11 +35,6 @@
       "type": "adadelta",
       "lr": 0.5
     },
-    "use_data_generator": true,
-    "use_dynamic_padding": true,
-    "use_adaptive_batch_sizes": true,
-    "adaptive_batch_size_memory_usage_constant": 440000,
-    "biggest_batch_first": true,
-    "validation_files": ["/efs/data/dlfa/squad/processed/dev.tsv"],
-    "train_files": ["/efs/data/dlfa/squad/processed/train.tsv"]
+    "validation_files": ["/net/efs/aristo/dlfa/squad/processed/dev.tsv"],
+    "train_files": ["/net/efs/aristo/dlfa/squad/processed/train.tsv"]
 }

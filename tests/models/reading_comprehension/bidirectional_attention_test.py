@@ -12,12 +12,18 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
     def test_trains_and_loads_correctly(self):
         self.write_span_prediction_files()
         args = Params({
-                'embedding_dim': {'words': 4, 'characters': 4},
+                'embedding_dim': {'words': 8, 'characters': 4},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
                 })
-        self.ensure_model_trains_and_loads(BidirectionalAttentionFlow, args)
+        model, _ = self.ensure_model_trains_and_loads(BidirectionalAttentionFlow, args)
+        for layer in model.model.layers:
+            if layer.name == 'character_embedding':
+                assert layer.get_output_shape_at(0)[-1] == 4
+                break
+        else:
+            assert False, "couldn't find character embedding layer"
 
     def test_get_best_span(self):
         # Note that the best span cannot be (1, 0) since even though 0.3 * 0.5 is the greatest
