@@ -1,11 +1,15 @@
+from collections import OrderedDict
 from typing import Dict
 from overrides import overrides
 from keras.layers import Input
 from keras.layers.wrappers import TimeDistributed
 
 from ...data.instances.sentence_selection import SentenceSelectionInstance
+from ...training.losses import ranking_loss, ranking_loss_with_margin
 from ...layers.attention import Attention
+from ...layers.backend import ReplaceMaskedValues
 from ...layers.wrappers import EncoderWrapper
+from ...tensors.backend import VERY_NEGATIVE_NUMBER
 from ...training import TextTrainer
 from ...training.models import DeepQaModel
 from ...common.params import Params
@@ -32,13 +36,38 @@ class SiameseSentenceSelector(TextTrainer):
     share_hidden_seq2seq_layers : bool, optional (default: ``False``)
         Whether or not to encode the sentences and the question with the same
         hidden seq2seq layers, or have different ones for each.
+
+    loss_function : str, optional (default: ``"cross_entropy"``)
+        Valid options here are ``"cross_entropy"``, ``"ranking"``, and ``"hinge_ranking"``.
+
+        - ``"cross_entropy"``: with this loss function, we will train the model using cross entropy
+          loss after a final softmax.  This means that there is exactly one correct answer, and you
+          want the model to assign all probability mass to that answer, and none to the incorrect
+          answers.
+        - ``"ranking"``: with this loss function, we will train the model to rank all positively
+          labeled sentences above all negatively labeled sentences.  This allows you to have more
+          than one correct answer, but has some other issues to think carefully about.  See
+          :func:`ranking_loss` for more detail.
+        - ``"hinge_ranking"``: with this loss function, we will train the model to score all
+          positively labeled sentences at least some margin above all negatively labeled sentences.
+          Similarly to ``"ranking"``, this allows you to have more than one correct answer, but has
+          some other issues to think carefully about.  See :func:`ranking_loss_with_margin` for
+          more detail.
     """
+    loss_choices = OrderedDict()
+    loss_choices["cross_entropy"] = "categorical_crossentropy"
+    loss_choices["ranking"] = ranking_loss
+    loss_choices["hinge_ranking"] = ranking_loss_with_margin
+
     def __init__(self, params: Params):
         self.num_hidden_seq2seq_layers = params.pop('num_hidden_seq2seq_layers', 2)
         self.share_hidden_seq2seq_layers = params.pop('share_hidden_seq2seq_layers', False)
         self.num_question_words = params.pop('num_question_words', None)
         self.num_sentences = params.pop('num_sentences', None)
+        self.loss_function = params.pop_choice("loss_function", list(self.loss_choices.keys()),
+                                               default_to_first_choice=True)
         super(SiameseSentenceSelector, self).__init__(params)
+        self.loss = self.loss_choices[self.loss_function]
 
     @overrides
     def _build_model(self):
@@ -116,8 +145,12 @@ class SiameseSentenceSelector(TextTrainer):
         attention_name = 'question_sentences_similarity'
         similarity_params = Params({"type": "cosine_similarity"})
         attention_layer = Attention(name=attention_name,
-                                    similarity_function=similarity_params.as_dict())
+                                    similarity_function=similarity_params.as_dict(),
+                                    normalize=self.loss_function == "cross_entropy")
         sentence_probabilities = attention_layer([encoded_question, encoded_sentences])
+        if self.loss_function != "cross_entropy":
+            replace_layer = ReplaceMaskedValues(replace_with=VERY_NEGATIVE_NUMBER)
+            sentence_probabilities = replace_layer(sentence_probabilities)
 
         return DeepQaModel(input=[question_input, sentences_input],
                            output=sentence_probabilities)
@@ -161,4 +194,5 @@ class SiameseSentenceSelector(TextTrainer):
         custom_objects = super(SiameseSentenceSelector, cls)._get_custom_objects()
         custom_objects["Attention"] = Attention
         custom_objects["EncoderWrapper"] = EncoderWrapper
+        custom_objects["ReplaceMaskedValues"] = ReplaceMaskedValues
         return custom_objects

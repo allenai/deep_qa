@@ -5,7 +5,9 @@ from numpy.testing import assert_almost_equal
 from keras.layers import Embedding, Input
 from keras.models import Model
 import keras.backend as K
+
 from deep_qa.layers.attention import Attention
+from deep_qa.layers.wrappers import OutputMask
 
 
 class TestAttentionLayer:
@@ -116,3 +118,22 @@ class TestAttentionLayer:
         query_tensor = numpy.asarray([[.1, .8, .5]])
         attention_tensor = model.predict([query_tensor, sentence_tensor])
         assert_almost_equal(attention_tensor, [[0, .73105858, 0, .26894142]])
+
+    def test_non_normalized_attention_works(self):
+        sentence_length = 4
+        vocab_size = 4
+        embedding_dim = 3
+        embedding_weights = numpy.asarray([[-1, 0, 4], [1, 1, 1], [-1, 0, -1], [-1, -1, 0]])
+        embedding = Embedding(vocab_size, embedding_dim, weights=[embedding_weights], mask_zero=True)
+        sentence_input = Input(shape=(sentence_length,), dtype='int32')
+        sentence_embedding = embedding(sentence_input)
+        query_input = Input(shape=(embedding_dim,), dtype='float32')
+        attention_layer = Attention(normalize=False)
+        attention = attention_layer([query_input, sentence_embedding])
+        attention_mask = OutputMask()(attention)
+        model = Model(inputs=[query_input, sentence_input], outputs=[attention, attention_mask])
+        sentence_tensor = numpy.asarray([[0, 1, 0, 2]])
+        query_tensor = numpy.asarray([[.1, .8, .5]])
+        attention_tensor, mask_tensor = model.predict([query_tensor, sentence_tensor])
+        assert_almost_equal(attention_tensor, [[1.9, 1.4, 1.9, -.6]])
+        assert_almost_equal(mask_tensor, [[0, 1, 0, 1]])

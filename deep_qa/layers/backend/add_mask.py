@@ -24,7 +24,6 @@ class AddMask(MaskedLayer):
         This is the value that we will compare to in ``compute_mask``.
     """
     def __init__(self, mask_value: float=0.0, **kwargs):
-        self.supports_masking = True
         self.mask_value = mask_value
         super(AddMask, self).__init__(**kwargs)
 

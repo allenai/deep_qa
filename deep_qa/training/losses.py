@@ -1,6 +1,6 @@
 from keras import backend as K
 
-from ..tensors.backend import switch, VERY_NEGATIVE_NUMBER, VERY_LARGE_NUMBER
+from ..tensors.backend import VERY_NEGATIVE_NUMBER, VERY_LARGE_NUMBER
 
 def ranking_loss(y_pred, y_true):
     """
@@ -23,9 +23,9 @@ def ranking_loss(y_pred, y_true):
     masked elements in ``y_pred`` have very negative values before they get passed into this loss
     function.
     """
-    correct_elements = switch(y_true, y_pred, K.ones_like(y_pred) * VERY_LARGE_NUMBER)
+    correct_elements = y_pred + (1.0 - y_true) * VERY_LARGE_NUMBER
     lowest_scoring_correct = K.min(correct_elements, axis=-1)
-    incorrect_elements = switch(y_true, K.ones_like(y_pred) * VERY_NEGATIVE_NUMBER, y_pred)
+    incorrect_elements = y_pred + y_true * VERY_NEGATIVE_NUMBER
     highest_scoring_incorrect = K.max(incorrect_elements, axis=-1)
     return K.mean(-K.sigmoid(lowest_scoring_correct - highest_scoring_incorrect))
 
@@ -49,8 +49,8 @@ def ranking_loss_with_margin(y_pred, y_true):
     masked elements in ``y_pred`` have very negative values before they get passed into this loss
     function.
     """
-    correct_elements = switch(y_true, y_pred, K.ones_like(y_pred) * VERY_LARGE_NUMBER)
+    correct_elements = y_pred + (1.0 - y_true) * VERY_LARGE_NUMBER
     lowest_scoring_correct = K.min(correct_elements, axis=-1)
-    incorrect_elements = switch(y_true, K.ones_like(y_pred) * VERY_NEGATIVE_NUMBER, y_pred)
+    incorrect_elements = y_pred + y_true * VERY_NEGATIVE_NUMBER
     highest_scoring_incorrect = K.max(incorrect_elements, axis=-1)
     return K.mean(K.maximum(0.0, 1.0 + highest_scoring_incorrect - lowest_scoring_correct))
