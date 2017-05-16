@@ -30,7 +30,7 @@
     "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",
-      "lr": 0.5
+      "learning_rate": 0.5
     },
     "validation_files": ["/net/efs/aristo/dlfa/snli/processed/dev.tsv"],
     "train_files": ["/net/efs/aristo/dlfa/snli/processed/train.tsv"]

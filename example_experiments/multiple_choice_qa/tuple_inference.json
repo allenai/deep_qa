@@ -10,7 +10,7 @@
     },
     "optimizer": {
       "type": "adam",
-      "lr": 0.01
+      "learning_rate": 0.01
     },
     "tuple_matcher": {
       "type": "word_token_matcher",

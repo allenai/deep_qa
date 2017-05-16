@@ -16,9 +16,11 @@
             "wrapper_params": {}
         }
     },
-    "optimizer": {"type": "adam",
-                  "clipnorm": 10.0
-                 },
+    "optimizer": {"type": "adam"},
+    "gradient_clipping": {
+        "type": "clip_by_norm",
+        "value": 10
+    },
     "embedding_dropout": 0.0,
     "patience": 1,
     "embedding_dim": {"words": 256},

@@ -57,10 +57,14 @@
             "wrapper_params": {}
         }
     },
-    "optimizer": {"type": "adam",
-                  "clipnorm": 10.0,
-                  "lr": 0.0005
-                 },
+    "optimizer": {
+        "type": "adam",
+        "learning_rate": 0.0005
+    },
+    "gradient_clipping": {
+        "type": "clip_by_norm",
+        "value": 10
+    },
     "embedding_dropout": 0.0,
     "patience": 0,
     "num_epochs": 10,
