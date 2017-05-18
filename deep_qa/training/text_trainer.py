@@ -315,7 +315,10 @@ class TextTrainer(Trainer):
         uses both words and characters, we need to run the character encoder and concatenate the
         result with a word embedding).
         """
-        return self.tokenizer.embed_input(input_layer, self.__get_embedded_input, self, embedding_name)
+        return self.tokenizer.embed_input(input_layer,
+                                          self.__get_embedded_input,
+                                          self,
+                                          embedding_name)
 
     def _get_encoder(self, name="default", fallback_behavior: str=None):
         """

@@ -2,6 +2,7 @@ from typing import List, Tuple, Union
 import sys
 import logging
 import shutil
+import os
 
 import random
 import pyhocon
@@ -71,6 +72,7 @@ def run_model(param_path: str, model_class=None):
     # These have to be imported _after_ we set the random seed,
     # because keras uses the numpy random seed.
     from deep_qa.models import concrete_models
+    import tensorflow
     from keras import backend as K
 
     log_dir = params.get("model_serialization_prefix", None)  # pylint: disable=no-member
@@ -82,6 +84,16 @@ def run_model(param_path: str, model_class=None):
         handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
         logging.getLogger().addHandler(handler)
         shutil.copyfile(param_path, log_dir + "_model_params.json")
+
+    num_threads = os.environ.get('OMP_NUM_THREADS')
+    config = {
+            "allow_soft_placement": True,
+            "log_device_placement": params.pop("log_device_placement", False)
+    }
+    if num_threads is not None:
+        config["intra_op_parallelism_threads"] = int(num_threads)
+    global_session = tensorflow.Session(config=tensorflow.ConfigProto(**config))
+    K.set_session(global_session)
 
     if model_class is None:
         model_type = params.pop_choice('model_class', concrete_models.keys())
