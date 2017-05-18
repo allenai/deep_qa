@@ -53,13 +53,13 @@ class KnowledgeBackedLSTM(LSTM):
         # projection_dim is the size of the hidden layer in the MLP
         # used for attention
         projection_dim = (self.token_dim + self.knowledge_dim) / 2
-        self.token_projector = self.add_weight((self.token_dim, projection_dim),
+        self.token_projector = self.add_weight(shape=(self.token_dim, projection_dim),
                                                name='{}_token_projector'.format(self.name),
                                                initializer=self.kernel_initializer)
-        self.knowledge_projector = self.add_weight((self.knowledge_dim, projection_dim),
+        self.knowledge_projector = self.add_weight(shape=(self.knowledge_dim, projection_dim),
                                                    name='{}_knowledge_projector'.format(self.name),
                                                    initializer=self.kernel_initializer)
-        self.attention_scorer = self.add_weight((projection_dim,),
+        self.attention_scorer = self.add_weight(shape=(projection_dim,),
                                                 name='{}_attention_scorer'.format(self.name),
                                                 initializer=self.attention_init)
         # Initialize the LSTM parameters by passing the appropriate
@@ -118,11 +118,11 @@ class KnowledgeBackedLSTM(LSTM):
         return super(KnowledgeBackedLSTM, self).get_constants(lstm_input)
 
     @overrides
-    def get_initial_states(self, inputs):
+    def get_initial_state(self, inputs):
         # overriding this method from Recurrent because we have an extra dimension
         # knowledge_len which needs to be ignored while initializing h and c.
         lstm_input = inputs[:, :, 0, :]
-        return super(KnowledgeBackedLSTM, self).get_initial_states(lstm_input)
+        return super(KnowledgeBackedLSTM, self).get_initial_state(lstm_input)
 
     @overrides
     def get_config(self):

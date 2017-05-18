@@ -22,7 +22,7 @@ class Additive(MaskedLayer):
     @overrides
     def build(self, input_shape):
         super(Additive, self).build(input_shape)
-        self._additive_weight = self.add_weight(input_shape[1:],
+        self._additive_weight = self.add_weight(shape=input_shape[1:],
                                                 name='%s_additive' % self.name,
                                                 initializer=self.initializer)
 

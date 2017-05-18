@@ -107,10 +107,10 @@ class AdaptiveStep(MaskedLayer):
         '''
         input_dim = input_shape[1][-1]
 
-        self.halting_weight = self.add_weight(((input_dim,) + (1,)),
+        self.halting_weight = self.add_weight(shape=((input_dim,) + (1,)),
                                               initializer=self.init,
                                               name='{}_halting_weight'.format(self.name))
-        self.halting_bias = self.add_weight((),
+        self.halting_bias = self.add_weight(shape=(),
                                             initializer=self.init,
                                             name='{}_halting_bias'.format(self.name))
         self.trainable_weights = [self.halting_weight, self.halting_bias]

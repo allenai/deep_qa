@@ -98,7 +98,7 @@ class TreeCompositionLSTM(Recurrent):
                     Ignoring return_sequences=True", RuntimeWarning)
             self.return_sequences = False
 
-    def get_initial_states(self, inputs):
+    def get_initial_state(self, inputs):
         # The initial buffer is sent into the TreeLSTM as a part of the input.
         # i.e., inputs is a concatenation of the transitions and the initial buffer.
         # (batch_size, buffer_limit, output_dim+1)
@@ -160,141 +160,146 @@ class TreeCompositionLSTM(Recurrent):
         # of treeLSTM
         if self.implementation == 1:
             # Input dimensionality for all W2s is output_dim, and there are 5 W2s: i, fp, fa, u, o
-            self.W2 = self.add_weight((self.output_dim, 5 * self.output_dim),
+            self.W2 = self.add_weight(shape=(self.output_dim, 5 * self.output_dim),
                                       name='{}_W2'.format(self.name), initializer=self.initializer)
             # Input dimensionality for all U2s is output_dim, and there are 5 U2s: i, fp, fa, u, o
-            self.U2 = self.add_weight((self.output_dim, 5 * self.output_dim),
+            self.U2 = self.add_weight(shape=(self.output_dim, 5 * self.output_dim),
                                       name='{}_U2'.format(self.name), initializer=self.initializer)
 
             # Input dimensionality for all W3s is output_dim, and there are 6 W2s: i, fp, fa1, fa2, u, o
-            self.W3 = self.add_weight((self.output_dim, 6 * self.output_dim),
+            self.W3 = self.add_weight(shape=(self.output_dim, 6 * self.output_dim),
                                       name='{}_W3'.format(self.name), initializer=self.initializer)
             # Input dimensionality for all U3s is output_dim, and there are 6 U3s: i, fp, fa1, fa2, u, o
-            self.U3 = self.add_weight((self.output_dim, 6 * self.output_dim),
+            self.U3 = self.add_weight(shape=(self.output_dim, 6 * self.output_dim),
                                       name='{}_U3'.format(self.name), initializer=self.initializer)
             # Input dimensionality for all V3s is output_dim, and there are 6 V3s: i, fp, fa1, fa2, u, o
-            self.V3 = self.add_weight((self.output_dim, 6 * self.output_dim),
+            self.V3 = self.add_weight(shape=(self.output_dim, 6 * self.output_dim),
                                       name='{}_V3'.format(self.name), initializer=self.initializer)
 
             self.b2 = K.variable(np.hstack((np.zeros(self.output_dim),
-                                            K.get_value(self.add_weight(self.output_dim,
+                                            K.get_value(self.add_weight(shape=self.output_dim,
+                                                                        name='{}_b2_1'.format(self.name),
                                                                         initializer=self.forget_bias_initializer)),
-                                            K.get_value(self.add_weight(self.output_dim,
+                                            K.get_value(self.add_weight(shape=self.output_dim,
+                                                                        name='{}_b2_2'.format(self.name),
                                                                         initializer=self.forget_bias_initializer)),
                                             np.zeros(self.output_dim),
                                             np.zeros(self.output_dim))),
                                  name='{}_b2'.format(self.name))
             self.b3 = K.variable(np.hstack((np.zeros(self.output_dim),
-                                            K.get_value(self.add_weight(self.output_dim,
+                                            K.get_value(self.add_weight(shape=self.output_dim,
+                                                                        name='{}_b3_1'.format(self.name),
                                                                         initializer=self.forget_bias_initializer)),
-                                            K.get_value(self.add_weight(self.output_dim,
+                                            K.get_value(self.add_weight(shape=self.output_dim,
+                                                                        name='{}_b3_2'.format(self.name),
                                                                         initializer=self.forget_bias_initializer)),
-                                            K.get_value(self.add_weight(self.output_dim,
+                                            K.get_value(self.add_weight(shape=self.output_dim,
+                                                                        name='{}_b3_3'.format(self.name),
                                                                         initializer=self.forget_bias_initializer)),
                                             np.zeros(self.output_dim),
                                             np.zeros(self.output_dim))),
                                  name='{}_b3'.format(self.name))
             self.trainable_weights = [self.W2, self.U2, self.W3, self.U3, self.V3, self.b2, self.b3]
         else:
-            self.W2_i = self.add_weight((self.output_dim, self.output_dim),
+            self.W2_i = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_W2_i'.format(self.name),
                                         initializer=self.initializer)
-            self.U2_i = self.add_weight((self.output_dim, self.output_dim),
+            self.U2_i = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_U2_i'.format(self.name),
                                         initializer=self.initializer)
-            self.W3_i = self.add_weight((self.output_dim, self.output_dim),
+            self.W3_i = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_W3_i'.format(self.name),
                                         initializer=self.initializer)
-            self.U3_i = self.add_weight((self.output_dim, self.output_dim),
+            self.U3_i = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_U3_i'.format(self.name),
                                         initializer=self.initializer)
-            self.V3_i = self.add_weight((self.output_dim, self.output_dim),
+            self.V3_i = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_V3_i'.format(self.name),
                                         initializer=self.initializer)
             self.b2_i = K.zeros((self.output_dim,), name='{}_b2_i'.format(self.name))
             self.b3_i = K.zeros((self.output_dim,), name='{}_b3_i'.format(self.name))
 
-            self.W2_fp = self.add_weight((self.output_dim, self.output_dim),
+            self.W2_fp = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_W2_fp'.format(self.name),
                                          initializer=self.initializer)
-            self.U2_fp = self.add_weight((self.output_dim, self.output_dim),
+            self.U2_fp = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_U2_fp'.format(self.name),
                                          initializer=self.initializer)
-            self.W2_fa = self.add_weight((self.output_dim, self.output_dim),
+            self.W2_fa = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_W2_fa'.format(self.name),
                                          initializer=self.initializer)
-            self.U2_fa = self.add_weight((self.output_dim, self.output_dim),
+            self.U2_fa = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_U2_fa'.format(self.name),
                                          initializer=self.initializer)
-            self.W3_fp = self.add_weight((self.output_dim, self.output_dim),
+            self.W3_fp = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_W3_fp'.format(self.name),
                                          initializer=self.initializer)
-            self.U3_fp = self.add_weight((self.output_dim, self.output_dim),
+            self.U3_fp = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_U3_fp'.format(self.name),
                                          initializer=self.initializer)
-            self.V3_fp = self.add_weight((self.output_dim, self.output_dim),
+            self.V3_fp = self.add_weight(shape=(self.output_dim, self.output_dim),
                                          name='{}_V3_fp'.format(self.name),
                                          initializer=self.initializer)
-            self.W3_fa1 = self.add_weight((self.output_dim, self.output_dim),
+            self.W3_fa1 = self.add_weight(shape=(self.output_dim, self.output_dim),
                                           name='{}_W3_fa1'.format(self.name),
                                           initializer=self.initializer)
-            self.U3_fa1 = self.add_weight((self.output_dim, self.output_dim),
+            self.U3_fa1 = self.add_weight(shape=(self.output_dim, self.output_dim),
                                           name='{}_U3_fa1'.format(self.name),
                                           initializer=self.initializer)
-            self.V3_fa1 = self.add_weight((self.output_dim, self.output_dim),
+            self.V3_fa1 = self.add_weight(shape=(self.output_dim, self.output_dim),
                                           name='{}_V3_fa1'.format(self.name),
                                           initializer=self.initializer)
-            self.W3_fa2 = self.add_weight((self.output_dim, self.output_dim),
+            self.W3_fa2 = self.add_weight(shape=(self.output_dim, self.output_dim),
                                           name='{}_W3_fa2'.format(self.name),
                                           initializer=self.initializer)
-            self.U3_fa2 = self.add_weight((self.output_dim, self.output_dim),
+            self.U3_fa2 = self.add_weight(shape=(self.output_dim, self.output_dim),
                                           name='{}_U3_fa2'.format(self.name),
                                           initializer=self.initializer)
-            self.V3_fa2 = self.add_weight((self.output_dim, self.output_dim),
+            self.V3_fa2 = self.add_weight(shape=(self.output_dim, self.output_dim),
                                           name='{}_V3_fa2'.format(self.name),
                                           initializer=self.initializer)
-            self.b2_fp = self.add_weight((self.output_dim,), name='{}_b2_fp'.format(self.name),
+            self.b2_fp = self.add_weight(shape=(self.output_dim,), name='{}_b2_fp'.format(self.name),
                                          initializer=self.forget_bias_initializer)
-            self.b2_fa = self.add_weight((self.output_dim,), name='{}_b2_fa'.format(self.name),
+            self.b2_fa = self.add_weight(shape=(self.output_dim,), name='{}_b2_fa'.format(self.name),
                                          initializer=self.forget_bias_initializer)
-            self.b3_fp = self.add_weight((self.output_dim,), name='{}_b3_fp'.format(self.name),
+            self.b3_fp = self.add_weight(shape=(self.output_dim,), name='{}_b3_fp'.format(self.name),
                                          initializer=self.forget_bias_initializer)
-            self.b3_fa1 = self.add_weight((self.output_dim,), name='{}_b3_fa1'.format(self.name),
+            self.b3_fa1 = self.add_weight(shape=(self.output_dim,), name='{}_b3_fa1'.format(self.name),
                                           initializer=self.forget_bias_initializer)
-            self.b3_fa2 = self.add_weight((self.output_dim,), name='{}_b3_fa2'.format(self.name),
+            self.b3_fa2 = self.add_weight(shape=(self.output_dim,), name='{}_b3_fa2'.format(self.name),
                                           initializer=self.forget_bias_initializer)
 
-            self.W2_u = self.add_weight((self.output_dim, self.output_dim),
+            self.W2_u = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_W2_u'.format(self.name),
                                         initializer=self.initializer)
-            self.U2_u = self.add_weight((self.output_dim, self.output_dim),
+            self.U2_u = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_U2_u'.format(self.name),
                                         initializer=self.initializer)
-            self.W3_u = self.add_weight((self.output_dim, self.output_dim),
+            self.W3_u = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_W3_u'.format(self.name),
                                         initializer=self.initializer)
-            self.U3_u = self.add_weight((self.output_dim, self.output_dim),
+            self.U3_u = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_U3_u'.format(self.name),
                                         initializer=self.initializer)
-            self.V3_u = self.add_weight((self.output_dim, self.output_dim),
+            self.V3_u = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_V3_u'.format(self.name),
                                         initializer=self.initializer)
             self.b2_u = K.zeros((self.output_dim,), name='{}_b2_u'.format(self.name))
             self.b3_u = K.zeros((self.output_dim,), name='{}_b3_u'.format(self.name))
 
-            self.W2_o = self.add_weight((self.output_dim, self.output_dim),
+            self.W2_o = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_W2_o'.format(self.name),
                                         initializer=self.initializer)
-            self.U2_o = self.add_weight((self.output_dim, self.output_dim),
+            self.U2_o = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_U2_o'.format(self.name),
                                         initializer=self.initializer)
-            self.W3_o = self.add_weight((self.output_dim, self.output_dim),
+            self.W3_o = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_W3_o'.format(self.name),
                                         initializer=self.initializer)
-            self.U3_o = self.add_weight((self.output_dim, self.output_dim),
+            self.U3_o = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_U3_o'.format(self.name),
                                         initializer=self.initializer)
-            self.V3_o = self.add_weight((self.output_dim, self.output_dim),
+            self.V3_o = self.add_weight(shape=(self.output_dim, self.output_dim),
                                         name='{}_V3_o'.format(self.name),
                                         initializer=self.initializer)
             self.b2_o = K.zeros((self.output_dim,), name='{}_b2_o'.format(self.name))

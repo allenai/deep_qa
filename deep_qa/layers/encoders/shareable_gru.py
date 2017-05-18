@@ -9,9 +9,9 @@ class ShareableGRU(GRU):
     def call(self, x, mask=None, **kwargs):
         input_shape = K.int_shape(x)
         res = super(ShareableGRU, self).call(x, mask, **kwargs)
-        self.input_spec = InputSpec(shape=(self.input_spec.shape[0],
-                                           None,
-                                           self.input_spec.shape[2]))
+        self.input_spec = [InputSpec(shape=(self.input_spec[0].shape[0],
+                                            None,
+                                            self.input_spec[0].shape[2]))]
         if K.ndim(x) == K.ndim(res):
             # A recent change in Keras
             # (https://github.com/fchollet/keras/commit/a9b6bef0624c67d6df1618ca63d8e8141b0df4d0)

@@ -139,10 +139,10 @@ class ParameterizedKnowledgeSelector(MaskedLayer):
     def build(self, input_shape):
         self.input_spec = [InputSpec(shape=input_shape)]
         input_dim = input_shape[2]
-        self.dense_weights = self.add_weight((input_dim * 2, input_dim),
+        self.dense_weights = self.add_weight(shape=(input_dim * 2, input_dim),
                                              initializer=self.init,
                                              name='{}_dense'.format(self.name))
-        self.dot_bias = self.add_weight((input_dim, 1),
+        self.dot_bias = self.add_weight(shape=(input_dim, 1),
                                         initializer=self.init,
                                         name='{}_dot_bias'.format(self.name))
         self.trainable_weights = [self.dense_weights, self.dot_bias]
@@ -259,16 +259,16 @@ class ParameterizedHeuristicMatchingKnowledgeSelector(MaskedLayer):
     def build(self, input_shape):
         self.input_spec = [InputSpec(shape=input_shape)]
         input_dim = input_shape[2]
-        self.dense_weights = self.add_weight((input_dim * 4, input_dim),
+        self.dense_weights = self.add_weight(shape=(input_dim * 4, input_dim),
                                              initializer=self.init,
                                              name='{}_dense'.format(self.name))
-        self.dot_bias = self.add_weight((input_dim, 1),
+        self.dot_bias = self.add_weight(shape=(input_dim, 1),
                                         initializer=self.init,
                                         name='{}_dot_bias'.format(self.name))
-        self.bias1 = self.add_weight((input_dim,),
+        self.bias1 = self.add_weight(shape=(input_dim,),
                                      initializer=self.init,
                                      name='{}_dense_bias1'.format(self.name))
-        self.bias2 = self.add_weight((1,),
+        self.bias2 = self.add_weight(shape=(1,),
                                      initializer=self.init,
                                      name='{}_dense_bias2'.format(self.name))
         self.trainable_weights = [self.dense_weights, self.dot_bias, self.bias1, self.bias2]

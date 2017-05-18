@@ -115,19 +115,19 @@ class DecomposableAttentionEntailment(WordAlignmentEntailment):
         compare_input_dim = 2 * self.input_dim
         aggregate_input_dim = self.hidden_layer_width * 2
         for i in range(self.num_hidden_layers):
-            self.attend_weights.append(self.add_weight((attend_input_dim, self.hidden_layer_width),
+            self.attend_weights.append(self.add_weight(shape=(attend_input_dim, self.hidden_layer_width),
                                                        name='%s_attend_%d' % (self.name, i),
                                                        initializer=self.initializer))
-            self.compare_weights.append(self.add_weight((compare_input_dim, self.hidden_layer_width),
+            self.compare_weights.append(self.add_weight(shape=(compare_input_dim, self.hidden_layer_width),
                                                         name='%s_compare_%d' % (self.name, i),
                                                         initializer=self.initializer))
-            self.aggregate_weights.append(self.add_weight((aggregate_input_dim, self.hidden_layer_width),
+            self.aggregate_weights.append(self.add_weight(shape=(aggregate_input_dim, self.hidden_layer_width),
                                                           name='%s_aggregate_%d' % (self.name, i),
                                                           initializer=self.initializer))
             attend_input_dim = self.hidden_layer_width
             compare_input_dim = self.hidden_layer_width
             aggregate_input_dim = self.hidden_layer_width
-        self.scorer = self.add_weight((self.hidden_layer_width, self.output_dim),
+        self.scorer = self.add_weight(shape=(self.hidden_layer_width, self.output_dim),
                                       initializer=self.initializer,
                                       name='%s_score' % self.name)
 
