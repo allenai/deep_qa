@@ -4,7 +4,10 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # Neural net and related libraries.
-keras
+# Keras had a bug that needed to be fixed.  This commit is the bugfix commit.  Once 2.0.5 comes
+# out, we can remove this pin.
+# keras
+git+git://github.com/fchollet/keras.git@b5490b20d23ed1ffd45d535f0799804d54308b09
 h5py
 scikit-learn
 

@@ -11,10 +11,10 @@ class SentenceSelectionInstance(TextInstance):
     """
     A SentenceSelectionInstance is an instance for the sentence selection
     task. A SentenceSelectionInstance stores a question as a string, and a set of sentences
-    as a list of strings. The labels is a single int, indicating the index of
-    the sentence that contains the answer to the question.
+    as a list of strings. The labels is a List[int], indicating the indices of all sentences that
+    contain the answer to the question.
     """
-    def __init__(self, question_text: str, sentences: List[str], label: int, index: int=None):
+    def __init__(self, question_text: str, sentences: List[str], label: List[int], index: int=None):
         super(SentenceSelectionInstance, self).__init__(label, index)
         self.question_text = question_text
         self.sentences = sentences
@@ -55,7 +55,8 @@ class SentenceSelectionInstance(TextInstance):
         (2) [question][tab][list_of_sentences][tab][label]
 
         The ``list_of_sentences`` column is assumed formatted as: ``[sentence]###[sentence]###[sentence]...``
-        That is, we split on three hashes (``"###"``).
+        That is, we split on three hashes (``"###"``).  The ``label`` is assumed to be a
+        comma-separated list of integers, indices into the ``list_of_sentences``.
         """
         fields = line.split("\t")
 
@@ -68,7 +69,8 @@ class SentenceSelectionInstance(TextInstance):
         else:
             raise RuntimeError("Unrecognized line format: " + line)
         sentences_split = sentences.split("###")
-        label = int(label_string)
+        correct_indices = label_string.split(",")
+        label = [int(x) for x in correct_indices]
 
         return cls(question, sentences_split, label, index)
 
@@ -158,5 +160,6 @@ class IndexedSentenceSelectionInstance(IndexedInstance):
             label = None
         else:
             label = np.zeros((len(self.sentences_indices)))
-            label[self.label] = 1
+            for correct_index in self.label:
+                label[correct_index] = 1
         return (question_array, sentences_matrix), np.asarray(label)

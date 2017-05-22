@@ -1,14 +1,13 @@
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, List
 from overrides import overrides
 from keras.layers import Input
-from keras.layers.wrappers import TimeDistributed
 
 from ...data.instances.sentence_selection import SentenceSelectionInstance
 from ...training.losses import ranking_loss, ranking_loss_with_margin
 from ...layers.attention import Attention
-from ...layers.backend import ReplaceMaskedValues
-from ...layers.wrappers import EncoderWrapper
+from ...layers.backend import ReplaceMaskedValues, CollapseToBatch, ExpandFromBatch
+from ...layers.wrappers import AddEncoderMask
 from ...tensors.backend import VERY_NEGATIVE_NUMBER
 from ...training import TextTrainer
 from ...training.models import DeepQaModel
@@ -112,32 +111,30 @@ class SiameseSentenceSelector(TextTrainer):
             modeled_question = hidden_layer(modeled_question)
 
         # We encode the sentence embedding with some more seq2seq layers
-        modeled_sentence = sentences_embedding
+        collapsed_sentences = CollapseToBatch(1)(sentences_embedding)
+        modeled_sentences = collapsed_sentences
         for i in range(self.num_hidden_seq2seq_layers):
             if self.share_hidden_seq2seq_layers:
                 seq2seq_encoder_name = "seq2seq_{}".format(i)
             else:
                 seq2seq_encoder_name = "sentence_seq2seq_{}".format(i)
 
-            hidden_layer = TimeDistributed(
-                    self._get_seq2seq_encoder(name=seq2seq_encoder_name,
-                                              fallback_behavior="use default params"),
-                    name="TimeDistributed_seq2seq_sentences_encoder_{}".format(i))
-            # shape: (batch_size, num_question_words, seq2seq output dimension)
-            modeled_sentence = hidden_layer(modeled_sentence)
+            hidden_layer = self._get_seq2seq_encoder(name=seq2seq_encoder_name,
+                                                     fallback_behavior="use default params")
+            # shape: (batch_size * num_sentences, num_question_words, seq2seq output dimension)
+            modeled_sentences = hidden_layer(modeled_sentences)
 
         # We encode the modeled question with some encoder.
-        question_encoder = self._get_encoder(name="question",
-                                             fallback_behavior="use default encoder")
+        question_encoder = self._get_encoder(name="question", fallback_behavior="use default encoder")
         # shape: (batch size, encoder_output_dimension)
         encoded_question = question_encoder(modeled_question)
 
         # We encode the modeled document with some encoder.
-        sentences_encoder = EncoderWrapper(self._get_encoder(name="sentence",
-                                                             fallback_behavior="use default encoder"),
-                                           name="sentences_encoder")
-        # shape: (batch size, num_sentences, encoder_output_dimension)
-        encoded_sentences = sentences_encoder(modeled_sentence)
+        sentences_encoder = self._get_encoder(name="sentence", fallback_behavior="use default encoder")
+        # shape: (batch size * num_sentences, encoder_output_dimension)
+        encoded_sentences = sentences_encoder(modeled_sentences)
+        encoded_sentences = AddEncoderMask()([encoded_sentences, modeled_sentences])
+        encoded_sentences = ExpandFromBatch(1)([encoded_sentences, sentences_embedding])
 
         # Here we use the Attention layer with the cosine similarity function
         # to get the cosine similarities of each sesntence with the question.
@@ -173,6 +170,10 @@ class SiameseSentenceSelector(TextTrainer):
         return padding_lengths
 
     @overrides
+    def get_instance_sorting_keys(self) -> List[str]:  # pylint: disable=no-self-use
+        return ['num_sentence_words', 'num_question_words']
+
+    @overrides
     def _set_padding_lengths(self, padding_lengths: Dict[str, int]):
         """
         Set the padding lengths of the model.
@@ -192,7 +193,9 @@ class SiameseSentenceSelector(TextTrainer):
     @classmethod
     def _get_custom_objects(cls):
         custom_objects = super(SiameseSentenceSelector, cls)._get_custom_objects()
+        custom_objects["AddEncoderMask"] = AddEncoderMask
         custom_objects["Attention"] = Attention
-        custom_objects["EncoderWrapper"] = EncoderWrapper
+        custom_objects["CollapseToBatch"] = CollapseToBatch
+        custom_objects["ExpandFromBatch"] = ExpandFromBatch
         custom_objects["ReplaceMaskedValues"] = ReplaceMaskedValues
         return custom_objects

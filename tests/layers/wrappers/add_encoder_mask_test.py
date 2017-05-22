@@ -2,21 +2,22 @@
 import numpy
 from keras.layers import Input
 
-from deep_qa.layers.wrappers import EncoderWrapper, OutputMask
+from deep_qa.layers.wrappers import AddEncoderMask, OutputMask
 from deep_qa.layers.encoders import BOWEncoder
 from deep_qa.layers import TimeDistributedEmbedding
 from deep_qa.training.models import DeepQaModel
 from ...common.test_case import DeepQaTestCase
 
 
-class TestEncoderWrapper(DeepQaTestCase):
+class TestAddEncoderMask(DeepQaTestCase):
     def test_mask_is_computed_correctly(self):
-        background_input = Input(shape=(3, 3), dtype='int32')
+        background_input = Input(shape=(None, 3), dtype='int32')
         embedding = TimeDistributedEmbedding(input_dim=3, output_dim=2, mask_zero=True)
         embedded_background = embedding(background_input)
-        encoded_background = EncoderWrapper(BOWEncoder(units=2))(embedded_background)
+        encoded_background = BOWEncoder(units=2)(embedded_background)
+        encoded_background_with_mask = AddEncoderMask()([encoded_background, embedded_background])
 
-        mask_output = OutputMask()(encoded_background)
+        mask_output = OutputMask()(encoded_background_with_mask)
         model = DeepQaModel(inputs=[background_input], outputs=mask_output)
 
         test_background = numpy.asarray([
@@ -24,8 +25,13 @@ class TestEncoderWrapper(DeepQaTestCase):
                         [0, 0, 0],
                         [2, 2, 2],
                         [0, 0, 0],
+                        [0, 1, 2],
+                        [1, 0, 0],
+                        [0, 0, 0],
+                        [0, 1, 0],
+                        [1, 1, 1],
                 ]
         ])
-        expected_mask = numpy.asarray([[0, 1, 0]])
+        expected_mask = numpy.asarray([[0, 1, 0, 1, 1, 0, 1, 1]])
         actual_mask = model.predict([test_background])
-        numpy.testing.assert_array_almost_equal(expected_mask, actual_mask)
+        numpy.testing.assert_array_equal(expected_mask, actual_mask)

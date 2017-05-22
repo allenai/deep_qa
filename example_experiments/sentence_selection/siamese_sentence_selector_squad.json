@@ -3,7 +3,6 @@
     "model_serialization_prefix": "/net/efs/aristo/dlfa/models/sentence_selection/siamese_1_hidden_layer_hard/",
     "share_hidden_seq2seq_layers": true,
     "num_hidden_seq2seq_layers": 1,
-    "num_sentence_words": 40,
     "encoder": {
         "question": {
             "type": "bi_gru",
@@ -27,6 +26,9 @@
     "patience": 2,
     "embedding_dim": {
         "words": 100
+    },
+    "data_generator": {
+      "dynamic_padding": true
     },
     "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
     "fine_tune_embeddings": false,

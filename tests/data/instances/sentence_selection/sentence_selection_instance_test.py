@@ -12,19 +12,19 @@ from ....common.test_case import DeepQaTestCase
 class TestSentenceSelectionInstance(DeepQaTestCase):
     @staticmethod
     def instance_to_line(question: str, sentences: List[str],
-                         label: int, index=None):
+                         label: List[int], index=None):
         line = ''
         if index is not None:
             line += str(index) + '\t'
         line += (question + '\t' + '###'.join(sentences) + '\t' +
-                 str(label))
+                 ','.join(str(x) for x in label))
         return line
 
     def test_read_from_line_handles_three_column(self):
         question = "What do dogs eat?"
         sentences = ["Dogs eat cats.", "Dogs play with cats.",
                      "Dogs enjoy cats."]
-        label = 0
+        label = [0]
         line = self.instance_to_line(question, sentences, label)
         instance = SentenceSelectionInstance.read_from_line(line)
         assert instance.question_text == question
@@ -36,7 +36,7 @@ class TestSentenceSelectionInstance(DeepQaTestCase):
         question = "What do dogs eat?"
         sentences = ["Dogs eat cats.", "Dogs play with cats.",
                      "Dogs enjoy cats."]
-        label = 0
+        label = [0, 1]
         index = 23
         line = self.instance_to_line(question, sentences, label, index)
         instance = SentenceSelectionInstance.read_from_line(line)
@@ -83,7 +83,7 @@ class TestIndexedSentenceSelectionInstance(DeepQaTestCase):
                                                          [[2, 3, 4],
                                                           [4, 6, 5, 1],
                                                           [1, 2, 3, 4, 5, 6]],
-                                                         1)
+                                                         [1, 2])
 
     def test_get_padding_lengths(self):
         assert self.instance.get_padding_lengths() == {'num_question_words': 5,
@@ -113,7 +113,7 @@ class TestIndexedSentenceSelectionInstance(DeepQaTestCase):
                            'num_sentence_words': 4,
                            'num_sentences': 4})
         inputs, label = self.instance.as_training_data()
-        assert numpy.all(label == numpy.asarray([0, 1, 0, 0]))
+        assert numpy.all(label == numpy.asarray([0, 1, 1, 0]))
         assert numpy.all(inputs[0] == numpy.asarray([0, 0, 1, 2, 3, 5, 6]))
         assert numpy.all(inputs[1] == numpy.asarray([[0, 2, 3, 4],
                                                      [4, 6, 5, 1],

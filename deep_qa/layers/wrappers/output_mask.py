@@ -11,11 +11,6 @@ class OutputMask(MaskedLayer):
 
     Don't try to use this in an actual model.
     """
-    def __init__(self, **kwargs):
-        # The base layer class overwrites self.supports_masking,
-        # so we add it afterwards.
-        super(OutputMask, self).__init__(**kwargs)
-
     @overrides
     def compute_mask(self, inputs, mask=None):
         return None
