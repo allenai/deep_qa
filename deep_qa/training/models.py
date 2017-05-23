@@ -1,10 +1,12 @@
 import logging
+import os
 from overrides import overrides
 
 from keras.models import Model, Sequential
 import keras.backend as K
 import tensorflow
 
+from .step import Step
 from ..common.params import Params, ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -56,6 +58,8 @@ class DeepQaModel(Model):
 
         """
         optimizer = params.get('optimizer')
+        self.tensorboard_log = params.pop('tensorboard_log', None)
+        self.tensorboard_frequency = params.pop('tensorboard_frequency', 0)
         self.gradient_clipping = params.pop("gradient_clipping", None).as_dict()
         super(DeepQaModel, self).compile(**params.as_dict())
         self.optimizer = optimizer
@@ -74,8 +78,9 @@ class DeepQaModel(Model):
             if self.uses_learning_phase and not isinstance(K.learning_phase(), int):
                 inputs += [K.learning_phase()]
 
+            tensorflow.summary.scalar("total_loss", self.total_loss)
             # Here we override Keras to use tensorflow optimizers directly.
-            self.global_step = K.variable(0., name='global_step')
+            self.global_step = tensorflow.train.get_or_create_global_step()
             gradients = tensorflow.gradients(self.total_loss, self._collected_trainable_weights)
             if self.gradient_clipping is not None:
                 # Don't pop from the gradient clipping dict here as
@@ -95,8 +100,51 @@ class DeepQaModel(Model):
                                                               global_step=self.global_step)
             # pylint: enable=no-member
             updates = self.updates + [training_updates]
+            outputs = [self.total_loss] + self.metrics_tensors
             # Gets loss and metrics. Updates weights at each call.
-            self.train_function = K.Function(inputs, [self.total_loss] + self.metrics_tensors, updates=updates)
+
+            if self.tensorboard_log is not None:
+                train_summary_writer = tensorflow.summary.FileWriter(os.path.join(self.tensorboard_log, "train"))
+            else:
+                train_summary_writer = None
+
+            self.train_function = Step(inputs, outputs, self.global_step, train_summary_writer,
+                                       self.tensorboard_frequency, updates=updates)
+
+    @overrides
+    def _make_test_function(self):
+        # pylint: disable=attribute-defined-outside-init
+        if not hasattr(self, 'test_function'):
+            raise RuntimeError('You must compile your model before using it.')
+        if self.test_function is None:
+            inputs = self._feed_inputs + self._feed_targets + self._feed_sample_weights
+            if self.uses_learning_phase and not isinstance(K.learning_phase(), int):
+                inputs += [K.learning_phase()]
+            # Return loss and metrics, no gradient updates.
+            # Does update the network states.
+
+            if not hasattr(self, 'global_step'):
+                self.global_step = tensorflow.train.get_or_create_global_step()
+            self.test_function = Step(inputs, [self.total_loss] + self.metrics_tensors,
+                                      self.global_step, updates=self.state_updates)
+
+    @overrides
+    def _make_predict_function(self):
+        # pylint: disable=attribute-defined-outside-init
+        if not hasattr(self, 'predict_function'):
+            self.predict_function = None
+        if self.predict_function is None:
+            if self.uses_learning_phase and not isinstance(K.learning_phase(), int):
+                inputs = self._feed_inputs + [K.learning_phase()]
+            else:
+                inputs = self._feed_inputs
+            # Gets network outputs. Does not update weights.
+            # Does update the network states.
+
+            if not hasattr(self, 'global_step'):
+                self.global_step = tensorflow.train.get_or_create_global_step()
+            self.predict_function = Step(inputs, self.outputs, self.global_step,
+                                         updates=self.state_updates)
 
 
 def print_summary_with_masking(layers, relevant_nodes=None):

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 import numpy
 from keras.models import model_from_json
-from keras.callbacks import CallbackList, EarlyStopping, LambdaCallback, ModelCheckpoint, TensorBoard
+from keras.callbacks import CallbackList, EarlyStopping, LambdaCallback, ModelCheckpoint
 
 from ..training.callbacks import ReplicaModelCheckpoint
 from ..common.checks import ConfigurationError
@@ -177,7 +177,7 @@ class Trainer:
 
         # Debugging / logging / misc parameters.
         self.tensorboard_log = params.pop('tensorboard_log', None)
-        self.tensorboard_histogram_freq = params.pop('tensorboard_histogram_freq', 0)
+        self.tensorboard_frequency = params.pop('tensorboard_frequency', 0)
         self.debug_params = params.pop('debug', {})
         self.show_summary_with_masking = params.pop('show_summary_with_masking_info', False)
 
@@ -524,11 +524,6 @@ class Trainer:
                                          on_epoch_end=lambda epoch, logs: self._post_epoch_hook(epoch))
         callbacks = [early_stop, model_callbacks]
 
-        if self.tensorboard_log is not None:
-            tensorboard_visualisation = TensorBoard(log_dir=self.tensorboard_log,
-                                                    histogram_freq=self.tensorboard_histogram_freq)
-            callbacks.append(tensorboard_visualisation)
-
         if self.debug_params:
             debug_callback = LambdaCallback(on_epoch_end=lambda epoch, logs:
                                             self.__debug(self.debug_params["layer_names"],
@@ -719,6 +714,8 @@ class Trainer:
         """
         # TODO(mark): factor all compile kwargs into a single dict in the json config.
         return Params({
+                'tensorboard_log': self.tensorboard_log,
+                'tensorboard_frequency': self.tensorboard_frequency,
                 'gradient_clipping': self.gradient_clipping,
                 'loss': self.loss,
                 'optimizer': self.optimizer,
