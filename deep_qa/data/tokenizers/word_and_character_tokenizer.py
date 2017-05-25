@@ -61,7 +61,7 @@ class WordAndCharacterTokenizer(Tokenizer):
                     input_layer: Layer,
                     embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
-                    embedding_name: str="embedding"):
+                    embedding_suffix: str=""):
         """
         A combined word-and-characters representation requires some fancy footwork to do the
         embedding properly.
@@ -81,10 +81,10 @@ class WordAndCharacterTokenizer(Tokenizer):
         # mask_split_axis argument to VectorMatrixSplit.
         words, characters = VectorMatrixSplit(split_axis=-1)(input_layer)
         word_embedding = embed_function(words,
-                                        embedding_name='word_' + embedding_name,
+                                        embedding_name='words' + embedding_suffix,
                                         vocab_name='words')
         character_embedding = embed_function(characters,
-                                             embedding_name='character_' + embedding_name,
+                                             embedding_name='characters' + embedding_suffix,
                                              vocab_name='characters')
 
         # A note about masking here: we care about the character masks when encoding a character

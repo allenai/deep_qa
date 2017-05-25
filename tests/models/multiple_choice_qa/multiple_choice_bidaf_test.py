@@ -16,7 +16,7 @@ class TestMultipleChoiceBidaf(DeepQaTestCase):
         self.write_span_prediction_files()
         args = Params({
                 'model_serialization_prefix': self.TEST_DIR + "_bidaf",
-                'embedding_dim': {"words": 4, "characters": 4},
+                'embeddings': {"words": {'dimension': 4}, "characters": {'dimension': 4}},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,

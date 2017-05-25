@@ -9,7 +9,6 @@ class TestGatedAttention(DeepQaTestCase):
     def test_cloze_train_does_not_crash(self):
         self.write_who_did_what_files()
         args = Params({
-                'save_models': True,
                 "qd_common_feature": True,
                 "gating_function": "+",
                 "cloze_token": "xxxxx",
@@ -55,7 +54,6 @@ class TestGatedAttention(DeepQaTestCase):
                                 }
                         }
                 },
-                "embedding_dim": {"words": 4, "characters": 4},
         })
         model, loaded_model = self.ensure_model_trains_and_loads(GatedAttentionReader, args)
         # verify that the gated attention function was set properly
@@ -69,7 +67,6 @@ class TestGatedAttention(DeepQaTestCase):
     def test_non_cloze_train_does_not_crash(self):
         self.write_who_did_what_files()
         args = Params({
-                'save_models': True,
                 "qd_common_feature": True,
                 "num_gated_attention_layers": 2,
                 "gating_function": "+",
@@ -110,7 +107,6 @@ class TestGatedAttention(DeepQaTestCase):
                                 "wrapper_params": {}
                         }
                 },
-                "embedding_dim": {"words": 4, "characters": 4},
         })
         model, loaded_model = self.ensure_model_trains_and_loads(GatedAttentionReader, args)
         # verify that the gated attention function was set properly

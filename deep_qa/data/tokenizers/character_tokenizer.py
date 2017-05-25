@@ -33,9 +33,9 @@ class CharacterTokenizer(Tokenizer):
                     input_layer: Layer,
                     embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
-                    embedding_name: str="embedding"):
+                    embedding_suffix: str=''):
         return embed_function(input_layer,
-                              embedding_name='character_' + embedding_name,
+                              embedding_name='characters' + embedding_suffix,
                               vocab_name='characters')
 
     @overrides

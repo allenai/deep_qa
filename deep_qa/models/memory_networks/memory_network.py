@@ -232,7 +232,7 @@ class MemoryNetwork(TextTrainer):
         knowledge_encoder_type = params.pop_choice("type", list(knowledge_encoders.keys()),
                                                    default_to_first_choice=True)
         params['name'] = name
-        params['encoding_dim'] = self.embedding_dim['words']
+        params['encoding_dim'] = self.embedding_layers['words'][0].output_dim
         params['knowledge_length'] = self.max_knowledge_length
         params['question_encoder'] = question_encoder
         params['has_multiple_backgrounds'] = self.has_multiple_backgrounds
@@ -275,7 +275,7 @@ class MemoryNetwork(TextTrainer):
         params = deepcopy(self.knowledge_combiner_params)
         params['name'] = name
         # These are required for the Attentive
-        params['output_dim'] = self.embedding_dim['words']
+        params['output_dim'] = self.embedding_layers['words'][0].output_dim
         params['input_length'] = self.max_knowledge_length
 
         combiner_type = params.pop_choice("type", list(knowledge_combiners.keys()),
@@ -300,7 +300,7 @@ class MemoryNetwork(TextTrainer):
         updater_type = params.pop_choice("type", list(updaters.keys()),
                                          default_to_first_choice=True)
         params['name'] = name
-        params['output_dim'] = self.embedding_dim['words']
+        params['output_dim'] = self.embedding_layers['words'][0].output_dim
         return updaters[updater_type](**params)
 
     def _get_entailment_input_combiner(self):
@@ -317,7 +317,7 @@ class MemoryNetwork(TextTrainer):
         # calls to params.pop()), but it's possible we'll want to call this more than once.  So
         # we'll make a copy and use that instead of self.entailment_combiner_params.
         params = deepcopy(self.entailment_combiner_params)
-        params['encoding_dim'] = self.embedding_dim['words']
+        params['encoding_dim'] = self.embedding_layers['words'][0].output_dim
         combiner_type = params.pop_choice("type", list(entailment_input_combiners.keys()),
                                           default_to_first_choice=True)
         return entailment_input_combiners[combiner_type](**params)
@@ -348,7 +348,7 @@ class MemoryNetwork(TextTrainer):
                                                   default_to_first_choice=True)
         # TODO(matt): Not great to have these two lines here.
         if model_type == 'question_answer_mlp':
-            entailment_params['answer_dim'] = self.embedding_dim['words']
+            entailment_params['answer_dim'] = self.embedding_layers['words'][0].output_dim
         return entailment_models[model_type](**entailment_params)
 
     def _get_memory_network_recurrence(self):

@@ -72,9 +72,9 @@ class TextDataset(Dataset):
 
     @staticmethod
     def read_from_file(filename: str, instance_class):
-        lines = [x.strip() for x in tqdm.tqdm(codecs.open(filename, "r",
-                                                          "utf-8").readlines())]
-        return TextDataset.read_from_lines(lines, instance_class)
+        with codecs.open(filename, 'r', 'utf-8') as input_file:
+            lines = [x.strip() for x in tqdm.tqdm(input_file.readlines())]
+            return TextDataset.read_from_lines(lines, instance_class)
 
     @staticmethod
     def read_from_lines(lines: List[str], instance_class):

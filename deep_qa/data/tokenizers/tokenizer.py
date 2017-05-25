@@ -60,7 +60,7 @@ class Tokenizer:
                     input_layer: Layer,
                     embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
-                    embedding_name: str="embedding"):
+                    embedding_suffix: str=''):
         """
         Applies embedding layers to the input_layer.  See :func:`TextTrainer._embed_input
         <deep_qa.training.text_trainer.TextTrainer._embed_input>` for a more detailed comment on
@@ -82,8 +82,9 @@ class Tokenizer:
             function.  So that you can get an encoder or other things from the ``TextTrainer`` here
             if you need them, we take this object as a parameter.
 
-        embedding_name: str, optional (default="embedding")
-            The name to assign the embedding layer, which allows for different embedding matrices.
+        embedding_suffix: str, optional (default="")
+            A suffix to add to embedding keys that we use, so that, e.g., you could specify several
+            different word embedding matrices, for whatever reason.
         """
         raise NotImplementedError
 

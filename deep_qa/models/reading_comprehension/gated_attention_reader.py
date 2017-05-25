@@ -125,10 +125,10 @@ class GatedAttentionReader(TextTrainer):
             options_indices = options_input
 
         # shape: (batch size, question_length, embedding size)
-        question_embedding = self._embed_input(question_input, embedding_name="question_embedding")
+        question_embedding = self._embed_input(question_input)
 
         # shape: (batch size, document_length, embedding size)
-        document_embedding = self._embed_input(document_input, embedding_name="document_embedding")
+        document_embedding = self._embed_input(document_input)
 
         # We pass the question and document embedding through a variable
         # number of gated-attention layers.

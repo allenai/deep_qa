@@ -48,10 +48,10 @@ class WordTokenizer(Tokenizer):
                     input_layer: Layer,
                     embed_function: Callable[[Layer, str, str], Layer],
                     text_trainer,
-                    embedding_name: str="embedding"):
+                    embedding_suffix: str=""):
         # pylint: disable=protected-access
         return embed_function(input_layer,
-                              embedding_name='word_' + embedding_name,
+                              embedding_name='words' + embedding_suffix,
                               vocab_name='words')
 
     @overrides

@@ -53,7 +53,7 @@ class TreeLSTMModel(TextTrainer):
 
         # Step 4: Pass the sequences of word vectors through TreeLSTM.
         lstm_layer = TreeCompositionLSTM(stack_limit=stack_limit, buffer_ops_limit=buffer_ops_limit,
-                                         units=self.embedding_dim['words'],
+                                         units=self.embedding_layers['words'][0].output_dim,
                                          W_regularizer=l2(0.01), U_regularizer=l2(0.01),
                                          V_regularizer=l2(0.01), b_regularizer=l2(0.01),
                                          name='treelstm')
@@ -62,7 +62,9 @@ class TreeLSTMModel(TextTrainer):
 
         # Step 5: Find p(true | proposition) by passing the encoded proposition through MLP with
         # ReLU followed by softmax.
-        projection_layer = Dense(self.embedding_dim['words']/2, activation='relu', name='projector')
+        projection_layer = Dense(self.embedding_layers['words'][0].output_dim / 2,
+                                 activation='relu',
+                                 name='projector')
         softmax_layer = Dense(2, activation='softmax', name='softmax')
         output_probabilities = softmax_layer(projection_layer(regularized_lstm_out))
 

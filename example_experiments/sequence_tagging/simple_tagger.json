@@ -31,7 +31,7 @@
       "dynamic_padding": true
     },
     "patience": 3,
-    "embedding_dim": {"words": 100, "characters": 8},
+    "embeddings": {"words": {"dimension": 100}, "characters": {"dimension": 8}},
     "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",

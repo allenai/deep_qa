@@ -8,9 +8,6 @@
           "num_filters": 100
         }
     },
-    "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
-    "project_embeddings": false,
-    "fine_tune_embeddings": false,
     "seq2seq_encoder": {
         "default": {
             "type": "bi_gru",
@@ -29,7 +26,14 @@
     // This is not quite the same as Min's paper; we don't have encoder dropout yet.
     "embedding_dropout": 0.2,
     "patience": 3,
-    "embedding_dim": {"words": 100, "characters": 8},
+    "embeddings": {
+      "words": {
+        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
+        "project": false,
+        "fine_tune": false
+      },
+      "characters": {"dimension": 8}
+    },
     "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",

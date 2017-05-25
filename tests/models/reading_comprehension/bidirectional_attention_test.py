@@ -12,14 +12,14 @@ class TestBidirectionalAttentionFlow(DeepQaTestCase):
     def test_trains_and_loads_correctly(self):
         self.write_span_prediction_files()
         args = Params({
-                'embedding_dim': {'words': 8, 'characters': 4},
+                'embeddings': {'words': {'dimension': 8}, 'characters': {'dimension': 4}},
                 'save_models': True,
                 'tokenizer': {'type': 'words and characters'},
                 'show_summary_with_masking_info': True,
                 })
         model, _ = self.ensure_model_trains_and_loads(BidirectionalAttentionFlow, args)
         for layer in model.model.layers:
-            if layer.name == 'character_embedding':
+            if layer.name == 'characters_embedding':
                 assert layer.get_output_shape_at(0)[-1] == 4
                 break
         else:

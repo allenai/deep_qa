@@ -9,7 +9,6 @@ class TestSiameseSentenceSelector(DeepQaTestCase):
     def test_model_trains_and_loads(self):
         self.write_sentence_selection_files()
         args = Params({
-                'save_models': True,
                 "encoder": {
                         "default": {
                                 "type": "gru",
@@ -25,14 +24,12 @@ class TestSiameseSentenceSelector(DeepQaTestCase):
                                 "wrapper_params": {}
                         }
                 },
-                "embedding_dim": {"words": 5},
         })
         self.ensure_model_trains_and_loads(SiameseSentenceSelector, args)
 
     def test_model_trains_and_loads_with_ranking_loss(self):
         self.write_sentence_selection_files()
         args = Params({
-                'save_models': True,
                 "encoder": {
                         "default": {
                                 "type": "gru",
@@ -49,6 +46,5 @@ class TestSiameseSentenceSelector(DeepQaTestCase):
                         }
                 },
                 "loss_function": "hinge_ranking",
-                "embedding_dim": {"words": 5},
         })
         self.ensure_model_trains_and_loads(SiameseSentenceSelector, args)

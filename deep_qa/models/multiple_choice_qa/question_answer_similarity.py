@@ -75,7 +75,7 @@ class QuestionAnswerSimilarity(TextTrainer):
         # layer has no parameters, so it doesn't need to be put into self._init_layers().
         softmax_output = Attention(name='answer_similarity_softmax')([projected_input, encoded_answers])
 
-        return DeepQaModel(input=[question_input, answer_input], output=softmax_output)
+        return DeepQaModel(inputs=[question_input, answer_input], outputs=softmax_output)
 
     def _instance_type(self):
         return QuestionAnswerInstance

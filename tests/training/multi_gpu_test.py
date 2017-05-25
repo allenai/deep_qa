@@ -16,11 +16,7 @@ class TestMultiGpu(DeepQaTestCase):
         super(TestMultiGpu, self).setUp()
         self.write_true_false_model_files()
         self.args = Params({
-                'embedding_dim': {'words': 4, 'characters': 2},
-                'batch_size': 8,
                 'num_gpus': 2,
-                'save_models': True,
-                'show_summary_with_masking_info': True,
         })
 
     def test_model_can_train_and_load(self):

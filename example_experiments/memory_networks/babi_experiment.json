@@ -9,7 +9,7 @@
     "knowledge_encoder": {
         "type": "temporal"
     },
-    "embedding_dim": {"words": 20},
+    "embeddings": {"words": {"dimension": 20}},
     "knowledge_selector": {
         "type": "dot_product"
     },

@@ -46,21 +46,20 @@ class TextTrainer(Trainer):
 
     Parameters
     ----------
-    pretrained_embeddings_file: string, optional
-        If specified, we will use the vectors in this file as our embedding layer.  You can
-        optionally keep these fixed or fine tune them, or learn a projection on top of them.
-    fine_tune_embeddings: bool, optional (default=False)
-        If we're using pre-trained embeddings, should we fine tune them?
-    project_embeddings: bool, optional (default=False)
-        Should we have a projection layer on top of our embedding layer? (mostly useful with
-        pre-trained embeddings)
-    embedding_dim: Dict[str, int], optional (default={'words': 50, 'characters': 8})
-        Number of dimensions to use for embeddings.  This is a dictionary, keyed by vocabulary
-        name.  The two default vocabulary names that are used are "words" and "characters".  The
-        'words' embedding_dim is also used by default for setting hidden layer sizes in things like
-        LSTMs, if you don't specify an output size in the ``encoder`` params.
-    embedding_dropout: float, optional (default=0.5)
-        Dropout parameter to apply to the embedding layer
+    embeddings : Dict[str, Any], optional (default=50 dim word embeddings, 8 dim character
+    embeddings, 0.5 dropout on both)
+        These parameters specify the kind of embeddings to use for words, character, tags, or
+        whatever you want to embed.  This dictionary behaves similarly to the ``encoder`` and
+        ``seq2seq_encoder`` parameter dictionaries.  Valid keys are ``dimension``, ``dropout``,
+        ``pretrained_file``, ``fine_tune``, and ``project``.  The value for ``dimension`` is an
+        ``int`` specifying the dimensionality of the embedding (default 50 for words, 8 for
+        characters); ``dropout`` is a float, specifying the amount of dropout to use on the
+        embedding layer (default ``0.5``); ``pretrained_file`` is a (string) path to a glove-formatted file
+        containing pre-trained embeddings; ``fine_tune`` is a boolean specifying whether the
+        pretrained embeddings should be trainable (default ``False``); and ``project`` is a boolean
+        specifying whether to add a projection layer after the embedding layer (only really useful
+        in conjunction with pre-trained embeddings, to get them into a lower-dimensional space;
+        default ``False``).
     data_generator: Dict[str, Any], optional (default=None)
         If not ``None``, we will pass these parameters to a :class:`DataGenerator` object to create
         data batches, instead of creating one big array for all of our training data.  See
@@ -109,11 +108,9 @@ class TextTrainer(Trainer):
     """
     # pylint: enable=line-too-long
     def __init__(self, params: Params):
-        self.pretrained_embeddings_file = params.pop('pretrained_embeddings_file', None)
-        self.fine_tune_embeddings = params.pop('fine_tune_embeddings', False)
-        self.project_embeddings = params.pop('project_embeddings', False)
-        self.embedding_dim = params.pop('embedding_dim', {'words': 50, 'characters': 8})
-        self.embedding_dropout = params.pop('embedding_dropout', 0.5)
+        self.embedding_params = params.pop('embeddings',
+                                           {'words': {'dim': 50, 'dropout': 0.5},
+                                            'characters': {'dim': 8, 'dropout': 0.5}})
         data_generator_params = params.pop('data_generator', None)
         if data_generator_params is not None:
             self.data_generator = DataGenerator(self, data_generator_params)
@@ -247,7 +244,7 @@ class TextTrainer(Trainer):
                     continue
                 if embedding_layer.startswith('combined_'):
                     continue
-                result += self.__render_embedding_matrix(embedding_layer)
+                result += self.__render_embedding_matrix(embedding_layer.replace("_embedding", ""))
         return result
 
     @overrides
@@ -283,10 +280,10 @@ class TextTrainer(Trainer):
             sentence_length = self.num_sentence_words
         return self.tokenizer.get_sentence_shape(sentence_length, self.num_word_characters)
 
-    def _embed_input(self, input_layer: Layer, embedding_name: str="embedding"):
+    def _embed_input(self, input_layer: Layer, embedding_suffix: str=""):
         """
         This function embeds a word sequence input, using an embedding defined by
-        ``embedding_name``.  You should call this function in your ``_build_model`` method any time
+        ``embedding_suffix``.  You should call this function in your ``_build_model`` method any time
         you want to convert word indices into word embeddings.  Note that if this is used in
         conjunction with ``_get_sentence_shape``, we will do the correct thing for whatever
         :class:`~deep_qa.data.tokenizers.tokenizer.Tokenizer` you use.  The actual input to this
@@ -298,7 +295,7 @@ class TextTrainer(Trainer):
         We need to take the input Layer here, instead of just returning a Layer that you can use as
         you wish, because we might have to apply several layers to the input, depending on the
         parameters you specified for embedding things.  So we return, essentially,
-        `embedding(input_layer)`.
+        ``embedding(input_layer)``.
 
         The input layer can have arbitrary shape, as long as it ends with a word sequence.  For
         example, you could pass in a single sentence, a set of sentences, or a set of sets of
@@ -314,11 +311,20 @@ class TextTrainer(Trainer):
         additional processing to actually give you a word embedding (e.g., if your text encoder
         uses both words and characters, we need to run the character encoder and concatenate the
         result with a word embedding).
+
+        Note that the ``embedding_suffix`` parameter is a `suffix` to whatever name the tokenizer
+        will give to the embeddings it creates.  Typically, the tokenizer will use the name
+        ``words``, though it could also use ``characters``, or something else.  So if you pass
+        ``_A`` for ``embedding_suffix``, you will end up with actual embedding names like
+        ``words_A`` and ``characters_A``.  These are the keys you need to specify in your parameter
+        file, for embedding sizes, pretraining, etc.  When constructing actual ``Embedding``
+        layers, we will further append the string ``_embedding``, so the layer would be named
+        ``words_A_embedding``.
         """
         return self.tokenizer.embed_input(input_layer,
                                           self.__get_embedded_input,
                                           self,
-                                          embedding_name)
+                                          embedding_suffix)
 
     def _get_encoder(self, name="default", fallback_behavior: str=None):
         """
@@ -604,7 +610,7 @@ class TextTrainer(Trainer):
 
     def __get_embedded_input(self,
                              input_layer: Layer,
-                             embedding_name: str="embedding",
+                             embedding_name: str,
                              vocab_name: str='words'):
         """
         This function does most of the work for self._embed_input.  We pass this method to the
@@ -613,54 +619,60 @@ class TextTrainer(Trainer):
         We allow for multiple vocabularies, e.g., if you want to embed both characters and words
         with separate embedding matrices.
         """
-        embedding_dim = self.embedding_dim[vocab_name]
         if embedding_name not in self.embedding_layers:
-            self.embedding_layers[embedding_name] = self.__get_new_embedding(embedding_name,
-                                                                             embedding_dim,
-                                                                             vocab_name)
+            self.embedding_layers[embedding_name] = self.__get_new_embedding(embedding_name, vocab_name)
 
-        embedding_layer, projection_layer = self.embedding_layers[embedding_name]
+        embedding_layer, projection_layer, dropout = self.embedding_layers[embedding_name]
         embedded_input = embedding_layer(input_layer)
         if projection_layer is not None:
             for _ in range(2, K.ndim(input_layer)):  # 2 here to account for batch_size.
                 projection_layer = TimeDistributed(projection_layer, name="timedist_" + projection_layer.name)
             embedded_input = projection_layer(embedded_input)
-        if self.embedding_dropout > 0.0:
-            embedded_input = Dropout(self.embedding_dropout)(embedded_input)
+        if dropout > 0.0:
+            embedded_input = Dropout(dropout)(embedded_input)
 
         return embedded_input
 
-    def __get_new_embedding(self, name: str, embedding_dim: int, vocab_name: str='words'):
+    def __get_new_embedding(self, name: str, vocab_name: str='words'):
         """
         Creates an Embedding Layer (and possibly also a Dense projection Layer) based on the
         parameters you've passed to the TextTrainer.  These could be pre-trained embeddings or not,
         could include a projection or not, and so on.
+
+        Parameters
+        ----------
+        name : ``str``
+            The name of the embedding.  This needs to correspond to one of the keys in the
+            ``embeddings`` parameter dictionary passed to the constructor.
         """
+        embedding_params = self.embedding_params.pop(name)
         with tensorflow.device("/cpu:0"):
-            if vocab_name == 'words' and self.pretrained_embeddings_file:
+            pretrained_file = embedding_params.pop('pretrained_embeddings_file', None)
+            if pretrained_file:
                 embedding_layer = PretrainedEmbeddings.get_embedding_layer(
-                        self.pretrained_embeddings_file,
+                        pretrained_file,
                         self.data_indexer,
-                        self.fine_tune_embeddings,
-                        name=name)
+                        embedding_params.pop('fine_tune', False),
+                        name=name + '_embedding')
             else:
                 # TimeDistributedEmbedding works with inputs of any shape.
                 embedding_layer = TimeDistributedEmbedding(
                         input_dim=self.data_indexer.get_vocab_size(vocab_name),
-                        output_dim=embedding_dim,
+                        output_dim=embedding_params.pop('dimension'),
                         mask_zero=True,  # this handles padding correctly
-                        name=name)
+                        name=name + '_embedding')
             projection_layer = None
-            if self.project_embeddings:
-                projection_layer = TimeDistributed(Dense(units=embedding_dim,),
+            if embedding_params.pop('project', False):
+                projection_layer = TimeDistributed(Dense(units=embedding_params.pop('dimension'),),
                                                    name=name + '_projection')
-            return embedding_layer, projection_layer
+            return embedding_layer, projection_layer, embedding_params.pop('dropout', 0.5)
 
     def __get_new_encoder(self, params: Params, name: str):
         encoder_type = params.pop_choice("type", list(encoders.keys()),
                                          default_to_first_choice=True)
         params["name"] = name
-        params.setdefault("units", self.embedding_dim['words'])
+        print(self.embedding_layers)
+        params.setdefault("units", self.embedding_layers['words'][0].output_dim)
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)
 
@@ -670,7 +682,7 @@ class TextTrainer(Trainer):
         wrapper_params["name"] = name
         seq2seq_encoder_type = encoder_params.pop_choice("type", list(seq2seq_encoders.keys()),
                                                          default_to_first_choice=True)
-        encoder_params.setdefault("units", self.embedding_dim['words'])
+        encoder_params.setdefault("units", self.embedding_layers['words'][0].output_dim)
         set_regularization_params(seq2seq_encoder_type, encoder_params)
         return seq2seq_encoders[seq2seq_encoder_type](**params)
 

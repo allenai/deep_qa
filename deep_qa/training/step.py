@@ -56,7 +56,8 @@ class Step:
     def __call__(self, inputs):
 
         current_step = K.eval(self.global_step)
-        run_summary = ((current_step % self.summary_frequency == 0)
+        run_summary = ((self.summary_frequency > 0)
+                       and (current_step % self.summary_frequency == 0)
                        and (self.summary_writer is not None))
 
         if not isinstance(inputs, (list, tuple)):

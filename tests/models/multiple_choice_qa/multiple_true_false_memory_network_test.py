@@ -19,7 +19,6 @@ class TestMultipleTrueFalseMemoryNetwork(DeepQaTestCase):
     def test_padding_works_correctly(self, _output_debug_info):
         args = Params({
                 'num_options': 5,
-                'embedding_dim': {"words": 2},
                 'max_knowledge_length': 3,
                 'show_summary_with_masking_info': True,
                 'debug': {

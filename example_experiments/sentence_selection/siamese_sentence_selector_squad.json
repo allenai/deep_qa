@@ -24,8 +24,8 @@
     },
     "batch_size": 32,
     "patience": 2,
-    "embedding_dim": {
-        "words": 100
+    "embeddings": {
+        "words": {"dimension": 100}
     },
     "data_generator": {
       "dynamic_padding": true
