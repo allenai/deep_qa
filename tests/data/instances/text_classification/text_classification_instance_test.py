@@ -1,10 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 
-# pylint: disable=line-too-long
-from deep_qa.data.instances.text_classification.text_classification_instance import IndexedTextClassificationInstance
-from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
-# pylint: enable=line-too-long
+from deep_qa.data.instances.text_classification import IndexedTextClassificationInstance
+from deep_qa.data.instances.text_classification import TextClassificationInstance
 from ....common.test_case import DeepQaTestCase
 
 

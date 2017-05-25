@@ -79,9 +79,6 @@ class IndexedTextClassificationInstance(IndexedInstance):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        """
-        This simple IndexedInstance only has one padding dimension: word_indices.
-        """
         return self._get_word_sequence_lengths(self.word_indices)
 
     @overrides
