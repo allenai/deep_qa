@@ -1,10 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
+import codecs
 
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.dataset import TextDataset
 from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
+from ..common.test_case import DeepQaTestCase
 
-class TestDataIndexer:
+class TestDataIndexer(DeepQaTestCase):
     def test_fit_word_dictionary_respects_min_count(self):
         instance = TextClassificationInstance("a a a a b b c c c", True)
         dataset = TextDataset([instance])
@@ -68,3 +70,31 @@ class TestDataIndexer:
         oov_index = data_indexer.get_word_index(oov_token)
         assert oov_index == 1
         assert data_indexer.get_word_index("unseen word") == oov_index
+
+    def test_set_from_file(self):
+        # pylint: disable=protected-access
+        vocab_filename = self.TEST_DIR + 'vocab_file'
+        with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
+            vocab_file.write('<S>\n')
+            vocab_file.write('</S>\n')
+            vocab_file.write('<UNK>\n')
+            vocab_file.write('a\n')
+            vocab_file.write('word\n')
+            vocab_file.write('another\n')
+        data_indexer = DataIndexer()
+        data_indexer.set_from_file(vocab_filename, oov_token="<UNK>")
+        assert data_indexer._oov_token == "<UNK>"
+        assert data_indexer.get_word_index("random string") == 3
+        assert data_indexer.get_word_index("<S>") == 1
+        assert data_indexer.get_word_index("</S>") == 2
+        assert data_indexer.get_word_index("<UNK>") == 3
+        assert data_indexer.get_word_index("a") == 4
+        assert data_indexer.get_word_index("word") == 5
+        assert data_indexer.get_word_index("another") == 6
+        assert data_indexer.get_word_from_index(0) == data_indexer._padding_token
+        assert data_indexer.get_word_from_index(1) == "<S>"
+        assert data_indexer.get_word_from_index(2) == "</S>"
+        assert data_indexer.get_word_from_index(3) == "<UNK>"
+        assert data_indexer.get_word_from_index(4) == "a"
+        assert data_indexer.get_word_from_index(5) == "word"
+        assert data_indexer.get_word_from_index(6) == "another"

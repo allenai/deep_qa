@@ -1,4 +1,5 @@
 from collections import defaultdict
+import codecs
 import logging
 
 import tqdm
@@ -28,6 +29,16 @@ class DataIndexer:
         self.word_indices = defaultdict(lambda: {self._padding_token: 0, self._oov_token: 1})
         self.reverse_word_indices = defaultdict(lambda: {0: self._padding_token, 1: self._oov_token})
         self._finalized = False
+
+    def set_from_file(self, filename: str, oov_token: str="@@UNKNOWN@@", namespace: str="words"):
+        self._oov_token = oov_token
+        self.word_indices[namespace] = {self._padding_token: 0}
+        self.reverse_word_indices[namespace] = {0: self._padding_token}
+        with codecs.open(filename, 'r', 'utf-8') as input_file:
+            for i, line in enumerate(input_file.readlines()):
+                token = line[:-1]  # remove the newline
+                self.word_indices[namespace][token] = i + 1
+                self.reverse_word_indices[namespace][i + 1] = token
 
     def finalize(self):
         logger.info("Finalizing data indexer")
