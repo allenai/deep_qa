@@ -55,3 +55,7 @@ seq2seq_encoders["bi_gru"] = (lambda **params:
                               Bidirectional(GRU(return_sequences=True,
                                                 **(params["encoder_params"])),
                                             **(params["wrapper_params"])))
+seq2seq_encoders["bi_lstm"] = (lambda **params:
+                               Bidirectional(LSTM(return_sequences=True,
+                                                  **(params["encoder_params"])),
+                                             **(params["wrapper_params"])))

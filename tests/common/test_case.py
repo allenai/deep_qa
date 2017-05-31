@@ -85,8 +85,11 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             # complicated, we'll just pass on the loading tests here.  See comment above.
             pass
         else:
-            assert_allclose(model.model.predict(model.validation_arrays[0]),
-                            loaded_model.model.predict(model.validation_arrays[0]))
+            model_predictions = model.model.predict(model.validation_arrays[0])
+            loaded_model_predictions = loaded_model.model.predict(model.validation_arrays[0])
+
+            for model_prediction, loaded_prediction in zip(model_predictions, loaded_model_predictions):
+                assert_allclose(model_prediction, loaded_prediction)
 
         # We should get the same result if we index the data from the original model and the loaded
         # model.
@@ -95,8 +98,11 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             # As above, we'll just pass on this.
             pass
         else:
-            assert_allclose(model.model.predict(model.validation_arrays[0]),
-                            loaded_model.model.predict(indexed_validation_arrays[0]))
+            model_predictions = model.model.predict(model.validation_arrays[0])
+            loaded_model_predictions = loaded_model.model.predict(indexed_validation_arrays[0])
+
+            for model_prediction, loaded_prediction in zip(model_predictions, loaded_model_predictions):
+                assert_allclose(model_prediction, loaded_prediction)
         return model, loaded_model
 
     @staticmethod
@@ -138,6 +144,18 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             validation_file.write('blue###N\tcows###N\tare###V\tanimals###N\t.###N\n')
             validation_file.write('monkeys###N\tare###V\tanimals###N\t.###N\n')
             validation_file.write('caterpillars###N\tare###V\tanimals###N\t.###N\n')
+
+    def write_verb_semantics_files(self):
+        with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
+            train_file.write('root####absorb####water\t1,1\t2,2\tMOVE\t-1,-1\t0,0\n')
+            train_file.write('this####mixture####is####converted####into####sugar####inside####leaf'
+                             '\t2,3\t5,5\tCREATE\t7,7\t-1,-1\n')
+            train_file.write('lakes####contain####water\t1,1\t2,2\tNONE\t-1,-1\t-1,-1\n')
+        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
+            validation_file.write('root####absorb####water\t1,1\t2,2\tMOVE\t-1,-1\t0,0\n')
+            validation_file.write('this####mixture####is####converted####into####sugar####inside####leaf'
+                                  '\t2,3\t5,5\tCREATE\t7,7\t-1,-1\n')
+            validation_file.write('lakes####contain####water\t1,1\t2,2\tNONE\t-1,-1\t-1,-1\n')
 
     def write_true_false_model_files(self):
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:

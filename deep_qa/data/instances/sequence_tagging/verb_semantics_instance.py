@@ -7,6 +7,7 @@ from overrides import overrides
 from ..instance import TextInstance, IndexedInstance
 from ...data_indexer import DataIndexer
 
+
 class VerbSemanticsInstance(TextInstance):
     """
     A VerbSemanticsInstance is a :class:`TextInstance` that is a single sentence of text,
@@ -46,7 +47,6 @@ class VerbSemanticsInstance(TextInstance):
         tags = self.__make_tag_sequence(arg1, arg2)
         super(VerbSemanticsInstance, self).__init__((state_change, tags), index)
 
-
     def __str__(self):
         return 'VerbSemanticsInstance(' + self.sentence + ', ' + self.verb + ', ' + \
                self.entity + str(self.label) + ')'
@@ -84,9 +84,7 @@ class VerbSemanticsInstance(TextInstance):
         2) state change types
         3) tags for arguments
         """
-        words = self._words_from_text(self.sentence)
-        words['state_changes'] = [self.label[0]]
-        words['tags'] = self.label[1]
+        words = {'words': self.sentence, 'state_changes': [self.label[0]], 'tags': self.label[1]}
         return words
 
     @overrides
@@ -201,7 +199,6 @@ class IndexedVerbSemanticsInstance(IndexedInstance):
 
     @overrides
     def as_training_data(self):
-
         word_array = numpy.asarray(self.sentence, dtype='int32')
         verb_array = numpy.asarray(self.verb, dtype='int32')
         entity_array = numpy.asarray(self.entity, dtype='int32')
@@ -209,4 +206,4 @@ class IndexedVerbSemanticsInstance(IndexedInstance):
         state_array = numpy.asarray(self.label[0], dtype='int32')
         tag_array = numpy.asarray(self.label[1], dtype='int32')
 
-        return ((word_array, verb_array, entity_array), (state_array, tag_array))
+        return (word_array, verb_array, entity_array), (state_array, tag_array)
