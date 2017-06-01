@@ -48,6 +48,9 @@ spacy
 numpy
 matplotlib
 
+# aws commandline tools for running on Docker remotely.
+awscli>=1.11.91
+
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors
