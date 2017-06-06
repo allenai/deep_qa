@@ -317,7 +317,7 @@ class TextTrainer(Trainer):
         ``words``, though it could also use ``characters``, or something else.  So if you pass
         ``_A`` for ``embedding_suffix``, you will end up with actual embedding names like
         ``words_A`` and ``characters_A``.  These are the keys you need to specify in your parameter
-        file, for embedding sizes, pretraining, etc.  When constructing actual ``Embedding``
+        file, for embedding sizes etc.  When constructing actual ``Embedding``
         layers, we will further append the string ``_embedding``, so the layer would be named
         ``words_A_embedding``.
         """

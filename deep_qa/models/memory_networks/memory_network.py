@@ -84,10 +84,8 @@ class MemoryNetwork(TextTrainer):
     '''
 
     # This specifies whether the entailment decision made my this solver (if any) has a sigmoid
-    # activation or a softmax activation.  This value is read by some pre-trainers, which need
-    # to know how to construct data for training a model.  Because it's necessary for pre-training,
-    # and we need to be able to override it in subclasses, it doesn't really work to set this in
-    # the constructor, so we make it a class variable instead.
+    # activation or a softmax activation. For legacy reasons involving pre-training this was difficult
+    # to set in model constructors.
     has_sigmoid_entailment = False
     has_multiple_backgrounds = False
 

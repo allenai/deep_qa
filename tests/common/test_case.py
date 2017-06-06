@@ -124,15 +124,6 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             validation_file.write('2\ttext 2\tlonger hypothesis 2\tcontradicts\n')
             validation_file.write('3\ttext3\thypothesis withreallylongfakeword\tentails\n')
 
-    def write_snli_pretraining_file(self):
-        with codecs.open(self.SNLI_FILE, 'w', 'utf-8') as snli_file:
-            snli_file.write('1\ttext1\thypothesis1\tentails\n')
-            snli_file.write('2\ttext2\thypothesis2\tcontradicts\n')
-            snli_file.write('3\ttext3\thypothesis3\tentails\n')
-            snli_file.write('4\ttext4\thypothesis4\tneutral\n')
-            snli_file.write('5\ttext5\thypothesis5\tentails\n')
-            snli_file.write('6\ttext6\thypothesis6\tcontradicts\n')
-
     def write_sequence_tagging_files(self):
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             train_file.write('cats###N\tare###V\tanimals###N\t.###N\n')
