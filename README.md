@@ -68,9 +68,7 @@ dependencies needed to run DeepQA.
 4.  Install the required dependencies.
 
     ```
-    pip install -r requirements.txt
-    python -m nltk.downloader punkt
-    python -m spacy.en.download all
+    ./scripts/install_requirements.sh
     ```
 
 5.  Set the `PYTHONHASHSEED` for repeatable experiments.
