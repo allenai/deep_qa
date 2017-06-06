@@ -53,6 +53,7 @@ This library has several main components:
    training/about_trainers
    training/trainer
    training/text_trainer
+   training/multi_gpu
    training/misc
 
 .. toctree::

@@ -79,5 +79,6 @@ class Step:
         returned_fetches = session.run(fetches, feed_dict=feed_dict)
         if run_summary:
             self.summary_writer.add_summary(returned_fetches[-1], current_step)
+            self.summary_writer.flush()
 
         return returned_fetches[:len(self.outputs)]
