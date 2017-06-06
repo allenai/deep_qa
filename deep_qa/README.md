@@ -1,30 +1,25 @@
-# The DeepQA library
+# DeepQA
 
-I think there are two main contributions that this library makes:
+DeepQA is organised into the following main sections:
 
-1. We provide a nice interface to training, validating, and debugging Keras models.  Instead of
-   writing code to run an experiment, you just specify a JSON file that describes your experiment,
-and our library will run it for you (assuming you only want to use the components that we've
-implemented).
-2. We've implemented several variants of memory networks, neural network architectures that
-   attempt a kind of reasoning over background knowledge, that are not trivial to implement.
-We've done this in a way that is configurable and extendable, such that you can easily run
-experiments with several different memory network variants just by changing some parameters in a
-configuration file, or implement a new idea just by writing a new component.
+-   `common`: Code for parameter parsing, logging and runtime checks.
+-   `contrib`: Related code for experiments and untested layers, models and features. Generally
+    untested.
+-   `data`: Indexing, padding, tokenisation, stemming, embedding and general dataset manipulation
+    happens here.
+-   `layers`: The bulk of the library. Use these Layers to compose new models. Some of these Layers
+    are very similar to what you might find in Keras, but altered slightly to support arbitrary
+dimensions or correct masking.
+-   `models`: Frameworks for different types of task. These generally all extend the TextTrainer
+    class which provides training capabilities to a DeepQaModel. We have models for Sequence
+Tagging, Entailment, Multiple Choice QA, Reading Comprehension and more. Take a look at the READMEs
+under `model` for more details - each task typically has a README describing the task definition.
+-   `tensors`: Convenience functions for writing the internals of Layers.  Will almost exclusively be
+    used inside Layer implementations.
+-   `training`: This module does the heavy lifting for training and optimisation. We also wrap the
+    Keras Model class to give it some useful debugging functionality.
 
-This library has several main components:
+The `data` and `models` sections are, in turn, structured according to what task they are intended
+for (e.g., text classification, reading comprehension, sequence tagging, etc.).  This should make
+it easy to see if something you are trying to do is already implemented in DeepQA or not.
 
-- A `training` module, which has a bunch of helper code for training Keras models of various kinds
-- A `solvers` module, specifying particular Keras models for question answering (in Aristo, we
-  call a question answering system a "solver", which is where the name comes from).
-- A `layers` module, which contains code for custom Keras `Layers` that we have written.
-- A `data` module, containing code for reading in data from files and converting it into numpy
-  arrays suitable for use with Keras.
-- A `common` module, which has a few random things dealing with reading parameters and a few other
-  things.
-
-There are also a couple of components that are not yet integrated into the DeepQA library, but
-exist here in an initial state, waiting to be cleaned up and fully integrated.  These are the
-`sentence_corruption` module and the `span_prediction` module.  At this point, these modules are
-totally independent from the rest of the library.  (Actually, it would probably be a good idea to
-move them outside of `deep_qa`, to make this more clear... TODO(matt).)

@@ -14,32 +14,77 @@ point of having a supported release yet.
 
 DeepQA is a library for doing high-level NLP tasks with deep learning, particularly focused on
 various kinds of question answering.  DeepQA is built on top of [Keras](https://keras.io) and
-[TensorFlow](https://www.tensorflow.org/), and can be thought of as a better interface to these
+[TensorFlow](https://www.tensorflow.org/), and can be thought of as an interface to these
 systems that makes NLP easier.
 
-Specifically, this library provides the following benefits over plain Keras / tensorflow:
+Specifically, this library provides the following benefits over plain Keras / TensorFlow:
 
-- It is hard to get NLP right in Keras.  There are a lot of issues around padding sequences and
-  masking that are not handled well in the main Keras code, and we have well-tested code that does
-the right thing for, e.g., computing attentions over padded sequences, padding all training
-instances to the same lengths (possibly dynamically by batch, to minimize computation wasted on
-padding tokens), or distributing text encoders across several sentences or words.
-- We provide a nice, consistent API around building NLP models in Keras.  This API has
-  functionality around processing data instances, embedding words and/or characters, easily getting
-various kinds of sentence encoders, and so on.  It makes building models for high-level NLP tasks
-easy.
-- We provide a nice interface to training, validating, and debugging Keras models.  It is very easy
-  to experiment with variants of a model family, just by changing some parameters in a JSON file.
-For example, the particulars of how words are represented, either with fixed GloVe vectors,
-fine-tuned word2vec vectors, or a concatenation of those with a character-level CNN, are all
-specified by parameters in a JSON file, not in your actual code.  This makes it trivial to switch
-the details of your model based on the data that you're working with.
-- We have implemented a number of state-of-the-art models, particularly focused around question
-  answering systems (though we've dabbled in models for other tasks, as well).  The actual model
-code for these systems is typically 50 lines or less.
+- It is easy to get NLP right in DeepQA.
+    - In Keras, there are a lot of issues around padding sequences and masking
+      that are not handled well in the main Keras code, and we have well-tested
+      code that does the right thing for, e.g., computing attentions over
+      padded sequences, padding all training instances to the same lengths
+      (possibly dynamically by batch, to minimize computation wasted on padding
+      tokens), or distributing text encoders across several sentences or words.
+    - DeepQA provides a nice, consistent API around building NLP models.  This
+      API has functionality around processing data instances, embedding words
+      and/or characters, easily getting various kinds of sentence encoders, and
+      so on.  It makes building models for high-level NLP tasks easy.
+- DeepQA provides a clean interface to training, validating, and debugging
+  Keras models.  It is easy to experiment with variants of a model family just
+  by changing some parameters in a JSON file.  For example, the particulars of
+  how words are represented, either with fixed GloVe vectors, fine-tuned
+  word2vec vectors, or a concatenation of those with a character-level CNN, are
+  all specified by parameters in a JSON file, not in your actual code.  This
+  makes it trivial to switch the details of your model based on the data that
+  you're working with.
+- DeepQA contains a number of state-of-the-art models, particularly focused
+  around question answering systems (though we've dabbled in models for other
+  tasks, as well).  The actual model code for these systems is typically 50
+  lines or less.
+
+## Running DeepQA
+
+### Setting up a development environment
+
+DeepQA is built using Python 3.  The easiest way to set up a compatible
+environment is to use [Conda](https://conda.io/).  This will set up a virtual
+environment with the exact version of Python used for development along with all the
+dependencies needed to run DeepQA.
+
+1.  [Download and install Conda](https://conda.io/docs/download.html).
+2.  Create a Conda environment with Python 3.
+
+    ```
+    conda create -n deep_qa python=3.5
+    ```
+
+3.  Now activate the Conda environment.
+
+    ```
+    source activate deep_qa
+    ```
+
+4.  Install the required dependencies.
+
+    ```
+    pip install -r requirements.txt
+    python -m nltk.downloader punkt
+    python -m spacy.en.download all
+    ```
+
+5.  Set the `PYTHONHASHSEED` for repeatable experiments.
+
+    ```
+    export PYTHONHASHSEED=2157
+    ```
+
+You should now be able to test your installation with `pytest -v`.  Congratulations!
+You now have a development environment for deep_qa that uses TensorFlow with CPU support.
+(For GPU support, see requirements.txt for information on how to install `tensorflow-gpu`).
 
 
-## Working in a clone of DeepQA
+### Using DeepQA as an executable
 
 To train or evaluate a model using a clone of the DeepQA repository, the recommended entry point is
 to use the [`run_model.py`](./scripts/run_model.py) script.  The first argument to that script
@@ -60,8 +105,7 @@ data processing code directly into DeepQA, so that DeepQA Experiments is not nec
 now, getting training data files in the right format is most easily [done with DeepQA
 Experiments](https://github.com/allenai/deep_qa/issues/328#issuecomment-298176527).
 
-
-## Using DeepQA as a library
+### Using DeepQA as a library
 
 If you are using DeepQA as a library in your own code, it is still straightforward to run your
 model.  Instead of using the [`run_model.py`](./scripts/run_model.py) script to do the
@@ -91,7 +135,6 @@ evaluate_model("/path/to/json/parameter/file", ["/path/to/data/file"])
 The rest of the usage guidelines, examples, etc., are the same as when [working in a clone of the
 repository](#working-in-a-clone-of-deepqa).
 
-
 ## Implementing your own models
 
 To implement a new model in DeepQA, you need to subclass `TextTrainer`.  There is
@@ -117,32 +160,6 @@ If you're doing a new task, or a new variant of a task with a different input/ou
 you probably also need to implement an [`Instance`](./deep_qa/data/instances/instance.py) type.
 The `Instance` handles reading data from a file and converting it into numpy arrays that can be
 used for training and evaluation.  This only needs to happen once for each input/output spec.
-
-
-## Organization
-
-DeepQA is organised into the following main sections:
-
--   `common`: Code for parameter parsing, logging and runtime checks.
--   `contrib`: Related code for experiments and untested layers, models and features. Generally
-    untested.
--   `data`: Indexing, padding, tokenisation, stemming, embedding and general dataset manipulation
-    happens here.
--   `layers`: The bulk of the library. Use these Layers to compose new models. Some of these Layers
-    are very similar to what you might find in Keras, but altered slightly to support arbitrary
-dimensions or correct masking.
--   `models`: Frameworks for different types of task. These generally all extend the TextTrainer
-    class which provides training capabilities to a DeepQaModel. We have models for Sequence
-Tagging, Entailment, Multiple Choice QA, Reading Comprehension and more. Take a look at the READMEs
-under `model` for more details - each task typically has a README describing the task definition.
--   `tensors`: Convenience functions for writing the internals of Layers.  Will almost exclusively be
-    used inside Layer implementations.
--   `training`: This module does the heavy lifting for training and optimisation. We also wrap the
-    Keras Model class to give it some useful debugging functionality.
-
-The `data` and `models` sections are, in turn, structured according to what task they are intended
-for (e.g., text classification, reading comprehension, sequence tagging, etc.).  This should make
-it easy to see if something you are trying to do is already implemented in DeepQA or not.
 
 ## Implemented models
 
