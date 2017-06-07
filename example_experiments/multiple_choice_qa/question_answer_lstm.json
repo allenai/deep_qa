@@ -3,11 +3,12 @@
     "model_serialization_prefix": "models/qa/lstm",
     "encoder": {
         "default": {
-            "type": "gru"
+            "type": "gru",
+            "units": 100
         }
     },
     "patience": 5,
     "num_sentence_words": 70,
     "max_answer_length": 70,
-    "train_files": ["data/science/omnibus_questions/processed_questions_and_answers.tsv"]
+    "train_files": ["/net/efs/aristo/dlfa/processed/omnibus_8_train/question_and_answer/questions.tsv"]
 }

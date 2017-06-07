@@ -5,6 +5,8 @@ import pytest
 
 from deep_qa.data.embeddings import PretrainedEmbeddings
 from deep_qa.data.data_indexer import DataIndexer
+from deep_qa.models.text_classification import ClassificationModel
+from deep_qa.common.checks import ConfigurationError
 from ..common.test_case import DeepQaTestCase
 
 class TestPretrainedEmbeddings(DeepQaTestCase):
@@ -66,3 +68,38 @@ class TestPretrainedEmbeddings(DeepQaTestCase):
         embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, data_indexer)
         word_vector = embedding_layer._initial_weights[0][data_indexer.get_word_index("word2")]
         assert not numpy.allclose(word_vector, numpy.asarray([0.0, 0.0, 0.0]))
+
+    def test_embedding_will_not_project_random_embeddings(self):
+        self.write_pretrained_vector_files()
+        self.write_true_false_model_files()
+        with pytest.raises(ConfigurationError):
+            args = {
+                    "embeddings": {
+                            "words": {
+                                    "dimension": 5,
+                                    "project": True,
+                                    "fine_tune": True,
+                                    "dropout": 0.2
+                            }
+                    }
+            }
+            model = self.get_model(ClassificationModel, args)
+            model.train()
+
+    def test_projection_dim_not_equal_to_pretrained_dim_with_no_projection_flag_raises_error(self):
+        self.write_pretrained_vector_files()
+        self.write_true_false_model_files()
+        with pytest.raises(ConfigurationError):
+            args = {
+                    "embeddings": {
+                            "words": {
+                                    "dimension": 13,
+                                    "pretrained_file": self.PRETRAINED_VECTORS_GZIP,
+                                    "project": False,
+                                    "fine_tune": False,
+                                    "dropout": 0.2
+                            }
+                    }
+            }
+            model = self.get_model(ClassificationModel, args)
+            model.train()

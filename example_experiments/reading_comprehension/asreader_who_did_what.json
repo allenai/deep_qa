@@ -21,10 +21,9 @@
         "type": "clip_by_norm",
         "value": 10
     },
-    "embedding_dropout": 0.0,
     "patience": 1,
-    "embedding_dim": {"words": 256},
+    "embeddings": {"words": {"dimension": 256, "dropout": 0.0}},
     "num_epochs": 5,
-    "validation_files": ["/efs/data/dlfa/who_did_what/processed/strict/val.tsv"],
-    "train_files": ["/efs/data/dlfa/who_did_what/processed/strict/train.tsv"]
+    "validation_files": ["/net/efs/data/dlfa/who_did_what/processed/strict/val.tsv"],
+    "train_files": ["/net/efs/data/dlfa/who_did_what/processed/strict/train.tsv"]
 }

@@ -15,7 +15,7 @@
     "num_epochs": 50,
     "tuple_matcher": {
                         "type": "encoded_matcher",
-                        "encoded_match_type": "slot_similarity",
+                        "encoded_matcher_type": "slot_similarity",
                         "similarity_function": {
                           "type": "cosine_similarity"
                         },

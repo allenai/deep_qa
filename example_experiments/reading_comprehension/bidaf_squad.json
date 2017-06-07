@@ -24,15 +24,19 @@
       "maximum_batch_size": 60
     },
     // This is not quite the same as Min's paper; we don't have encoder dropout yet.
-    "embedding_dropout": 0.2,
     "patience": 3,
     "embeddings": {
       "words": {
+        "dimension": 100,
         "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
-        "project": false,
-        "fine_tune": false
+        "project": true,
+        "fine_tune": false,
+        "dropout": 0.2
       },
-      "characters": {"dimension": 8}
+      "characters": {
+        "dimension": 8,
+        "dropout": 0.2
+      }
     },
     "num_epochs": 20,
     "optimizer": {

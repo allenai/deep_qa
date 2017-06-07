@@ -25,14 +25,15 @@
     "batch_size": 32,
     "patience": 2,
     "embeddings": {
-        "words": {"dimension": 100}
+        "words": {
+            "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
+            "fine_tune": false,
+            "project": false
+        }
     },
     "data_generator": {
       "dynamic_padding": true
     },
-    "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
-    "fine_tune_embeddings": false,
-    "project_embeddings": false,
     "optimizer": {
         "type": "adam"
     },

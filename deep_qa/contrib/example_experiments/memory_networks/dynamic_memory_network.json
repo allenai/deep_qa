@@ -25,7 +25,7 @@
     "num_sentence_words": 125,
     "max_training_instances": 10,
     "train_files": [
-        "data/science/omnibus_questions/processed_questions.tsv",
-        "data/science/omnibus_questions/processed_questions_background.tsv"
+        "/net/efs/aristo/dlfa/processed/omnibus_8_train/multiple_tf/append_answer/sentences.tsv",
+        "/net/efs/aristo/dlfa/processed/omnibus_8_train/multiple_tf/append_answer/sentences_background.tsv"
     ]
 }

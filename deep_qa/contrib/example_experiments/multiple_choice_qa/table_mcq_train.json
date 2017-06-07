@@ -22,17 +22,8 @@
     "num_memory_layers": 1,
     "patience": 5,
     "train_files": [
-        "/home/mattg/data/table_mcq_test/test_data.tsv",
-        "/home/mattg/data/table_mcq_test/test_data_background.tsv"
+        "/net/efs/aristo/dlfa/table_mcq_test/test_data.tsv",
+        "/net/efs/aristo/dlfa/table_mcq_test/test_data_background.tsv"
     ],
-    "pretrainers": [
-        {
-            "type": "AttentionPretrainer",
-            "num_epochs": 40,
-            "train_files": [
-                "/home/mattg/data/table_mcq_test/test_data.tsv",
-                "/home/mattg/data/table_mcq_test/test_data_labeled_background.tsv"
-            ]
-        }
-    ]
+
 }

@@ -12,6 +12,7 @@ from ...layers.backend import ExpandFromBatch
 from ...layers.wrappers import EncoderWrapper
 from ...layers import VectorMatrixSplit
 from ...common.params import Params
+from ...common.util import clean_layer_name
 
 
 class WordAndCharacterTokenizer(Tokenizer):
@@ -115,14 +116,8 @@ class WordAndCharacterTokenizer(Tokenizer):
         # to have a unique name each time.  In order to get a unique name, we use the name of the
         # input layer.  Except sometimes Keras adds funny things to the ends of the input layer, so
         # we'll strip those off.
-        input_name = input_layer.name
-        if '/' in input_name:
-            input_name = input_name.rsplit('/', 1)[1]
-        if ':' in input_name:
-            input_name = input_name.split(':')[0]
-        if input_name.split('_')[-1].isdigit():
-            input_name = '_'.join(input_name.split('_')[:-1])
-        name = 'combined_word_embedding_for_' + input_name
+        name = 'combined_word_embedding_for_' + clean_layer_name(input_layer.name)
+
         final_embedded_input = Concatenate(name=name)([word_embedding, word_encoding])
         return final_embedded_input
 

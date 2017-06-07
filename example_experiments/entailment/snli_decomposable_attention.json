@@ -2,13 +2,13 @@
     "model_class": "DecomposableAttention",
     "model_serialization_prefix": "/net/efs/aristo/dlfa/models/decomposable_attention/",
     "seq2seq_encoder": {
-        "default": {
-            "type": "bi_gru",
-            "encoder_params": {
-                "units": 100
-            },
-            "wrapper_params": {}
-        }
+      "default": {
+        "type": "bi_gru",
+        "encoder_params": {
+          "units": 100
+        },
+        "wrapper_params": {}
+      }
     },
     "num_seq2seq_layers": 0,
     "decomposable_attention_params": {
@@ -21,12 +21,16 @@
       "dynamic_padding": true
     },
     "batch_size": 60,
-    "pretrained_embeddings_file": "/net/efs/aristo/dlfa/glove/glove.840B.300d.txt.gz",
-    "project_embeddings": true,
-    "fine_tune_embeddings": false,
-    "embedding_dropout": 0.2,
     "patience": 3,
-    "embeddings": {"words": {"dimension": 200}},
+    "embeddings": {
+      "words": {
+        "dimension": 200,
+        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.840B.300d.txt.gz",
+        "project": true,
+        "fine_tune": false,
+        "dropout": 0.2
+      }
+    },
     "num_epochs": 20,
     "optimizer": {
       "type": "adadelta",

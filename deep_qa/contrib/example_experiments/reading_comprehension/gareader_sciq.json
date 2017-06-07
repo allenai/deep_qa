@@ -1,8 +1,18 @@
 {
-    "embedding_dim": {"words": 200, "characters": 16},
-    "pretrained_embeddings_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
-    "fine_tune_embeddings": False,
-    "project_embeddings": False,
+    "embeddings": {
+      "words": {
+          "dimension": 200,
+          "pretrained_file": "/net/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+          "fine_tune": false,
+          "project": false,
+          "droppout": 0.0
+      },
+      "characters": {
+          "dimension": 16,
+          "droppout": 0.0
+      }
+    },
+
     "model_class": "GatedAttentionReader",
     "model_serialization_prefix": "models/multiple_choice_qa/gareader_sciq",
     "num_word_characters": 10,
@@ -65,9 +75,8 @@
         "type": "clip_by_norm",
         "value": 10
     },
-    "embedding_dropout": 0.0,
     "patience": 0,
     "num_epochs": 10,
-    "validation_files": ["/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
-    "train_files": ["/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]
+    "validation_files": ["/net/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
+    "train_files": ["/net/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]
 }

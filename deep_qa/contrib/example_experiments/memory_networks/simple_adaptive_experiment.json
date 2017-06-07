@@ -23,7 +23,7 @@
     "patience": 5,
     "show_summary_with_masking_info": true,
     "train_files": [
-        "/Users/markn/allen_ai/deep_qa/mem_net_files/train_file",
-        "/Users/markn/allen_ai/deep_qa/mem_net_files/train_background"
+        "/net/efs/aristo/dlfa/processed/omnibus_8_train/multiple_tf/append_answer/sentences.tsv",
+        "/net/efs/aristo/dlfa/processed/omnibus_8_train/multiple_tf/append_answer/sentences_background.tsv"
     ]
 }

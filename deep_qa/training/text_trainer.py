@@ -11,6 +11,7 @@ import tensorflow
 
 from ..common.checks import ConfigurationError
 from ..common.params import Params
+from ..common.util import clean_layer_name
 from ..data import tokenizers, DataIndexer, DataGenerator, IndexedDataset, TextDataset
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.instances import Instance, TextInstance
@@ -624,9 +625,14 @@ class TextTrainer(Trainer):
 
         embedding_layer, projection_layer, dropout = self.embedding_layers[embedding_name]
         embedded_input = embedding_layer(input_layer)
+
+        layer_name = clean_layer_name(input_layer.name, strip_numerics_after_underscores=False)
         if projection_layer is not None:
-            for _ in range(2, K.ndim(input_layer)):  # 2 here to account for batch_size.
-                projection_layer = TimeDistributed(projection_layer, name="timedist_" + projection_layer.name)
+            # 1 here to account for batch_size, which we don't need
+            # to TimeDistribute.
+            for i in range(1, K.ndim(input_layer)):
+                projection_layer_name = layer_name + "/" + projection_layer.name + "_{}".format(i)
+                projection_layer = TimeDistributed(projection_layer, name=projection_layer_name)
             embedded_input = projection_layer(embedded_input)
         if dropout > 0.0:
             embedded_input = Dropout(dropout)(embedded_input)
@@ -647,13 +653,31 @@ class TextTrainer(Trainer):
         """
         embedding_params = self.embedding_params.pop(name)
         with tensorflow.device("/cpu:0"):
-            pretrained_file = embedding_params.pop('pretrained_embeddings_file', None)
+            pretrained_file = embedding_params.pop('pretrained_file', None)
+            projection_layer = None
             if pretrained_file:
                 embedding_layer = PretrainedEmbeddings.get_embedding_layer(
                         pretrained_file,
                         self.data_indexer,
                         embedding_params.pop('fine_tune', False),
                         name=name + '_embedding')
+
+                if embedding_params.pop('project', False):
+                    # This projection layer is not time distributed, because we handle it later
+                    # in __get_embedded_input - this allows us to more easily reuse embeddings
+                    # for inputs with different shapes, as Keras sets layer attributes such as
+                    # input shape the first time the layer is called, which is overly restrictive
+                    # in the case of sharing embedding lookup tables.
+                    projection_layer = Dense(units=embedding_params.pop('dimension'), name=name + "_projection")
+                else:
+                    embedding_dimension = embedding_params.pop('dimension', None)
+                    if embedding_dimension is not None and embedding_dimension != embedding_layer.output_dim:
+                        raise ConfigurationError("You have specified both 'pretrained_file' "
+                                                 " and 'dimension' in your embedding parameters, but "
+                                                 "the 'project' argument was either False or unset and the "
+                                                 "dimension you specified was not equal to the pretrained"
+                                                 " embedding size. Refusing to continue without clarification"
+                                                 " of parameters.")
             else:
                 # TimeDistributedEmbedding works with inputs of any shape.
                 embedding_layer = TimeDistributedEmbedding(
@@ -661,17 +685,20 @@ class TextTrainer(Trainer):
                         output_dim=embedding_params.pop('dimension'),
                         mask_zero=True,  # this handles padding correctly
                         name=name + '_embedding')
-            projection_layer = None
-            if embedding_params.pop('project', False):
-                projection_layer = TimeDistributed(Dense(units=embedding_params.pop('dimension'),),
-                                                   name=name + '_projection')
-            return embedding_layer, projection_layer, embedding_params.pop('dropout', 0.5)
+                if embedding_params.pop('project', False):
+                    raise ConfigurationError("You are projecting randomly initialised embeddings. Change "
+                                             " 'project' to false or add pretrained_file to your config. ")
+            dropout = embedding_params.pop('dropout', 0.5)
+
+            # We now should have popped all parameters from this
+            # embedding scope, so we check for any which remain.
+            embedding_params.assert_empty("embedding with name {}".format(name))
+            return embedding_layer, projection_layer, dropout
 
     def __get_new_encoder(self, params: Params, name: str):
         encoder_type = params.pop_choice("type", list(encoders.keys()),
                                          default_to_first_choice=True)
         params["name"] = name
-        print(self.embedding_layers)
         params.setdefault("units", self.embedding_layers['words'][0].output_dim)
         set_regularization_params(encoder_type, params)
         return encoders[encoder_type](**params)

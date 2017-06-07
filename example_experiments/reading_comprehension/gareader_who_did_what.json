@@ -1,11 +1,16 @@
 {
     "embeddings": {
-      "words": {
-        "pretrained_file": "/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
-        "fine_tune": false,
-        "project": false
-      },
-      "characters": {"dimension": 16}
+        "words": {
+            "dimension": 200,
+            "pretrained_file": "/net/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+            "fine_tune": false,
+            "project": true,
+            "dropout": 0.0
+        },
+        "characters": {
+            "dimension": 16,
+            "dropout": 0.0
+        }
     },
     "model_class": "GatedAttentionReader",
     "cloze_token": "xxxxx",
@@ -75,9 +80,8 @@
         "type": "clip_by_norm",
         "value": 10
     },
-    "embedding_dropout": 0.0,
     "patience": 5,
     "num_epochs": 10,
-    "validation_files": ["/efs/data/dlfa/who_did_what/processed/strict/val.tsv"],
-    "train_files": ["/efs/data/dlfa/who_did_what/processed/strict/train.tsv"]
+    "validation_files": ["/net/efs/data/dlfa/who_did_what/processed/strict/val.tsv"],
+    "train_files": ["/net/efs/data/dlfa/who_did_what/processed/strict/train.tsv"]
 }

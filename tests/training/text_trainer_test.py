@@ -165,8 +165,13 @@ class TestTextTrainer(DeepQaTestCase):
         self.write_true_false_model_files()
         self.write_pretrained_vector_files()
         args = Params({
-                'embeddings': {'words': {'dimension': 8, 'pretrained_file': self.PRETRAINED_VECTORS_GZIP},
-                               'characters': {'dimension': 8}},
+                'embeddings': {
+                        'words': {
+                                'dimension': 8,
+                                'pretrained_file': self.PRETRAINED_VECTORS_GZIP,
+                                'project': True
+                        },
+                        'characters': {'dimension': 8}},
                 })
         model = self.get_model(ClassificationModel, args)
         model.train()

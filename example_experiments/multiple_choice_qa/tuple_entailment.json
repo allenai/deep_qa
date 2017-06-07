@@ -12,6 +12,6 @@
     "max_knowledge_length": 30,
     "num_tuple_slots": 3,
     "num_answer_options": 4,
-    "train_files": ["/Users/rebeccas/data/questions.tsv",
-                    "/Users/rebeccas/data/questions_background_as_tuples.tsv"]
+    "train_files": ["/net/efs/aristo/dlfa/processed/omnibus_4_train/question_and_answer/old/questions.tsv",
+                    "/net/efs/aristo/dlfa/processed/omnibus_4_train/question_and_answer/old/questions_background_as_tuples.tsv"]
 }

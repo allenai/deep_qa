@@ -21,10 +21,9 @@
         "type": "clip_by_norm",
         "value": 10
     },
-    "embedding_dropout": 0.0,
     "patience": 1,
-    "embeddings": {"words": {"dimension": 256}},
+    "embeddings": {"words": {"dimension": 256, "droppout": 0.0}},
     "num_epochs": 5,
-    "validation_files": ["/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
-    "train_files": ["/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]
+    "validation_files": ["/net/efs/data/dlfa/sciq/processed/dev_no_passage_with_background_as_passages.tsv"],
+    "train_files": ["/net/efs/data/dlfa/sciq/processed/train_no_passage_with_background_as_passages.tsv"]
 }
