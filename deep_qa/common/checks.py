@@ -1,7 +1,7 @@
 import logging
 import os
 
-PYTHONHASHSEED = '2157'
+REQUIRED_PYTHONHASHSEED = '2157'
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -15,11 +15,12 @@ class ConfigurationError(Exception):
 
 
 def ensure_pythonhashseed_set():
-    message = """You must set PYTHONHASHSEED so that we get repeatable results.
+    message = """You must set PYTHONHASHSEED to %s so we get repeatable results and tests pass.
     You can do this with the command `export PYTHONHASHSEED=%s`.
     See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONHASHSEED for more info.
     """
-    assert os.environ.get('PYTHONHASHSEED', None) == PYTHONHASHSEED, message % PYTHONHASHSEED
+    assert os.environ.get('PYTHONHASHSEED', None) == REQUIRED_PYTHONHASHSEED, \
+        message % (REQUIRED_PYTHONHASHSEED, REQUIRED_PYTHONHASHSEED)
 
 
 def log_keras_version_info():
