@@ -12,38 +12,6 @@ text in some form
 Outputs: A probability distribution over the answer options indicating how
 likely each option is to be correct.
 
-DecomposableAttention
----------------------
-
-.. automodule:: deep_qa.models.multiple_choice_qa.decomposable_attention
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-MultipleTrueFalseMemoryNetwork
-------------------------------
-
-.. automodule:: deep_qa.models.multiple_choice_qa.multiple_true_false_memory_network
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-MultipleTrueFalseSimilarity
----------------------------
-
-.. automodule:: deep_qa.models.multiple_choice_qa.multiple_true_false_similarity
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-QuestionAnswerMemoryNetwork
----------------------------
-
-.. automodule:: deep_qa.models.multiple_choice_qa.question_answer_memory_network
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 QuestionAnswerSimilarity
 ------------------------
 

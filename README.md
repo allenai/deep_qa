@@ -179,20 +179,6 @@ by Hermann and others
 - Decomposable Attention, from [A Decomposable Attention Model for Natural Language
   Inference](https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27),
 
-#### Memory networks
-
-- The original MemNN, from [Memory Networks](https://arxiv.org/abs/1410.3916), by Weston, Chopra
-  and Bordes
-- [End-to-end memory
-  networks](https://www.semanticscholar.org/paper/End-To-End-Memory-Networks-Sukhbaatar-Szlam/10ebd5c40277ecba4ed45d3dc12f9f1226720523),
-by Sukhbaatar and others
-- [Dynamic memory
-  networks](https://www.semanticscholar.org/paper/Ask-Me-Anything-Dynamic-Memory-Networks-for-Kumar-Irsoy/04ee77ef1143af8b19f71c63b8c5b077c5387855),
-  by Kumar and others
-- DMN+, from [Dynamic Memory Networks for Visual and Textual Question
-  Answering](https://www.semanticscholar.org/paper/Dynamic-Memory-Networks-for-Visual-and-Textual-Xiong-Merity/b2624c3cb508bf053e620a090332abce904099a1),
-by Xiong, Merity and Socher
-
 ## Datasets
 
 This code allows for easy experimentation with the following datasets:

@@ -79,7 +79,6 @@ This library has several main components:
 
    models/about_models
    models/entailment
-   models/memory_networks
    models/multiple_choice_qa
    models/sentence_selection
    models/reading_comprehension

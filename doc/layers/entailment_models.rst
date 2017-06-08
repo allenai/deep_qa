@@ -9,14 +9,6 @@ DecomposableAttention
     :undoc-members:
     :show-inheritance:
 
-EncodedSentence
----------------
-
-.. automodule:: deep_qa.layers.entailment_models.encoded_sentence
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 MultipleChoiceTupleEntailment
 -----------------------------
 

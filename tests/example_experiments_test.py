@@ -25,7 +25,7 @@ class TestExampleExperiments(DeepQaTestCase):
         self.check_experiment_type_can_train(snli_decomposable_attention)
 
     def test_question_answer_lstm_can_train(self):
-        self.write_question_answer_memory_network_files()
+        self.write_question_answer_files()
         question_answer_lstm = self.multiple_choice_qa_dir + "question_answer_lstm.json"
         self.check_experiment_type_can_train(question_answer_lstm)
 

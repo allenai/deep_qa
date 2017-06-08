@@ -13,8 +13,6 @@ from numpy.testing import assert_allclose
 
 from deep_qa.common.checks import log_keras_version_info
 from deep_qa.common.params import Params
-from deep_qa.models.memory_networks.memory_network import MemoryNetwork
-from deep_qa.models.multiple_choice_qa.multiple_true_false_similarity import MultipleTrueFalseSimilarity
 
 
 class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
@@ -38,7 +36,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         shutil.rmtree(self.TEST_DIR)
         K.clear_session()
 
-    def get_model_params(self, model_class, additional_arguments=None):
+    def get_model_params(self, additional_arguments=None):
         params = Params({})
         params['save_models'] = False
         params['model_serialization_prefix'] = self.TEST_DIR
@@ -48,22 +46,14 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         params['encoder'] = {"default": {'type': 'bow'}}
         params['num_epochs'] = 1
         params['validation_split'] = 0.0
-        if self.is_model_with_background(model_class):
-            # pylint: disable=no-member
-            params['train_files'].append(self.TRAIN_BACKGROUND)
-            params['validation_files'].append(self.VALIDATION_BACKGROUND)
-            # pylint: enable=no-member
-        if self.is_memory_network(model_class):
-            params['knowledge_selector'] = {'type': 'dot_product'}
-            params['memory_updater'] = {'type': 'sum'}
-            params['entailment_input_combiner'] = {'type': 'memory_only'}
+
         if additional_arguments:
             for key, value in additional_arguments.items():
                 params[key] = deepcopy(value)
         return params
 
     def get_model(self, model_class, additional_arguments=None):
-        params = self.get_model_params(model_class, additional_arguments)
+        params = self.get_model_params(additional_arguments)
         return model_class(params)
 
     def ensure_model_trains_and_loads(self, model_class, args: Params):
@@ -199,77 +189,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
             train_file.write('5\tsentence11 word3 word2\t0\n')
             train_file.write('6\tsentence12\t0\n')
 
-    def write_memory_network_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
-            validation_file.write('1\tq1a1\t0\n')
-            validation_file.write('2\tq1a2\t1\n')
-            validation_file.write('3\tq1a3\t0\n')
-            validation_file.write('4\tq1a4\t0\n')
-        with codecs.open(self.VALIDATION_BACKGROUND, 'w', 'utf-8') as validation_background:
-            validation_background.write('1\tvb1\tvb2\n')
-            validation_background.write('2\tvb3\tvb4\tvb5\n')
-            validation_background.write('3\tvb6\n')
-            validation_background.write('4\tvb7\tvb8\tvb9\n')
-        with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tsentence1\t0\n')
-            train_file.write('2\tsentence2\t1\n')
-            train_file.write('3\tsentence3\t0\n')
-            train_file.write('4\tsentence4\t1\n')
-            train_file.write('5\tsentence5\t0\n')
-            train_file.write('6\tsentence6\t0\n')
-        with codecs.open(self.TRAIN_BACKGROUND, 'w', 'utf-8') as train_background:
-            train_background.write('1\tsb1\tsb2\n')
-            train_background.write('2\tsb3\n')
-            train_background.write('3\tsb4\n')
-            train_background.write('4\tsb5\tsb6\n')
-            train_background.write('5\tsb7\tsb8\n')
-            train_background.write('6\tsb9\n')
-
-    def write_multiple_true_false_memory_network_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
-            validation_file.write('1\tq1a1\t0\n')
-            validation_file.write('2\tq1a2\t1\n')
-            validation_file.write('3\tq1a3\t0\n')
-            validation_file.write('4\tq1a4\t0\n')
-        with codecs.open(self.VALIDATION_BACKGROUND, 'w', 'utf-8') as validation_background:
-            validation_background.write('1\tvb1\tvb2\n')
-            validation_background.write('2\tvb3\tvb4\tvb5\n')
-            validation_background.write('3\tvb6\n')
-            validation_background.write('4\tvb7\tvb8\tvb9\n')
-        with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tsentence1\t0\n')
-            train_file.write('2\tsentence2\t0\n')
-            train_file.write('3\tsentence3\t0\n')
-            train_file.write('4\tsentence4\t1\n')
-        with codecs.open(self.TRAIN_BACKGROUND, 'w', 'utf-8') as train_background:
-            train_background.write('1\tsb1\tsb2\n')
-            train_background.write('2\tsb3\n')
-            train_background.write('3\tsb4\n')
-            train_background.write('4\tsb5\tsb6\n')
-
-    def write_additional_multiple_true_false_memory_network_files(self):
-        with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
-            validation_file.write('1\tq2a1\t0\n')
-            validation_file.write('2\tq2a2\t1\n')
-            validation_file.write('3\tq2a3\t0\n')
-            validation_file.write('4\tq2a4\t0\n')
-        with codecs.open(self.VALIDATION_BACKGROUND, 'w', 'utf-8') as validation_background:
-            validation_background.write('1\tvb10\tvb11\n')
-            validation_background.write('2\tvb12\tvb13\tvb14\n')
-            validation_background.write('3\tvb15\n')
-            validation_background.write('4\tvb16\tvb17\tvb18\n')
-        with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
-            train_file.write('1\tsentence5 extrasentence1\t0\n')
-            train_file.write('2\tsentence6\t0\n')
-            train_file.write('3\tsentence7 extrasentence2\t0\n')
-            train_file.write('4\tsentence8\t1\n')
-        with codecs.open(self.TRAIN_BACKGROUND, 'w', 'utf-8') as train_background:
-            train_background.write('1\tsb7\tsb8\tsbextra\n')
-            train_background.write('2\tsb9\n')
-            train_background.write('3\tsb10\tsbextra\n')
-            train_background.write('4\tsb11\tsb12\n')
-
-    def write_question_answer_memory_network_files(self):
+    def write_question_answer_files(self):
         with codecs.open(self.VALIDATION_FILE, 'w', 'utf-8') as validation_file:
             validation_file.write('1\tquestion1\tanswer1###answer2\t0\n')
         with codecs.open(self.VALIDATION_BACKGROUND, 'w', 'utf-8') as validation_background:
@@ -349,15 +269,3 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
         with open(self.PRETRAINED_VECTORS_FILE, 'rb') as f_in:
             with gzip.open(self.PRETRAINED_VECTORS_GZIP, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
-
-    @staticmethod
-    def is_memory_network(model_class):
-        if issubclass(model_class, MemoryNetwork):
-            return True
-        return False
-
-    def is_model_with_background(self, model_class):
-        # pylint: disable=multiple-statements
-        if self.is_memory_network(model_class): return True
-        if model_class == MultipleTrueFalseSimilarity: return True
-        return False

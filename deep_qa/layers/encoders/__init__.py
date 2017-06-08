@@ -9,6 +9,7 @@ from .bag_of_words import BOWEncoder
 from .convolutional_encoder import CNNEncoder
 from .positional_encoder import PositionalEncoder
 from .shareable_gru import ShareableGRU as GRU
+from .attentive_gru import AttentiveGru
 
 
 def set_regularization_params(encoder_type: str, params: Params):

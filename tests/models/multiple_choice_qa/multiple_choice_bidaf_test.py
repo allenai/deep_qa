@@ -25,7 +25,7 @@ class TestMultipleChoiceBidaf(DeepQaTestCase):
         bidaf_model.train()
         K.clear_session()
 
-        bidaf_model_params = self.get_model_params(BidirectionalAttentionFlow, args)
+        bidaf_model_params = self.get_model_params(args)
         args = Params({
                 'bidaf_params': bidaf_model_params,
                 'train_bidaf': False,

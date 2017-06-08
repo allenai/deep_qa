@@ -8,13 +8,13 @@ from ...common.test_case import DeepQaTestCase
 
 class TestQuestionAnswerSimilarity(DeepQaTestCase):
     def test_train_does_not_crash(self):
-        self.write_question_answer_memory_network_files()
+        self.write_question_answer_files()
         model = self.get_model(QuestionAnswerSimilarity)
         model.train()
 
     @mock.patch.object(QuestionAnswerSimilarity, '_output_debug_info')
     def test_padding_works_correctly(self, _output_debug_info):
-        self.write_question_answer_memory_network_files()
+        self.write_question_answer_files()
         args = Params({
                 'num_hidden_layers': 1,
                 'hidden_layer_width': 2,
@@ -31,7 +31,7 @@ class TestQuestionAnswerSimilarity(DeepQaTestCase):
             # particular, we'll check two things: (1) that the final answer option softmax has
             # correctly padded out the extra option, and (2) that the attention weights on all of
             # the inputs are properly padded.  To see that this test is correct, you have to look
-            # at the actual file written in `write_multiple_true_false_memory_network_files()`.
+            # at the actual file written in `write_question_answer_files()`.
             print(output_dict)
             answer_scores = output_dict['answer_similarity_softmax']
             assert answer_scores[0][2] == 0

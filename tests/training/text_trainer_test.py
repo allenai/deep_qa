@@ -70,7 +70,7 @@ class TestTextTrainer(DeepQaTestCase):
 
     @mock.patch.object(QuestionAnswerSimilarity, '_output_debug_info')
     def test_words_and_characters_works_with_matrices(self, _output_debug_info):
-        self.write_question_answer_memory_network_files()
+        self.write_question_answer_files()
         args = Params({
                 'embeddings': {'words': {'dimension': 2}, 'characters': {'dimension': 2}},
                 'tokenizer': {'type': 'words and characters'},

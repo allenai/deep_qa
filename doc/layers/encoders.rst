@@ -24,3 +24,12 @@ PositionalEncoder
     :members:
     :undoc-members:
     :show-inheritance:
+
+AttentiveGRU
+------------
+
+.. automodule:: deep_qa.layers.encoders.attentive_gru
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

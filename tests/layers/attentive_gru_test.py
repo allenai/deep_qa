@@ -5,10 +5,10 @@ from keras.layers import Input, Embedding, merge
 from keras.models import Model
 import keras.backend as K
 
-from deep_qa.layers import AttentiveGRUKnowledgeCombiner
+from deep_qa.layers.encoders import AttentiveGru
 
 
-class TestAttentiveGRUKnowledgeCombiner:
+class TestAttentiveGRU:
     def test_on_unmasked_input(self):
 
         sentence_length = 5
@@ -18,10 +18,10 @@ class TestAttentiveGRUKnowledgeCombiner:
         attention = Input(shape=(sentence_length,), dtype='float32')
         # Embedding does not mask zeros
         embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim)
-        attentive_gru = AttentiveGRUKnowledgeCombiner(output_dim=embedding_dim,
-                                                      input_length=sentence_length,
-                                                      return_sequences=True,
-                                                      name='attentive_gru_test')
+        attentive_gru = AttentiveGru(output_dim=embedding_dim,
+                                     input_length=sentence_length,
+                                     return_sequences=True,
+                                     name='attentive_gru_test')
         embedded_input = embedding(input_layer)
         concat_mode = lambda layer_outs: K.concatenate([K.expand_dims(layer_outs[0], axis=2),
                                                         layer_outs[1]],
