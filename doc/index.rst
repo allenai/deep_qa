@@ -71,6 +71,7 @@ This library has several main components:
    data/wrappers
    data/tokenizers
    data/data_generator
+   data/datasets
    data/general_data_utils
 
 .. toctree::

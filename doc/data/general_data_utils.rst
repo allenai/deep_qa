@@ -9,14 +9,6 @@ deep_qa.data.data_indexer
     :undoc-members:
     :show-inheritance:
 
-deep_qa.data.dataset
---------------------
-
-.. automodule:: deep_qa.data.dataset
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 deep_qa.data.embeddings
 -----------------------
 

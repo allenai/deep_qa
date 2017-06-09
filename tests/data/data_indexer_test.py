@@ -2,8 +2,9 @@
 import codecs
 
 from deep_qa.data.data_indexer import DataIndexer
-from deep_qa.data.dataset import TextDataset
+from deep_qa.data.datasets import TextDataset
 from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
+
 from ..common.test_case import DeepQaTestCase
 
 class TestDataIndexer(DeepQaTestCase):

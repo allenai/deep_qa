@@ -3,12 +3,12 @@ import os
 from typing import Any, Dict, List, Tuple
 
 import numpy
-from keras.models import model_from_json
 from keras.callbacks import CallbackList, EarlyStopping, LambdaCallback, ModelCheckpoint
+from keras.models import model_from_json
 
+from ..data.datasets import Dataset, IndexedDataset
 from ..common.checks import ConfigurationError
 from ..common.params import Params
-from ..data.dataset import Dataset, IndexedDataset
 from ..data.instances.instance import Instance
 from ..layers.wrappers import OutputMask
 from .models import DeepQaModel

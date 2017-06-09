@@ -6,12 +6,23 @@ from typing import Dict, List
 import numpy
 import tqdm
 
-from ..common.util import add_noise_to_dict_values
-from .data_indexer import DataIndexer
-from .instances.instance import Instance, TextInstance, IndexedInstance
+from ...common.util import add_noise_to_dict_values
+from ...common.params import Params
+from ..data_indexer import DataIndexer
+from ..instances.instance import Instance, TextInstance, IndexedInstance
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
+def log_label_counts(instances: List[TextInstance]):
+    labels = [(x.label, x) for x in instances]
+    labels.sort(key=lambda x: str(x[0]))
+    label_counts = [(label, len([x for x in group]))
+                    for label, group in itertools.groupby(labels, lambda x: x[0])]
+    label_count_str = str(label_counts)
+    if len(label_count_str) > 100:
+        label_count_str = label_count_str[:100] + '...'
+    logger.info("Finished reading dataset; label counts: %s", label_count_str)
 
 class Dataset:
     """
@@ -58,9 +69,12 @@ class TextDataset(Dataset):
     A Dataset of TextInstances, with a few helper methods.
 
     TextInstances aren't useful for much with Keras until they've been indexed.  So this class just
-    has methods to read in data from a file and converting it into other kinds of Datasets.
+    has methods to read in data from a file and convert it into other kinds of Datasets.
     """
-    def __init__(self, instances: List[TextInstance]):
+    def __init__(self, instances: List[TextInstance], params: Params=None):
+
+        if params is not None:
+            params.assert_empty("TextDataset")
         super(TextDataset, self).__init__(instances)
 
     def to_indexed_dataset(self, data_indexer: DataIndexer) -> 'IndexedDataset':
@@ -71,23 +85,16 @@ class TextDataset(Dataset):
         return IndexedDataset(indexed_instances)
 
     @staticmethod
-    def read_from_file(filename: str, instance_class):
+    def read_from_file(filename: str, instance_class, params: Params=None):
         with codecs.open(filename, 'r', 'utf-8') as input_file:
             lines = [x.strip() for x in tqdm.tqdm(input_file.readlines())]
-            return TextDataset.read_from_lines(lines, instance_class)
+            return TextDataset.read_from_lines(lines, instance_class, params)
 
     @staticmethod
-    def read_from_lines(lines: List[str], instance_class):
+    def read_from_lines(lines: List[str], instance_class, params: Params=None):
         instances = [instance_class.read_from_line(x) for x in lines]
-        labels = [(x.label, x) for x in instances]
-        labels.sort(key=lambda x: str(x[0]))
-        label_counts = [(label, len([x for x in group]))
-                        for label, group in itertools.groupby(labels, lambda x: x[0])]
-        label_count_str = str(label_counts)
-        if len(label_count_str) > 100:
-            label_count_str = label_count_str[:100] + '...'
-        logger.info("Finished reading dataset; label counts: %s", label_count_str)
-        return TextDataset(instances)
+        log_label_counts(instances)
+        return TextDataset(instances, params)
 
 
 class IndexedDataset(Dataset):

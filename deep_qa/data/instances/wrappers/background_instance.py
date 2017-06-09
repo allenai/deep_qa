@@ -7,7 +7,7 @@ from overrides import overrides
 
 from ..instance import TextInstance, IndexedInstance
 from ...data_indexer import DataIndexer
-from ...dataset import TextDataset
+from ...datasets import TextDataset
 
 
 def read_background_from_file(dataset: TextDataset, filename: str, background_class) -> TextDataset:

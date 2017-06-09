@@ -15,6 +15,7 @@ from ..common.util import clean_layer_name
 from ..data import tokenizers, DataIndexer, DataGenerator, IndexedDataset, TextDataset
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.instances import Instance, TextInstance
+from ..data.datasets import concrete_datasets
 from ..layers import TimeDistributedEmbedding
 from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
 from .trainer import Trainer
@@ -117,6 +118,11 @@ class TextTrainer(Trainer):
             self.data_generator = DataGenerator(self, data_generator_params)
         else:
             self.data_generator = None
+
+        self.dataset_params = params.pop("dataset", {})
+        dataset_type_key = self.dataset_params.pop_choice("type", list(concrete_datasets.keys()),
+                                                          default_to_first_choice=True)
+        self.dataset_type = concrete_datasets[dataset_type_key]
         self.num_sentence_words = params.pop('num_sentence_words', None)
         self.num_word_characters = params.pop('num_word_characters', None)
 
@@ -173,7 +179,8 @@ class TextTrainer(Trainer):
         has background information could call this method, then do additional processing on the
         rest of the list, for instance).
         """
-        return TextDataset.read_from_file(files[0], self._instance_type())
+        dataset_params = deepcopy(self.dataset_params)
+        return self.dataset_type.read_from_file(files[0], self._instance_type(), dataset_params)
 
     @overrides
     def score_dataset(self, dataset: TextDataset):

@@ -5,8 +5,9 @@ import numpy
 from overrides import overrides
 
 from ..instance import TextInstance, IndexedInstance
-from ...dataset import TextDataset
+from ...datasets import TextDataset
 from ...data_indexer import DataIndexer
+
 
 def __can_be_converted_to_multiple_true_false(dataset: TextDataset) -> bool:
     """
