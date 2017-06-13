@@ -4,11 +4,14 @@
 
 # WARNING
 
-This is unreleased code!  We're at the pre-alpha stage, things could change, and there are still
-a lot of rough edges.  This grew out of some research code, and we think it'll be pretty useful
-generally, but we're still working on making it easily usable by people outside of our group.  Feel
-free to submit issues for problems that arise so that we're aware of them, but we're not to the
-point of having a supported release yet.
+DeepQA is currently pre-alpha.  There are no stable APIs, and
+there are plenty of rough edges.  This grew out of some research code, and we think
+it'll be pretty useful generally, but we're still working on making it easily
+usable by people outside of our group.  Feel free to submit issues for problems
+that arise so that we're aware of them, but we're not to the point of having a
+supported release yet.
+
+We will have our first supported release in September.
 
 # DeepQA
 
@@ -196,19 +199,14 @@ Experiments](https://github.com/allenai/deep_qa_experiments), however.
 ## Contributing
 
 If you use this code and think something could be improved, pull requests are very welcome. Opening
-an issue is ok, too, but we're a lot more likely to respond to a PR. The primary maintainer of this
-code is [Matt Gardner](https://matt-gardner.github.io/), with a lot of help from [Pradeep
-Dasigi](http://www.cs.cmu.edu/~pdasigi/) (who was the initial author of this codebase), [Mark
-Neumann](http://markneumann.xyz/) and [Nelson Liu](http://nelsonliu.me/).
+an issue is ok, too, but we can respond much more quickly to pull requests.
 
-A note on issues: we are a very small team, and our focus is on getting research done, not on
-building this library.  We do not have anyone dedicated full-time to maintaining and improving
-this code.  As such, we generally do not have bandwidth to solve your problems.  Sorry.  The code
-is well tested and works on our continuous integration server, so if the tests do not pass in your
-environment, there is something wrong with your environment, not the code.  Please only submit
-issues _after_ having made sure the tests pass, and trying to figure out the issue yourself.  In
-your issue, explain clearly what the problem is and what you tried to do to fix it, including
-commands run and full stack traces.  You're a whole lot more likely to actually get help that way.
+## Contributors
+
+* [Matt Gardner](https://matt-gardner.github.io/)
+* [Mark Neumann](http://markneumann.xyz/)
+* [Nelson Liu](http://nelsonliu.me/).
+* [Pradeep Dasigi](http://www.cs.cmu.edu/~pdasigi/) (the initial author of this codebase)
 
 ## License
 
