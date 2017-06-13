@@ -220,6 +220,7 @@ class Trainer:
 
     def load_data_arrays(self,
                          data_files: List[str],
+                         batch_size: int=None,
                          max_instances: int=None) -> Tuple[Dataset, numpy.array, numpy.array]:
         """
         Loads a :class:`Dataset` from a list of files, then converts it into numpy arrays for
@@ -236,6 +237,11 @@ class Trainer:
         data_files: List[str]
             The files to load.  These will get passed to ``self.load_dataset_from_files()``, which
             subclasses must implement.
+        batch_size: int, optional (default = None)
+            Optionally pass a specific batch size to load the data arrays with. If this is not
+            specified, we use the default self.batch_size attribute. This is a parameter so
+            you can specify different batch sizes for training vs validation, for instance, which
+            is useful if you are doing multi-gpu training.
         max_instances: int, optional (default=None)
             If not ``None``, we will restrict the dataset to only this many instances.  This is
             mostly useful for testing models out on subsets of your data.
@@ -251,6 +257,9 @@ class Trainer:
             An array or tuple of arrays suitable to be passed as outputs ``y`` to Keras'
             ``model.fit(x, y)`` or ``model.evaluate(x, y)`` methods
         """
+        if batch_size is None:
+            batch_size = self.batch_size
+
         logger.info("Loading data from %s", str(data_files))
         dataset = self.load_dataset_from_files(data_files)
         if max_instances is not None:
@@ -259,7 +268,7 @@ class Trainer:
         logger.info("Indexing dataset")
         indexing_kwargs = self._dataset_indexing_kwargs()
         indexed_dataset = dataset.to_indexed_dataset(**indexing_kwargs)
-        data_arrays = self.create_data_arrays(indexed_dataset)
+        data_arrays = self.create_data_arrays(indexed_dataset, batch_size)
         return (dataset, data_arrays)
 
     def train(self):
@@ -284,13 +293,15 @@ class Trainer:
         indexed_training_dataset = self.training_dataset.to_indexed_dataset(**indexing_kwargs)
         if self.update_model_state_with_training_data:
             self.set_model_state_from_indexed_dataset(indexed_training_dataset)
-        self.training_arrays = self.create_data_arrays(indexed_training_dataset)
+        self.training_arrays = self.create_data_arrays(indexed_training_dataset, self.batch_size)
         if self._uses_data_generators():
             self.train_steps_per_epoch = self.data_generator.last_num_batches  # pylint: disable=no-member
 
         if self.validation_files:
+            batch_size_for_validation = self.batch_size / self.num_gpus if self.num_gpus > 1 else None
             self.validation_dataset, self.validation_arrays = self.load_data_arrays(self.validation_files,
-                                                                                    self.max_validation_instances)
+                                                                                    self.max_validation_instances,
+                                                                                    batch_size_for_validation)
         if self._uses_data_generators():
             self.validation_steps = self.data_generator.last_num_batches  # pylint: disable=no-member
 
@@ -301,11 +312,11 @@ class Trainer:
             self.model.compile(self.__compile_kwargs())
         else:
             if self._uses_data_generators():
-                # TODO(Mark): Remove this once we support dynamic padding + batching.
-                raise ConfigurationError("Multi-gpu training is currently only supported for"
-                                         "training without a DataGenerator, as it does not "
-                                         "support adaptive or dynamic batching. Remove these"
-                                         "from your configuration file to proceed.")
+                if self.data_generator.adaptive_batch_sizes:   # pylint: disable=no-member
+                    raise ConfigurationError("Multi-gpu training is currently only supported for "
+                                             "training which does not utilise adaptive batching."
+                                             "Please remove 'adaptive_batch_sizes'from your "
+                                             "configuration file to proceed.")
             self.model = compile_parallel_model(self._build_model, self.__compile_kwargs())
 
         self.model.summary(show_masks=self.show_summary_with_masking)
@@ -464,7 +475,8 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def create_data_arrays(self, dataset: IndexedDataset) -> Tuple[numpy.array, numpy.array]:
+    def create_data_arrays(self, dataset: IndexedDataset,
+                           batch_size: int=None) -> Tuple[numpy.array, numpy.array]:
         """
         Takes a raw dataset and converts it into training inputs and labels that can be used to
         either train a model or make predictions.  Depending on parameters passed to the
@@ -476,6 +488,9 @@ class Trainer:
         dataset: Dataset
             A ``Dataset`` of the same format as read by ``load_dataset_from_files()`` (we will
             call this directly with the output from that method, in fact)
+        batch_size: int, optional (default = None)
+            The batch size with which the dataset should be created. If this is None,
+            the default self.batch_size will be used.
 
         Returns
         -------

@@ -104,18 +104,21 @@ class DataGenerator:
         #: this data.
         self.last_num_batches = None
 
-    def create_generator(self, dataset: IndexedDataset):
+    def create_generator(self, dataset: IndexedDataset, batch_size: int=None):
         """
         Main external API call: converts an ``IndexedDataset`` into a data generator suitable for
         use with Keras' ``fit_generator`` and related methods.
         """
-        grouped_instances = self.__create_batches(dataset)
+        if batch_size is None:
+            batch_size = self.text_trainer.batch_size
+
+        grouped_instances = self.__create_batches(dataset, batch_size)
         self.last_num_batches = len(grouped_instances)
         def generator():
             while True:
                 if self.sort_every_epoch:
                     unpadded_dataset = deepcopy(dataset)
-                    groups = self.__create_batches(unpadded_dataset)
+                    groups = self.__create_batches(unpadded_dataset, batch_size)
                 else:
                     groups = grouped_instances
                 for group in groups:
@@ -124,14 +127,14 @@ class DataGenerator:
                     yield batch.as_training_data()
         return generator()
 
-    def __create_batches(self, dataset: IndexedDataset) -> List[List[IndexedInstance]]:
+    def __create_batches(self, dataset: IndexedDataset, batch_size: int) -> List[List[IndexedInstance]]:
         if self.dynamic_padding:
             dataset.sort_by_padding(self.text_trainer.get_instance_sorting_keys(), self.padding_noise)
         instances = dataset.instances
         if self.adaptive_batch_sizes:
             grouped_instances = self.__adaptive_grouping(instances)
         else:
-            grouped_instances = group_by_count(instances, self.text_trainer.batch_size, None)
+            grouped_instances = group_by_count(instances, batch_size, None)
             grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
         if self.biggest_batch_first:
             # We'll actually pop the last _two_ batches, because the last one might not

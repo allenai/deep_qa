@@ -20,6 +20,12 @@ class TestMultiGpu(DeepQaTestCase):
     def test_model_can_train_and_load(self):
         self.ensure_model_trains_and_loads(ClassificationModel, self.args)
 
+    def test_model_can_train_and_load_with_generator(self):
+        args = self.args
+
+        args["data_generator"] = {"dynamic_batching": True, "padding_noise": 0.4}
+        self.ensure_model_trains_and_loads(ClassificationModel, args)
+
     def test_variables_live_on_cpu(self):
         model = self.get_model(ClassificationModel, self.args)
         model.train()

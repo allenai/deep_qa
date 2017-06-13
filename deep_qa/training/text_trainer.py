@@ -164,9 +164,12 @@ class TextTrainer(Trainer):
     ###########################
 
     @overrides
-    def create_data_arrays(self, dataset: IndexedDataset):
+    def create_data_arrays(self, dataset: IndexedDataset, batch_size: int=None):
+
+        if batch_size is None:
+            batch_size = self.batch_size
         if self.data_generator is not None:
-            return self.data_generator.create_generator(dataset)
+            return self.data_generator.create_generator(dataset, batch_size)
         else:
             dataset.pad_instances(self.get_padding_lengths())
             return dataset.as_training_data()

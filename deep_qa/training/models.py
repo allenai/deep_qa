@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import Dict, List
 from overrides import overrides
 
 from keras.models import Model, Sequential
@@ -69,6 +69,75 @@ class DeepQaModel(Model):
         self.gradient_clipping = params.pop("gradient_clipping", None).as_dict()
         super(DeepQaModel, self).compile(**params.as_dict())
         self.optimizer = optimizer
+
+    @overrides
+    def train_on_batch(self,
+                       x: List[numpy.array],
+                       y: List[numpy.array],
+                       sample_weight: List[numpy.array]=None,
+                       class_weight: Dict[int, numpy.array]=None):
+        """
+        Runs a single gradient update on a single batch of data. We override this
+        method in order to provide multi-gpu training capability.
+
+        Parameters
+        ----------
+        x: List[numpy.array], required
+            Numpy array of training data, or list of Numpy arrays if the model
+            has multiple inputs. If all inputs in the model are named, you can also
+            pass a dictionary mapping input names to Numpy arrays.
+        y: List[numpy.array], required
+            A Numpy array of labels, or list of Numpy arrays if the model has multiple outputs.
+            If all outputs in the model are named, you can also pass a dictionary
+            mapping output names to Numpy arrays.
+        sample_weight: List[numpy.array], optional (default = None)
+            optional array of the same length as x, containing weights to apply to
+            the model's loss for each sample. In the case of temporal data, you
+            can pass a 2D array with shape (samples, sequence_length), to apply a
+            different weight to every timestep of every sample. In this case you
+            should make sure to specify sample_weight_mode="temporal" in compile().
+        class_weight: optional dictionary mapping
+            class indices (integers) to a weight (float) to apply to the model's
+            loss for the samples from this class during training. This can be useful
+            to tell the model to "pay more attention" to samples from an under-represented class.
+
+        Returns
+        -------
+        Scalar training loss
+        (if the model has a single output and no metrics)
+        or list of scalars (if the model has multiple outputs
+        and/or metrics). The attribute `model.metrics_names` will give you
+        the display labels for the scalar outputs.
+        """
+        inputs, targets, sample_weights = self._standardize_user_data(x, y,
+                                                                      sample_weight=sample_weight,
+                                                                      class_weight=class_weight,
+                                                                      check_batch_axis=True)
+        if self.uses_learning_phase and not isinstance(K.learning_phase(), int):
+            batch_inputs = inputs + targets + sample_weights + [1.]
+        else:
+            batch_inputs = inputs + targets + sample_weights
+
+        # Here is the main difference between a single gpu model and one split
+        # across multiple gpus. In our multiple gpu model, all of the inputs
+        # are replicated num_gpus times, so we need to split our large batch
+        # into the corresponding sets of smaller batches for each model.
+        if self.num_gpus > 1:
+            # The Keras learning phase is a global variable used across model towers.
+            # If it is present, we remove it before splitting up the inputs
+            # and add it back on afterwards.
+            if isinstance(batch_inputs[-1], float):
+                model_inputs = self._multi_gpu_batch(batch_inputs[:-1])
+                model_inputs.append(batch_inputs[-1])
+            else:
+                model_inputs = self._multi_gpu_batch(batch_inputs)
+            batch_inputs = model_inputs
+
+        self._make_train_function()
+        outputs = self.train_function(batch_inputs)
+        if len(outputs) == 1:
+            return outputs[0]
+        return outputs
 
     @overrides
     def _make_train_function(self):
