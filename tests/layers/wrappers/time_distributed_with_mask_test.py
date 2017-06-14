@@ -1,10 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 
-from keras.layers import Input
+from keras.layers import Embedding, Input
 
 from deep_qa.layers.encoders import BOWEncoder
-from deep_qa.layers import TimeDistributedEmbedding
 from deep_qa.layers.wrappers import EncoderWrapper, TimeDistributedWithMask, OutputMask
 from deep_qa.layers.tuple_matchers import SlotSimilarityTupleMatcher, WordOverlapTupleMatcher
 from deep_qa.training.models import DeepQaModel
@@ -17,7 +16,7 @@ class TestTimeDistributedWithMask(DeepQaTestCase):
         # num_slots, num_words).
         tuple_input = Input(shape=(2, 3, 4, 5), dtype='int32')
         tuple_input_2 = Input(shape=(2, 3, 4, 5), dtype='int32')
-        embedding = TimeDistributedEmbedding(input_dim=3, output_dim=6, mask_zero=True)
+        embedding = Embedding(input_dim=3, output_dim=6, mask_zero=True)
         # shape is now (batch_size, num_options, num_tuples, num_slots, num_words, embedding_dim)
         embedded_tuple = embedding(tuple_input)
         embedded_tuple_2 = embedding(tuple_input_2)

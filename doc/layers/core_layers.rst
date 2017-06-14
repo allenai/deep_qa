@@ -73,14 +73,6 @@ SubtractMinimum
     :undoc-members:
     :show-inheritance:
 
-TimeDistributedEmbedding
-------------------------
-
-.. automodule:: deep_qa.layers.time_distributed_embedding
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 VectorMatrixMerge
 -----------------
 

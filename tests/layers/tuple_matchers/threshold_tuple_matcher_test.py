@@ -4,12 +4,11 @@ import numpy
 from numpy.testing import assert_array_almost_equal
 from keras import backend as K
 from keras.initializers import Constant
-from keras.layers import Input
+from keras.layers import Embedding, Input
 from keras.models import Model
 from keras import activations
 
 from deep_qa.tensors.backend import apply_feed_forward
-from deep_qa.layers import TimeDistributedEmbedding
 from deep_qa.layers.tuple_matchers import ThresholdTupleMatcher
 from ...common.test_case import DeepQaTestCase
 
@@ -105,7 +104,7 @@ class TestThresholdTupleMatcher(DeepQaTestCase):
         tuple1_word_input = Input(shape=(num_slots, num_words), dtype='int32', name="input_tuple1")
         tuple2_word_input = Input(shape=(num_slots, num_words), dtype='int32', name="input_tuple2")
 
-        embedding = TimeDistributedEmbedding(10, embed_dimension, mask_zero=True)
+        embedding = Embedding(10, embed_dimension, mask_zero=True)
         embedded_masked_tuple1 = embedding(tuple1_word_input)
         embedded_masked_tuple2 = embedding(tuple2_word_input)
 

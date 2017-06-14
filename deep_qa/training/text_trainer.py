@@ -4,7 +4,7 @@ import logging
 
 import dill as pickle
 from keras import backend as K
-from keras.layers import Dense, Dropout, Layer, TimeDistributed
+from keras.layers import Dense, Dropout, Layer, TimeDistributed, Embedding
 from overrides import overrides
 import numpy
 import tensorflow
@@ -16,7 +16,6 @@ from ..data import tokenizers, DataIndexer, DataGenerator, IndexedDataset, TextD
 from ..data.embeddings import PretrainedEmbeddings
 from ..data.instances import Instance, TextInstance
 from ..data.datasets import concrete_datasets
-from ..layers import TimeDistributedEmbedding
 from ..layers.encoders import encoders, set_regularization_params, seq2seq_encoders
 from .trainer import Trainer
 
@@ -265,7 +264,6 @@ class TextTrainer(Trainer):
     @classmethod
     def _get_custom_objects(cls):
         custom_objects = super(TextTrainer, cls)._get_custom_objects()
-        custom_objects["TimeDistributedEmbedding"] = TimeDistributedEmbedding
         for value in encoders.values():
             if value.__name__ not in ['LSTM']:
                 custom_objects[value.__name__] = value
@@ -689,8 +687,7 @@ class TextTrainer(Trainer):
                                                  " embedding size. Refusing to continue without clarification"
                                                  " of parameters.")
             else:
-                # TimeDistributedEmbedding works with inputs of any shape.
-                embedding_layer = TimeDistributedEmbedding(
+                embedding_layer = Embedding(
                         input_dim=self.data_indexer.get_vocab_size(vocab_name),
                         output_dim=embedding_params.pop('dimension'),
                         mask_zero=True,  # this handles padding correctly

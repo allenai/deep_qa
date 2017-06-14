@@ -1,10 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from keras.layers import Input
+from keras.layers import Embedding, Input
 from keras.models import Model
 
 from deep_qa.layers.entailment_models import MultipleChoiceTupleEntailment
-from deep_qa.layers import TimeDistributedEmbedding
 
 class TestTupleAlignment:
     def test_tuple_alignment_does_not_crash(self):
@@ -19,8 +18,8 @@ class TestTupleAlignment:
         answer_input_layer = Input(shape=(num_options,), dtype='int32')
         knowledge_input_layer = Input(shape=(num_tuples, tuple_size), dtype='int32')
         # Embedding does not mask zeros
-        embedding = TimeDistributedEmbedding(input_dim=vocabulary_size, output_dim=embedding_dim,
-                                             mask_zero=True)
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim,
+                              mask_zero=True)
         embedded_question = embedding(question_input_layer)
         embedded_answer = embedding(answer_input_layer)
         embedded_knowledge = embedding(knowledge_input_layer)

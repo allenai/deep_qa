@@ -1,10 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from keras.layers import Input
+from keras.layers import Embedding, Input
 
 from deep_qa.layers.wrappers import EncoderWrapper, OutputMask
 from deep_qa.layers.encoders import BOWEncoder
-from deep_qa.layers import TimeDistributedEmbedding
 from deep_qa.training.models import DeepQaModel
 from ...common.test_case import DeepQaTestCase
 
@@ -12,7 +11,7 @@ from ...common.test_case import DeepQaTestCase
 class TestEncoderWrapper(DeepQaTestCase):
     def test_mask_is_computed_correctly(self):
         background_input = Input(shape=(3, 3), dtype='int32')
-        embedding = TimeDistributedEmbedding(input_dim=3, output_dim=2, mask_zero=True)
+        embedding = Embedding(input_dim=3, output_dim=2, mask_zero=True)
         embedded_background = embedding(background_input)
         encoded_background = EncoderWrapper(BOWEncoder(units=2))(embedded_background)
 

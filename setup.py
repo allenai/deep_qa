@@ -79,7 +79,7 @@ setup(name='deep_qa',
       license='Apache',
       packages=find_packages(),
       install_requires=[
-          'keras==2.0.3',
+          'keras==2.0.5',
           'h5py',
           'scikit-learn',
           'grpcio',

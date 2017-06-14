@@ -1,9 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from keras.layers import Input
+from keras.layers import Input, Embedding
 from keras.models import Model
 
-from deep_qa.layers import TimeDistributedEmbedding, VectorMatrixSplit
+from deep_qa.layers import VectorMatrixSplit
 from deep_qa.layers.wrappers import OutputMask
 
 class TestVectorMatrixSplit:
@@ -42,7 +42,7 @@ class TestVectorMatrixSplit:
         embedding_dim = 10
         num_sentences = 7
         sentence_input = Input(shape=(sentence_length, word_length), dtype='int32')
-        embedding = TimeDistributedEmbedding(input_dim=vocabulary_size, output_dim=embedding_dim, mask_zero=True)
+        embedding = Embedding(input_dim=vocabulary_size, output_dim=embedding_dim, mask_zero=True)
         embedded_sentence = embedding(sentence_input)  # (batch_size, sentence_length, word_length, embedding_dim)
         sentence_mask = OutputMask()(embedded_sentence)
         # Note that this mask_split_axis doesn't make practical sense; I'm just testing the code

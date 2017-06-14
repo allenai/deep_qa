@@ -3,8 +3,7 @@ import gzip
 import logging
 
 import numpy
-
-from ..layers.time_distributed_embedding import TimeDistributedEmbedding
+from keras.layers import Embedding
 from .data_indexer import DataIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -93,9 +92,9 @@ class PretrainedEmbeddings:
             embedding_misses_file.close()
 
         # The weight matrix is initialized, so we construct and return the actual Embedding layer.
-        return TimeDistributedEmbedding(input_dim=vocab_size,
-                                        output_dim=embedding_dim,
-                                        mask_zero=True,
-                                        weights=[embedding_matrix],
-                                        trainable=trainable,
-                                        name=name)
+        return Embedding(input_dim=vocab_size,
+                         output_dim=embedding_dim,
+                         mask_zero=True,
+                         weights=[embedding_matrix],
+                         trainable=trainable,
+                         name=name)

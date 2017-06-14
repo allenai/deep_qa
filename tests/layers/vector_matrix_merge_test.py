@@ -2,10 +2,10 @@
 import numpy
 from numpy.testing import assert_array_equal
 
-from keras.layers import Input
+from keras.layers import Embedding, Input
 from keras.models import Model
 
-from deep_qa.layers import TimeDistributedEmbedding, VectorMatrixMerge
+from deep_qa.layers import VectorMatrixMerge
 from deep_qa.layers.wrappers import OutputMask
 
 class TestVectorMatrixMerge:
@@ -36,7 +36,7 @@ class TestVectorMatrixMerge:
         embedding_dim = 10
         sentence_input = Input(shape=(sentence_length, word_length), dtype='int32')
         extra_word_input = Input(shape=(word_length,), dtype='int32')
-        embedding = TimeDistributedEmbedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)
+        embedding = Embedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)
         embedded_sentence = embedding(sentence_input)  # (batch_size, sentence_length, word_length, embedding_dim)
         embedded_extra_word = embedding(extra_word_input)  # (batch_size, word_length, embedding_dim)
         merge_layer = VectorMatrixMerge(concat_axis=1)
@@ -60,7 +60,7 @@ class TestVectorMatrixMerge:
         for concat_axis in [2, -1]:
             sentence_input = Input(shape=(sentence_length,), dtype='int32')
             extra_embedding_input = Input(shape=(sentence_length,), dtype='float32')
-            embedding = TimeDistributedEmbedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)
+            embedding = Embedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)
             embedded_sentence = embedding(sentence_input)  # (batch_size, sentence_length, embedding_dim)
             merge_layer = VectorMatrixMerge(concat_axis=concat_axis)
             merged_sentence = merge_layer([extra_embedding_input, embedded_sentence])
