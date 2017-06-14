@@ -12,6 +12,8 @@ import numpy
 from numpy.testing import assert_allclose
 
 from deep_qa.common.checks import log_keras_version_info
+from deep_qa.data.instances.instance import TextInstance
+from deep_qa.data.tokenizers import tokenizers
 from deep_qa.common.params import Params
 
 
@@ -34,6 +36,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)
+        TextInstance.tokenizer = tokenizers["words"](Params({}))
         K.clear_session()
 
     def get_model_params(self, additional_arguments=None):
