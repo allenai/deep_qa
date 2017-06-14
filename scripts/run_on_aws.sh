@@ -18,7 +18,7 @@ set -e
 # package with a version more recent than 1.11.91.
 eval $(aws --region=us-west-2 ecr get-login --no-include-email)
 
-docker pull $ECR_REPOSITORY/infrastructure/aristo/cuda:8
+docker pull $ECR_REPOSITORY/deep_qa/cuda:8
 
 docker build -t $ECR_REPOSITORY/aristo/deep_qa:$CONTAINER_TAG . --build-arg PARAM_FILE=$PARAM_FILE
 docker push $ECR_REPOSITORY/aristo/deep_qa:$CONTAINER_TAG

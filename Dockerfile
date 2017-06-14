@@ -1,4 +1,4 @@
-FROM 896129387501.dkr.ecr.us-west-2.amazonaws.com/infrastructure/aristo/cuda:8
+FROM 896129387501.dkr.ecr.us-west-2.amazonaws.com/deep_qa/cuda:8
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
