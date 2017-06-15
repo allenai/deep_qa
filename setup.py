@@ -80,6 +80,7 @@ setup(name='deep_qa',
       packages=find_packages(),
       install_requires=[
           'keras==2.0.5',
+          'tensorflow>=1.0.1',  # If you are using GPUs, you will need to install tensorflow-gpu.
           'h5py',
           'scikit-learn',
           'grpcio',
