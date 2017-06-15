@@ -1,12 +1,11 @@
 # pylint: disable=no-self-use
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-
 from keras.layers import Input
 from keras.models import Model
-from deep_qa.layers.subtract_minimum import SubtractMinimum
 from deep_qa.layers.backend.add_mask import AddMask
-from ..common.test_case import DeepQaTestCase
+from deep_qa.layers.subtract_minimum import SubtractMinimum
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestSubtractMinimum(DeepQaTestCase):

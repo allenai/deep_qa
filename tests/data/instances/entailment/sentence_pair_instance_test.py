@@ -2,7 +2,7 @@
 import numpy
 
 from deep_qa.data.instances.entailment.sentence_pair_instance import IndexedSentencePairInstance
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestIndexedSentencePairInstance(DeepQaTestCase):

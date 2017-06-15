@@ -1,14 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import mock
 
-import numpy
-
 from deep_qa.common.params import Params, pop_choice
-from deep_qa.layers.encoders import encoders
 from deep_qa.data.datasets import Dataset, SnliDataset
+from deep_qa.layers.encoders import encoders
 from deep_qa.models.text_classification import ClassificationModel
-from deep_qa.models.multiple_choice_qa import QuestionAnswerSimilarity
-from ..common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestTextTrainer(DeepQaTestCase):
@@ -66,52 +63,6 @@ class TestTextTrainer(DeepQaTestCase):
             assert word_masks[3][0] == 0
             assert word_masks[3][1] == 0
             assert word_masks[3][2] == 1
-        _output_debug_info.side_effect = new_debug
-        model.train()
-
-    @mock.patch.object(QuestionAnswerSimilarity, '_output_debug_info')
-    def test_words_and_characters_works_with_matrices(self, _output_debug_info):
-        self.write_question_answer_files()
-        args = Params({
-                'embeddings': {'words': {'dimension': 2}, 'characters': {'dimension': 2}},
-                'tokenizer': {'type': 'words and characters'},
-                'debug': {
-                        'data': 'training',
-                        'layer_names': [
-                                'combined_word_embedding_for_answer_input',
-                                ],
-                        'masks': [
-                                'combined_word_embedding_for_answer_input',
-                                ],
-                        }
-                })
-        model = self.get_model(QuestionAnswerSimilarity, args)
-
-        def new_debug(output_dict, epoch):  # pylint: disable=unused-argument
-            # We're going to check two things in here: that the shape of combined word embedding is
-            # as expected, and that the mask is computed correctly.
-            # TODO(matt): actually, from this test, it looks like the mask is returned as
-            # output_dict['combined_word_embedding'][1].  Maybe this means we can simplify the
-            # logic in Trainer._debug()?  I need to look into this more to be sure that's
-            # consistently happening, though.
-            word_embeddings = output_dict['combined_word_embedding_for_answer_input'][0]
-            assert len(word_embeddings) == 4
-            assert word_embeddings[0].shape == (3, 2, 4)
-            word_masks = output_dict['combined_word_embedding_for_answer_input'][1]
-            # Zeros are added to answer words _from the left_, and to answer options from the
-            # _right_.
-            assert numpy.all(word_masks[0, 0, :] == numpy.asarray([1, 1]))
-            assert numpy.all(word_masks[0, 1, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[0, 2, :] == numpy.asarray([0, 0]))
-            assert numpy.all(word_masks[1, 0, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[1, 1, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[1, 2, :] == numpy.asarray([0, 0]))
-            assert numpy.all(word_masks[2, 0, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[2, 1, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[2, 2, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[3, 0, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[3, 1, :] == numpy.asarray([0, 1]))
-            assert numpy.all(word_masks[3, 2, :] == numpy.asarray([0, 0]))
         _output_debug_info.side_effect = new_debug
         model.train()
 

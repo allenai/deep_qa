@@ -5,7 +5,7 @@ from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.instances.text_classification import IndexedTextClassificationInstance
 from deep_qa.data.instances.text_classification import TextClassificationInstance
 from deep_qa.data.tokenizers import tokenizers
-from ...common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 class TestTextInstance(DeepQaTestCase):
     """

@@ -1,11 +1,10 @@
 # pylint: disable=no-self-use
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-
+from deep_qa.layers import L1Normalize
+from deep_qa.testing.test_case import DeepQaTestCase
 from keras.layers import Input, Masking
 from keras.models import Model
-from deep_qa.layers import L1Normalize
-from ..common.test_case import DeepQaTestCase
 
 
 class TestL1Normalize(DeepQaTestCase):

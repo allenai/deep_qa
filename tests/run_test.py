@@ -4,12 +4,10 @@ import os
 
 import numpy
 from numpy.testing import assert_almost_equal
-
+from deep_qa.run import compute_accuracy
 from deep_qa.run import run_model, load_model, evaluate_model
 from deep_qa.run import score_dataset, score_dataset_with_ensemble
-from deep_qa.run import compute_accuracy
-
-from .common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestRun(DeepQaTestCase):

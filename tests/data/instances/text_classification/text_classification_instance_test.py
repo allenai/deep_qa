@@ -3,7 +3,7 @@ import numpy
 
 from deep_qa.data.instances.text_classification import IndexedTextClassificationInstance
 from deep_qa.data.instances.text_classification import TextClassificationInstance
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestTextClassificationInstance:

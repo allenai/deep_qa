@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from deep_qa.common import util
-from .test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestCommonUtils(DeepQaTestCase):

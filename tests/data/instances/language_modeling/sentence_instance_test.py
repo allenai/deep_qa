@@ -1,13 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
-from numpy.testing import assert_array_equal
-
 from deep_qa.common.params import Params
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances import TextInstance
 from deep_qa.data.instances.language_modeling import IndexedSentenceInstance
 from deep_qa.data.instances.language_modeling import SentenceInstance
 from deep_qa.data.tokenizers import tokenizers
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+from numpy.testing import assert_array_equal
 
 
 class TestSentenceInstance(DeepQaTestCase):

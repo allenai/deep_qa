@@ -1,13 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
 import gzip
+
 import numpy
 import pytest
-
-from deep_qa.data.embeddings import PretrainedEmbeddings
-from deep_qa.data.data_indexer import DataIndexer
-from deep_qa.models.text_classification import ClassificationModel
 from deep_qa.common.checks import ConfigurationError
-from ..common.test_case import DeepQaTestCase
+from deep_qa.data.data_indexer import DataIndexer
+from deep_qa.data.embeddings import PretrainedEmbeddings
+from deep_qa.models.text_classification import ClassificationModel
+from deep_qa.testing.test_case import DeepQaTestCase
+
 
 class TestPretrainedEmbeddings(DeepQaTestCase):
     # pylint: disable=protected-access

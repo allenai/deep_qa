@@ -3,9 +3,9 @@ import numpy
 from numpy.testing import assert_array_almost_equal
 from keras.layers import Input, Lambda
 from keras.models import Model
-
 from deep_qa.layers.wrappers import TimeDistributed
-from ...common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+
 
 class TestTimeDistributed(DeepQaTestCase):
     def test_handles_multiple_inputs(self):
