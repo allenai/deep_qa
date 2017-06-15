@@ -13,10 +13,7 @@ class TestExampleExperiments(DeepQaTestCase):
         self.write_pretrained_vector_files()
         self.example_experiments_dir = "./example_experiments"
         self.entailment_dir = self.example_experiments_dir + "/entailment/"
-        self.memory_networks_dir = self.example_experiments_dir + "/memory_networks/"
-        self.multiple_choice_qa_dir = self.example_experiments_dir + "/multiple_choice_qa/"
         self.reading_comprehension_dir = self.example_experiments_dir + "/reading_comprehension/"
-        self.sentence_selection_dir = self.example_experiments_dir + "/sentence_selection/"
         self.sequence_tagging_dir = self.example_experiments_dir + "/sequence_tagging/"
 
     def test_entailment_examples_can_train(self):
