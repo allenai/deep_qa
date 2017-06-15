@@ -4,7 +4,7 @@ inherit from. Specifically, there are three classes:
 
 1. ``Instance``, that just exists as a base type with no functionality
 2. ``TextInstance``, which adds a ``words()`` method and a method to convert
-   strings to indices using a DataIndexer.
+   strings to indices using a Vocabulary.
 3. ``IndexedInstance``, which is a ``TextInstance`` that has had all of its
    strings converted into indices.
 
@@ -18,11 +18,12 @@ corresponding ``IndexedInstance``, which you can see in the individual files
 for each ``Instance`` type.
 """
 import itertools
-from typing import Any, Callable, Dict, List
+from typing import Dict, List
 
 from ...common.params import Params
+from ...common.util import pad_sequence_to_length
 from ..tokenizers import tokenizers
-from ..data_indexer import DataIndexer
+from ..vocabulary import Vocabulary
 
 
 class Instance:
@@ -50,7 +51,7 @@ class TextInstance(Instance):
     individual tokens here are encoded as strings, and we can
     get a list of strings out when we ask what words show up in the instance.
 
-    We use these kinds of instances to fit a ``DataIndexer`` (i.e., deciding
+    We use these kinds of instances to fit a ``Vocabulary`` (i.e., deciding
     which words should be mapped to an unknown token); to use them in training
     or testing, we need to first convert them into ``IndexedInstances``.
 
@@ -68,8 +69,8 @@ class TextInstance(Instance):
     def _words_from_text(self, text: str) -> Dict[str, List[str]]:
         return self.tokenizer.get_words_for_indexer(text)
 
-    def _index_text(self, text: str, data_indexer: DataIndexer) -> List[int]:
-        return self.tokenizer.index_text(text, data_indexer)
+    def _index_text(self, text: str, vocab: Vocabulary) -> List[int]:
+        return self.tokenizer.index_text(text, vocab)
 
     def words(self) -> Dict[str, List[str]]:
         """
@@ -82,7 +83,7 @@ class TextInstance(Instance):
         and for characters (in fact, words and characters are the only use
         cases I can think of for now, but this allows you to do other more
         crazy things if you want). You can call the namespaces whatever you
-        want, but if you want the ``DataIndexer`` to work correctly without
+        want, but if you want the ``Vocabulary`` to work correctly without
         namespace arguments, you should use the key 'words' to represent word
         tokens.
 
@@ -97,15 +98,15 @@ class TextInstance(Instance):
         """
         raise NotImplementedError
 
-    def to_indexed_instance(self, data_indexer: DataIndexer) -> 'IndexedInstance':
+    def to_indexed_instance(self, vocab: Vocabulary) -> 'IndexedInstance':
         """
         Converts the words in this ``Instance`` into indices using
-        the ``DataIndexer``.
+        the ``Vocabulary``.
 
         Parameters
         ----------
-        data_indexer : DataIndexer
-            ``DataIndexer`` to use in converting the ``Instance`` to
+        vocab : Vocabulary
+            ``Vocabulary`` to use in converting the ``Instance`` to
             an ``IndexedInstance``.
 
         Returns
@@ -147,8 +148,8 @@ class IndexedInstance(Instance):
     An indexed data instance has all word tokens replaced with word indices,
     along with some kind of label, suitable for input to a Keras model. An
     ``IndexedInstance`` is created from an ``Instance`` using a
-    ``DataIndexer``, and the indices here have no recoverable meaning without
-    the ``DataIndexer``.
+    ``Vocabulary``, and the indices here have no recoverable meaning without
+    the ``Vocabulary``.
 
     For example, we might have the following ``Instance``:
     - ``TrueFalseInstance('Jamie is nice, Holly is mean', True, 25)``
@@ -158,7 +159,7 @@ class IndexedInstance(Instance):
     - ``IndexedTrueFalseInstance([1, 6, 7, 1, 6, 8], True, 25)``
 
     This would mean that ``"Jamie"`` and ``"Holly"`` were OOV to the
-    ``DataIndexer``, and the other words were given indices.
+    ``Vocabulary``, and the other words were given indices.
     """
     @classmethod
     def empty_instance(cls):
@@ -276,18 +277,19 @@ class IndexedInstance(Instance):
         if 'num_word_characters' in padding_lengths:
             default_value = lambda: []
 
-        padded_word_sequence = IndexedInstance.pad_sequence_to_length(
-                word_sequence, padding_lengths['num_sentence_words'], default_value, truncate_from_right)
+        pad_sequence_to_length(word_sequence,
+                               padding_lengths['num_sentence_words'],
+                               default_value,
+                               truncate_from_right)
         if 'num_word_characters' in padding_lengths:
             desired_length = padding_lengths['num_word_characters']
-            longest_word = max(padded_word_sequence, key=len)
+            longest_word = max(word_sequence, key=len)
             if desired_length > len(longest_word):
                 # since we want to pad to greater than the longest word, we add a
                 # "dummy word" to get the speed of itertools.zip_longest
-                padded_word_sequence.append([0]*desired_length)
+                word_sequence.append([0]*desired_length)
             # pad the list of lists to the longest sublist, appending 0's
-            words_padded_to_longest = list(zip(*itertools.zip_longest(*padded_word_sequence,
-                                                                      fillvalue=0)))
+            words_padded_to_longest = list(zip(*itertools.zip_longest(*word_sequence, fillvalue=0)))
             if desired_length > len(longest_word):
                 # now we remove the "dummy word" if we appended one.
                 words_padded_to_longest.pop()
@@ -295,62 +297,5 @@ class IndexedInstance(Instance):
             # now we need to truncate all of them to our desired length.
             # since truncate_from_right is always False, we chop off starting from
             # the right.
-            padded_word_sequence = [list(word[:desired_length])
-                                    for word in words_padded_to_longest]
-        return padded_word_sequence
-
-    @staticmethod
-    def pad_sequence_to_length(sequence: List,
-                               desired_length: int,
-                               default_value: Callable[[], Any]=lambda: 0,
-                               truncate_from_right: bool=True) -> List:
-        """
-        Take a list of indices and pads them to the desired length.
-
-        Parameters
-        ----------
-        word_sequence : List of int
-            A list of word indices.
-
-        desired_length : int
-            Maximum length of each sequence. Longer sequences
-            are truncated to this length, and shorter ones are padded to it.
-
-        default_value: Callable, default=lambda: 0
-            Callable that outputs a default value (of any type) to use as
-            padding values.
-
-        truncate_from_right : bool, default=True
-            If truncating the indices is necessary, this parameter dictates
-            whether we do so on the left or right.
-
-        Returns
-        -------
-        padded_word_sequence : List of int
-            A padded or truncated list of word indices.
-
-        Notes
-        -----
-        The reason we truncate from the right by default is for
-        cases that are questions, with long set ups. We at least want to get
-        the question encoded, which is always at the end, even if we've lost
-        much of the question set up. If you want to truncate from the other
-        direction, you can.
-        """
-        if truncate_from_right:
-            truncated = sequence[-desired_length:]
-        else:
-            truncated = sequence[:desired_length]
-        if len(truncated) < desired_length:
-            # If the length of the truncated sequence is less than the desired
-            # length, we need to pad.
-            padding_sequence = [default_value()] * (desired_length - len(truncated))
-            if truncate_from_right:
-                # When we truncate from the right, we add zeroes to the front.
-                padding_sequence.extend(truncated)
-                return padding_sequence
-            else:
-                # When we do not truncate from the right, we add zeroes to the end.
-                truncated.extend(padding_sequence)
-                return truncated
-        return truncated
+            word_sequence = [list(word[:desired_length]) for word in words_padded_to_longest]
+        return word_sequence

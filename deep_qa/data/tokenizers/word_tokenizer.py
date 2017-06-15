@@ -1,63 +1,79 @@
-from typing import Callable, Dict, List, Tuple
+from typing import List
 
-from overrides import overrides
-from keras.layers import Layer
-
+from ...common import Params
 from .tokenizer import Tokenizer
-from .word_processor import WordProcessor
-from ..data_indexer import DataIndexer
-from ...common.params import Params
+from .word_filter import WordFilter, PassThroughWordFilter, word_filters
+from .word_splitter import WordSplitter, SimpleWordSplitter, word_splitters
+from .word_stemmer import WordStemmer, PassThroughWordStemmer, word_stemmers
 
 
 class WordTokenizer(Tokenizer):
     """
-    A ``WordTokenizer`` splits strings into word tokens.
-
-    There are several ways that you can split a string into words, so we rely on a
-    ``WordProcessor`` to do that work for us.  Note that we're using the word "tokenizer" here for
-    something different than is typical in NLP - we're referring here to how strings are
-    represented as numpy arrays, not the linguistic notion of splitting sentences into tokens.
-    Those things are handled in the ``WordProcessor``, which is a common dependency in several
-    ``Tokenizers``.
+    A ``WordTokenizer`` handles the splitting of strings into words (with the use of a
+    WordSplitter) as well as any desired post-processing (e.g., stemming, filtering, etc.).  Note
+    that we leave one particular piece of post-processing for later: the decision of whether or not
+    to lowercase the token.  This is for two reasons: (1) if you want to make two different casing
+    decisions for whatever reason, you won't have to run the tokenizer twice, and more importantly
+    (2) if you want to lowercase words for your word embedding, but retain capitalization in a
+    character-level representation, we need to retain the capitalization here.
 
     Parameters
     ----------
-    processor: Dict[str, Any], default={}
-        Contains parameters for processing text strings into word tokens, including, e.g.,
-        splitting, stemming, and filtering words.  See ``WordProcessor`` for a complete description
-        of available parameters.
+    word_splitter : ``WordSplitter``, optional (default=``SimpleWordSplitter``)
+        The :class:`WordSplitter` to use for splitting text strings into word tokens.
+
+    word_filter : ``WordFilter``, optional (default=``PassThroughWordFilter``)
+        The :class:`WordFilter` to use for, e.g., removing stopwords.  Default is to do no
+        filtering.
+
+    word_stemmer : ``WordStemmer``, optional (default=``PassThroughWordStemmer``)
+        The :class:`WordStemmer` to use.  Default is no stemming.
     """
-    def __init__(self, params: Params):
-        self.word_processor = WordProcessor(params.pop('processor', {}))
-        super(WordTokenizer, self).__init__(params)
+    def __init__(self,
+                 word_splitter: WordSplitter=SimpleWordSplitter,
+                 word_filter: WordFilter=PassThroughWordFilter,
+                 word_stemmer: WordStemmer=PassThroughWordStemmer):
+        self.word_splitter = word_splitter
+        self.word_filter = word_filter
+        self.word_stemmer = word_stemmer
 
-    @overrides
     def tokenize(self, text: str) -> List[str]:
-        return self.word_processor.get_tokens(text)
+        """
+        Does whatever processing is required to convert a string of text into a sequence of tokens.
 
-    @overrides
-    def get_words_for_indexer(self, text: str) -> Dict[str, List[str]]:
-        return {'words': self.tokenize(text)}
+        At a minimum, this uses a ``WordSplitter`` to split words into text.  It may also do
+        stemming or stopword removal, depending on the parameters given to the constructor.
+        """
+        words = self.word_splitter.split_words(text)
+        filtered_words = self.word_filter.filter_words(words)
+        stemmed_words = [self.word_stemmer.stem_word(word) for word in filtered_words]
+        return stemmed_words
 
-    @overrides
-    def index_text(self, text: str, data_indexer: DataIndexer) -> List:
-        return [data_indexer.get_word_index(word, namespace='words') for word in self.tokenize(text)]
+    @classmethod
+    def from_params(cls, params: Params) -> 'WordTokenizer':
+        """
+        Parameters
+        ----------
+        word_splitter : ``str``, default=``"simple"``
+            The string name of the ``WordSplitter`` of choice (see the options at the bottom of
+            ``word_splitter.py``).
 
-    @overrides
-    def embed_input(self,
-                    input_layer: Layer,
-                    embed_function: Callable[[Layer, str, str], Layer],
-                    text_trainer,
-                    embedding_suffix: str=""):
-        # pylint: disable=protected-access
-        return embed_function(input_layer,
-                              embedding_name='words' + embedding_suffix,
-                              vocab_name='words')
+        word_filter : ``str``, default=``"pass_through"``
+            The name of the ``WordFilter`` to use (see the options at the bottom of
+            ``word_filter.py``).
 
-    @overrides
-    def get_sentence_shape(self, sentence_length: int, word_length: int) -> Tuple[int]:
-        return (sentence_length,)
-
-    @overrides
-    def get_padding_lengths(self, sentence_length: int, word_length: int) -> Dict[str, int]:
-        return {'num_sentence_words': sentence_length}
+        word_stemmer : ``str``, default=``"pass_through"``
+            The name of the ``WordStemmer`` to use (see the options at the bottom of
+            ``word_stemmer.py``).
+        """
+        word_splitter_choice = params.pop_choice('word_splitter', list(word_splitters.keys()),
+                                                 default_to_first_choice=True)
+        word_splitter = word_splitters[word_splitter_choice]()
+        word_filter_choice = params.pop_choice('word_filter', list(word_filters.keys()),
+                                               default_to_first_choice=True)
+        word_filter = word_filters[word_filter_choice]()
+        word_stemmer_choice = params.pop_choice('word_stemmer', list(word_stemmers.keys()),
+                                                default_to_first_choice=True)
+        word_stemmer = word_stemmers[word_stemmer_choice]()
+        params.assert_empty(cls.__name__)
+        return cls(word_splitter=word_splitter, word_filter=word_filter, word_stemmer=word_stemmer)

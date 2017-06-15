@@ -7,10 +7,10 @@ from overrides import overrides
 class WordSplitter:
     """
     A ``WordSplitter`` splits strings into words.  This is typically called a "tokenizer" in NLP,
-    but we need ``Tokenizer`` to refer to something else, so we're using ``WordSplitter`` here
-    instead.
+    because splitting strings into characters is trivial, but we use ``Tokenizer`` to refer to the
+    higher-level object that splits strings into tokens (which could just be character tokens).
+    So, we're using "word splitter" here for this.
     """
-
     def split_words(self, sentence: str) -> List[str]:
         raise NotImplementedError
 
@@ -76,17 +76,28 @@ class SimpleWordSplitter(WordSplitter):
         return token and token not in self.special_cases
 
 
+class SpaceWordSplitter(WordSplitter):
+    """
+    A ``WordSplitter`` that assumes you've already done your own tokenization somehow and have
+    separated the tokens by spaces.  We just split the input string on whitespace and return the
+    resulting list.
+
+    Note that we use ``sentence.split()``, which means that the amount of whitespace between the
+    tokens does not matter.  This will never result in spaces being included as tokens.
+    """
+    @overrides
+    def split_words(self, sentence: str) -> List[str]:
+        return sentence.split()
+
+
 class NltkWordSplitter(WordSplitter):
     """
-    A tokenizer that uses nltk's word_tokenize method.
+    A ``WordSplitter`` that uses nltk's ``word_tokenize`` method.
 
     I found that nltk is very slow, so I switched to using my own simple one, which is a good deal
     faster.  But I'm adding this one back so that there's consistency with older versions of the
     code, if you really want it.
     """
-    def __init__(self):
-        pass
-
     @overrides
     def split_words(self, sentence: str) -> List[str]:
         # Import is here because it's slow, and by default unnecessary.
@@ -96,7 +107,7 @@ class NltkWordSplitter(WordSplitter):
 
 class SpacyWordSplitter(WordSplitter):
     """
-    A tokenizer that uses spaCy's Tokenizer, which is much faster than the others.
+    A ``WordSplitter`` that uses spaCy's Tokenizer, which is much faster than the others.
     """
     def __init__(self):
         # Import is here it's slow, and can be unnecessary.
@@ -108,26 +119,8 @@ class SpacyWordSplitter(WordSplitter):
         return [str(token.lower_) for token in self.en_nlp.tokenizer(sentence)]
 
 
-class NoOpWordSplitter(WordSplitter):
-    """
-    This is a word splitter that does nothing.  We're playing a little loose with python's dynamic
-    typing, breaking the typical WordSplitter API a bit and assuming that you've already split
-    ``sentence`` into a list somehow, so you don't need to do anything else here.  For example, the
-    ``PreTokenizedTaggingInstance`` requires this word splitter, because it reads in pre-tokenized
-    data from a file.
-    """
-    @overrides
-    def __init__(self):
-        pass
-
-    @overrides
-    def split_words(self, sentence: str) -> List[str]:
-        assert isinstance(sentence, list), "This splitter is only meant to be used for pre-split text"
-        return sentence
-
-
 word_splitters = OrderedDict()  # pylint: disable=invalid-name
 word_splitters['simple'] = SimpleWordSplitter
+word_splitters['spaces'] = SpaceWordSplitter
 word_splitters['nltk'] = NltkWordSplitter
 word_splitters['spacy'] = SpacyWordSplitter
-word_splitters['no_op'] = NoOpWordSplitter

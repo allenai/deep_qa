@@ -1,5 +1,5 @@
 from itertools import zip_longest
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 import random
 
 
@@ -16,6 +16,41 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     make a function out of it.
     """
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
+
+
+def pad_sequence_to_length(sequence: List,
+                           desired_length: int,
+                           default_value: Callable[[], Any]=lambda: 0,
+                           padding_on_right: bool=True):
+    """
+    Take a list of objects and pads it to the desired length.  This `modifies` the input sequence,
+    instead of returning a new sequence.
+
+    Parameters
+    ----------
+    sequence : List
+        A list of objects to be padded.
+
+    desired_length : int
+        Maximum length of each sequence. Longer sequences are truncated to this length, and
+        shorter ones are padded to it.
+
+    default_value: Callable, default=lambda: 0
+        Callable that outputs a default value (of any type) to use as padding values.
+
+    padding_on_right : bool, default=True
+        When we add padding tokens (or truncate the sequence), should we do it on the right or
+        the left?
+    """
+    if padding_on_right:
+        del sequence[desired_length:]
+    else:
+        del sequence[:-desired_length]
+    for _ in range(desired_length - len(sequence)):
+        if padding_on_right:
+            sequence.append(default_value())
+        else:
+            sequence.insert(0, default_value())
 
 
 def add_noise_to_dict_values(dictionary: Dict[Any, float], noise_param: float) -> Dict[Any, float]:
