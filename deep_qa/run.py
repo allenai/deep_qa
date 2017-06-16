@@ -1,8 +1,9 @@
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 import sys
 import logging
-import shutil
 import os
+import json
+from copy import deepcopy
 
 import random
 import pyhocon
@@ -46,7 +47,20 @@ def prepare_environment(params: Union[Params, dict]):
     log_keras_version_info()
 
 
-def run_model(param_path: str, model_class=None):
+def run_model_from_file(param_path: str):
+    """
+    A wrapper around the run_model function which loads json from a file.
+
+    Parameters
+    ----------
+    param_path: str, required.
+        A json paramter file specifying a DeepQA model.
+    """
+    param_dict = pyhocon.ConfigFactory.parse_file(param_path)
+    run_model(param_dict)
+
+
+def run_model(param_dict: Dict[str, any], model_class=None):
     """
     This function is the normal entry point to DeepQA. Use this to run a DeepQA model in
     your project. Note that if you care about exactly reproducible experiments,
@@ -59,13 +73,12 @@ def run_model(param_path: str, model_class=None):
 
     Parameters
     ----------
-    param_path: str, required.
-        A json file specifying a DeepQaModel.
+    param_dict: Dict[str, any], required.
+        A parameter file specifying a DeepQaModel.
     model_class: DeepQaModel, optional (default=None).
         This option is useful if you have implemented a new model class which
         is not one of the ones implemented in this library.
     """
-    param_dict = pyhocon.ConfigFactory.parse_file(param_path)
     params = Params(replace_none(param_dict))
     prepare_environment(params)
 
@@ -83,7 +96,9 @@ def run_model(param_path: str, model_class=None):
         handler.setLevel(logging.INFO)
         handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
         logging.getLogger().addHandler(handler)
-        shutil.copyfile(param_path, log_dir + "_model_params.json")
+        serialisation_params = deepcopy(params).as_dict(quiet=True)
+        with open(log_dir + "_model_params.json", "w") as param_file:
+            json.dump(serialisation_params, param_file)
 
     num_threads = os.environ.get('OMP_NUM_THREADS')
     config = {
