@@ -63,12 +63,9 @@ This library has several main components:
    data/about_data
    data/instances
    data/entailment
-   data/multiple_choice_qa
    data/reading_comprehension
-   data/sentence_selection
    data/sequence_tagging
    data/text_classification
-   data/wrappers
    data/tokenizers
    data/data_generator
    data/datasets
@@ -80,8 +77,6 @@ This library has several main components:
 
    models/about_models
    models/entailment
-   models/multiple_choice_qa
-   models/sentence_selection
    models/reading_comprehension
    models/text_classification
 
@@ -95,7 +90,6 @@ This library has several main components:
    layers/backend
    layers/encoders
    layers/entailment_models
-   layers/tuple_matchers
    layers/wrappers
 
 .. toctree::

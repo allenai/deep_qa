@@ -1,8 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
-from numpy.testing import assert_array_almost_equal
-
 from deep_qa.data.instances.sequence_tagging.tagging_instance import IndexedTaggingInstance
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+from numpy.testing import assert_array_almost_equal
 
 
 class TestIndexedTaggingInstance(DeepQaTestCase):

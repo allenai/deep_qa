@@ -24,11 +24,3 @@ TimeDistributed
     :members:
     :undoc-members:
     :show-inheritance:
-
-TimeDistributedWithMask
------------------------
-
-.. automodule:: deep_qa.layers.wrappers.time_distributed_with_mask
-    :members:
-    :undoc-members:
-    :show-inheritance:

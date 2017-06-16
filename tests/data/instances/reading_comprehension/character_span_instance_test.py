@@ -2,10 +2,9 @@
 from typing import Tuple
 
 import numpy
-
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.reading_comprehension.character_span_instance import CharacterSpanInstance
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestCharacterSpanInstance(DeepQaTestCase):

@@ -1,11 +1,9 @@
 # pylint: disable=invalid-name,no-self-use
-from keras import backend as K
 import numpy
 from numpy.testing import assert_almost_equal
-
+from keras import backend as K
+from deep_qa.testing.test_case import DeepQaTestCase
 from deep_qa.training.losses import ranking_loss, ranking_loss_with_margin
-
-from ..common.test_case import DeepQaTestCase
 
 
 class TestLosses(DeepQaTestCase):

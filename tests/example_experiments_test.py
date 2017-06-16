@@ -4,7 +4,7 @@ import pyhocon
 from deep_qa.common.params import Params, replace_none
 from deep_qa.models import concrete_models
 
-from .common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestExampleExperiments(DeepQaTestCase):
@@ -13,31 +13,13 @@ class TestExampleExperiments(DeepQaTestCase):
         self.write_pretrained_vector_files()
         self.example_experiments_dir = "./example_experiments"
         self.entailment_dir = self.example_experiments_dir + "/entailment/"
-        self.memory_networks_dir = self.example_experiments_dir + "/memory_networks/"
-        self.multiple_choice_qa_dir = self.example_experiments_dir + "/multiple_choice_qa/"
         self.reading_comprehension_dir = self.example_experiments_dir + "/reading_comprehension/"
-        self.sentence_selection_dir = self.example_experiments_dir + "/sentence_selection/"
         self.sequence_tagging_dir = self.example_experiments_dir + "/sequence_tagging/"
 
     def test_entailment_examples_can_train(self):
         self.write_snli_files()
         snli_decomposable_attention = self.entailment_dir + "snli_decomposable_attention.json"
         self.check_experiment_type_can_train(snli_decomposable_attention)
-
-    def test_question_answer_lstm_can_train(self):
-        self.write_question_answer_files()
-        question_answer_lstm = self.multiple_choice_qa_dir + "question_answer_lstm.json"
-        self.check_experiment_type_can_train(question_answer_lstm)
-
-    def test_tuple_entailment_can_train(self):
-        self.write_tuple_inference_files()
-        svo_mc_tuple_entailment = self.multiple_choice_qa_dir + "svo_mc_tuple_entailment.json"
-        self.check_experiment_type_can_train(svo_mc_tuple_entailment)
-
-    def test_tuple_inference_can_train(self):
-        self.write_tuple_inference_files()
-        tuple_inference = self.multiple_choice_qa_dir + "tuple_inference.json"
-        self.check_experiment_type_can_train(tuple_inference)
 
     def test_bidaf_can_train(self):
         self.write_span_prediction_files()
@@ -53,11 +35,6 @@ class TestExampleExperiments(DeepQaTestCase):
         self.write_who_did_what_files()
         as_reader_who_did_what = self.reading_comprehension_dir + "asreader_who_did_what.json"
         self.check_experiment_type_can_train(as_reader_who_did_what)
-
-    def test_siamese_sentence_selection_can_train(self):
-        self.write_sentence_selection_files()
-        siamese_sentence_selector_squad = self.sentence_selection_dir + "siamese_sentence_selector_squad.json"
-        self.check_experiment_type_can_train(siamese_sentence_selector_squad)
 
     def test_simple_tagger_can_train(self):
         self.write_sequence_tagging_files()

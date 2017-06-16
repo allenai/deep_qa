@@ -1,8 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
+from deep_qa.common.params import Params
 from deep_qa.data.datasets import LanguageModelingDataset
 from deep_qa.data.instances.language_modeling.sentence_instance import SentenceInstance
-from deep_qa.common.params import Params
-from tests.common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestLanguageModellingDataset(DeepQaTestCase):

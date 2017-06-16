@@ -1,11 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
-import tensorflow
 import numpy
-
-from deep_qa.training.train_utils import pin_variable_device_scope, slice_batch, average_gradients
-from deep_qa.training.train_utils import _get_dense_gradient_average, _get_sparse_gradient_average
+import tensorflow
 from deep_qa.common.params import Params
-from ..common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+from deep_qa.training.train_utils import _get_dense_gradient_average, _get_sparse_gradient_average
+from deep_qa.training.train_utils import pin_variable_device_scope, slice_batch, average_gradients
 
 
 class TestTrainUtils(DeepQaTestCase):

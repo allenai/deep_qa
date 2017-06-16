@@ -1,12 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
-from os.path import join
 import random
+from os.path import join
 
-from overrides import overrides
 import numpy
-
 from deep_qa.data.dataset_readers.squad_sentence_selection_reader import SquadSentenceSelectionReader
-from ...common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+from overrides import overrides
 
 
 class TestSquadSentenceSelectionReader(DeepQaTestCase):

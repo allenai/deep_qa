@@ -4,10 +4,9 @@ from numpy.testing import assert_almost_equal
 import keras.backend as K
 from keras.layers import Input, Masking
 from keras.models import Model
-
 from deep_qa.layers.backend import BatchDot
 from deep_qa.layers.wrappers import OutputMask
-from ...common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestBatchDotLayer(DeepQaTestCase):

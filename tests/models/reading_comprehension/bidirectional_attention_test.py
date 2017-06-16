@@ -1,10 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from flaky import flaky
-
-from deep_qa.models.reading_comprehension import BidirectionalAttentionFlow
 from deep_qa.common.params import Params
-from ...common.test_case import DeepQaTestCase
+from deep_qa.models.reading_comprehension import BidirectionalAttentionFlow
+from deep_qa.testing.test_case import DeepQaTestCase
+from flaky import flaky
 
 
 class TestBidirectionalAttentionFlow(DeepQaTestCase):

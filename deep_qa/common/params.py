@@ -121,11 +121,19 @@ class Params(MutableMapping):
             raise ConfigurationError(message)
         return value
 
-    def as_dict(self):
+    def as_dict(self, quiet=False):
         """
         Sometimes we need to just represent the parameters as a dict, for instance when we pass
         them to a Keras layer(so that they can be serialised).
+
+        Parameters
+        ----------
+        quiet: bool, optional (default = False)
+            Whether to log the parameters before returning them as a dict.
         """
+        if quiet:
+            return self.params
+
         def log_recursively(parameters, history):
             for key, value in parameters.items():
                 if isinstance(value, dict):

@@ -1,2 +1,0 @@
-from .background_instance import BackgroundInstance, IndexedBackgroundInstance
-from .background_instance import read_background_from_file

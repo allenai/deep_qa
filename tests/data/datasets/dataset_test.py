@@ -2,7 +2,7 @@
 from deep_qa.data.datasets.dataset import Dataset, TextDataset
 from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
 
-from tests.common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestDataset:

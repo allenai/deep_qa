@@ -2,7 +2,7 @@
 from deep_qa.data.datasets import SnliDataset
 from deep_qa.data.instances.entailment.snli_instance import SnliInstance
 
-from tests.common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestSnliDataset(DeepQaTestCase):
