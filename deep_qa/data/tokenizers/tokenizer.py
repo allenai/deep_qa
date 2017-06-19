@@ -1,5 +1,8 @@
 from typing import List
 
+from . import tokenizers
+from ...common import Params
+
 
 class Tokenizer:
     """
@@ -23,3 +26,8 @@ class Tokenizer:
         The only public method for this class.  Actually implements splitting words into tokens.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def from_params(params: Params):
+        choice = params.pop_choice('type', list(tokenizers.keys()), default_to_first_choice=True)
+        return tokenizers[choice].from_params(params)

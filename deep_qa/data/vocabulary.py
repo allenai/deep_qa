@@ -7,35 +7,44 @@ import tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-
-class _TokenToIndexDefaultDict(defaultdict):
-    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str):
+class _NamespaceDependentDefaultDict(defaultdict):
+    """
+    Using ``defaultdicts`` to handle namespaces is really convenient - you don't need to worry
+    about whether you've seen a particular namespace before in any of the methods in
+    ``Vocabulary``.  But because some namespaces need padding (like "tokens") and some don't (like
+    "labels"), we want different defaults depending on the namespace.  This lets us still use a
+    ``defaultdict``, but have different default values depending on the key that we're given.
+    """
+    def __init__(self, non_padded_namespaces: List[str], padded_function, non_padded_function):
         self._non_padded_namespaces = non_padded_namespaces
-        self._padding_token = padding_token
-        self._oov_token = oov_token
-        super(_TokenToIndexDefaultDict, self).__init__()
+        self._padded_function = padded_function
+        self._non_padded_function = non_padded_function
+        super(_NamespaceDependentDefaultDict, self).__init__()
 
-    def __missing__(self, key):
-        if key in self._non_padded_namespaces:
-            value = {}
-        else:
-            value = {self._padding_token: 0, self._oov_token: 1}
+    def __missing__(self, key: str):
+        value = None
+        for namespace_str in self._non_padded_namespaces:
+            if namespace_str[0] == '*' and key.endswith(namespace_str[1:]):
+                value = self._non_padded_function()
+            elif namespace_str == key:
+                value = self._non_padded_function()
+        if value is None:
+            value = self._padded_function
         dict.__setitem__(self, key, value)
 
 
-class _IndexToTokenDefaultDict(defaultdict):
+class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str):
-        self._non_padded_namespaces = non_padded_namespaces
-        self._padding_token = padding_token
-        self._oov_token = oov_token
-        super(_IndexToTokenDefaultDict, self).__init__()
+        super(_TokenToIndexDefaultDict, self).__init__(non_padded_namespaces,
+                                                       lambda: {padding_token: 0, oov_token: 1},
+                                                       lambda: {})
 
-    def __missing__(self, key):
-        if key in self._non_padded_namespaces:
-            value = []
-        else:
-            value = [self._padding_token, self._oov_token]
-        dict.__setitem__(self, key, value)
+
+class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
+    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str):
+        super(_IndexToTokenDefaultDict, self).__init__(non_padded_namespaces,
+                                                       lambda: [padding_token, oov_token],
+                                                       lambda: [])
 
 
 class Vocabulary:
@@ -69,12 +78,19 @@ class Vocabulary:
         to be no larger than this.  If you specify a dictionary, the keys need to be the same as
         the namespaces in the ``counter``, and any missing key will have a value of ``None``, which
         means no cap on the vocabulary size.
-    non_padded_namespaces : ``List[str]``, optional (default=``None``)
+    non_padded_namespaces : ``List[str]``, optional (default=``["*tags", "*labels"]``)
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
         mapping NER or SRL tags, or class labels, to integers, you probably do not want to reserve
         indices for padding and out-of-vocabulary tokens.  Use this field to specify which
         namespaces should `not` have padding and OOV tokens added.
+
+        The format of each element of this is either a string, which must match field names
+        exactly,  or "*" followed by a string, which we match as a suffix against field names.
+
+        We try to make the default here reasonable, so that you don't have to think about this.  As
+        long as your namespace ends in "tags" or "labels" (which is true by default for all tag and
+        label fields in this code), you don't have to specify anything here.
     """
     def __init__(self,
                  counter: Dict[str, Dict[str, int]]=None,
@@ -84,7 +100,7 @@ class Vocabulary:
         self._padding_token = "@@PADDING@@"
         self._oov_token = "@@UNKOWN@@"
         if non_padded_namespaces is None:
-            non_padded_namespaces = []
+            non_padded_namespaces = ["*tags", "*labels"]
         if not isinstance(max_vocab_size, dict):
             max_vocab_size = defaultdict(lambda: max_vocab_size)
         self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,

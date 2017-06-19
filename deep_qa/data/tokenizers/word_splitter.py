@@ -3,6 +3,7 @@ from typing import List
 
 from overrides import overrides
 
+from ...common import Params
 
 class WordSplitter:
     """
@@ -13,6 +14,12 @@ class WordSplitter:
     """
     def split_words(self, sentence: str) -> List[str]:
         raise NotImplementedError
+
+    @staticmethod
+    def from_params(params: Params) -> 'WordSplitter':
+        choice = params.pop_choice('type', list(word_splitters.keys()), default_to_first_choice=True)
+        params.assert_empty('WordSplitter')
+        return word_splitters[choice]()
 
 
 class SimpleWordSplitter(WordSplitter):

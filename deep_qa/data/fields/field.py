@@ -1,43 +1,67 @@
-"""
-A ``Field`` is some piece of a data instance that ends up as an array in a model (either as an
-input or an output).  Data instances are just collections of fields.
-
-
-Fields go through up to two steps of processing: (1) tokenized fields are converted into token ids,
-(2) fields containing token ids (or any other numeric data) are padded (if necessary) and converted
-into data arrays.  We have two ``Field`` objects corresponding to fields in each stage of this
-processing pipeline: ``UnindexedFields`` are fields containing raw strings (already tokenized) that
-need to be converted into token IDs.  We use these fields to compute a vocabulary, then convert
-them to ``IndexedFields``.  ``IndexedFields`` have a method for determining padding lengths, so
-that a data generator object can intelligently batch together instances, then pad them.
-
-If you are writing a new ``Field`` class, if there is nothing in the field that needs to be
-converted from strings to integers, you should just subclass ``IndexedField``.  If you `do` need to
-convert strings to integers, you should subclass both ``IndexedField`` and ``UnindexedField``, and
-make the ``UnindexedField`` subclass public, and the other private.
-"""
 from typing import Dict, List
 
 import numpy
 
 from ..vocabulary import Vocabulary
 
-# Because of how the dependencies work between these objects, we're defining them in reverse order,
-# so that UnindexedField can reference IndexedField in its return types.
+class Field:
+    """
+    A ``Field`` is some piece of a data instance that ends up as an array in a model (either as an
+    input or an output).  Data instances are just collections of fields.
 
-class IndexedField:
+    Fields go through up to two steps of processing: (1) tokenized fields are converted into token
+    ids, (2) fields containing token ids (or any other numeric data) are padded (if necessary) and
+    converted into data arrays.  The ``Field`` API has methods around both of these steps,
+    though they may not be needed for some concrete ``Field`` classes - if your field doesn't have
+    any strings that need indexing, you don't need to implement ``count_vocab_items`` or ``index``.
+    These methods ``pass`` by default.
+
+    Once a vocabulary is computed and all fields are indexed, we will determine padding lengths,
+    then intelligently batch together instances and pad them into actual arrays.
     """
-    An ``IndexedField`` is a field that is almost ready to be put into a data array for use in a
-    model.  The only thing missing is padding.  The methods on this object allow you to get padding
-    lengths, so you can group things into batches of similar size, and then actually pad the
-    field into a fixed-size array that can be used in a batch of instances.
-    """
+    def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
+        """
+        If there are strings in this field that need to be converted into integers through a
+        :class:`Vocabulary`, here is where we count them, to determine which tokens are in or out
+        of the vocabulary.
+
+        If your ``Field`` does not have any strings that need to be converted into indices, you do
+        not need to implement this method.
+
+        A note on this ``counter``: because ``Fields`` can represent conceptually different things,
+        we separate the vocabulary items by `namespaces`.  This way, we can use a single shared
+        mechanism to handle all mappings from strings to integers in all fields, while keeping
+        words in a ``TextField`` from sharing the same ids with labels in a ``LabelField`` (e.g.,
+        "entailment" or "contradiction" are labels in an entailment task)
+
+        Additionally, a single ``Field`` might want to use multiple namespaces - ``TextFields`` can
+        be represented as a combination of word ids and character ids, and you don't want words and
+        characters to share the same vocabulary - "a" as a word should get a different id from "a"
+        as a character, and the vocabulary sizes of words and characters are very different.
+
+        Because of this, the first key in the ``counter`` object is a `namespace`, like "tokens",
+        "token_characters", "tags", or "labels", and the second key is the actual vocabulary item.
+        """
+        pass
+
+    def index(self, vocab: Vocabulary):
+        """
+        Given a :class:`Vocabulary`, converts all strings in this field into (typically) integers.
+        This `modifies` the ``Field`` object, it does not return anything.
+
+        If your ``Field`` does not have any strings that need to be converted into indices, you do
+        not need to implement this method.
+        """
+        pass
+
     def get_padding_lengths(self) -> Dict[str, int]:
         """
         If there are things in this field that need padding, note them here.  In order to pad a
         batch of instance, we get all of the lengths from the batch, take the max, and pad
         everything to that length (or use a pre-specified maximum length).  The return value is a
         dictionary mapping keys to lengths, like {'num_tokens': 13}.
+
+        This is always called after :func:`index`.
         """
         raise NotImplementedError
 
@@ -50,24 +74,15 @@ class IndexedField:
         """
         raise NotImplementedError
 
+    def empty_field(self) -> 'Field':
+        """
+        So that ``ListField`` can pad the number of fields in a list (e.g., the number of answer
+        option ``TextFields``), we need a representation of an empty field of each type.  This
+        returns that.  This will only ever be called when we're to the point of calling
+        :func:`pad`, so you don't need to worry about ``get_padding_lengths``,
+        ``count_vocab_items``, etc., being called on this empty field.
 
-class UnindexedField:
-    """
-    An ``UnindexedField`` is a field that still has strings instead of token ids.  We use these
-    fields to compute vocabularies, and then convert them into ``IndexedFields``, from which we can
-    actually construct data arrays.
-    """
-    def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
-        """
-        If there are strings in this field that need to be converted into integers through a
-        :class:`Vocabulary`, here is where we count them, to determine which tokens are in or out
-        of the vocabulary.
-        """
-        raise NotImplementedError
-
-    def index(self, vocab: Vocabulary) -> IndexedField:
-        """
-        Given a :class:`Vocabulary`, converts all tokens in this field into (typically) integer
-        arrays, returning an ``IndexedField`` as a result.
+        We make this an instance method instead of a static method so that if there is any state
+        in the Field, we can copy it over (e.g., the token indexers in ``TextField``).
         """
         raise NotImplementedError

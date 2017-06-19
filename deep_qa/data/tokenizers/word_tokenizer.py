@@ -2,9 +2,9 @@ from typing import List
 
 from ...common import Params
 from .tokenizer import Tokenizer
-from .word_filter import WordFilter, PassThroughWordFilter, word_filters
-from .word_splitter import WordSplitter, SimpleWordSplitter, word_splitters
-from .word_stemmer import WordStemmer, PassThroughWordStemmer, word_stemmers
+from .word_filter import WordFilter, PassThroughWordFilter
+from .word_splitter import WordSplitter, SimpleWordSplitter
+from .word_stemmer import WordStemmer, PassThroughWordStemmer
 
 
 class WordTokenizer(Tokenizer):
@@ -66,14 +66,8 @@ class WordTokenizer(Tokenizer):
             The name of the ``WordStemmer`` to use (see the options at the bottom of
             ``word_stemmer.py``).
         """
-        word_splitter_choice = params.pop_choice('word_splitter', list(word_splitters.keys()),
-                                                 default_to_first_choice=True)
-        word_splitter = word_splitters[word_splitter_choice]()
-        word_filter_choice = params.pop_choice('word_filter', list(word_filters.keys()),
-                                               default_to_first_choice=True)
-        word_filter = word_filters[word_filter_choice]()
-        word_stemmer_choice = params.pop_choice('word_stemmer', list(word_stemmers.keys()),
-                                                default_to_first_choice=True)
-        word_stemmer = word_stemmers[word_stemmer_choice]()
+        word_splitter = WordSplitter.from_params(params.pop('word_splitter'))
+        word_filter = WordFilter.from_params(params.pop('word_filter'))
+        word_stemmer = WordStemmer.from_params(params.pop('word_stemmer'))
         params.assert_empty(cls.__name__)
         return cls(word_splitter=word_splitter, word_filter=word_filter, word_stemmer=word_stemmer)

@@ -3,6 +3,8 @@ from typing import List
 
 from overrides import overrides
 
+from ...common import Params
+
 
 class WordFilter:
     """
@@ -15,6 +17,12 @@ class WordFilter:
     def filter_words(self, words: List[str]) -> List[str]:
         """Filters words from the given word list"""
         raise NotImplementedError
+
+    @staticmethod
+    def from_params(params: Params) -> 'WordFilter':
+        choice = params.pop_choice('type', list(word_filters.keys()), default_to_first_choice=True)
+        params.assert_empty('WordFilter')
+        return word_filters[choice]()
 
 
 class PassThroughWordFilter(WordFilter):

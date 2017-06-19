@@ -21,10 +21,10 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
 def pad_sequence_to_length(sequence: List,
                            desired_length: int,
                            default_value: Callable[[], Any]=lambda: 0,
-                           padding_on_right: bool=True):
+                           padding_on_right: bool=True) -> List:
     """
-    Take a list of objects and pads it to the desired length.  This `modifies` the input sequence,
-    instead of returning a new sequence.
+    Take a list of objects and pads it to the desired length, returning the padded list.  The
+    original list is not modified.
 
     Parameters
     ----------
@@ -41,16 +41,21 @@ def pad_sequence_to_length(sequence: List,
     padding_on_right : bool, default=True
         When we add padding tokens (or truncate the sequence), should we do it on the right or
         the left?
+
+    Returns
+    -------
+    padded_sequence : List
     """
     if padding_on_right:
-        del sequence[desired_length:]
+        padded_sequence = sequence[:desired_length]
     else:
-        del sequence[:-desired_length]
-    for _ in range(desired_length - len(sequence)):
+        padded_sequence = sequence[-desired_length:]
+    for _ in range(desired_length - len(padded_sequence)):
         if padding_on_right:
-            sequence.append(default_value())
+            padded_sequence.append(default_value())
         else:
-            sequence.insert(0, default_value())
+            padded_sequence.insert(0, default_value())
+    return padded_sequence
 
 
 def add_noise_to_dict_values(dictionary: Dict[Any, float], noise_param: float) -> Dict[Any, float]:

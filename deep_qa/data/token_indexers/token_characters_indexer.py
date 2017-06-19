@@ -59,22 +59,22 @@ class TokenCharactersIndexer(TokenIndexer):
     def pad_token_sequence(self,
                            tokens: List[TokenType],
                            desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]):
-        pad_sequence_to_length(tokens, desired_num_tokens, default_value=0)
+                           padding_lengths: Dict[str, int]) -> List[TokenType]:
+        padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
         longest_token = max(tokens, key=len)
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
             # "dummy token" to get the speed of itertools.zip_longest.
-            tokens.append([0] * desired_token_length)
+            padded_tokens.append([0] * desired_token_length)
         # pad the list of lists to the longest sublist, appending 0's
-        padded_tokens = list(zip(*itertools.zip_longest(*tokens, fillvalue=0)))
+        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=0)))
         if desired_token_length > len(longest_token):
             # now we remove the "dummy token" if we appended one.
             padded_tokens.pop()
 
-        # Now we need to truncate all of them to our desired length.
-        tokens[:] = [list(token[:desired_token_length]) for token in padded_tokens]
+        # Now we need to truncate all of them to our desired length, and return the result.
+        return [list(token[:desired_token_length]) for token in padded_tokens]
 
     @classmethod
     def from_params(cls, params: Params) -> 'TokenCharactersIndexer':

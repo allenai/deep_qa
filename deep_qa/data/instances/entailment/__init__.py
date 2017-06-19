@@ -1,2 +1,0 @@
-from .sentence_pair_instance import SentencePairInstance, IndexedSentencePairInstance
-from .snli_instance import SnliInstance

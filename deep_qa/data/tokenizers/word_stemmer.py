@@ -3,6 +3,8 @@ from collections import OrderedDict
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
 
+from ...common import Params
+
 
 class WordStemmer:
     """
@@ -17,6 +19,12 @@ class WordStemmer:
     def stem_word(self, word: str) -> str:
         """Converts a word to its lemma"""
         raise NotImplementedError
+
+    @staticmethod
+    def from_params(params: Params) -> 'WordStemmer':
+        choice = params.pop_choice('type', list(word_stemmers.keys()), default_to_first_choice=True)
+        params.assert_empty('WordStemmer')
+        return word_stemmers[choice]()
 
 
 class PassThroughWordStemmer(WordStemmer):

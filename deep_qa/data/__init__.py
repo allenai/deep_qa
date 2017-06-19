@@ -1,5 +1,5 @@
-from .datasets.dataset import Dataset, IndexedDataset, TextDataset
-
+from .dataset import Dataset
 from .data_generator import DataGenerator
-from .data_indexer import DataIndexer
+from .instance import Instance
+from .vocabulary import Vocabulary
 from .tokenizers import tokenizers
