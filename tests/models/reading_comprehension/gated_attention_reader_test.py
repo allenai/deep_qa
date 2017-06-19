@@ -1,8 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 
-from deep_qa.models.reading_comprehension import GatedAttentionReader
 from deep_qa.common.params import Params
-from ...common.test_case import DeepQaTestCase
+from deep_qa.models.reading_comprehension import GatedAttentionReader
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestGatedAttention(DeepQaTestCase):

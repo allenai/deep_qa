@@ -4,10 +4,9 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal
 import keras.backend as K
 from keras.layers import Input
 from keras.models import Model
-
-from deep_qa.layers import OptionAttentionSum
 from deep_qa.common.checks import ConfigurationError
-from ..common.test_case import DeepQaTestCase
+from deep_qa.layers import OptionAttentionSum
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestOptionAttentionSum(DeepQaTestCase):

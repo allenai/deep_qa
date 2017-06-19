@@ -3,8 +3,6 @@
 DeepQA is organised into the following main sections:
 
 -   `common`: Code for parameter parsing, logging and runtime checks.
--   `contrib`: Related code for experiments and untested layers, models and features. Generally
-    untested.
 -   `data`: Indexing, padding, tokenisation, stemming, embedding and general dataset manipulation
     happens here.
 -   `layers`: The bulk of the library. Use these Layers to compose new models. Some of these Layers

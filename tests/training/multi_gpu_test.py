@@ -2,10 +2,9 @@
 from copy import deepcopy
 
 import keras.backend as K
-
 from deep_qa.common.params import Params
 from deep_qa.models.text_classification import ClassificationModel
-from ..common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestMultiGpu(DeepQaTestCase):

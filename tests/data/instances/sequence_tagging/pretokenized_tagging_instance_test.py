@@ -1,14 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
 from typing import List
 
-from numpy.testing import assert_array_almost_equal
-
+from deep_qa.common.params import Params
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.instances.instance import TextInstance
 from deep_qa.data.instances.sequence_tagging.pretokenized_tagging_instance import PreTokenizedTaggingInstance
 from deep_qa.data.tokenizers import tokenizers
-from deep_qa.common.params import Params
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+from numpy.testing import assert_array_almost_equal
 
 
 class TestPreTokenizedTaggingInstance(DeepQaTestCase):

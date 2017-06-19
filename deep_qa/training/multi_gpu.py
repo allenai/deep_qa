@@ -59,7 +59,7 @@ def compile_parallel_model(model_builder: Callable[[], DeepQaModel],
     # Place a copy of the model on each GPU, each getting a slice of the batch.
     for gpu_index in range(num_gpus):
         with tensorflow.device(pin_variable_device_scope('/gpu:%d' % gpu_index)):
-            with tensorflow.name_scope('tower_%d' % gpu_index):
+            with tensorflow.name_scope('tower_%d' % gpu_index):  # pylint: disable=not-context-manager
                 # This is a new model object every time.
                 model = model_builder()
                 compile_kwargs = deepcopy(compile_arguments)

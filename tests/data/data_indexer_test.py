@@ -4,8 +4,7 @@ import codecs
 from deep_qa.data.data_indexer import DataIndexer
 from deep_qa.data.datasets import TextDataset
 from deep_qa.data.instances.text_classification.text_classification_instance import TextClassificationInstance
-
-from ..common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 class TestDataIndexer(DeepQaTestCase):
     def test_fit_word_dictionary_respects_min_count(self):

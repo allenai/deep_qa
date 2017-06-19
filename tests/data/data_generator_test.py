@@ -3,7 +3,7 @@ import numpy
 
 from deep_qa.common.params import Params
 from deep_qa.data import DataGenerator, IndexedDataset
-from ..common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestDataGenerator(DeepQaTestCase):

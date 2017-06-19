@@ -1,11 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from keras.layers import Embedding, Input
-
-from deep_qa.layers.wrappers import EncoderWrapper, OutputMask
 from deep_qa.layers.encoders import BOWEncoder
+from deep_qa.layers.wrappers import EncoderWrapper, OutputMask
+from deep_qa.testing.test_case import DeepQaTestCase
 from deep_qa.training.models import DeepQaModel
-from ...common.test_case import DeepQaTestCase
+from keras.layers import Embedding, Input
 
 
 class TestEncoderWrapper(DeepQaTestCase):

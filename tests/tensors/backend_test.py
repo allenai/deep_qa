@@ -1,9 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-from keras import backend as K
-
 from deep_qa.tensors.backend import hardmax
-from ..common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
+from keras import backend as K
 
 
 class TestBackendTensorFunctions(DeepQaTestCase):

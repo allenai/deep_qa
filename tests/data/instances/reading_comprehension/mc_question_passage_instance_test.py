@@ -1,12 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy as np
-
 from deep_qa.data.data_indexer import DataIndexer
 # pylint: disable=line-too-long
-from deep_qa.data.instances.reading_comprehension.mc_question_passage_instance import McQuestionPassageInstance
 from deep_qa.data.instances.reading_comprehension.mc_question_passage_instance import IndexedMcQuestionPassageInstance
+from deep_qa.data.instances.reading_comprehension.mc_question_passage_instance import McQuestionPassageInstance
 # pylint: enable=line-too-long
-from ....common.test_case import DeepQaTestCase
+from deep_qa.testing.test_case import DeepQaTestCase
 
 
 class TestMcQuestionPassageInstance:
