@@ -113,6 +113,11 @@ class TextTrainer(Trainer):
         self.embedding_params = params.pop('embeddings',
                                            {'words': {'dim': 50, 'dropout': 0.5},
                                             'characters': {'dim': 8, 'dropout': 0.5}})
+        self.pretrained_param = None
+        self.use_rand = None
+        self.test_embeddings = params.pop('test_embeddings', False)
+        self.embeddings = None
+
         data_generator_params = params.pop('data_generator', None)
         if data_generator_params is not None:
             self.data_generator = DataGenerator(self, data_generator_params)
@@ -213,6 +218,11 @@ class TextTrainer(Trainer):
         self.data_indexer.fit_word_dictionary(dataset)
 
     @overrides
+    def set_model_state_from_file(self, vocab_file: TextDataset):
+        logger.info("Fitting data indexer with vocabulary file.")
+        self.data_indexer.set_from_file(vocab_file)
+
+    @overrides
     def set_model_state_from_indexed_dataset(self, dataset: IndexedDataset):
         self._set_padding_lengths(dataset.padding_lengths())
 
@@ -236,6 +246,58 @@ class TextTrainer(Trainer):
         data_indexer_file = open("%s_data_indexer.pkl" % self.model_prefix, "rb")
         self.data_indexer = pickle.load(data_indexer_file)
         data_indexer_file.close()
+
+        if self.test_embeddings:
+            if self.pretrained_param is None:
+                self.word_params = self.embedding_params.pop('words')
+                self.pretrained_param = self.word_params.pop('pretrained_file', None)
+                self.use_rand = self.word_params.pop('use_rand', None)
+
+            self.test_dataset = self.load_dataset_from_files(self.test_files)
+
+            # overloaded_param = 1
+
+            # Load embeddings from file
+            if self.embeddings is None:
+                [self.embeddings, self.dim] = PretrainedEmbeddings.read_embeddings_file(self.pretrained_param)
+
+
+            embedding_weights = None
+            # get embedding layer
+            for l in self.model.layers:
+                print("Checking",l.name)
+                if l.name == 'words_embedding':
+                    embedding_weights = l.get_weights()
+                    break
+
+            if embedding_weights is None:
+                logger.info("Error: can't find embeddings layer")
+            else:
+                # change weights in layer
+                logger.info("%d %d %d %d %s %s", len(embedding_weights),len(embedding_weights[0]),len(embedding_weights[0][0]),self.data_indexer.get_vocab_size(),self.data_indexer.get_word_from_index(3),str(embedding_weights[0][3][:10]))
+                self.data_indexer.fit_word_existing_dictionary(self.test_dataset, self.embeddings, self.use_rand)
+                logger.info("%d %d %d %d %s %s", len(embedding_weights),len(embedding_weights[0]),len(embedding_weights[0][0]),self.data_indexer.get_vocab_size(),self.data_indexer.get_word_from_index(3),str(embedding_weights[0][3][:10]))
+
+                word_indices = self.data_indexer.words_in_index('words')
+                for i in range(2, len(word_indices)):
+                    word = self.data_indexer.get_word_from_index(i)
+
+                    if word is None:
+                        break
+
+                    if self.use_rand and word not in self.embeddings:
+                        vec = numpy.random.rand(self.dim,)
+                    else:
+                        vec = self.embeddings[word]
+
+                    # if i < 10:
+                    #     logger.info("%s %s %s", i,word,str(vec[:10]))
+
+                    embedding_weights[0][i] = vec
+
+                logger.info("Done, now setting weights")
+                l.set_weights(embedding_weights)
+                logger.info("Done setting weights")
 
     @overrides
     def _overall_debug_output(self, output_dict: Dict[str, numpy.array]) -> str:
