@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Tuple
 import numpy
 from keras.callbacks import CallbackList, EarlyStopping, LambdaCallback, ModelCheckpoint
 from keras.models import model_from_json
+import keras.backend as K
+import tensorflow
 
 from ..data.datasets import Dataset, IndexedDataset
 from ..common.checks import ConfigurationError
@@ -16,6 +18,81 @@ from .optimizers import optimizer_from_params
 from .multi_gpu import compile_parallel_model
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+# Todo The following five methods should be made more principled and put elsewhere
+def contradicts_to_neutral(y_true, y_pred):
+    """In a tri-labels setup, convert all ones to twos.
+    This is the desired case when training an entailment model on SNLI and testing on science entailment, which only has labels 0 and 2."""
+    return K.mean(K.equal(K.argmax(y_true, axis=-1), K.minimum(2*K.argmax(y_pred, axis=-1), 2)))
+
+# The following four methods are taken from earlier version of Keras
+def recall(y_true, y_pred):
+    """Recall metric.
+
+    Only computes a batch-wise average of recall.
+
+    Computes the recall, a metric for multi-label classification of
+    how many relevant items are selected.
+    """
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+
+def fbeta_score(y_true, y_pred, beta=1):
+    """Computes the F score.
+
+    The F score is the weighted harmonic mean of precision and recall.
+    Here it is only computed as a batch-wise average, not globally.
+
+    This is useful for multi-label classification, where input samples can be
+    classified as sets of labels. By only using accuracy (precision) a model
+    would achieve a perfect score by simply assigning every class to every
+    input. In order to avoid this, a metric should penalize incorrect class
+    assignments as well (recall). The F-beta score (ranged from 0.0 to 1.0)
+    computes this, as a weighted mean of the proportion of correct class
+    assignments vs. the proportion of incorrect class assignments.
+
+    With beta = 1, this is equivalent to a F-measure. With beta < 1, assigning
+    correct classes becomes more important, and with beta > 1 the metric is
+    instead weighted towards penalizing incorrect class assignments.
+    """
+    if beta < 0:
+        raise ValueError('The lowest choosable beta is zero (only precision).')
+
+    # If there are no true positives, fix the F score at 0 like sklearn.
+    if K.sum(K.round(K.clip(y_true, 0, 1))) == 0:
+        return 0
+
+    p = precision(y_true, y_pred)
+    r = recall(y_true, y_pred)
+    bb = beta ** 2
+    fbeta_score = (1 + bb) * (p * r) / (bb * p + r + K.epsilon())
+    return fbeta_score
+
+
+def precision(y_true, y_pred):
+    """Precision metric.
+
+    Only computes a batch-wise average of precision.
+
+    Computes the precision, a metric for multi-label classification of
+    how many selected items are relevant.
+    """
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+def fmeasure(y_true, y_pred):
+    """Computes the f-measure, the harmonic mean of precision and recall.
+
+    Here it is only computed as a batch-wise average, not globally.
+    """
+    return fbeta_score(y_true, y_pred, beta=1)
+
 
 
 class Trainer:
@@ -132,6 +209,7 @@ class Trainer:
         This is a debugging setting, mostly - we have written a custom model.summary() method that
         supports showing masking info, to help understand what's going on with the masks.
     """
+
     def __init__(self, params: Params):
         self.name = "Trainer"
 
@@ -160,6 +238,10 @@ class Trainer:
         self.validation_split = params.pop('validation_split', 0.1)
         self.batch_size = params.pop('batch_size', 32)
 
+        # Word vocabulary file (to read embeddings from)
+        self.vocab_file = params.pop("vocab_file", None)
+
+
         # If you've got more than one gpu, we make a mega batch, which then
         # gets split across the number of gpus you have.
         if self.num_gpus > 1:
@@ -170,6 +252,8 @@ class Trainer:
         self.gradient_clipping = params.pop('gradient_clipping', {'type': 'clip_by_norm', "value": 10})
         self.loss = params.pop('loss', 'categorical_crossentropy')
         self.metrics = params.pop('metrics', ['accuracy'])
+        self.metrics.append(contradicts_to_neutral)
+        self.metrics.append(fmeasure)
         self.validation_metric = params.pop('validation_metric', 'val_acc')
         self.patience = params.pop('patience', 1)
         self.fit_kwargs = params.pop('fit_kwargs', {})
@@ -214,6 +298,7 @@ class Trainer:
     ################
     # Public methods
     ################
+
 
     def can_train(self):
         return self.train_files is not None
@@ -277,8 +362,12 @@ class Trainer:
         self.training_dataset = self.load_dataset_from_files(self.train_files)
         if self.max_training_instances:
             self.training_dataset = self.training_dataset.truncate(self.max_training_instances)
+
         if self.update_model_state_with_training_data:
-            self.set_model_state_from_dataset(self.training_dataset)
+            if self.vocab_file is not None:
+                self.set_model_state_from_file(self.vocab_file)
+            else:
+                self.set_model_state_from_dataset(self.training_dataset)
         logger.info("Indexing training data")
         indexing_kwargs = self._dataset_indexing_kwargs()
         indexed_training_dataset = self.training_dataset.to_indexed_dataset(**indexing_kwargs)
@@ -396,8 +485,9 @@ class Trainer:
         # We call self.load_model() first, to be sure that we load the best model we have, if we've
         # trained for a while.
         self.load_model()
+
         _, arrays = self.load_data_arrays(data_files, max_instances)
-        logger.info("Evaluting model on the test set.")
+        logger.info("Evaluating model on the test set.")
         if not self._uses_data_generators():
             scores = self.model.evaluate(arrays[0], arrays[1])
         else:
@@ -442,6 +532,12 @@ class Trainer:
         Given a list of file inputs, load a raw dataset from the files.  This is a list because
         some datasets are specified in more than one file (e.g., a file containing the instances,
         and a file containing background information about those instances).
+        """
+        raise NotImplementedError
+
+    def set_model_state_from_file(self, dataset: Dataset):
+        # TODO(Roy) change docomentation
+        """
         """
         raise NotImplementedError
 
