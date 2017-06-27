@@ -146,7 +146,7 @@ def load_model(param_path: str, model_class=None):
     return model
 
 
-def score_dataset(param_path: str, dataset_files: List[str], model_class=None):
+def score_dataset(param_path: str, dataset_files: List[str] = None, model_class=None):
     """
     Loads a model from a saved parameter path and scores a dataset with it, returning the
     predictions.
@@ -172,6 +172,9 @@ def score_dataset(param_path: str, dataset_files: List[str], model_class=None):
         whatever metrics you want, if the data was labeled.
     """
     model = load_model(param_path, model_class=model_class)
+    if dataset_files is None:
+        dataset_files = model.test_files
+    logger.info(dataset_files)
     dataset = model.load_dataset_from_files(dataset_files)
     return model.score_dataset(dataset)
 
