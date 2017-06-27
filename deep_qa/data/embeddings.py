@@ -38,35 +38,14 @@ class PretrainedEmbeddings:
         """
         words_to_keep = set(data_indexer.words_in_index())
         vocab_size = data_indexer.get_vocab_size()
-        embeddings = {}
-        embedding_dim = None
 
         # TODO(matt): make this a parameter
         embedding_misses_filename = 'embedding_misses.txt'
 
         # First we read the embeddings from the file, only keeping vectors for the words we need.
         logger.info("Reading embeddings from file")
-        with gzip.open(embeddings_filename, 'rb') as embeddings_file:
-            for line in embeddings_file:
-                fields = line.decode('utf-8').strip().split(' ')
-                if embedding_dim is None:
-                    embedding_dim = len(fields) - 1
-                    assert embedding_dim > 1, "Found embedding size of 1; do you have a header?"
-                else:
-                    if len(fields) - 1 != embedding_dim:
-                        # Sometimes there are funny unicode parsing problems that lead to different
-                        # fields lengths (e.g., a word with a unicode space character that splits
-                        # into more than one column).  We skip those lines.  Note that if you have
-                        # some kind of long header, this could result in all of your lines getting
-                        # skipped.  It's hard to check for that here; you just have to look in the
-                        # embedding_misses_file and at the model summary to make sure things look
-                        # like they are supposed to.
-                        continue
-                word = fields[0]
-                if word in words_to_keep:
-                    vector = numpy.asarray(fields[1:], dtype='float32')
-                    embeddings[word] = vector
 
+        embeddings, embedding_dim = PretrainedEmbeddings.read_embeddings_file(embeddings_filename, words_to_keep)
 
         # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
         # then filling in the word vectors we just read.
@@ -99,3 +78,35 @@ class PretrainedEmbeddings:
                                         weights=[embedding_matrix],
                                         trainable=trainable,
                                         name=name)
+
+    @staticmethod
+    def read_embeddings_file(embeddings_filename, words_to_keep = None):
+        embeddings = {}
+        embedding_dim = None
+        with gzip.open(embeddings_filename, 'rb') as embeddings_file:
+            for line in embeddings_file:
+                fields = line.decode('utf-8').strip().split(' ')
+                if embedding_dim is None:
+                    if len(fields) == 2:
+                        embedding_dim = int(fields[1])
+                    else:
+                        embedding_dim = len(fields) - 1
+
+                    assert embedding_dim > 1, "Found embedding size of 1; do you have a header?"
+                else:
+                    if len(fields) - 1 != embedding_dim:
+                        # Sometimes there are funny unicode parsing problems that lead to different
+                        # fields lengths (e.g., a word with a unicode space character that splits
+                        # into more than one column).  We skip those lines.  Note that if you have
+                        # some kind of long header, this could result in all of your lines getting
+                        # skipped.  It's hard to check for that here; you just have to look in the
+                        # embedding_misses_file and at the model summary to make sure things look
+                        # like they are supposed to.
+                        continue
+                word = fields[0]
+                if words_to_keep is None or word in words_to_keep:
+                    vector = numpy.asarray(fields[1:], dtype='float32')
+                    embeddings[word] = vector
+        
+        return [embeddings, embedding_dim]
+        
