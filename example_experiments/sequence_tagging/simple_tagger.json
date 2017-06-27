@@ -29,7 +29,7 @@
     "patience": 3,
     "embeddings": {
       "words": {
-        "pretrained_file": "/net/efs/data/dlfa/glove/glove.6B.100d.txt.gz",
+        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
         "project": false,
         "fine_tune": false,
         "dropout": 0.2
