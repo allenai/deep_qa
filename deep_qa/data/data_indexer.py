@@ -32,13 +32,9 @@ class DataIndexer:
 
     def set_from_file(self, filename: str, oov_token: str="@@UNKNOWN@@", namespace: str="words"):
         self._oov_token = oov_token
-        self.word_indices[namespace] = {self._padding_token: 0}
-        self.reverse_word_indices[namespace] = {0: self._padding_token}
         with codecs.open(filename, 'r', 'utf-8') as input_file:
-            for i, line in enumerate(input_file.readlines()):
-                token = line[:-1]  # remove the newline
-                self.word_indices[namespace][token] = i + 1
-                self.reverse_word_indices[namespace][i + 1] = token
+            for line in input_file:
+                self.add_word_to_index(line.rstrip(), namespace)
 
     def finalize(self):
         logger.info("Finalizing data indexer")
@@ -79,6 +75,91 @@ class DataIndexer:
             for word, count in namespace_word_counts[namespace].items():
                 if count >= min_count:
                     self.add_word_to_index(word, namespace)
+
+    def fit_word_existing_dictionary(self, dataset, embeddings, use_rand = False):
+        """
+        Given a ``Dataset``, an embedding space and an existing index size,
+        this method traverses the words in the datasets, and adds all words into the index.
+
+        Parameters
+        ----------
+        dataset: ``TextDataset``
+            The dataset to index.
+        """
+        logger.info("Fitting word dictionary with")
+
+        namespace_word_counts = defaultdict(lambda: defaultdict(int))
+        for instance in tqdm.tqdm(dataset.instances):
+            namespace_dict = instance.words()
+            for namespace in namespace_dict:
+                # print(namespace_dict[namespace])
+                for word in namespace_dict[namespace]:
+                    namespace_word_counts[namespace][word] += 1
+
+        for namespace in namespace_dict:
+            logger.info("%s: Read %d words. Index size is %s",namespace, len(namespace_word_counts[namespace]), len(self.word_indices[namespace]))
+            # for word in self.word_indices[namespace]:
+            #     print("Orig:",word)
+
+        n = 0
+        n2 = 0
+        nt = 0
+        nt2 = 0
+        nta = 0
+        for namespace in tqdm.tqdm(namespace_word_counts):
+            # Starting from 2, first two tokens are padding and oov
+            i = 2
+            for word, count in sorted(namespace_word_counts[namespace].items(), key=lambda x: x[1]):
+
+                if word not in self.word_indices[namespace]:
+                    n += 1
+                    nt += namespace_word_counts[namespace][word]
+                    # logger.info("New word: %s (%d)", word, namespace_word_counts[namespace][word])
+
+                if word not in embeddings:
+                    n2 += 1
+                    nt2 += namespace_word_counts[namespace][word]
+                    # try:
+                    #     # print(word,namespace_word_counts[namespace][word],"is out!!!")
+                    # except UnicodeEncodeError:
+                        # print("##BadUnicode##", namespace_word_counts[namespace][word], "is out!!!")
+                # print(word)
+
+                nta += namespace_word_counts[namespace][word]
+
+                if word in embeddings or use_rand:
+                    # print("\t",word)
+                    index = None
+                    old_word = self.reverse_word_indices[namespace][i]
+                    # If word is already in index, remove it
+                    if word in self.word_indices[namespace]:
+                        index = self.word_indices[namespace][word]
+
+                        self.reverse_word_indices[namespace][index] = None
+
+                    if old_word is not None:
+                        del self.word_indices[namespace][old_word]
+
+                    # print("\t\tBTATA", i, index, old_word, word)
+
+                    self.word_indices[namespace][word] = i
+                    self.reverse_word_indices[namespace][i] = word
+                    i += 1
+
+                    if i == len(self.word_indices[namespace]):
+                        break
+
+            orig_dict_size = len(self.reverse_word_indices[namespace])
+            for j in range(i,orig_dict_size):
+                old_word = self.reverse_word_indices[namespace][j]
+                if old_word is not None:
+                    del self.word_indices[namespace][old_word]
+                self.reverse_word_indices[namespace][j] = None
+
+            logger.info("N training words: %d %d. N test words: %d (%d)"". N new: %d. N not in embeddings: %d. Nta:"\
+                        "%d,nt: %d, nt2: %d",orig_dict_size,len(self.word_indices[namespace]),len(namespace_word_counts[namespace]),i, n, n2, nta,nt, nt2)
+
+
 
     def add_word_to_index(self, word: str, namespace: str='words') -> int:
         """
