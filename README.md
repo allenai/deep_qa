@@ -2,16 +2,13 @@
 [![Documentation Status](https://readthedocs.org/projects/deep-qa/badge/?version=latest)](http://deep-qa.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/allenai/deep_qa/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/deep_qa)
 
-# WARNING
+# DEPRECATED
 
-DeepQA is currently pre-alpha.  There are no stable APIs, and
-there are plenty of rough edges.  This grew out of some research code, and we think
-it'll be pretty useful generally, but we're still working on making it easily
-usable by people outside of our group.  Feel free to submit issues for problems
-that arise so that we're aware of them, but we're not to the point of having a
-supported release yet.
-
-We will have our first supported release in September.
+DeepQA is built on top of Keras.  We've decided that [pytorch](http://pytorch.org) is a
+better platform for NLP research.  We re-wrote DeepQA into a pytorch library called
+[AllenNLP](https://github.com/allenai/allennlp).  There will be no more development
+of DeepQA.  But, we're pretty excited about AllenNLP - if you're doing deep learning
+for natural language processing, you should [check it out](http://allennlp.org)!
 
 # DeepQA
 
