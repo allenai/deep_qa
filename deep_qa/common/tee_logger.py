@@ -21,7 +21,7 @@ class TeeLogger:
         # We'll special case a particular thing that keras does, to make the log file more
         # readable.  Keras uses ^H characters to get the training line to update for each batch
         # without adding more lines to the terminal output.  Displaying those in a file won't work
-        # correctly, so we'll just make sure that each batch shows up on its one line.
+        # correctly, so we'll just make sure that each batch shows up on its own line.
         if '\x08' in message:
             message = message.replace('\x08', '')
             if len(message) == 0 or message[-1] != '\n':
